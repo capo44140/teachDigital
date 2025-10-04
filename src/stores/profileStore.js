@@ -217,9 +217,15 @@ export const useProfileStore = defineStore('profile', {
       }
     },
 
-    // Mettre à jour le code PIN
+    // Mettre à jour le code PIN avec validation de sécurité
     async updatePin(profileId, newPin) {
       try {
+        // Valider le format du code PIN
+        const validation = PinService.validatePin(newPin);
+        if (!validation.isValid) {
+          throw new Error(validation.message);
+        }
+        
         await PinService.updatePin(profileId, newPin);
         console.log('✅ Code PIN mis à jour avec succès');
       } catch (error) {
@@ -227,6 +233,21 @@ export const useProfileStore = defineStore('profile', {
         console.error('❌ Erreur lors de la mise à jour du code PIN:', error);
         throw error;
       }
+    },
+
+    // Générer un code PIN sécurisé
+    generateSecurePin(length = 4) {
+      return PinService.generateSecurePin(length);
+    },
+
+    // Analyser la force d'un code PIN
+    analyzePinStrength(pin) {
+      return PinService.analyzePinStrength(pin);
+    },
+
+    // Valider un code PIN
+    validatePin(pin) {
+      return PinService.validatePin(pin);
     },
 
     // Récupérer le code PIN par défaut

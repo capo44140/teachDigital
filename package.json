@@ -10,10 +10,16 @@
     "generate-icons": "node scripts/generate-icons.js",
     "init-db": "node scripts/init-db.js",
     "db:init": "node scripts/init-db.js",
-    "db:test": "node -e \"import('./src/config/database.js').then(db => db.testConnection())\""
+    "db:test": "node -e \"import('./src/config/database.js').then(db => db.testConnection())\"",
+    "migrate-pins": "node scripts/migrate-pins.js migrate",
+    "check-pins": "node scripts/migrate-pins.js check",
+    "test-pin-security": "node scripts/test-pin-security.js",
+    "migrate-db": "node scripts/migrate-database.js migrate",
+    "check-db": "node scripts/migrate-database.js check"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
+    "bcryptjs": "^3.0.2",
     "pinia": "^3.0.3",
     "vue": "^3.4.0",
     "vue-router": "^4.2.0"

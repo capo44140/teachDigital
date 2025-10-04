@@ -79,7 +79,7 @@ export async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS pin_codes (
         id SERIAL PRIMARY KEY,
         profile_id INTEGER REFERENCES profiles(id) ON DELETE CASCADE,
-        pin_code VARCHAR(4) NOT NULL,
+        pin_code VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -186,11 +186,8 @@ export async function insertTestData() {
       `;
     }
     
-    // Insérer le code PIN par défaut pour le profil parent
-    await sql`
-      INSERT INTO pin_codes (profile_id, pin_code)
-      VALUES (1, '1234')
-    `;
+    // Le code PIN par défaut sera initialisé avec hachage via PinService
+    // Pas besoin d'insérer directement ici
     
     console.log('✅ Données de test insérées avec succès');
     return true;
