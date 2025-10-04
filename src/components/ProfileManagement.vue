@@ -93,11 +93,21 @@
               <div class="flex items-center space-x-4">
                 <!-- Avatar du profil -->
                 <div class="relative">
+                  <!-- Image réelle si disponible -->
+                  <div v-if="profile.image_data" class="w-16 h-16 rounded-lg overflow-hidden">
+                    <img 
+                      :src="profile.image_data" 
+                      :alt="profile.name"
+                      class="w-full h-full object-cover"
+                    >
+                  </div>
+                  <!-- Avatar par défaut sinon -->
                   <div 
-                    :class="profile.avatarClass"
+                    v-else
+                    :class="profile.avatar_class"
                     class="w-16 h-16 rounded-lg flex items-center justify-center"
                   >
-                    <div v-html="profile.avatarContent"></div>
+                    <div v-html="profile.avatar_content"></div>
                   </div>
                   <!-- Badge de statut -->
                   <div 
@@ -143,6 +153,15 @@
               <!-- Actions -->
               <div class="flex items-center space-x-2">
                 <button 
+                  @click="manageImage(profile)"
+                  class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+                  title="Gérer l'image"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </button>
+                <button 
                   @click="editProfile(profile)"
                   class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
                   title="Modifier"
@@ -176,6 +195,43 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de gestion d'image -->
+    <div 
+      v-if="showImageModal"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      @click="closeImageModal"
+    >
+      <div 
+        class="bg-gray-800 rounded-lg max-w-md w-full p-6"
+        @click.stop
+      >
+        <h3 class="text-xl font-semibold text-white mb-4">
+          Gérer l'image de {{ selectedProfile?.name }}
+        </h3>
+        
+        <div class="flex justify-center mb-6">
+          <ImageUpload
+            :profile-id="selectedProfile?.id"
+            :current-image="selectedProfile?.image_data"
+            :alt-text="`Image de ${selectedProfile?.name}`"
+            size="large"
+            @image-uploaded="onImageUploaded"
+            @image-removed="onImageRemoved"
+            @upload-error="onUploadError"
+          />
+        </div>
+
+        <div class="flex justify-end space-x-3">
+          <button 
+            @click="closeImageModal"
+            class="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+          >
+            Fermer
+          </button>
         </div>
       </div>
     </div>
@@ -270,9 +326,13 @@
 
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
+import ImageUpload from './ImageUpload.vue'
 
 export default {
   name: 'ProfileManagement',
+  components: {
+    ImageUpload
+  },
   setup() {
     const profileStore = useProfileStore()
     return { profileStore }
@@ -280,7 +340,9 @@ export default {
   data() {
     return {
       showModal: false,
+      showImageModal: false,
       editingProfile: null,
+      selectedProfile: null,
       form: {
         name: '',
         description: '',
@@ -395,6 +457,35 @@ export default {
     closeModal() {
       this.showModal = false
       this.editingProfile = null
+    },
+    manageImage(profile) {
+      this.selectedProfile = profile
+      this.showImageModal = true
+    },
+    closeImageModal() {
+      this.showImageModal = false
+      this.selectedProfile = null
+    },
+    onImageUploaded(imageData) {
+      // Mettre à jour le profil dans la liste
+      const index = this.profiles.findIndex(p => p.id === this.selectedProfile.id)
+      if (index !== -1) {
+        this.profiles[index].image_data = imageData.imageData
+        this.profiles[index].image_type = imageData.imageType
+      }
+      console.log('✅ Image mise à jour avec succès')
+    },
+    onImageRemoved() {
+      // Supprimer l'image du profil dans la liste
+      const index = this.profiles.findIndex(p => p.id === this.selectedProfile.id)
+      if (index !== -1) {
+        this.profiles[index].image_data = null
+        this.profiles[index].image_type = null
+      }
+      console.log('✅ Image supprimée avec succès')
+    },
+    onUploadError(error) {
+      console.error('❌ Erreur lors de l\'upload:', error)
     },
     formatDate(date) {
       return new Intl.DateTimeFormat('fr-FR', {

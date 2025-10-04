@@ -10,7 +10,7 @@ export class ProfileService {
         SELECT 
           id, name, description, type, is_admin, is_child, is_teen, 
           is_active, is_locked, color, avatar_class, avatar_content, 
-          created_at, updated_at
+          image_url, image_data, image_type, created_at, updated_at
         FROM profiles 
         ORDER BY created_at DESC
       `;
@@ -28,7 +28,7 @@ export class ProfileService {
         SELECT 
           id, name, description, type, is_admin, is_child, is_teen, 
           is_active, is_locked, color, avatar_class, avatar_content, 
-          created_at, updated_at
+          image_url, image_data, image_type, created_at, updated_at
         FROM profiles 
         WHERE id = ${id}
       `;
@@ -48,7 +48,10 @@ export class ProfileService {
         type,
         color = 'purple',
         avatarClass,
-        avatarContent
+        avatarContent,
+        imageUrl,
+        imageData,
+        imageType
       } = profileData;
       
       // Déterminer les flags selon le type
@@ -59,11 +62,13 @@ export class ProfileService {
       const result = await sql`
         INSERT INTO profiles (
           name, description, type, is_admin, is_child, is_teen, 
-          is_active, is_locked, color, avatar_class, avatar_content
+          is_active, is_locked, color, avatar_class, avatar_content,
+          image_url, image_data, image_type
         )
         VALUES (
           ${name}, ${description}, ${type}, ${isAdmin}, ${isChild}, ${isTeen},
-          true, false, ${color}, ${avatarClass}, ${avatarContent}
+          true, false, ${color}, ${avatarClass}, ${avatarContent},
+          ${imageUrl}, ${imageData}, ${imageType}
         )
         RETURNING *
       `;
@@ -85,6 +90,9 @@ export class ProfileService {
         color,
         avatarClass,
         avatarContent,
+        imageUrl,
+        imageData,
+        imageType,
         isActive,
         isLocked
       } = profileData;
@@ -106,6 +114,9 @@ export class ProfileService {
           color = ${color},
           avatar_class = ${avatarClass},
           avatar_content = ${avatarContent},
+          image_url = ${imageUrl},
+          image_data = ${imageData},
+          image_type = ${imageType},
           is_active = ${isActive},
           is_locked = ${isLocked},
           updated_at = CURRENT_TIMESTAMP
@@ -188,6 +199,66 @@ export class ProfileService {
       console.error('Erreur lors de la récupération des statistiques:', error);
       throw error;
     }
+  }
+
+  // Mettre à jour l'image d'un profil
+  static async updateProfileImage(profileId, imageData, imageType) {
+    try {
+      const result = await sql`
+        UPDATE profiles 
+        SET 
+          image_data = ${imageData},
+          image_type = ${imageType},
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${profileId}
+        RETURNING *
+      `;
+      return result[0];
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de l\'image:', error);
+      throw error;
+    }
+  }
+
+  // Supprimer l'image d'un profil
+  static async removeProfileImage(profileId) {
+    try {
+      const result = await sql`
+        UPDATE profiles 
+        SET 
+          image_data = NULL,
+          image_type = NULL,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${profileId}
+        RETURNING *
+      `;
+      return result[0];
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'image:', error);
+      throw error;
+    }
+  }
+
+  // Convertir un fichier en base64
+  static async fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
+  }
+
+  // Valider le type de fichier image
+  static validateImageType(file) {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    return allowedTypes.includes(file.type);
+  }
+
+  // Valider la taille du fichier (max 5MB)
+  static validateImageSize(file) {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    return file.size <= maxSize;
   }
 }
 

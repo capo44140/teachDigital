@@ -3,105 +3,63 @@
     <!-- Titre -->
     <h1 class="text-4xl font-bold text-white mb-12">Qui est-ce ?</h1>
     
+    <!-- Indicateur de chargement -->
+    <div v-if="isLoading" class="mb-12">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+      <p class="mt-2 text-gray-400">Chargement des profils...</p>
+    </div>
+
     <!-- Grille des profils -->
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-6 mb-12 max-w-4xl">
-      <!-- Profil Parent (Admin) -->
+    <div v-else class="grid grid-cols-2 md:grid-cols-5 gap-6 mb-12 max-w-4xl">
+      <!-- Profils dynamiques -->
       <div 
-        @click="selectProfile('parent')"
+        v-for="profile in profiles"
+        :key="profile.id"
+        @click="selectProfile(profile)"
         class="profile-card group cursor-pointer transform transition-all duration-300 hover:scale-105"
       >
-        <div class="profile-image bg-gradient-to-br from-teal-400 to-blue-500 relative">
-          <div class="absolute inset-0 flex items-center justify-center">
-            <!-- Icône main avec cadenas -->
-            <div class="relative">
-              <svg class="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C8.13 2 5 5.13 5 9v1H4c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-8c0-1.1-.9-2-2-2h-1V9c0-3.87-3.13-7-7-7zm0 2c2.76 0 5 2.24 5 5v1H7V9c0-2.76 2.24-5 5-5z"/>
-              </svg>
-              <!-- Cadenas admin -->
-              <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center">
-                <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
-                </svg>
-              </div>
-            </div>
+        <div class="profile-image relative" :class="profile.avatar_class">
+          <!-- Image réelle si disponible -->
+          <div v-if="profile.image_data" class="w-full h-full rounded-lg overflow-hidden">
+            <img 
+              :src="profile.image_data" 
+              :alt="profile.name"
+              class="w-full h-full object-cover"
+            >
+          </div>
+          <!-- Avatar par défaut sinon -->
+          <div v-else class="absolute inset-0 flex items-center justify-center">
+            <div v-html="profile.avatar_content"></div>
+          </div>
+          
+          <!-- Badges de statut -->
+          <div 
+            v-if="profile.is_admin"
+            class="absolute -top-1 -right-1 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center"
+          >
+            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+            </svg>
+          </div>
+          <div 
+            v-if="profile.is_child"
+            class="absolute -bottom-1 -right-1 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold"
+          >
+            jeunesse
+          </div>
+          <div 
+            v-if="profile.is_teen"
+            class="absolute -bottom-1 -right-1 bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold"
+          >
+            adolescent
           </div>
         </div>
-        <div class="profile-name">Parent</div>
-        <div class="admin-badge">
+        <div class="profile-name">{{ profile.name }}</div>
+        <div v-if="profile.is_admin" class="admin-badge">
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
             <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
           </svg>
         </div>
-      </div>
-
-      <!-- Profil Ayna -->
-      <div 
-        @click="selectProfile('ayna')"
-        class="profile-card group cursor-pointer transform transition-all duration-300 hover:scale-105"
-      >
-        <div class="profile-image bg-gradient-to-br from-purple-500 to-pink-500">
-          <div class="absolute inset-0 flex items-center justify-center">
-            <!-- Avatar Wednesday Addams style -->
-            <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-              <div class="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center">
-                <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                  <div class="w-6 h-6 bg-gray-800 rounded-full"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="profile-name">Ayna</div>
-      </div>
-
-      <!-- Profil Nolann -->
-      <div 
-        @click="selectProfile('nolann')"
-        class="profile-card group cursor-pointer transform transition-all duration-300 hover:scale-105"
-      >
-        <div class="profile-image bg-gradient-to-br from-red-500 to-blue-500 relative">
-          <div class="absolute inset-0 flex items-center justify-center">
-            <!-- Robot avatar -->
-            <div class="w-16 h-16 bg-white rounded-lg flex items-center justify-center">
-              <div class="w-12 h-12 bg-gray-300 rounded flex flex-col items-center justify-center">
-                <div class="w-8 h-2 bg-blue-500 rounded mb-1"></div>
-                <div class="w-6 h-4 bg-red-500 rounded"></div>
-              </div>
-            </div>
-          </div>
-          <!-- Badge Jeunesse -->
-          <div class="absolute bottom-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
-            jeunesse
-          </div>
-        </div>
-        <div class="profile-name">Nolann</div>
-      </div>
-
-      <!-- Profil Elyo -->
-      <div 
-        @click="selectProfile('elyo')"
-        class="profile-card group cursor-pointer transform transition-all duration-300 hover:scale-105"
-      >
-        <div class="profile-image bg-gradient-to-br from-green-400 to-emerald-500 relative">
-          <div class="absolute inset-0 flex items-center justify-center">
-            <!-- Personnage vert amorphe -->
-            <div class="w-16 h-16 bg-green-300 rounded-full flex items-center justify-center">
-              <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center relative">
-                <!-- Yeux -->
-                <div class="absolute top-2 left-2 w-2 h-2 bg-white rounded-full"></div>
-                <div class="absolute top-2 right-2 w-2 h-2 bg-white rounded-full"></div>
-                <div class="absolute top-4 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
-                <!-- Sourire -->
-                <div class="absolute bottom-3 left-1/2 transform -translate-x-1/2 w-4 h-1 bg-white rounded-full"></div>
-              </div>
-            </div>
-          </div>
-          <!-- Badge Jeunesse -->
-          <div class="absolute bottom-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
-            jeunesse
-          </div>
-        </div>
-        <div class="profile-name">Elyo</div>
       </div>
 
       <!-- Ajouter un profil -->
@@ -131,12 +89,30 @@
 </template>
 
 <script>
+import { useProfileStore } from '../stores/profileStore.js'
+
 export default {
   name: 'ProfileSelector',
+  setup() {
+    const profileStore = useProfileStore()
+    return { profileStore }
+  },
   data() {
     return {
       selectedProfile: null
     }
+  },
+  computed: {
+    profiles() {
+      return this.profileStore.profiles
+    },
+    isLoading() {
+      return this.profileStore.isLoading
+    }
+  },
+  async mounted() {
+    // Charger les profils depuis la base de données
+    await this.profileStore.loadProfiles()
   },
   methods: {
     selectProfile(profile) {
@@ -144,17 +120,17 @@ export default {
       console.log('Profil sélectionné:', profile)
       
       // Sauvegarder le profil sélectionné
-      localStorage.setItem('selectedProfile', profile)
+      localStorage.setItem('selectedProfile', JSON.stringify(profile))
       
       // Émettre un événement vers le composant parent
       this.$emit('profile-selected', profile)
       
-      // Vérifier si c'est le profil parent (nécessite un PIN)
-      if (profile === 'parent') {
-        this.$router.push({ path: '/pin-lock', query: { profile: profile } })
+      // Vérifier si c'est le profil admin (nécessite un PIN)
+      if (profile.is_admin) {
+        this.$router.push({ path: '/pin-lock', query: { profile: profile.id } })
       } else {
         // Rediriger vers l'application principale pour les autres profils
-        this.$router.push({ path: '/dashboard', query: { profile: profile } })
+        this.$router.push({ path: '/dashboard', query: { profile: profile.id } })
       }
     },
     

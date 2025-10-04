@@ -66,6 +66,9 @@ export async function initializeDatabase() {
         color VARCHAR(50) DEFAULT 'purple',
         avatar_class TEXT,
         avatar_content TEXT,
+        image_url TEXT,
+        image_data TEXT,
+        image_type VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
