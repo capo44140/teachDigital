@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/* Styles personnalisés */
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Variables CSS personnalisées */
+:root {
+  --primary-color: #3b82f6;
+  --secondary-color: #1e40af;
+  --accent-color: #f59e0b;
+}
