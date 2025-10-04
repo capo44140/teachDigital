@@ -78,13 +78,6 @@
       </div>
     </div>
 
-    <!-- Bouton Gérer les profils -->
-    <button 
-      @click="manageProfiles"
-      class="px-8 py-3 border border-white text-white rounded-lg hover:bg-white hover:text-gray-900 transition-all duration-300 font-semibold"
-    >
-      Gérer les profils
-    </button>
   </div>
 </template>
 
@@ -138,12 +131,6 @@ export default {
       console.log('Ajouter un nouveau profil')
       // Logique pour ajouter un nouveau profil
       this.$emit('add-profile')
-    },
-    
-    manageProfiles() {
-      console.log('Gérer les profils')
-      // Rediriger vers la page de gestion des profils
-      this.$router.push('/manage-profiles')
     }
   }
 }
