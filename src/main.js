@@ -1,7 +1,11 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import './style.css'
 import App from './App.vue'
 import router from './router'
+
+// Créer l'instance Pinia
+const pinia = createPinia()
 
 // Enregistrement du Service Worker pour PWA
 if ('serviceWorker' in navigator) {
@@ -16,4 +20,4 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-createApp(App).use(router).mount('#app')
+createApp(App).use(pinia).use(router).mount('#app')
