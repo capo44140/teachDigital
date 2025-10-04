@@ -173,19 +173,6 @@ export async function insertTestData() {
         color: 'green',
         avatar_class: 'bg-gradient-to-br from-green-400 to-emerald-500',
         avatar_content: '<div class="w-16 h-16 bg-green-300 rounded-full flex items-center justify-center"><div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center relative"><div class="absolute top-2 left-2 w-2 h-2 bg-white rounded-full"></div><div class="absolute top-2 right-2 w-2 h-2 bg-white rounded-full"></div><div class="absolute top-4 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div><div class="absolute bottom-3 left-1/2 transform -translate-x-1/2 w-4 h-1 bg-white rounded-full"></div></div></div>'
-      },
-      {
-        name: 'Lucas',
-        description: 'Profil adolescent - Accès modéré',
-        type: 'teen',
-        is_admin: false,
-        is_child: false,
-        is_teen: true,
-        is_active: true,
-        is_locked: false,
-        color: 'orange',
-        avatar_class: 'bg-gradient-to-br from-orange-500 to-red-500',
-        avatar_content: '<div class="w-16 h-16 bg-white rounded-lg flex items-center justify-center"><div class="w-12 h-12 bg-orange-300 rounded-lg flex items-center justify-center"><div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center relative"><div class="absolute top-1 left-1 w-1.5 h-1.5 bg-white rounded-full"></div><div class="absolute top-1 right-1 w-1.5 h-1.5 bg-white rounded-full"></div><div class="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-3 h-0.5 bg-white rounded-full"></div></div></div></div>'
       }
     ];
     
