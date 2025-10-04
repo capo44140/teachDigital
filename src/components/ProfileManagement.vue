@@ -60,13 +60,30 @@
         </div>
       </div>
 
+      <!-- Messages d'erreur -->
+      <div v-if="error" class="mb-6 bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg">
+        <div class="flex items-center">
+          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+          {{ error }}
+        </div>
+      </div>
+
       <!-- Liste des profils -->
       <div class="bg-gray-800 rounded-lg overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-700">
           <h2 class="text-xl font-semibold text-white">Liste des profils</h2>
         </div>
         
-        <div class="divide-y divide-gray-700">
+        <!-- Indicateur de chargement -->
+        <div v-if="isLoading" class="p-8 text-center">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          <p class="mt-2 text-gray-400">Chargement des profils...</p>
+        </div>
+
+        <!-- Liste des profils -->
+        <div v-else class="divide-y divide-gray-700">
           <div 
             v-for="profile in profiles" 
             :key="profile.id"
@@ -92,13 +109,13 @@
                     </svg>
                   </div>
                   <div 
-                    v-if="profile.isChild"
+                    v-if="profile.is_child"
                     class="absolute -bottom-1 -right-1 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold"
                   >
                     jeunesse
                   </div>
                   <div 
-                    v-if="profile.isTeen"
+                    v-if="profile.is_teen"
                     class="absolute -bottom-1 -right-1 bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold"
                   >
                     adolescent
@@ -111,13 +128,13 @@
                   <p class="text-gray-400">{{ profile.description }}</p>
                   <div class="flex items-center space-x-4 mt-2">
                     <span 
-                      :class="profile.isActive ? 'text-green-400' : 'text-red-400'"
+                      :class="profile.is_active ? 'text-green-400' : 'text-red-400'"
                       class="text-sm font-medium"
                     >
-                      {{ profile.isActive ? 'Actif' : 'Inactif' }}
+                      {{ profile.is_active ? 'Actif' : 'Inactif' }}
                     </span>
                     <span class="text-gray-500 text-sm">
-                      Créé le {{ formatDate(profile.createdAt) }}
+                      Créé le {{ formatDate(profile.created_at) }}
                     </span>
                   </div>
                 </div>
@@ -136,11 +153,11 @@
                 </button>
                 <button 
                   @click="toggleProfileStatus(profile)"
-                  :class="profile.isActive ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'"
+                  :class="profile.is_active ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'"
                   class="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-                  :title="profile.isActive ? 'Désactiver' : 'Activer'"
+                  :title="profile.is_active ? 'Désactiver' : 'Activer'"
                 >
-                  <svg v-if="profile.isActive" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-if="profile.is_active" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/>
                   </svg>
                   <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -252,8 +269,14 @@
 </template>
 
 <script>
+import { useProfileStore } from '../stores/profileStore.js'
+
 export default {
   name: 'ProfileManagement',
+  setup() {
+    const profileStore = useProfileStore()
+    return { profileStore }
+  },
   data() {
     return {
       showModal: false,
@@ -273,110 +296,35 @@ export default {
         { name: 'indigo', class: 'bg-gradient-to-br from-indigo-500 to-purple-500' },
         { name: 'teal', class: 'bg-gradient-to-br from-teal-500 to-blue-500' },
         { name: 'pink', class: 'bg-gradient-to-br from-pink-500 to-rose-500' }
-      ],
-      profiles: [
-        {
-          id: 1,
-          name: 'Parent',
-          description: 'Profil administrateur avec accès complet',
-          type: 'admin',
-          isAdmin: true,
-          isChild: false,
-          isTeen: false,
-          isActive: true,
-          color: 'teal',
-          avatarClass: 'bg-gradient-to-br from-teal-400 to-blue-500',
-          avatarContent: `
-            <div class="relative">
-              <svg class="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C8.13 2 5 5.13 5 9v1H4c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-8c0-1.1-.9-2-2-2h-1V9c0-3.87-3.13-7-7-7zm0 2c2.76 0 5 2.24 5 5v1H7V9c0-2.76 2.24-5 5-5z"/>
-              </svg>
-            </div>
-          `,
-          createdAt: new Date('2024-01-01')
-        },
-        {
-          id: 2,
-          name: 'Ayna',
-          description: 'Profil enfant - Accès limité',
-          type: 'child',
-          isAdmin: false,
-          isChild: true,
-          isTeen: false,
-          isActive: true,
-          color: 'purple',
-          avatarClass: 'bg-gradient-to-br from-purple-500 to-pink-500',
-          avatarContent: `
-            <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-              <div class="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center">
-                <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-                  <div class="w-6 h-6 bg-gray-800 rounded-full"></div>
-                </div>
-              </div>
-            </div>
-          `,
-          createdAt: new Date('2024-01-15')
-        },
-        {
-          id: 3,
-          name: 'Nolann',
-          description: 'Profil enfant - Accès limité',
-          type: 'child',
-          isAdmin: false,
-          isChild: true,
-          isTeen: false,
-          isActive: true,
-          color: 'red',
-          avatarClass: 'bg-gradient-to-br from-red-500 to-blue-500',
-          avatarContent: `
-            <div class="w-16 h-16 bg-white rounded-lg flex items-center justify-center">
-              <div class="w-12 h-12 bg-gray-300 rounded flex flex-col items-center justify-center">
-                <div class="w-8 h-2 bg-blue-500 rounded mb-1"></div>
-                <div class="w-6 h-4 bg-red-500 rounded"></div>
-              </div>
-            </div>
-          `,
-          createdAt: new Date('2024-01-20')
-        },
-        {
-          id: 4,
-          name: 'Elyo',
-          description: 'Profil enfant - Accès limité',
-          type: 'child',
-          isAdmin: false,
-          isChild: true,
-          isTeen: false,
-          isActive: true,
-          color: 'green',
-          avatarClass: 'bg-gradient-to-br from-green-400 to-emerald-500',
-          avatarContent: `
-            <div class="w-16 h-16 bg-green-300 rounded-full flex items-center justify-center">
-              <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center relative">
-                <div class="absolute top-2 left-2 w-2 h-2 bg-white rounded-full"></div>
-                <div class="absolute top-2 right-2 w-2 h-2 bg-white rounded-full"></div>
-                <div class="absolute top-4 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
-                <div class="absolute bottom-3 left-1/2 transform -translate-x-1/2 w-4 h-1 bg-white rounded-full"></div>
-              </div>
-            </div>
-          `,
-          createdAt: new Date('2024-01-25')
-        },
       ]
     }
   },
   computed: {
+    profiles() {
+      return this.profileStore.profiles
+    },
     activeProfiles() {
-      return this.profiles.filter(p => p.isActive).length
+      return this.profileStore.stats.active
     },
     childProfiles() {
-      return this.profiles.filter(p => p.isChild).length
+      return this.profileStore.stats.children
     },
     teenProfiles() {
-      return this.profiles.filter(p => p.isTeen).length
+      return this.profileStore.stats.teens
     },
     adminProfiles() {
-      return this.profiles.filter(p => p.isAdmin).length
+      return this.profileStore.stats.admins
+    },
+    isLoading() {
+      return this.profileStore.isLoading
+    },
+    error() {
+      return this.profileStore.error
     }
+  },
+  async mounted() {
+    // Charger les profils depuis la base de données
+    await this.profileStore.loadProfiles()
   },
   methods: {
     goBack() {
@@ -399,47 +347,49 @@ export default {
       // Rediriger vers la page de modification de profil
       this.$router.push(`/edit-profile/${profile.id}`)
     },
-    saveProfile() {
-      if (this.editingProfile) {
-        // Modifier le profil existant
-        const index = this.profiles.findIndex(p => p.id === this.editingProfile.id)
-        this.profiles[index] = {
-          ...this.profiles[index],
-          name: this.form.name,
-          description: this.form.description,
-          type: this.form.type,
-          isAdmin: this.form.type === 'admin',
-          isChild: this.form.type === 'child',
-          isTeen: this.form.type === 'teen',
-          color: this.form.color
+    async saveProfile() {
+      try {
+        if (this.editingProfile) {
+          // Modifier le profil existant
+          await this.profileStore.updateProfile(this.editingProfile.id, {
+            name: this.form.name,
+            description: this.form.description,
+            type: this.form.type,
+            color: this.form.color,
+            avatarClass: this.getAvatarClass(this.form.color),
+            avatarContent: this.getAvatarContent(this.form.type)
+          })
+        } else {
+          // Créer un nouveau profil
+          await this.profileStore.createProfile({
+            name: this.form.name,
+            description: this.form.description,
+            type: this.form.type,
+            color: this.form.color,
+            avatarClass: this.getAvatarClass(this.form.color),
+            avatarContent: this.getAvatarContent(this.form.type)
+          })
         }
-      } else {
-        // Créer un nouveau profil
-        const newProfile = {
-          id: Date.now(),
-          name: this.form.name,
-          description: this.form.description,
-          type: this.form.type,
-          isAdmin: this.form.type === 'admin',
-          isChild: this.form.type === 'child',
-          isTeen: this.form.type === 'teen',
-          isActive: true,
-          color: this.form.color,
-          avatarClass: this.getAvatarClass(this.form.color),
-          avatarContent: this.getAvatarContent(this.form.type),
-          createdAt: new Date()
-        }
-        this.profiles.push(newProfile)
+        this.closeModal()
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde du profil:', error)
+        // L'erreur sera affichée via le store
       }
-      this.closeModal()
     },
-    toggleProfileStatus(profile) {
-      profile.isActive = !profile.isActive
+    async toggleProfileStatus(profile) {
+      try {
+        await this.profileStore.toggleProfileStatus(profile.id)
+      } catch (error) {
+        console.error('Erreur lors du basculement du statut:', error)
+      }
     },
-    deleteProfile(profile) {
+    async deleteProfile(profile) {
       if (confirm(`Êtes-vous sûr de vouloir supprimer le profil "${profile.name}" ?`)) {
-        const index = this.profiles.findIndex(p => p.id === profile.id)
-        this.profiles.splice(index, 1)
+        try {
+          await this.profileStore.deleteProfile(profile.id)
+        } catch (error) {
+          console.error('Erreur lors de la suppression du profil:', error)
+        }
       }
     },
     closeModal() {

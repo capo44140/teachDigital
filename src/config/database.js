@@ -1,8 +1,8 @@
 import { neon } from '@neondatabase/serverless';
-import dotenv from 'dotenv';
 
-// Charger les variables d'environnement
-dotenv.config();
+// Configuration de la base de données Neon
+// En production, les variables d'environnement sont injectées par Vercel
+// En développement, elles sont chargées automatiquement par Vite
 
 // Configuration de la base de données Neon
 const config = {

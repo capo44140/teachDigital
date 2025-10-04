@@ -42,24 +42,24 @@
           <!-- Avatar -->
           <div class="relative">
             <div 
-              :class="profile.avatarClass"
+              :class="profile.avatar_class"
               class="w-24 h-24 rounded-lg flex items-center justify-center relative"
             >
-              <div v-html="profile.avatarContent"></div>
+              <div v-html="profile.avatar_content"></div>
               
               <!-- Badge de type de profil -->
-              <div 
-                v-if="profile.isChild"
-                class="absolute -bottom-1 -right-1 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold"
-              >
-                jeunesse
-              </div>
-              <div 
-                v-if="profile.isTeen"
-                class="absolute -bottom-1 -right-1 bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold"
-              >
-                adolescent
-              </div>
+                  <div 
+                    v-if="profile.is_child"
+                    class="absolute -bottom-1 -right-1 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold"
+                  >
+                    jeunesse
+                  </div>
+                  <div 
+                    v-if="profile.is_teen"
+                    class="absolute -bottom-1 -right-1 bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold"
+                  >
+                    adolescent
+                  </div>
               
               <!-- Icône de modification -->
               <div class="absolute -top-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md cursor-pointer hover:bg-gray-50 transition-colors"
@@ -118,10 +118,10 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-4">
               <div 
-                :class="profile.avatarClass"
+                :class="profile.avatar_class"
                 class="w-12 h-12 rounded-lg flex items-center justify-center"
               >
-                <div v-html="profile.avatarContent"></div>
+                <div v-html="profile.avatar_content"></div>
               </div>
               <div>
                 <h3 class="text-lg font-semibold text-black">{{ profile.name }}</h3>
@@ -218,35 +218,32 @@
 </template>
 
 <script>
+import { useProfileStore } from '../stores/profileStore.js'
+
 export default {
   name: 'EditProfilePage',
+  setup() {
+    const profileStore = useProfileStore()
+    return { profileStore }
+  },
   data() {
     return {
       showAvatarModal: false,
       selectedAvatar: null,
       profile: {
-        id: 1,
-        name: 'Elyo',
-        description: 'Profil enfant - Accès limité',
+        id: null,
+        name: '',
+        description: '',
         type: 'child',
-        isAdmin: false,
-        isChild: true,
-        isTeen: false,
-        isActive: true,
-        isLocked: false,
+        is_admin: false,
+        is_child: true,
+        is_teen: false,
+        is_active: true,
+        is_locked: false,
         color: 'green',
-        avatarClass: 'bg-gradient-to-br from-green-400 to-emerald-500',
-        avatarContent: `
-          <div class="w-16 h-16 bg-green-300 rounded-full flex items-center justify-center">
-            <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center relative">
-              <div class="absolute top-2 left-2 w-2 h-2 bg-white rounded-full"></div>
-              <div class="absolute top-2 right-2 w-2 h-2 bg-white rounded-full"></div>
-              <div class="absolute top-4 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
-              <div class="absolute bottom-3 left-1/2 transform -translate-x-1/2 w-4 h-1 bg-white rounded-full"></div>
-            </div>
-          </div>
-        `,
-        createdAt: new Date('2024-01-25')
+        avatar_class: 'bg-gradient-to-br from-green-400 to-emerald-500',
+        avatar_content: '',
+        created_at: null
       },
       availableAvatars: [
         {
@@ -372,17 +369,21 @@ export default {
       ]
     }
   },
-  mounted() {
-    // Charger les données du profil depuis l'URL ou le store
-    this.loadProfile()
+  async mounted() {
+    // Charger les données du profil depuis la base de données
+    await this.loadProfile()
   },
   methods: {
-    loadProfile() {
-      // Récupérer l'ID du profil depuis l'URL
+    async loadProfile() {
       const profileId = this.$route.params.id
       if (profileId) {
-        // Ici, vous pourriez charger les données du profil depuis une API
-        console.log('Chargement du profil:', profileId)
+        try {
+          await this.profileStore.loadProfile(profileId)
+          this.profile = { ...this.profileStore.currentProfile }
+        } catch (error) {
+          console.error('Erreur lors du chargement du profil:', error)
+          this.$router.push('/manage-profiles')
+        }
       }
     },
     
@@ -390,29 +391,41 @@ export default {
       this.$router.push('/manage-profiles')
     },
     
-    saveProfile() {
-      // Sauvegarder les modifications du profil
-      console.log('Sauvegarde du profil:', this.profile)
-      // Ici, vous pourriez envoyer les données à une API
-      this.$router.push('/manage-profiles')
+    async saveProfile() {
+      try {
+        await this.profileStore.updateProfile(this.profile.id, {
+          name: this.profile.name,
+          description: this.profile.description,
+          type: this.profile.type,
+          color: this.profile.color,
+          avatarClass: this.profile.avatar_class,
+          avatarContent: this.profile.avatar_content
+        })
+        this.$router.push('/manage-profiles')
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde du profil:', error)
+      }
     },
     
     cancelEdit() {
       this.$router.push('/manage-profiles')
     },
     
-    deleteProfile() {
+    async deleteProfile() {
       if (confirm(`Êtes-vous sûr de vouloir supprimer le profil "${this.profile.name}" ?`)) {
-        console.log('Suppression du profil:', this.profile.id)
-        // Ici, vous pourriez supprimer le profil via une API
-        this.$router.push('/manage-profiles')
+        try {
+          await this.profileStore.deleteProfile(this.profile.id)
+          this.$router.push('/manage-profiles')
+        } catch (error) {
+          console.error('Erreur lors de la suppression du profil:', error)
+        }
       }
     },
     
     changeAvatar() {
       this.showAvatarModal = true
       this.selectedAvatar = this.availableAvatars.find(avatar => 
-        avatar.class === this.profile.avatarClass
+        avatar.class === this.profile.avatar_class
       )
     },
     
@@ -422,8 +435,8 @@ export default {
     
     confirmAvatarChange() {
       if (this.selectedAvatar) {
-        this.profile.avatarClass = this.selectedAvatar.class
-        this.profile.avatarContent = this.selectedAvatar.content
+        this.profile.avatar_class = this.selectedAvatar.class
+        this.profile.avatar_content = this.selectedAvatar.content
       }
       this.closeAvatarModal()
     },

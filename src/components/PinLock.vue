@@ -75,9 +75,14 @@
 
 <script>
 import { PIN_CONFIG, getCurrentPin, setPin } from '../config/pinConfig.js'
+import { useProfileStore } from '../stores/profileStore.js'
 
 export default {
   name: 'PinLock',
+  setup() {
+    const profileStore = useProfileStore()
+    return { profileStore }
+  },
   data() {
     return {
       pinDigits: ['', '', '', ''],
@@ -119,40 +124,51 @@ export default {
       }
     },
     
-    checkPin() {
+    async checkPin() {
       if (this.isLocked) return
       
       const enteredPin = this.pinDigits.join('')
-      const correctPin = getCurrentPin()
       
-      if (enteredPin === correctPin) {
-        // PIN correct - rediriger vers le dashboard
-        this.$router.push({ 
-          path: '/dashboard', 
-          query: { 
-            profile: this.profileName.toLowerCase(),
-            unlocked: 'true'
-          } 
-        })
-      } else {
-        // PIN incorrect
-        this.attempts++
-        const remainingAttempts = this.maxAttempts - this.attempts
+      try {
+        // Récupérer le profil parent (ID 1) pour vérifier le PIN
+        const profileId = 1 // Profil parent
+        const isValid = await this.profileStore.verifyPin(profileId, enteredPin)
         
-        if (remainingAttempts > 0) {
-          this.errorMessage = `${PIN_CONFIG.MESSAGES.INCORRECT_PIN}. Tentatives restantes : ${remainingAttempts}`
-          // Réinitialiser les champs après 1 seconde
-          setTimeout(() => {
-            this.resetPin()
-          }, 1000)
+        if (isValid) {
+          // PIN correct - rediriger vers le dashboard
+          this.$router.push({ 
+            path: '/dashboard', 
+            query: { 
+              profile: this.profileName.toLowerCase(),
+              unlocked: 'true'
+            } 
+          })
         } else {
-          // Trop de tentatives - verrouiller temporairement
-          this.isLocked = true
-          this.errorMessage = PIN_CONFIG.MESSAGES.TOO_MANY_ATTEMPTS
-          setTimeout(() => {
-            this.goBack()
-          }, 3000)
+          // PIN incorrect
+          this.attempts++
+          const remainingAttempts = this.maxAttempts - this.attempts
+          
+          if (remainingAttempts > 0) {
+            this.errorMessage = `${PIN_CONFIG.MESSAGES.INCORRECT_PIN}. Tentatives restantes : ${remainingAttempts}`
+            // Réinitialiser les champs après 1 seconde
+            setTimeout(() => {
+              this.resetPin()
+            }, 1000)
+          } else {
+            // Trop de tentatives - verrouiller temporairement
+            this.isLocked = true
+            this.errorMessage = PIN_CONFIG.MESSAGES.TOO_MANY_ATTEMPTS
+            setTimeout(() => {
+              this.goBack()
+            }, 3000)
+          }
         }
+      } catch (error) {
+        console.error('Erreur lors de la vérification du PIN:', error)
+        this.errorMessage = 'Erreur de connexion. Veuillez réessayer.'
+        setTimeout(() => {
+          this.resetPin()
+        }, 1000)
       }
     },
     
@@ -173,10 +189,15 @@ export default {
       this.$router.push('/')
     },
     
-    forgotPin() {
-      // Afficher le code PIN actuel
-      const currentPin = getCurrentPin()
-      alert(PIN_CONFIG.MESSAGES.FORGOT_PIN.replace('{pin}', currentPin))
+    async forgotPin() {
+      try {
+        // Récupérer le code PIN depuis la base de données
+        const currentPin = await this.profileStore.getDefaultPin()
+        alert(PIN_CONFIG.MESSAGES.FORGOT_PIN.replace('{pin}', currentPin))
+      } catch (error) {
+        console.error('Erreur lors de la récupération du code PIN:', error)
+        alert('Code PIN par défaut : 1234')
+      }
     }
   }
 }
