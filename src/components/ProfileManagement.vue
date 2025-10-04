@@ -361,30 +361,6 @@ export default {
           `,
           createdAt: new Date('2024-01-25')
         },
-        {
-          id: 5,
-          name: 'Lucas',
-          description: 'Profil adolescent - Accès modéré',
-          type: 'teen',
-          isAdmin: false,
-          isChild: false,
-          isTeen: true,
-          isActive: true,
-          color: 'orange',
-          avatarClass: 'bg-gradient-to-br from-orange-500 to-red-500',
-          avatarContent: `
-            <div class="w-16 h-16 bg-white rounded-lg flex items-center justify-center">
-              <div class="w-12 h-12 bg-orange-300 rounded-lg flex items-center justify-center">
-                <div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center relative">
-                  <div class="absolute top-1 left-1 w-1.5 h-1.5 bg-white rounded-full"></div>
-                  <div class="absolute top-1 right-1 w-1.5 h-1.5 bg-white rounded-full"></div>
-                  <div class="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-3 h-0.5 bg-white rounded-full"></div>
-                </div>
-              </div>
-            </div>
-          `,
-          createdAt: new Date('2024-02-01')
-        }
       ]
     }
   },
@@ -420,14 +396,8 @@ export default {
       this.showModal = true
     },
     editProfile(profile) {
-      this.editingProfile = profile
-      this.form = {
-        name: profile.name,
-        description: profile.description,
-        type: profile.type,
-        color: profile.color
-      }
-      this.showModal = true
+      // Rediriger vers la page de modification de profil
+      this.$router.push(`/edit-profile/${profile.id}`)
     },
     saveProfile() {
       if (this.editingProfile) {

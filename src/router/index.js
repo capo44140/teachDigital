@@ -4,6 +4,8 @@ import Dashboard from '../components/Dashboard.vue'
 import ProfileManagement from '../components/ProfileManagement.vue'
 import PinLock from '../components/PinLock.vue'
 import PinSettings from '../components/PinSettings.vue'
+import EditProfilePage from '../components/EditProfilePage.vue'
+import ProfileSettings from '../components/ProfileSettings.vue'
 
 const routes = [
   {
@@ -26,6 +28,18 @@ const routes = [
     path: '/manage-profiles',
     name: 'ProfileManagement',
     component: ProfileManagement
+  },
+  {
+    path: '/edit-profile/:id',
+    name: 'EditProfilePage',
+    component: EditProfilePage,
+    props: true
+  },
+  {
+    path: '/profile-settings/:id',
+    name: 'ProfileSettings',
+    component: ProfileSettings,
+    props: true
   },
   {
     path: '/pin-settings',
