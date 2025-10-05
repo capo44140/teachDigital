@@ -11,6 +11,7 @@ import LessonScanner from '../components/LessonScanner.vue'
 import QuizGenerator from '../components/QuizGenerator.vue'
 import SecurityDashboard from '../components/SecurityDashboard.vue'
 import ProfileTest from '../components/ProfileTest.vue'
+import ParentQuizManagement from '../components/ParentQuizManagement.vue'
 
 const routes = [
   {
@@ -75,6 +76,11 @@ const routes = [
     path: '/profile-test',
     name: 'ProfileTest',
     component: ProfileTest
+  },
+  {
+    path: '/parent-quiz-management',
+    name: 'ParentQuizManagement',
+    component: ParentQuizManagement
   }
 ]
 

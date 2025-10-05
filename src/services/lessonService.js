@@ -194,6 +194,92 @@ export class LessonService {
   }
   
   /**
+   * Récupère les statistiques globales de tous les enfants
+   * @returns {Promise<Object>} Statistiques globales
+   */
+  static async getGlobalStats() {
+    try {
+      const stats = await sql`
+        SELECT 
+          COUNT(DISTINCT l.id) as total_lessons,
+          COUNT(DISTINCT qr.id) as total_quizzes_completed,
+          AVG(qr.percentage) as average_score
+        FROM lessons l
+        LEFT JOIN quiz_results qr ON l.id = qr.lesson_id
+        WHERE l.is_published = true
+      `;
+      
+      return stats[0];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des statistiques globales:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Récupère les statistiques détaillées d'un enfant avec historique
+   * @param {number} profileId - ID du profil
+   * @returns {Promise<Object>} Statistiques détaillées
+   */
+  static async getDetailedChildStats(profileId) {
+    try {
+      // Statistiques de base
+      const basicStats = await this.getProfileStats(profileId);
+      
+      // Leçons avec informations de quiz
+      const lessons = await this.getLessonsByProfile(profileId);
+      const enrichedLessons = await Promise.all(
+        lessons.map(async (lesson) => {
+          const quizResults = await this.getQuizResults(lesson.id, profileId);
+          const bestResult = quizResults.length > 0 
+            ? quizResults.reduce((best, current) => current.percentage > best.percentage ? current : best)
+            : null;
+          
+          return {
+            ...lesson,
+            quizCompleted: quizResults.length > 0,
+            bestScore: bestResult ? bestResult.percentage : 0,
+            totalAttempts: quizResults.length,
+            lastAttempt: quizResults.length > 0 ? quizResults[0].completed_at : null
+          };
+        })
+      );
+      
+      // Historique des quiz (derniers 20)
+      const quizHistory = [];
+      for (const lesson of lessons) {
+        const results = await this.getQuizResults(lesson.id, profileId);
+        results.forEach(result => {
+          quizHistory.push({
+            id: result.id,
+            lessonId: lesson.id,
+            lessonTitle: lesson.title,
+            score: result.percentage,
+            correctAnswers: result.score,
+            totalQuestions: result.total_questions,
+            completedAt: result.completed_at
+          });
+        });
+      }
+      
+      // Trier l'historique par date (plus récent en premier)
+      quizHistory.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+      
+      return {
+        ...basicStats,
+        lessons: enrichedLessons,
+        quizHistory: quizHistory.slice(0, 20), // Limiter à 20 derniers quiz
+        totalLessons: basicStats.total_lessons || 0,
+        totalQuizzes: basicStats.total_quizzes_completed || 0,
+        averageScore: basicStats.average_score || 0
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des statistiques détaillées:', error);
+      throw error;
+    }
+  }
+  
+  /**
    * Supprime une leçon
    * @param {number} lessonId - ID de la leçon
    * @param {number} profileId - ID du profil (pour vérification)
