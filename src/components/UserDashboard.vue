@@ -10,20 +10,26 @@
             </div>
             <div>
               <h1 class="text-xl font-bold text-gray-800">TeachDigital</h1>
-              <p class="text-sm text-gray-600">Connecté en tant que {{ currentProfile.name }}</p>
+              <p class="text-sm text-gray-600">Connecté en tant que {{ currentProfile?.name || 'Utilisateur' }}</p>
             </div>
           </div>
           
           <div class="flex items-center space-x-4">
             <!-- Profil actuel -->
-            <div class="flex items-center space-x-2">
+            <div v-if="currentProfile" class="flex items-center space-x-2">
               <div class="w-8 h-8 rounded-full flex items-center justify-center" :class="currentProfile.bgColor">
                 <span class="text-white text-sm font-semibold">{{ currentProfile.initial }}</span>
               </div>
               <span class="text-gray-700 font-medium">{{ currentProfile.name }}</span>
             </div>
+            <div v-else class="flex items-center space-x-2">
+              <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-400">
+                <span class="text-white text-sm font-semibold">?</span>
+              </div>
+              <span class="text-gray-700 font-medium">Chargement...</span>
+            </div>
             
-            <!-- Bouton changer de profil -->
+            <!-- Bouton changer de profil (seulement pour les profils non-admin) -->
             <button 
               @click="changeProfile"
               class="p-2 text-purple-600 border border-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
@@ -42,10 +48,10 @@
     <main class="container mx-auto px-6 py-12">
       <div class="text-center mb-12">
         <h2 class="text-4xl font-bold text-gray-800 mb-4">
-          Salut {{ currentProfile.name }} ! 👋
+          Salut {{ currentProfile?.name || 'Utilisateur' }} ! 👋
         </h2>
         <p class="text-xl text-gray-600">
-          {{ currentProfile.welcomeMessage }}
+          {{ currentProfile?.welcomeMessage || 'Bienvenue dans votre espace d\'apprentissage !' }}
         </p>
       </div>
 
@@ -53,7 +59,7 @@
       <div class="mb-12">
         <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">Mes cours disponibles</h3>
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="course in currentProfile.courses" :key="course.id" 
+          <div v-for="course in (currentProfile?.courses || [])" :key="course.id" 
                class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
             <div class="flex items-center mb-4">
               <div class="w-12 h-12 rounded-lg flex items-center justify-center" :class="course.color">
@@ -251,51 +257,69 @@ export default {
     }
   },
   async created() {
-    // Récupérer le profil depuis les paramètres d'URL ou le store
-    const profileId = this.$route.query.profile
-    if (profileId) {
-      await this.profileStore.loadProfile(profileId)
-      this.currentProfile = this.profileStore.currentProfile
-      // Charger les leçons du profil
-      await this.loadUserLessons(profileId)
-    } else {
-      // Profil par défaut pour les utilisateurs non-admin
-      this.currentProfile = {
-        id: 'user',
-        name: 'Utilisateur',
-        initial: 'U',
-        bgColor: 'bg-purple-500',
-        welcomeMessage: 'Découvre de nouveaux cours passionnants !',
-        courses: [
-          {
-            id: 1,
-            title: 'Programmation créative',
-            description: 'Apprends à créer des animations et des jeux',
-            duration: '2h',
-            color: 'bg-purple-500',
-            icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4'
-          },
-          {
-            id: 2,
-            title: 'Design numérique',
-            description: 'Crée des designs modernes et attrayants',
-            duration: '1h30',
-            color: 'bg-pink-500',
-            icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z'
-          },
-          {
-            id: 3,
-            title: 'Mathématiques amusantes',
-            description: 'Apprends les maths en jouant',
-            duration: '45 min',
-            color: 'bg-blue-500',
-            icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z'
-          }
-        ]
-      }
-    }
+    await this.loadCurrentProfile()
   },
   methods: {
+    async loadCurrentProfile() {
+      try {
+        // Récupérer le profil depuis les paramètres d'URL ou le store
+        const profileId = this.$route.query.profile
+        
+        if (profileId) {
+          await this.profileStore.loadProfile(profileId)
+          this.currentProfile = this.profileStore.currentProfile
+          // Charger les leçons du profil
+          await this.loadUserLessons(profileId)
+        } else {
+          // Profil par défaut pour les utilisateurs non-admin
+          this.currentProfile = {
+            id: 'user',
+            name: 'Utilisateur',
+            initial: 'U',
+            bgColor: 'bg-purple-500',
+            welcomeMessage: 'Découvre de nouveaux cours passionnants !',
+            courses: [
+              {
+                id: 1,
+                title: 'Programmation créative',
+                description: 'Apprends à créer des animations et des jeux',
+                duration: '2h',
+                color: 'bg-purple-500',
+                icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4'
+              },
+              {
+                id: 2,
+                title: 'Design numérique',
+                description: 'Crée des designs modernes et attrayants',
+                duration: '1h30',
+                color: 'bg-pink-500',
+                icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z'
+              },
+              {
+                id: 3,
+                title: 'Mathématiques amusantes',
+                description: 'Apprends les maths en jouant',
+                duration: '45 min',
+                color: 'bg-blue-500',
+                icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z'
+              }
+            ]
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement du profil:', error)
+        // Profil de fallback en cas d'erreur
+        this.currentProfile = {
+          id: 'fallback',
+          name: 'Utilisateur',
+          initial: 'U',
+          bgColor: 'bg-gray-500',
+          welcomeMessage: 'Bienvenue !',
+          courses: []
+        }
+      }
+    },
+    
     async loadUserLessons(profileId) {
       this.isLoadingLessons = true
       try {
@@ -309,6 +333,14 @@ export default {
     },
     
     changeProfile() {
+      // Vérifier que l'utilisateur n'est pas un profil admin
+      if (this.currentProfile && this.currentProfile.is_admin) {
+        console.warn('Tentative de changement de profil depuis un compte admin - redirection vers le dashboard admin')
+        this.$router.push({ path: '/dashboard', query: { profile: this.currentProfile.id } })
+        return
+      }
+      
+      // Pour les profils enfants/teens, rediriger vers le sélecteur de profil
       this.$router.push('/')
     },
     
