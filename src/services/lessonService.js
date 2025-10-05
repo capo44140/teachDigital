@@ -247,6 +247,48 @@ export class LessonService {
       throw error;
     }
   }
+
+  /**
+   * Récupère l'historique des quiz d'un enfant
+   * @param {number} profileId - ID du profil enfant
+   * @returns {Promise<Array>} Historique des quiz
+   */
+  static async getChildQuizHistory(profileId) {
+    try {
+      console.log('📚 [SERVICE] Récupération de l\'historique des quiz pour le profil:', profileId)
+      
+      const quizHistory = await sql`
+        SELECT 
+          qr.*,
+          l.title as lesson_title,
+          l.description as lesson_description,
+          l.subject as lesson_subject
+        FROM quiz_results qr
+        LEFT JOIN lessons l ON qr.lesson_id = l.id
+        WHERE qr.profile_id = ${profileId}
+        ORDER BY qr.completed_at DESC
+      `;
+      
+      console.log('📈 [SERVICE] Historique des quiz récupéré:', quizHistory?.length || 0)
+      
+      return quizHistory.map(quiz => ({
+        id: quiz.id,
+        lessonId: quiz.lesson_id,
+        lessonTitle: quiz.lesson_title,
+        lessonDescription: quiz.lesson_description,
+        lessonSubject: quiz.lesson_subject,
+        score: quiz.score,
+        totalQuestions: quiz.total_questions,
+        percentage: quiz.percentage,
+        completedAt: quiz.completed_at,
+        duration: quiz.duration || 0, // Durée en minutes
+        answers: quiz.answers
+      }));
+    } catch (error) {
+      console.error('❌ [SERVICE] Erreur lors de la récupération de l\'historique des quiz:', error);
+      throw error;
+    }
+  }
   
   /**
    * Récupère les statistiques globales de tous les enfants

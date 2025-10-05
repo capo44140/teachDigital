@@ -189,6 +189,15 @@
         <h3 class="text-2xl font-bold text-gray-800 mb-6">Paramètres rapides</h3>
         <div class="flex justify-center space-x-4">
           <button 
+            @click="viewProgress"
+            class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
+          >
+            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            Suivi des progrès
+          </button>
+          <button 
             @click="showSettings"
             class="px-6 py-3 bg-white text-purple-600 border border-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
           >
@@ -378,6 +387,15 @@ export default {
     showHelp() {
       console.log('Affichage de l\'aide')
       alert('Fonctionnalité d\'aide à implémenter')
+    },
+    viewProgress() {
+      console.log('Accès au suivi des progrès')
+      this.$router.push({
+        name: 'ProgressTracking',
+        query: {
+          childId: this.currentProfile.id
+        }
+      })
     }
   }
 }
