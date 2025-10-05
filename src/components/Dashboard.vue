@@ -15,6 +15,9 @@
           </div>
           
           <div class="flex items-center space-x-4">
+            <!-- Centre de notifications -->
+            <NotificationCenter />
+            
             <!-- Profil actuel -->
             <div v-if="currentProfile" class="flex items-center space-x-2">
               <div class="w-8 h-8 rounded-full flex items-center justify-center" :class="currentProfile.bgColor">
@@ -176,9 +179,13 @@
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
 import sessionService from '../services/sessionService.js'
+import NotificationCenter from './NotificationCenter.vue'
 
 export default {
   name: 'Dashboard',
+  components: {
+    NotificationCenter
+  },
   setup() {
     const profileStore = useProfileStore()
     return { profileStore }

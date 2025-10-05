@@ -5,6 +5,7 @@
 
 import sql from '../config/database.js'
 import { auditLogService } from './auditLogService.js'
+import { NotificationService } from './notificationService.js'
 
 export class LessonService {
   
@@ -139,6 +140,17 @@ export class LessonService {
           percentage: results.percentage
         }
       );
+      
+      // Récupérer les informations de la leçon pour la notification
+      const lesson = await this.getLessonById(lessonId);
+      
+      // Créer une notification de quiz terminé
+      await NotificationService.createQuizCompletionNotification(profileId, {
+        score: results.score,
+        totalQuestions: results.totalQuestions,
+        percentage: results.percentage,
+        lessonTitle: lesson?.title || 'Quiz'
+      });
       
       return result[0];
     } catch (error) {

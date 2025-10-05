@@ -128,6 +128,20 @@ export async function initializeDatabase() {
       )
     `;
     
+    // Créer la table des notifications
+    await sql`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        profile_id INTEGER REFERENCES profiles(id) ON DELETE CASCADE,
+        type VARCHAR(50) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        data JSONB,
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    
     // Créer les index pour améliorer les performances
     await sql`CREATE INDEX IF NOT EXISTS idx_profiles_type ON profiles(type)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_profiles_active ON profiles(is_active)`;
@@ -137,6 +151,9 @@ export async function initializeDatabase() {
     await sql`CREATE INDEX IF NOT EXISTS idx_lessons_published ON lessons(is_published)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_quiz_results_lesson ON quiz_results(lesson_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_quiz_results_profile ON quiz_results(profile_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_notifications_profile ON notifications(profile_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type)`;
     
     console.log('✅ Base de données initialisée avec succès');
     return true;
