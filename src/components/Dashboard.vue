@@ -70,9 +70,10 @@
       </div>
 
       <!-- Indicateur de chargement -->
-      <div v-if="!currentProfile" class="text-center py-12">
+      <div v-if="isLoadingProfile" class="text-center py-12">
         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         <p class="mt-4 text-gray-600">Chargement du profil...</p>
+        <p class="mt-2 text-sm text-gray-500">Veuillez patienter...</p>
       </div>
 
       <!-- Contenu spécifique au profil -->
@@ -297,58 +298,93 @@ export default {
       currentProfile: null
     }
   },
+  computed: {
+    isLoadingProfile() {
+      return !this.currentProfile
+    }
+  },
   async created() {
+    console.log('🚀 [DASHBOARD] Initialisation du dashboard')
     await this.loadCurrentProfile()
+    
     // S'assurer qu'un profil est toujours disponible
     if (!this.currentProfile) {
-      console.warn('Aucun profil trouvé, utilisation du profil parent par défaut')
+      console.warn('⚠️ [DASHBOARD] Aucun profil trouvé, utilisation du profil parent par défaut')
       this.currentProfile = this.profiles.parent
     }
     
-    // S'assurer que le profil parent a les droits d'admin
+    // S'assurer que le profil parent a les droits d'admin et ses propriétés par défaut
     if (this.currentProfile && (this.currentProfile.name === 'Parent' || this.currentProfile.id === '1' || this.currentProfile.id === 1)) {
       this.currentProfile.isAdmin = true
-      console.log('Droits admin confirmés pour le profil parent')
+      // S'assurer que le profil parent a ses propriétés par défaut
+      if (!this.currentProfile.welcomeMessage) {
+        this.currentProfile.welcomeMessage = 'Gérez l\'apprentissage de votre famille'
+      }
+      if (!this.currentProfile.courses) {
+        this.currentProfile.courses = this.profiles.parent.courses
+      }
+      console.log('✅ [DASHBOARD] Droits admin et propriétés par défaut confirmés pour le profil parent')
     }
     
-    console.log('Profil final dans created():', this.currentProfile)
+    console.log('🏁 [DASHBOARD] Profil final dans created():', this.currentProfile)
   },
   methods: {
     async loadCurrentProfile() {
       try {
+        console.log('👤 [DASHBOARD] Début du chargement du profil')
+        
         // Récupérer le profil depuis les paramètres d'URL ou localStorage
         const profileId = this.$route.query.profile
-        console.log('ProfileId depuis URL:', profileId)
+        console.log('🔍 [DASHBOARD] ProfileId depuis URL:', profileId)
+        console.log('🔍 [DASHBOARD] Paramètres de route complets:', this.$route.query)
         
         if (profileId) {
+          console.log('📚 [DASHBOARD] Chargement du profil depuis la base de données...')
           // Charger le profil depuis la base de données
           await this.profileStore.loadProfile(profileId)
           this.currentProfile = this.profileStore.currentProfile
-          console.log('Profil chargé depuis la base de données:', this.currentProfile)
+          console.log('📊 [DASHBOARD] Profil chargé depuis la base de données:', this.currentProfile)
           
           // Si le profil n'est pas trouvé, utiliser le profil parent par défaut
           if (!this.currentProfile) {
-            console.warn('Profil non trouvé dans la base de données, utilisation du profil parent par défaut')
+            console.warn('⚠️ [DASHBOARD] Profil non trouvé dans la base de données, utilisation du profil parent par défaut')
             this.currentProfile = this.profiles.parent
           }
         } else {
           // Profil par défaut
-          console.log('Aucun profileId, utilisation du profil parent par défaut')
+          console.log('🏠 [DASHBOARD] Aucun profileId, utilisation du profil parent par défaut')
           this.currentProfile = this.profiles.parent
         }
         
-        // S'assurer que le profil parent a les droits d'admin
+        // S'assurer que le profil parent a les droits d'admin et ses propriétés par défaut
         if (this.currentProfile && (this.currentProfile.name === 'Parent' || this.currentProfile.id === '1' || this.currentProfile.id === 1)) {
           this.currentProfile.isAdmin = true
-          console.log('Droits admin accordés au profil parent')
+          // S'assurer que le profil parent a ses propriétés par défaut
+          if (!this.currentProfile.welcomeMessage) {
+            this.currentProfile.welcomeMessage = 'Gérez l\'apprentissage de votre famille'
+          }
+          if (!this.currentProfile.courses) {
+            this.currentProfile.courses = this.profiles.parent.courses
+          }
+          console.log('✅ [DASHBOARD] Droits admin et propriétés par défaut accordés au profil parent')
         }
         
-        console.log('Profil final utilisé:', this.currentProfile)
+        console.log('🏁 [DASHBOARD] Profil final utilisé:', this.currentProfile)
+        console.log('🔍 [DASHBOARD] État du profil:', {
+          hasProfile: !!this.currentProfile,
+          profileName: this.currentProfile?.name,
+          profileId: this.currentProfile?.id,
+          isAdmin: this.currentProfile?.isAdmin,
+          hasWelcomeMessage: !!this.currentProfile?.welcomeMessage,
+          welcomeMessage: this.currentProfile?.welcomeMessage,
+          hasCourses: !!this.currentProfile?.courses,
+          coursesCount: this.currentProfile?.courses?.length || 0
+        })
       } catch (error) {
-        console.error('Erreur lors du chargement du profil:', error)
+        console.error('❌ [DASHBOARD] Erreur lors du chargement du profil:', error)
         // En cas d'erreur, utiliser le profil parent par défaut
         this.currentProfile = this.profiles.parent
-        console.log('Profil de fallback utilisé:', this.currentProfile)
+        console.log('🔄 [DASHBOARD] Profil de fallback utilisé:', this.currentProfile)
       }
     },
     
