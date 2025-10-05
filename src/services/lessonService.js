@@ -87,6 +87,27 @@ export class LessonService {
   }
   
   /**
+   * Récupère toutes les leçons disponibles (publiées)
+   * @returns {Promise<Array>} Liste de toutes les leçons publiées
+   */
+  static async getAllAvailableLessons() {
+    try {
+      const lessons = await sql`
+        SELECT id, title, description, subject, level, 
+               image_filename, created_at, updated_at, profile_id
+        FROM lessons 
+        WHERE is_published = true
+        ORDER BY created_at DESC
+      `;
+      
+      return lessons;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des leçons disponibles:', error);
+      throw error;
+    }
+  }
+  
+  /**
    * Récupère une leçon par son ID
    * @param {number} lessonId - ID de la leçon
    * @returns {Promise<Object>} Données de la leçon
@@ -117,6 +138,14 @@ export class LessonService {
    */
   static async saveQuizResults(lessonId, profileId, results) {
     try {
+      console.log('💾 [SERVICE] Début de la sauvegarde des résultats de quiz')
+      console.log('📊 [SERVICE] Paramètres reçus:', {
+        lessonId,
+        profileId,
+        results
+      })
+      
+      console.log('🗄️ [SERVICE] Exécution de la requête SQL...')
       const result = await sql`
         INSERT INTO quiz_results (
           lesson_id, profile_id, score, total_questions, 
@@ -129,7 +158,10 @@ export class LessonService {
         RETURNING *
       `;
       
+      console.log('✅ [SERVICE] Résultats insérés en base:', result[0])
+      
       // Enregistrer les résultats dans les logs d'audit
+      console.log('📝 [SERVICE] Enregistrement des logs d\'audit...')
       auditLogService.logDataAccess(
         profileId,
         'quiz_completion',
@@ -142,9 +174,12 @@ export class LessonService {
       );
       
       // Récupérer les informations de la leçon pour la notification
+      console.log('📚 [SERVICE] Récupération des informations de la leçon...')
       const lesson = await this.getLessonById(lessonId);
+      console.log('📖 [SERVICE] Leçon récupérée:', lesson?.title)
       
       // Créer une notification de quiz terminé
+      console.log('🔔 [SERVICE] Création de la notification...')
       await NotificationService.createQuizCompletionNotification(profileId, {
         score: results.score,
         totalQuestions: results.totalQuestions,
@@ -152,9 +187,17 @@ export class LessonService {
         lessonTitle: lesson?.title || 'Quiz'
       });
       
+      console.log('🎉 [SERVICE] Sauvegarde complète réussie!')
       return result[0];
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde des résultats:', error);
+      console.error('❌ [SERVICE] Erreur lors de la sauvegarde des résultats:', error);
+      console.error('🔍 [SERVICE] Détails de l\'erreur:', {
+        message: error.message,
+        stack: error.stack,
+        lessonId,
+        profileId,
+        results
+      });
       throw error;
     }
   }
@@ -238,10 +281,11 @@ export class LessonService {
       // Statistiques de base
       const basicStats = await this.getProfileStats(profileId);
       
-      // Leçons avec informations de quiz
-      const lessons = await this.getLessonsByProfile(profileId);
+      // Récupérer TOUTES les leçons disponibles (pas seulement celles créées par l'enfant)
+      const allLessons = await this.getAllAvailableLessons();
+      
       const enrichedLessons = await Promise.all(
-        lessons.map(async (lesson) => {
+        allLessons.map(async (lesson) => {
           const quizResults = await this.getQuizResults(lesson.id, profileId);
           const bestResult = quizResults.length > 0 
             ? quizResults.reduce((best, current) => current.percentage > best.percentage ? current : best)
@@ -259,7 +303,7 @@ export class LessonService {
       
       // Historique des quiz (derniers 20)
       const quizHistory = [];
-      for (const lesson of lessons) {
+      for (const lesson of allLessons) {
         const results = await this.getQuizResults(lesson.id, profileId);
         results.forEach(result => {
           quizHistory.push({

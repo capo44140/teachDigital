@@ -376,6 +376,7 @@ export default {
           name: 'QuizGenerator',
           query: {
             childId: this.selectedChild.id,
+            lessonId: savedLesson.id,
             quizData: JSON.stringify(quiz)
           }
         })
@@ -404,6 +405,7 @@ export default {
         name: 'QuizGenerator',
         query: {
           childId: this.selectedChild.id,
+          lessonId: this.generatedQuiz.lessonId,
           quizData: JSON.stringify(this.generatedQuiz)
         }
       })
