@@ -122,8 +122,8 @@ export default {
       if (profile.is_admin) {
         this.$router.push({ path: '/pin-lock', query: { profile: profile.id } })
       } else {
-        // Rediriger vers l'application principale pour les autres profils
-        this.$router.push({ path: '/dashboard', query: { profile: profile.id } })
+        // Rediriger vers le dashboard utilisateur pour les profils non-admin
+        this.$router.push({ path: '/user-dashboard', query: { profile: profile.id } })
       }
     },
     
