@@ -15,6 +15,7 @@ import SecurityTest from '../components/SecurityTest.vue'
 import ParentQuizManagement from '../components/ParentQuizManagement.vue'
 import TextQuizGenerator from '../components/TextQuizGenerator.vue'
 import { useProfileStore } from '../stores/profileStore.js'
+import sessionService from '../services/sessionService.js'
 
 const routes = [
   {
@@ -131,6 +132,16 @@ router.beforeEach(async (to, from, next) => {
     // Si l'accès est déverrouillé (après vérification du PIN), permettre l'accès
     if (isUnlocked) {
       console.log('Accès autorisé après vérification du PIN')
+      next()
+      return
+    }
+    
+    // Vérifier si une session valide existe
+    const session = sessionService.getValidSession()
+    if (session && sessionService.isUnlocked(profileId)) {
+      console.log('Accès autorisé par session valide pour:', session.profileName)
+      // Prolonger la session
+      sessionService.extendSession()
       next()
       return
     }

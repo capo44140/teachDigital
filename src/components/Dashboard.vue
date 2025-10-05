@@ -39,6 +39,17 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
               </svg>
             </button>
+            
+            <!-- Bouton de déconnexion -->
+            <button 
+              @click="logout"
+              class="p-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors"
+              title="Se déconnecter"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+              </svg>
+            </button>
           </div>
         </div>
       </nav>
@@ -164,6 +175,7 @@
 
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
+import sessionService from '../services/sessionService.js'
 
 export default {
   name: 'Dashboard',
@@ -380,6 +392,19 @@ export default {
           unlocked: 'true'
         } 
       })
+    },
+    
+    logout() {
+      // Effacer la session
+      sessionService.clearSession()
+      
+      // Nettoyer le localStorage
+      localStorage.removeItem('selectedProfile')
+      
+      // Rediriger vers la page de sélection de profil
+      this.$router.push('/')
+      
+      console.log('🚪 Déconnexion effectuée')
     }
   }
 }

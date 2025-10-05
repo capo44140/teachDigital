@@ -76,6 +76,7 @@
 <script>
 import { PIN_CONFIG, getCurrentPin, setPin } from '../config/pinConfig.js'
 import { useProfileStore } from '../stores/profileStore.js'
+import sessionService from '../services/sessionService.js'
 
 export default {
   name: 'PinLock',
@@ -135,10 +136,12 @@ export default {
         const isValid = await this.profileStore.verifyPin(profileId, enteredPin)
         
         if (isValid) {
-          // PIN correct - rediriger vers le dashboard
-          // Récupérer l'ID du profil depuis l'URL ou utiliser l'ID par défaut
+          // PIN correct - créer une session et rediriger vers le dashboard
           const profileId = this.$route.query.profile || '1'
-          console.log('PIN correct, redirection vers le dashboard avec profil:', profileId)
+          console.log('PIN correct, création de session pour le profil:', profileId)
+          
+          // Créer une session persistante
+          sessionService.createSession(profileId, this.profileName)
           
           // Sauvegarder le profil sélectionné dans localStorage
           localStorage.setItem('selectedProfile', JSON.stringify({ id: profileId, name: this.profileName }))

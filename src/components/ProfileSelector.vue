@@ -83,6 +83,7 @@
 
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
+import sessionService from '../services/sessionService.js'
 
 export default {
   name: 'ProfileSelector',
@@ -104,6 +105,20 @@ export default {
     }
   },
   async mounted() {
+    // Vérifier s'il y a une session valide
+    const session = sessionService.getValidSession()
+    if (session) {
+      console.log('Session valide trouvée, redirection automatique vers le dashboard')
+      this.$router.push({ 
+        path: '/dashboard', 
+        query: { 
+          profile: session.profileId,
+          unlocked: 'true'
+        } 
+      })
+      return
+    }
+    
     // Charger les profils depuis la base de données
     await this.profileStore.loadProfiles()
   },
