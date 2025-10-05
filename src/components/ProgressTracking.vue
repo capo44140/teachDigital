@@ -1,5 +1,13 @@
 <template>
   <div class="progress-tracking">
+    <!-- Bouton de retour -->
+    <div class="back-button-container">
+      <button @click="goBack" class="back-button">
+        <i class="fas fa-arrow-left"></i>
+        Retour
+      </button>
+    </div>
+
     <!-- En-tête avec informations de l'enfant -->
     <div class="child-header">
       <div class="child-info">
@@ -472,6 +480,16 @@ export default {
           recommendedQuiz: JSON.stringify(quiz)
         }
       })
+    },
+
+    goBack() {
+      // Retourner au dashboard utilisateur
+      this.$router.push({
+        name: 'UserDashboard',
+        query: {
+          profile: this.selectedChild.id
+        }
+      })
     }
   }
 }
@@ -484,6 +502,38 @@ export default {
   padding: 20px;
   background: #f8f9fa;
   min-height: 100vh;
+}
+
+.back-button-container {
+  margin-bottom: 20px;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  color: #6c757d;
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.back-button:hover {
+  background: #f8f9fa;
+  border-color: #667eea;
+  color: #667eea;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.back-button i {
+  font-size: 14px;
 }
 
 .child-header {

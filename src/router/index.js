@@ -15,6 +15,7 @@ import SecurityTest from '../components/SecurityTest.vue'
 import ParentQuizManagement from '../components/ParentQuizManagement.vue'
 import TextQuizGenerator from '../components/TextQuizGenerator.vue'
 import ProgressTracking from '../components/ProgressTracking.vue'
+import ParentProgressTracking from '../components/ParentProgressTracking.vue'
 import { useProfileStore } from '../stores/profileStore.js'
 import sessionService from '../services/sessionService.js'
 
@@ -114,6 +115,12 @@ const routes = [
     name: 'ProgressTracking',
     component: ProgressTracking,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/parent-progress-tracking',
+    name: 'ParentProgressTracking',
+    component: ParentProgressTracking,
+    meta: { requiresAdmin: true }
   }
 ]
 
