@@ -15,7 +15,7 @@ export class ProfileService {
         SELECT 
           id, name, description, type, is_admin, is_child, is_teen, 
           is_active, is_locked, color, avatar_class, avatar_content, 
-          image_url, image_data, image_type, created_at, updated_at
+          image_url, image_data, image_type, level, created_at, updated_at
         FROM profiles 
         ORDER BY created_at DESC
       `;
@@ -33,7 +33,7 @@ export class ProfileService {
         SELECT 
           id, name, description, type, is_admin, is_child, is_teen, 
           is_active, is_locked, color, avatar_class, avatar_content, 
-          image_url, image_data, image_type, created_at, updated_at
+          image_url, image_data, image_type, level, created_at, updated_at
         FROM profiles 
         WHERE id = ${id}
       `;
@@ -56,7 +56,8 @@ export class ProfileService {
         avatarContent,
         imageUrl,
         imageData,
-        imageType
+        imageType,
+        level
       } = profileData;
       
       // Déterminer les flags selon le type
@@ -90,12 +91,12 @@ export class ProfileService {
         INSERT INTO profiles (
           name, description, type, is_admin, is_child, is_teen, 
           is_active, is_locked, color, avatar_class, avatar_content,
-          image_url, image_data, image_type
+          image_url, image_data, image_type, level
         )
         VALUES (
           ${name}, ${encryptedDescription}, ${type}, ${isAdmin}, ${isChild}, ${isTeen},
           true, false, ${color}, ${avatarClass}, ${encryptedAvatarContent},
-          ${imageUrl}, ${encryptedImageData}, ${imageType}
+          ${imageUrl}, ${encryptedImageData}, ${imageType}, ${level}
         )
         RETURNING *
       `;
@@ -137,7 +138,8 @@ export class ProfileService {
         imageData,
         imageType,
         isActive,
-        isLocked
+        isLocked,
+        level
       } = profileData;
       
       // Déterminer les flags selon le type
@@ -162,6 +164,7 @@ export class ProfileService {
           image_type = ${imageType},
           is_active = ${isActive},
           is_locked = ${isLocked},
+          level = ${level},
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
         RETURNING *

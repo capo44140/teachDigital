@@ -83,6 +83,26 @@
           </div>
         </div>
 
+        <!-- Champ de niveau (seulement pour les enfants et adolescents) -->
+        <div v-if="profile.type !== 'admin'" class="mb-6">
+          <label class="block text-sm font-medium text-gray-500 mb-2">Niveau</label>
+          <select 
+            v-model="profile.level"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+          >
+            <option value="">Sélectionner un niveau</option>
+            <option value="CP">CP (6 ans)</option>
+            <option value="CE1">CE1 (7 ans)</option>
+            <option value="CE2">CE2 (8 ans)</option>
+            <option value="CM1">CM1 (9 ans)</option>
+            <option value="CM2">CM2 (10 ans)</option>
+            <option value="6ème">6ème (11 ans)</option>
+            <option value="5ème">5ème (12 ans)</option>
+            <option value="4ème">4ème (13 ans)</option>
+            <option value="3ème">3ème (14 ans)</option>
+          </select>
+        </div>
+
         <!-- Boutons d'action -->
         <div class="space-y-4">
           <!-- Bouton Enregistrer -->
@@ -243,6 +263,7 @@ export default {
         color: 'green',
         avatar_class: 'bg-gradient-to-br from-green-400 to-emerald-500',
         avatar_content: '',
+        level: '',
         created_at: null
       },
       availableAvatars: [
@@ -398,6 +419,7 @@ export default {
           description: this.profile.description,
           type: this.profile.type,
           color: this.profile.color,
+          level: this.profile.level,
           avatarClass: this.profile.avatar_class,
           avatarContent: this.profile.avatar_content
         })

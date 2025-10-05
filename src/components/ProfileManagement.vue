@@ -143,6 +143,9 @@
                     >
                       {{ profile.is_active ? 'Actif' : 'Inactif' }}
                     </span>
+                    <span v-if="profile.level" class="text-blue-400 text-sm font-medium">
+                      {{ profile.level }}
+                    </span>
                     <span class="text-gray-500 text-sm">
                       Créé le {{ formatDate(profile.created_at) }}
                     </span>
@@ -285,6 +288,25 @@
               </select>
             </div>
 
+            <div v-if="form.type !== 'admin'">
+              <label class="block text-sm font-medium text-gray-300 mb-2">Niveau</label>
+              <select 
+                v-model="form.level"
+                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Sélectionner un niveau</option>
+                <option value="CP">CP (6 ans)</option>
+                <option value="CE1">CE1 (7 ans)</option>
+                <option value="CE2">CE2 (8 ans)</option>
+                <option value="CM1">CM1 (9 ans)</option>
+                <option value="CM2">CM2 (10 ans)</option>
+                <option value="6ème">6ème (11 ans)</option>
+                <option value="5ème">5ème (12 ans)</option>
+                <option value="4ème">4ème (13 ans)</option>
+                <option value="3ème">3ème (14 ans)</option>
+              </select>
+            </div>
+
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">Couleur du profil</label>
               <div class="grid grid-cols-4 gap-2">
@@ -347,7 +369,8 @@ export default {
         name: '',
         description: '',
         type: 'child',
-        color: 'purple'
+        color: 'purple',
+        level: ''
       },
       profileColors: [
         { name: 'purple', class: 'bg-gradient-to-br from-purple-500 to-pink-500' },
@@ -401,7 +424,8 @@ export default {
         name: '',
         description: '',
         type: 'child',
-        color: 'purple'
+        color: 'purple',
+        level: ''
       }
       this.showModal = true
     },
@@ -418,6 +442,7 @@ export default {
             description: this.form.description,
             type: this.form.type,
             color: this.form.color,
+            level: this.form.level,
             avatarClass: this.getAvatarClass(this.form.color),
             avatarContent: this.getAvatarContent(this.form.type)
           })
@@ -428,6 +453,7 @@ export default {
             description: this.form.description,
             type: this.form.type,
             color: this.form.color,
+            level: this.form.level,
             avatarClass: this.getAvatarClass(this.form.color),
             avatarContent: this.getAvatarContent(this.form.type)
           })
