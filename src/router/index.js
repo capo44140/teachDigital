@@ -12,6 +12,7 @@ import QuizGenerator from '../components/QuizGenerator.vue'
 import SecurityDashboard from '../components/SecurityDashboard.vue'
 import ProfileTest from '../components/ProfileTest.vue'
 import ParentQuizManagement from '../components/ParentQuizManagement.vue'
+import TextQuizGenerator from '../components/TextQuizGenerator.vue'
 
 const routes = [
   {
@@ -81,6 +82,11 @@ const routes = [
     path: '/parent-quiz-management',
     name: 'ParentQuizManagement',
     component: ParentQuizManagement
+  },
+  {
+    path: '/text-quiz-generator',
+    name: 'TextQuizGenerator',
+    component: TextQuizGenerator
   }
 ]
 

@@ -117,6 +117,17 @@
             <span>Gérer les interrogations</span>
           </button>
           
+          <button 
+            @click="openTextQuizGenerator"
+            class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2"
+            title="Créer un quiz à partir de texte"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            <span>Quiz à partir de texte</span>
+          </button>
+          
           <button class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
             Voir les statistiques
           </button>
@@ -256,6 +267,9 @@ export default {
     },
     openQuizManagement() {
       this.$router.push('/parent-quiz-management')
+    },
+    openTextQuizGenerator() {
+      this.$router.push('/text-quiz-generator')
     }
   }
 }

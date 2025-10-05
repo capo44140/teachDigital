@@ -209,10 +209,10 @@ class AIService {
         throw new Error('Réponse Gemini incomplète')
       }
       
-      const text = data.candidates[0].content.parts[0].text
+      const responseText = data.candidates[0].content.parts[0].text
       
       // Vérifier si la réponse est tronquée (se termine par des caractères incomplets)
-      if (text.length > 0 && !text.trim().endsWith('}') && !text.trim().endsWith(']')) {
+      if (responseText.length > 0 && !responseText.trim().endsWith('}') && !responseText.trim().endsWith(']')) {
         console.warn('Réponse Gemini potentiellement tronquée, tentative de retry...')
         if (retryCount < maxRetries) {
           await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))) // Délai progressif
@@ -221,7 +221,7 @@ class AIService {
       }
       
       // Nettoyer le texte pour extraire le JSON
-      let jsonText = text.trim()
+      let jsonText = responseText.trim()
       
       // Supprimer les backticks et markdown si présents
       if (jsonText.startsWith('```json')) {
@@ -256,7 +256,7 @@ class AIService {
         return parsed
       } catch (parseError) {
         console.error('Erreur de parsing JSON Gemini:', parseError)
-        console.error('Texte reçu:', text)
+        console.error('Texte reçu:', responseText)
         console.error('JSON nettoyé:', jsonText)
         
         // Tentative de retry si c'est un problème de parsing
@@ -314,10 +314,10 @@ class AIService {
     }
 
     const data = await response.json()
-    const text = data.choices[0].message.content
+    const responseText = data.choices[0].message.content
     
     // Nettoyer le texte pour extraire le JSON
-    let jsonText = text.trim()
+    let jsonText = responseText.trim()
     
     // Supprimer les backticks et markdown si présents
     if (jsonText.startsWith('```json')) {
@@ -336,7 +336,7 @@ class AIService {
       return JSON.parse(jsonText)
     } catch (parseError) {
       console.error('Erreur de parsing JSON Groq:', parseError)
-      console.error('Texte reçu:', text)
+      console.error('Texte reçu:', responseText)
       throw new Error('Impossible de parser la réponse de Groq')
     }
   }
@@ -464,10 +464,10 @@ class AIService {
         throw new Error('Réponse Gemini incomplète')
       }
       
-      const text = data.candidates[0].content.parts[0].text
+      const responseText = data.candidates[0].content.parts[0].text
       
       // Nettoyer le texte pour extraire le JSON
-      let jsonText = text.trim()
+      let jsonText = responseText.trim()
       
       // Supprimer les backticks et markdown si présents
       if (jsonText.startsWith('```json')) {
@@ -538,7 +538,7 @@ class AIService {
         
       } catch (parseError) {
         console.error('Erreur de parsing JSON Gemini:', parseError)
-        console.error('Texte reçu:', text)
+        console.error('Texte reçu:', responseText)
         console.error('JSON nettoyé:', jsonText)
         
         // Tentative de retry si c'est un problème de parsing
@@ -616,10 +616,10 @@ class AIService {
     }
 
     const data = await response.json()
-    const text = data.choices[0].message.content
+    const responseText = data.choices[0].message.content
     
     // Nettoyer le texte pour extraire le JSON
-    let jsonText = text.trim()
+    let jsonText = responseText.trim()
     
     // Supprimer les backticks et markdown si présents
     if (jsonText.startsWith('```json')) {
@@ -638,7 +638,7 @@ class AIService {
       return JSON.parse(jsonText)
     } catch (parseError) {
       console.error('Erreur de parsing JSON Groq:', parseError)
-      console.error('Texte reçu:', text)
+      console.error('Texte reçu:', responseText)
       throw new Error('Impossible de parser la réponse de Groq')
     }
   }
@@ -736,46 +736,341 @@ class AIService {
    * Génère un quiz personnalisé basé sur un texte
    * @param {string} text - Texte de la leçon
    * @param {Object} childProfile - Profil de l'enfant
+   * @param {Object} options - Options de génération
    * @returns {Promise<Object>} Quiz généré
    */
-  async generateQuizFromText(text, childProfile) {
-    if (!this.isValidApiKey()) {
-      return this.getDemoQuiz(childProfile)
+  async generateQuizFromText(inputText, childProfile, options = {}) {
+    if (!this.hasValidApiKey()) {
+      return this.getDemoQuizFromText(childProfile, options)
     }
 
+    // Essayer d'abord OpenAI
+    if (this.isValidOpenAIKey()) {
+      try {
+        const result = await this.generateQuizFromTextWithOpenAI(inputText, childProfile, options)
+        return result
+      } catch (error) {
+        console.warn('Erreur OpenAI, tentative avec Gemini:', error.message)
+      }
+    }
+
+    // Essayer Gemini si OpenAI échoue
+    if (this.isValidGeminiKey()) {
+      try {
+        const result = await this.generateQuizFromTextWithGemini(inputText, childProfile, options)
+        return result
+      } catch (error) {
+        console.warn('Erreur Gemini, tentative avec Groq:', error.message)
+      }
+    }
+
+    // Essayer Groq si Gemini échoue
+    if (this.isValidGroqKey()) {
+      try {
+        const result = await this.generateQuizFromTextWithGroq(inputText, childProfile, options)
+        return result
+      } catch (error) {
+        console.warn('Erreur Groq:', error.message)
+      }
+    }
+
+    // Fallback vers le mode démo
+    return this.getDemoQuizFromText(childProfile, options)
+  }
+
+  async generateQuizFromTextWithOpenAI(inputText, childProfile, options) {
+    const response = await fetch(`${this.openaiBaseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.openaiApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-5',
+        messages: [
+          {
+            role: 'system',
+            content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. 
+            Créez des questions claires, éducatives et adaptées au niveau de l'enfant.
+            L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}.
+            Générez exactement ${options.questionCount || 5} questions avec 4 options chacune.
+            Niveau de difficulté: ${options.difficulty || 'moyen'}.`
+          },
+          {
+            role: 'user',
+            content: `Basé sur ce texte de leçon: "${inputText}", 
+            générez un quiz adapté à l'enfant.
+            Format de réponse: JSON avec structure {title, description, questions: [{question, options: [], correctAnswer, explanation}]}`
+          }
+        ],
+        max_tokens: 2000
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`Erreur OpenAI: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return JSON.parse(data.choices[0].message.content)
+  }
+
+  async generateQuizFromTextWithGemini(inputText, childProfile, options, retryCount = 0) {
+    const maxRetries = 2
+    
     try {
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      const response = await fetch(`${this.geminiBaseUrl}/models/gemini-2.5-flash:generateContent?key=${this.geminiApiKey}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-5',
-          messages: [
-            {
-              role: 'system',
-              content: `Créez un quiz éducatif adapté à l'âge de l'enfant (${childProfile.age || 8} ans).
-              Format de réponse: JSON avec {title, description, questions: [{question, options: [], correctAnswer, explanation}]}`
-            },
-            {
-              role: 'user',
-              content: `Créez un quiz de 5 questions basé sur ce texte: ${text}`
-            }
-          ],
-          max_tokens: 1500
+          contents: [{
+            parts: [{
+              text: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants.
+              
+              L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}.
+              Générez exactement ${options.questionCount || 5} questions avec 4 options chacune.
+              Niveau de difficulté: ${options.difficulty || 'moyen'}.
+              
+              Basé sur ce texte de leçon: "${inputText}", 
+              générez un quiz adapté à l'enfant.
+              
+              IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. 
+              Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
+            }]
+          }],
+          generationConfig: {
+            maxOutputTokens: 3000,
+            temperature: 0.7,
+            topP: 0.8,
+            topK: 40
+          }
         })
       })
 
       if (!response.ok) {
-        return this.getDemoQuiz(childProfile)
+        throw new Error(`Erreur Gemini: ${response.status} - ${response.statusText}`)
       }
 
       const data = await response.json()
-      return JSON.parse(data.choices[0].message.content)
+      
+      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+        throw new Error('Réponse Gemini incomplète')
+      }
+      
+      const responseText = data.candidates[0].content.parts[0].text
+      
+      // Nettoyer le texte pour extraire le JSON
+      let jsonText = responseText.trim()
+      
+      // Supprimer les backticks et markdown si présents
+      if (jsonText.startsWith('```json')) {
+        jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+      } else if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+      }
+      
+      // Essayer de trouver le JSON dans le texte
+      const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        jsonText = jsonMatch[0]
+      }
+      
+      try {
+        const parsed = JSON.parse(jsonText)
+        
+        // Vérifier que l'objet a les propriétés attendues
+        if (!parsed.title || !parsed.questions || !Array.isArray(parsed.questions)) {
+          throw new Error('Structure JSON invalide pour le quiz')
+        }
+        
+        return parsed
+        
+      } catch (parseError) {
+        console.error('Erreur de parsing JSON Gemini:', parseError)
+        
+        // Tentative de retry si c'est un problème de parsing
+        if (retryCount < maxRetries) {
+          console.log(`Tentative de retry ${retryCount + 1}/${maxRetries}...`)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
+          return this.generateQuizFromTextWithGemini(inputText, childProfile, options, retryCount + 1)
+        }
+        
+        // Fallback vers le quiz démo si tout échoue
+        console.warn('Fallback vers le quiz démo après échec de Gemini')
+        return this.getDemoQuizFromText(childProfile, options)
+      }
     } catch (error) {
-      return this.getDemoQuiz(childProfile)
+      if (retryCount < maxRetries) {
+        console.log(`Erreur réseau, tentative de retry ${retryCount + 1}/${maxRetries}...`)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
+        return this.generateQuizFromTextWithGemini(inputText, childProfile, options, retryCount + 1)
+      }
+      
+      // Fallback vers le quiz démo en cas d'erreur
+      console.warn('Fallback vers le quiz démo après erreur:', error.message)
+      return this.getDemoQuizFromText(childProfile, options)
     }
+  }
+
+  async generateQuizFromTextWithGroq(inputText, childProfile, options) {
+    const response = await fetch(`${this.groqBaseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.groqApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. 
+            Créez des questions claires, éducatives et adaptées au niveau de l'enfant.
+            L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}.
+            Générez exactement ${options.questionCount || 5} questions avec 4 options chacune.
+            Niveau de difficulté: ${options.difficulty || 'moyen'}.`
+          },
+          {
+            role: 'user',
+            content: `Basé sur ce texte de leçon: "${inputText}", 
+            générez un quiz adapté à l'enfant.
+            IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. 
+            Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.7
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`Erreur Groq: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const responseText = data.choices[0].message.content
+    
+    // Nettoyer le texte pour extraire le JSON
+    let jsonText = responseText.trim()
+    
+    // Supprimer les backticks et markdown si présents
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+    }
+    
+    // Essayer de trouver le JSON dans le texte
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      jsonText = jsonMatch[0]
+    }
+    
+    try {
+      return JSON.parse(jsonText)
+    } catch (parseError) {
+      console.error('Erreur de parsing JSON Groq:', parseError)
+      console.error('Texte reçu:', responseText)
+      throw new Error('Impossible de parser la réponse de Groq')
+    }
+  }
+
+  /**
+   * Quiz démo pour la génération à partir de texte
+   * @param {Object} childProfile - Profil de l'enfant
+   * @param {Object} options - Options de génération
+   * @returns {Object} Quiz simulé
+   */
+  getDemoQuizFromText(childProfile, options) {
+    const questionCount = parseInt(options.questionCount) || 5
+    const difficulty = options.difficulty || 'moyen'
+    
+    // Quiz adapté selon le niveau de difficulté
+    const questions = this.getDemoQuestionsByDifficulty(difficulty, questionCount)
+    
+    return {
+      title: options.title || 'Quiz généré à partir de texte',
+      description: `Quiz adapté au niveau ${difficulty} - ${questionCount} questions`,
+      subject: options.subject || 'Général',
+      level: options.level || 'Primaire',
+      questions: questions
+    }
+  }
+
+  /**
+   * Génère des questions démo selon la difficulté
+   * @param {string} difficulty - Niveau de difficulté
+   * @param {number} count - Nombre de questions
+   * @returns {Array} Questions générées
+   */
+  getDemoQuestionsByDifficulty(difficulty, count) {
+    const questionSets = {
+      facile: [
+        {
+          question: 'Quelle est la couleur du ciel par temps clair ?',
+          options: ['Rouge', 'Bleu', 'Vert', 'Jaune'],
+          correctAnswer: 1,
+          explanation: 'Le ciel est bleu par temps clair car la lumière du soleil se disperse dans l\'atmosphère.'
+        },
+        {
+          question: 'Combien y a-t-il de jours dans une semaine ?',
+          options: ['5', '6', '7', '8'],
+          correctAnswer: 2,
+          explanation: 'Une semaine compte 7 jours : lundi, mardi, mercredi, jeudi, vendredi, samedi et dimanche.'
+        },
+        {
+          question: 'Quel animal dit "miaou" ?',
+          options: ['Le chien', 'Le chat', 'L\'oiseau', 'Le poisson'],
+          correctAnswer: 1,
+          explanation: 'Le chat fait "miaou" pour communiquer.'
+        }
+      ],
+      moyen: [
+        {
+          question: 'Quelle est la capitale de la France ?',
+          options: ['Lyon', 'Marseille', 'Paris', 'Toulouse'],
+          correctAnswer: 2,
+          explanation: 'Paris est la capitale de la France depuis le Moyen Âge.'
+        },
+        {
+          question: 'Combien font 15 + 25 ?',
+          options: ['35', '40', '45', '50'],
+          correctAnswer: 1,
+          explanation: '15 + 25 = 40'
+        },
+        {
+          question: 'Quel est le plus grand océan du monde ?',
+          options: ['Atlantique', 'Pacifique', 'Indien', 'Arctique'],
+          correctAnswer: 1,
+          explanation: 'L\'océan Pacifique est le plus grand océan du monde.'
+        }
+      ],
+      difficile: [
+        {
+          question: 'Quelle est la formule chimique de l\'eau ?',
+          options: ['H2O', 'CO2', 'NaCl', 'O2'],
+          correctAnswer: 0,
+          explanation: 'L\'eau a pour formule chimique H2O (2 atomes d\'hydrogène et 1 atome d\'oxygène).'
+        },
+        {
+          question: 'Qui a peint la Joconde ?',
+          options: ['Michel-Ange', 'Léonard de Vinci', 'Picasso', 'Van Gogh'],
+          correctAnswer: 1,
+          explanation: 'Léonard de Vinci a peint la Joconde au XVIe siècle.'
+        },
+        {
+          question: 'Quelle est la vitesse de la lumière ?',
+          options: ['300 000 km/s', '150 000 km/s', '600 000 km/s', '900 000 km/s'],
+          correctAnswer: 0,
+          explanation: 'La vitesse de la lumière dans le vide est d\'environ 300 000 km/s.'
+        }
+      ]
+    }
+
+    const selectedQuestions = questionSets[difficulty] || questionSets.moyen
+    return selectedQuestions.slice(0, count)
   }
 }
 
