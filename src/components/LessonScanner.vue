@@ -121,6 +121,19 @@
           </div>
         </div>
 
+        <!-- Avertissements de validation -->
+        <div v-if="validationWarnings.length > 0" class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div class="flex items-center mb-2">
+            <svg class="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            <h4 class="text-sm font-medium text-yellow-800">Avertissements de validation</h4>
+          </div>
+          <ul class="text-sm text-yellow-700 space-y-1">
+            <li v-for="warning in validationWarnings" :key="warning">• {{ warning }}</li>
+          </ul>
+        </div>
+
         <!-- Boutons d'action -->
         <div class="flex justify-center space-x-4 mt-8">
           <button 
@@ -179,6 +192,10 @@
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
 import { AIService } from '../services/aiService.js'
+import { rateLimitService } from '../services/rateLimitService.js'
+import { ImageValidationService } from '../services/imageValidationService.js'
+import { auditLogService } from '../services/auditLogService.js'
+import { LessonService } from '../services/lessonService.js'
 
 export default {
   name: 'LessonScanner',
@@ -189,13 +206,17 @@ export default {
       isDragOver: false,
       isProcessing: false,
       selectedChild: null,
-      generatedQuiz: null
+      generatedQuiz: null,
+      imageValidator: new ImageValidationService(),
+      validationErrors: [],
+      validationWarnings: []
     }
   },
   computed: {
     childProfiles() {
       const store = useProfileStore()
-      return store.childProfiles || []
+      // Utiliser le nouveau getter pour tous les profils non-administrateurs
+      return store.nonAdminProfiles || []
     }
   },
   async created() {
@@ -227,20 +248,57 @@ export default {
       }
     },
     
-    handleFile(file) {
+    async handleFile(file) {
       if (!file.type.startsWith('image/')) {
         alert('Veuillez sélectionner un fichier image')
         return
       }
       
-      this.selectedFile = file
-      
-      // Créer un aperçu
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        this.filePreview = e.target.result
+      // Valider l'image côté serveur
+      try {
+        const validation = await this.imageValidator.validateImage(file)
+        
+        if (!validation.valid) {
+          this.validationErrors = validation.errors
+          this.validationWarnings = validation.warnings
+          alert(`Erreur de validation: ${validation.errors.join(', ')}`)
+          return
+        }
+        
+        this.validationErrors = []
+        this.validationWarnings = validation.warnings
+        
+        // Enregistrer l'upload d'image dans les logs d'audit
+        auditLogService.logDataAccess(
+          this.selectedChild?.id || 'unknown',
+          'image_upload',
+          'IMAGE_UPLOADED',
+          {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            validation: validation.metadata
+          }
+        )
+        
+        this.selectedFile = file
+        
+        // Créer un aperçu
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          this.filePreview = e.target.result
+        }
+        reader.readAsDataURL(file)
+        
+      } catch (error) {
+        console.error('Erreur lors de la validation de l\'image:', error)
+        auditLogService.logSystemError(
+          'Image validation failed',
+          'LessonScanner',
+          { error: error.message, fileName: file.name }
+        )
+        alert('Erreur lors de la validation de l\'image')
       }
-      reader.readAsDataURL(file)
     },
     
     removeFile() {
@@ -264,9 +322,54 @@ export default {
       this.generatedQuiz = null
       
       try {
+        // Vérifier le rate limiting
+        const rateLimitCheck = rateLimitService.checkRateLimit(this.selectedChild.id, 'openai')
+        if (!rateLimitCheck.allowed) {
+          alert(`Limite de requêtes atteinte. Réessayez dans ${rateLimitCheck.retryAfter} secondes.`)
+          return
+        }
+        
+        // Enregistrer la requête dans le rate limiting
+        rateLimitService.recordRequest(this.selectedChild.id, 'openai')
+        
+        // Enregistrer le début de l'analyse dans les logs d'audit
+        auditLogService.logApiUsage(
+          this.selectedChild.id,
+          'openai',
+          true,
+          {
+            action: 'QUIZ_GENERATION_START',
+            fileName: this.selectedFile.name,
+            fileSize: this.selectedFile.size
+          }
+        )
+        
         // Simuler l'analyse de l'image et la génération du quiz
-        const quiz = await AIService.generateQuizFromImage(this.selectedFile, this.selectedChild)
+        const aiService = new AIService()
+        const quiz = await aiService.generateQuizFromImage(this.selectedFile, this.selectedChild)
         this.generatedQuiz = quiz
+        
+        // Sauvegarder la leçon en base de données
+        const savedLesson = await LessonService.saveLesson(
+          quiz, 
+          this.selectedChild.id, 
+          this.selectedFile
+        )
+        
+        // Ajouter l'ID de la leçon sauvegardée au quiz
+        this.generatedQuiz.lessonId = savedLesson.id
+        
+        // Enregistrer le succès de l'analyse
+        auditLogService.logApiUsage(
+          this.selectedChild.id,
+          'openai',
+          true,
+          {
+            action: 'QUIZ_GENERATION_SUCCESS',
+            quizQuestions: quiz.questions?.length || 0,
+            lessonId: savedLesson.id
+          }
+        )
         
         // Rediriger vers le quiz
         this.$router.push({
@@ -278,6 +381,18 @@ export default {
         })
       } catch (error) {
         console.error('Erreur lors de la génération du quiz:', error)
+        
+        // Enregistrer l'échec de l'analyse
+        auditLogService.logApiUsage(
+          this.selectedChild.id,
+          'openai',
+          false,
+          {
+            action: 'QUIZ_GENERATION_FAILED',
+            error: error.message
+          }
+        )
+        
         alert('Erreur lors de la génération du quiz. Veuillez réessayer.')
       } finally {
         this.isProcessing = false

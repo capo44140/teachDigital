@@ -15,7 +15,11 @@
     "check-pins": "node scripts/migrate-pins.js check",
     "test-pin-security": "node scripts/test-pin-security.js",
     "migrate-db": "node scripts/migrate-database.js migrate",
-    "check-db": "node scripts/migrate-database.js check"
+    "check-db": "node scripts/migrate-database.js check",
+    "migrate-teens": "node scripts/migrate-teen-profiles.js migrate",
+    "check-profiles": "node scripts/migrate-teen-profiles.js check",
+    "create-teen": "node scripts/migrate-teen-profiles.js create",
+    "migrate-lessons": "node scripts/migrate-lessons.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

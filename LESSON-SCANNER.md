@@ -41,13 +41,19 @@ Le scanner de leçons permet aux parents de :
 - Parfait pour tester l'interface
 
 ### Mode IA avancé
-- Ajoutez votre clé API OpenAI dans `.env` :
+- **OpenAI** : Ajoutez votre clé API OpenAI dans `.env` :
 ```
 VITE_OPENAI_API_KEY=sk-your-openai-api-key-here
 ```
-- Obtient une clé sur : https://platform.openai.com/api-keys
-- Analyse réelle des images avec GPT-4 Vision
+- **Gemini (Gratuit)** : Ajoutez votre clé API Gemini dans `.env` :
+```
+VITE_GEMINI_API_KEY=your-gemini-api-key-here
+```
+- Obtient une clé OpenAI sur : https://platform.openai.com/api-keys
+- Obtient une clé Gemini sur : https://makersuite.google.com/app/apikey
+- Analyse réelle des images avec IA
 - Génération personnalisée des quiz
+- **Fallback automatique** : Si OpenAI échoue, utilise Gemini
 
 ## Composants créés
 

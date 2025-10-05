@@ -209,6 +209,7 @@
 
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
+import { LessonService } from '../services/lessonService.js'
 
 export default {
   name: 'QuizGenerator',
@@ -239,12 +240,26 @@ export default {
     this.initializeQuiz()
   },
   methods: {
-    initializeQuiz() {
+    async initializeQuiz() {
       // Récupérer les données du quiz depuis les paramètres de route
       const quizData = this.$route.query.quizData
       const childId = this.$route.query.childId
+      const lessonId = this.$route.query.lessonId
       
-      if (quizData) {
+      if (lessonId && childId) {
+        // Charger une leçon depuis la base de données
+        try {
+          const lesson = await LessonService.getLessonById(lessonId)
+          this.quiz = lesson.quiz_data
+          this.quiz.lessonId = lesson.id
+          this.loadChildProfile(childId)
+        } catch (error) {
+          console.error('Erreur lors du chargement de la leçon:', error)
+          this.goBack()
+          return
+        }
+      } else if (quizData) {
+        // Charger les données du quiz depuis les paramètres (mode génération)
         try {
           this.quiz = JSON.parse(quizData)
         } catch (error) {
@@ -299,7 +314,7 @@ export default {
       }
     },
     
-    finishQuiz() {
+    async finishQuiz() {
       // Calculer le score
       this.correctAnswers = 0
       this.quiz.questions.forEach((question, index) => {
@@ -307,6 +322,28 @@ export default {
           this.correctAnswers++
         }
       })
+      
+      // Sauvegarder les résultats en base de données si une leçon est associée
+      if (this.quiz.lessonId && this.selectedChild) {
+        try {
+          const results = {
+            score: this.correctAnswers,
+            totalQuestions: this.quiz.questions.length,
+            percentage: Math.round((this.correctAnswers / this.quiz.questions.length) * 100),
+            answers: this.userAnswers
+          }
+          
+          await LessonService.saveQuizResults(
+            this.quiz.lessonId,
+            this.selectedChild.id,
+            results
+          )
+          
+          console.log('Résultats du quiz sauvegardés:', results)
+        } catch (error) {
+          console.error('Erreur lors de la sauvegarde des résultats:', error)
+        }
+      }
       
       this.quizCompleted = true
     },

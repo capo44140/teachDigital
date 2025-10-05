@@ -9,6 +9,8 @@ import EditProfilePage from '../components/EditProfilePage.vue'
 import ProfileSettings from '../components/ProfileSettings.vue'
 import LessonScanner from '../components/LessonScanner.vue'
 import QuizGenerator from '../components/QuizGenerator.vue'
+import SecurityDashboard from '../components/SecurityDashboard.vue'
+import ProfileTest from '../components/ProfileTest.vue'
 
 const routes = [
   {
@@ -63,6 +65,16 @@ const routes = [
     path: '/quiz-generator',
     name: 'QuizGenerator',
     component: QuizGenerator
+  },
+  {
+    path: '/security-dashboard',
+    name: 'SecurityDashboard',
+    component: SecurityDashboard
+  },
+  {
+    path: '/profile-test',
+    name: 'ProfileTest',
+    component: ProfileTest
   }
 ]
 

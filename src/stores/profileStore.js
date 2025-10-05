@@ -29,6 +29,11 @@ export const useProfileStore = defineStore('profile', {
     // Récupérer les profils administrateurs
     adminProfiles: (state) => state.profiles.filter(profile => profile.is_admin),
     
+    // Récupérer tous les profils non-administrateurs (enfants et adolescents)
+    nonAdminProfiles: (state) => state.profiles.filter(profile => 
+      profile.is_active && !profile.is_admin && (profile.is_child || profile.is_teen)
+    ),
+    
     // Récupérer un profil par ID
     getProfileById: (state) => (id) => state.profiles.find(profile => profile.id === id),
     

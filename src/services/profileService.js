@@ -1,8 +1,12 @@
 import sql from '../config/database.js';
 import { HashService } from './hashService.js';
+import { EncryptionService } from './encryptionService.js';
+import { auditLogService } from './auditLogService.js';
 
 // Service pour la gestion des profils
 export class ProfileService {
+  
+  static encryptionService = new EncryptionService();
   
   // Récupérer tous les profils
   static async getAllProfiles() {
@@ -41,7 +45,7 @@ export class ProfileService {
   }
   
   // Créer un nouveau profil
-  static async createProfile(profileData) {
+  static async createProfile(profileData, masterPassword = null) {
     try {
       const {
         name,
@@ -60,6 +64,28 @@ export class ProfileService {
       const isChild = type === 'child';
       const isTeen = type === 'teen';
       
+      // Chiffrer les données sensibles si un mot de passe maître est fourni
+      let encryptedDescription = description;
+      let encryptedAvatarContent = avatarContent;
+      let encryptedImageData = imageData;
+      
+      if (masterPassword) {
+        try {
+          if (description) {
+            encryptedDescription = await this.encryptionService.encryptWithPassword(description, masterPassword);
+          }
+          if (avatarContent) {
+            encryptedAvatarContent = await this.encryptionService.encryptWithPassword(avatarContent, masterPassword);
+          }
+          if (imageData) {
+            encryptedImageData = await this.encryptionService.encryptWithPassword(imageData, masterPassword);
+          }
+        } catch (encryptionError) {
+          console.warn('Erreur lors du chiffrement des données sensibles:', encryptionError);
+          // Continuer sans chiffrement en cas d'erreur
+        }
+      }
+      
       const result = await sql`
         INSERT INTO profiles (
           name, description, type, is_admin, is_child, is_teen, 
@@ -67,16 +93,32 @@ export class ProfileService {
           image_url, image_data, image_type
         )
         VALUES (
-          ${name}, ${description}, ${type}, ${isAdmin}, ${isChild}, ${isTeen},
-          true, false, ${color}, ${avatarClass}, ${avatarContent},
-          ${imageUrl}, ${imageData}, ${imageType}
+          ${name}, ${encryptedDescription}, ${type}, ${isAdmin}, ${isChild}, ${isTeen},
+          true, false, ${color}, ${avatarClass}, ${encryptedAvatarContent},
+          ${imageUrl}, ${encryptedImageData}, ${imageType}
         )
         RETURNING *
       `;
       
+      // Enregistrer la création du profil dans les logs d'audit
+      auditLogService.logProfileChange(
+        result[0].id,
+        'PROFILE_CREATED',
+        {
+          name: result[0].name,
+          type: result[0].type,
+          encrypted: !!masterPassword
+        }
+      );
+      
       return result[0];
     } catch (error) {
       console.error('Erreur lors de la création du profil:', error);
+      auditLogService.logSystemError(
+        'Profile creation failed',
+        'ProfileService',
+        { error: error.message, profileData: { name, type } }
+      );
       throw error;
     }
   }
