@@ -217,11 +217,23 @@ export default {
     },
     
     goBack() {
-      this.$router.push('/manage-profiles')
+      this.$router.push({ 
+        path: '/manage-profiles',
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        } 
+      })
     },
     
     goToEditProfile() {
-      this.$router.push(`/edit-profile/${this.profile.id}`)
+      this.$router.push({ 
+        path: `/edit-profile/${this.profile.id}`,
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        } 
+      })
     },
     
     goToPinSettings() {

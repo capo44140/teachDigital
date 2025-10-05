@@ -403,13 +403,25 @@ export default {
           this.profile = { ...this.profileStore.currentProfile }
         } catch (error) {
           console.error('Erreur lors du chargement du profil:', error)
-          this.$router.push('/manage-profiles')
+          this.$router.push({ 
+          path: '/manage-profiles',
+          query: { 
+            profile: this.$route.query.profile || '1',
+            unlocked: 'true'
+          } 
+        })
         }
       }
     },
     
     goBack() {
-      this.$router.push('/manage-profiles')
+      this.$router.push({ 
+        path: '/manage-profiles',
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        } 
+      })
     },
     
     async saveProfile() {
@@ -423,7 +435,13 @@ export default {
           avatarClass: this.profile.avatar_class,
           avatarContent: this.profile.avatar_content
         })
-        this.$router.push('/manage-profiles')
+        this.$router.push({ 
+          path: '/manage-profiles',
+          query: { 
+            profile: this.$route.query.profile || '1',
+            unlocked: 'true'
+          } 
+        })
       } catch (error) {
         console.error('Erreur lors de la sauvegarde du profil:', error)
       }
@@ -437,7 +455,13 @@ export default {
       if (confirm(`Êtes-vous sûr de vouloir supprimer le profil "${this.profile.name}" ?`)) {
         try {
           await this.profileStore.deleteProfile(this.profile.id)
-          this.$router.push('/manage-profiles')
+          this.$router.push({ 
+          path: '/manage-profiles',
+          query: { 
+            profile: this.$route.query.profile || '1',
+            unlocked: 'true'
+          } 
+        })
         } catch (error) {
           console.error('Erreur lors de la suppression du profil:', error)
         }
@@ -469,7 +493,13 @@ export default {
     },
     
     goToProfileSettings() {
-      this.$router.push(`/profile-settings/${this.profile.id}`)
+      this.$router.push({ 
+        path: `/profile-settings/${this.profile.id}`,
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        } 
+      })
     }
   }
 }

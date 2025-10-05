@@ -413,7 +413,13 @@ export default {
   },
   methods: {
     goBack() {
-      this.$router.push('/')
+      this.$router.push({ 
+        path: '/dashboard',
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        } 
+      })
     },
     openPinSettings() {
       this.$router.push('/pin-settings')
@@ -430,8 +436,14 @@ export default {
       this.showModal = true
     },
     editProfile(profile) {
-      // Rediriger vers la page de modification de profil
-      this.$router.push(`/edit-profile/${profile.id}`)
+      // Rediriger vers la page de modification de profil avec les paramètres de session
+      this.$router.push({ 
+        path: `/edit-profile/${profile.id}`,
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        } 
+      })
     },
     async saveProfile() {
       try {
