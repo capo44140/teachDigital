@@ -337,19 +337,49 @@ export default {
       this.$router.push('/')
     },
     manageProfiles() {
-      this.$router.push('/manage-profiles')
+      this.$router.push({ 
+        path: '/manage-profiles', 
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        } 
+      })
     },
     openLessonScanner() {
-      this.$router.push('/lesson-scanner')
+      this.$router.push({ 
+        path: '/lesson-scanner', 
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        } 
+      })
     },
     openQuizManagement() {
-      this.$router.push('/parent-quiz-management')
+      this.$router.push({ 
+        path: '/parent-quiz-management', 
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        } 
+      })
     },
     openTextQuizGenerator() {
-      this.$router.push('/text-quiz-generator')
+      this.$router.push({ 
+        path: '/text-quiz-generator', 
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        } 
+      })
     },
     openSecurityTest() {
-      this.$router.push('/security-test')
+      this.$router.push({ 
+        path: '/security-test', 
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        } 
+      })
     }
   }
 }
