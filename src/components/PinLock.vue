@@ -136,12 +136,23 @@ export default {
         
         if (isValid) {
           // PIN correct - rediriger vers le dashboard
+          // Récupérer l'ID du profil depuis l'URL ou utiliser l'ID par défaut
+          const profileId = this.$route.query.profile || '1'
+          console.log('PIN correct, redirection vers le dashboard avec profil:', profileId)
+          
+          // Sauvegarder le profil sélectionné dans localStorage
+          localStorage.setItem('selectedProfile', JSON.stringify({ id: profileId, name: this.profileName }))
+          
           this.$router.push({ 
             path: '/dashboard', 
             query: { 
-              profile: this.profileName.toLowerCase(),
+              profile: profileId,
               unlocked: 'true'
             } 
+          }).catch(error => {
+            console.error('Erreur lors de la redirection:', error)
+            // Fallback vers le sélecteur de profil
+            this.$router.push('/')
           })
         } else {
           // PIN incorrect

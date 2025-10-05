@@ -10,17 +10,23 @@
             </div>
             <div>
               <h1 class="text-xl font-bold text-gray-800">TeachDigital</h1>
-              <p class="text-sm text-gray-600">Connecté en tant que {{ currentProfile.name }}</p>
+              <p class="text-sm text-gray-600">Connecté en tant que {{ currentProfile?.name || 'Chargement...' }}</p>
             </div>
           </div>
           
           <div class="flex items-center space-x-4">
             <!-- Profil actuel -->
-            <div class="flex items-center space-x-2">
+            <div v-if="currentProfile" class="flex items-center space-x-2">
               <div class="w-8 h-8 rounded-full flex items-center justify-center" :class="currentProfile.bgColor">
                 <span class="text-white text-sm font-semibold">{{ currentProfile.initial }}</span>
               </div>
               <span class="text-gray-700 font-medium">{{ currentProfile.name }}</span>
+            </div>
+            <div v-else class="flex items-center space-x-2">
+              <div class="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center">
+                <span class="text-white text-sm font-semibold">?</span>
+              </div>
+              <span class="text-gray-700 font-medium">Chargement...</span>
             </div>
             
             <!-- Bouton changer de profil -->
@@ -42,15 +48,21 @@
     <main class="container mx-auto px-6 py-12">
       <div class="text-center mb-12">
         <h2 class="text-4xl font-bold text-gray-800 mb-4">
-          Bienvenue {{ currentProfile.name }} !
+          Bienvenue {{ currentProfile?.name || 'Chargement...' }} !
         </h2>
         <p class="text-xl text-gray-600">
-          {{ currentProfile.welcomeMessage }}
+          {{ currentProfile?.welcomeMessage || 'Chargement du profil...' }}
         </p>
       </div>
 
+      <!-- Indicateur de chargement -->
+      <div v-if="!currentProfile" class="text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p class="mt-4 text-gray-600">Chargement du profil...</p>
+      </div>
+
       <!-- Contenu spécifique au profil -->
-      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div v-if="currentProfile" class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
         <!-- Cartes de cours -->
         <div v-for="course in currentProfile.courses" :key="course.id" 
              class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
@@ -73,7 +85,7 @@
       </div>
 
       <!-- Section admin pour les parents -->
-      <div v-if="currentProfile.isAdmin" class="mt-16 bg-yellow-50 border border-yellow-200 rounded-xl p-8">
+      <div v-if="currentProfile && (currentProfile.isAdmin || currentProfile.name === 'Parent' || currentProfile.id === '1' || currentProfile.id === 1)" class="mt-16 bg-yellow-50 border border-yellow-200 rounded-xl p-8">
         <div class="flex items-center mb-4">
           <svg class="w-8 h-8 text-yellow-600 mr-3" fill="currentColor" viewBox="0 0 24 24">
             <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
@@ -151,8 +163,14 @@
 </template>
 
 <script>
+import { useProfileStore } from '../stores/profileStore.js'
+
 export default {
   name: 'Dashboard',
+  setup() {
+    const profileStore = useProfileStore()
+    return { profileStore }
+  },
   data() {
     return {
       profiles: {
@@ -260,12 +278,61 @@ export default {
       currentProfile: null
     }
   },
-  created() {
-    // Récupérer le profil sélectionné depuis le localStorage ou les paramètres d'URL
-    const selectedProfile = this.$route.query.profile || localStorage.getItem('selectedProfile') || 'parent'
-    this.currentProfile = this.profiles[selectedProfile] || this.profiles.parent
+  async created() {
+    await this.loadCurrentProfile()
+    // S'assurer qu'un profil est toujours disponible
+    if (!this.currentProfile) {
+      console.warn('Aucun profil trouvé, utilisation du profil parent par défaut')
+      this.currentProfile = this.profiles.parent
+    }
+    
+    // S'assurer que le profil parent a les droits d'admin
+    if (this.currentProfile && (this.currentProfile.name === 'Parent' || this.currentProfile.id === '1' || this.currentProfile.id === 1)) {
+      this.currentProfile.isAdmin = true
+      console.log('Droits admin confirmés pour le profil parent')
+    }
+    
+    console.log('Profil final dans created():', this.currentProfile)
   },
   methods: {
+    async loadCurrentProfile() {
+      try {
+        // Récupérer le profil depuis les paramètres d'URL ou localStorage
+        const profileId = this.$route.query.profile
+        console.log('ProfileId depuis URL:', profileId)
+        
+        if (profileId) {
+          // Charger le profil depuis la base de données
+          await this.profileStore.loadProfile(profileId)
+          this.currentProfile = this.profileStore.currentProfile
+          console.log('Profil chargé depuis la base de données:', this.currentProfile)
+          
+          // Si le profil n'est pas trouvé, utiliser le profil parent par défaut
+          if (!this.currentProfile) {
+            console.warn('Profil non trouvé dans la base de données, utilisation du profil parent par défaut')
+            this.currentProfile = this.profiles.parent
+          }
+        } else {
+          // Profil par défaut
+          console.log('Aucun profileId, utilisation du profil parent par défaut')
+          this.currentProfile = this.profiles.parent
+        }
+        
+        // S'assurer que le profil parent a les droits d'admin
+        if (this.currentProfile && (this.currentProfile.name === 'Parent' || this.currentProfile.id === '1' || this.currentProfile.id === 1)) {
+          this.currentProfile.isAdmin = true
+          console.log('Droits admin accordés au profil parent')
+        }
+        
+        console.log('Profil final utilisé:', this.currentProfile)
+      } catch (error) {
+        console.error('Erreur lors du chargement du profil:', error)
+        // En cas d'erreur, utiliser le profil parent par défaut
+        this.currentProfile = this.profiles.parent
+        console.log('Profil de fallback utilisé:', this.currentProfile)
+      }
+    },
+    
     changeProfile() {
       this.$router.push('/')
     },

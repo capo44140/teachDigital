@@ -125,7 +125,15 @@ router.beforeEach(async (to, from, next) => {
   // Seulement vérifier les pages qui nécessitent des permissions admin
   if (to.meta.requiresAdmin) {
     const profileId = to.query.profile
+    const isUnlocked = to.query.unlocked === 'true'
     let currentProfile = null
+    
+    // Si l'accès est déverrouillé (après vérification du PIN), permettre l'accès
+    if (isUnlocked) {
+      console.log('Accès autorisé après vérification du PIN')
+      next()
+      return
+    }
     
     if (profileId) {
       try {
