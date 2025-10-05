@@ -83,6 +83,17 @@
           </div>
         </div>
 
+        <!-- Champ de description -->
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-500 mb-2">Description</label>
+          <textarea 
+            v-model="profile.description"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            rows="3"
+            placeholder="Description du profil"
+          ></textarea>
+        </div>
+
         <!-- Champ de niveau (seulement pour les enfants et adolescents) -->
         <div v-if="profile.type !== 'admin'" class="mb-6">
           <label class="block text-sm font-medium text-gray-500 mb-2">Niveau</label>
@@ -101,6 +112,31 @@
             <option value="4ème">4ème (13 ans)</option>
             <option value="3ème">3ème (14 ans)</option>
           </select>
+        </div>
+
+        <!-- Champ de statut de verrouillage -->
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-500 mb-2">Statut du profil</label>
+          <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2">
+              <input 
+                v-model="profile.is_active"
+                type="checkbox"
+                id="is_active"
+                class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+              >
+              <label for="is_active" class="text-sm text-gray-700">Profil actif</label>
+            </div>
+            <div class="flex items-center space-x-2">
+              <input 
+                v-model="profile.is_locked"
+                type="checkbox"
+                id="is_locked"
+                class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+              >
+              <label for="is_locked" class="text-sm text-gray-700">Profil verrouillé</label>
+            </div>
+          </div>
         </div>
 
         <!-- Boutons d'action -->
@@ -432,6 +468,8 @@ export default {
           type: this.profile.type,
           color: this.profile.color,
           level: this.profile.level,
+          isActive: this.profile.is_active,
+          isLocked: this.profile.is_locked,
           avatarClass: this.profile.avatar_class,
           avatarContent: this.profile.avatar_content
         })
