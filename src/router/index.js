@@ -7,6 +7,8 @@ import PinLock from '../components/PinLock.vue'
 import PinSettings from '../components/PinSettings.vue'
 import EditProfilePage from '../components/EditProfilePage.vue'
 import ProfileSettings from '../components/ProfileSettings.vue'
+import LessonScanner from '../components/LessonScanner.vue'
+import QuizGenerator from '../components/QuizGenerator.vue'
 
 const routes = [
   {
@@ -51,6 +53,16 @@ const routes = [
     path: '/pin-settings',
     name: 'PinSettings',
     component: PinSettings
+  },
+  {
+    path: '/lesson-scanner',
+    name: 'LessonScanner',
+    component: LessonScanner
+  },
+  {
+    path: '/quiz-generator',
+    name: 'QuizGenerator',
+    component: QuizGenerator
   }
 ]
 

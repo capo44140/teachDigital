@@ -82,7 +82,7 @@
         </div>
         <p class="text-yellow-700 mb-6">En tant que parent, vous avez accès aux fonctionnalités d'administration.</p>
         
-        <div class="grid md:grid-cols-3 gap-6">
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <button 
             @click="manageProfiles"
             class="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors flex items-center justify-center space-x-2"
@@ -94,10 +94,22 @@
             </svg>
             <span>Gérer les profils</span>
           </button>
-          <button class="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors">
+          
+          <button 
+            @click="openLessonScanner"
+            class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+            title="Scanner des leçons"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+            </svg>
+            <span>Scanner des leçons</span>
+          </button>
+          
+          <button class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
             Voir les statistiques
           </button>
-          <button class="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors">
+          <button class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors">
             Paramètres
           </button>
         </div>
@@ -227,6 +239,9 @@ export default {
     },
     manageProfiles() {
       this.$router.push('/manage-profiles')
+    },
+    openLessonScanner() {
+      this.$router.push('/lesson-scanner')
     }
   }
 }
