@@ -1054,39 +1054,392 @@ export default {
 
 @media (max-width: 768px) {
   .progress-tracking {
+    padding: 12px;
+  }
+  
+  .back-button-container {
+    margin-bottom: 16px;
+  }
+  
+  .back-button {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  
+  .child-header {
     padding: 16px;
+    margin-bottom: 16px;
   }
   
   .child-info {
     flex-direction: column;
     text-align: center;
+    gap: 16px;
+  }
+  
+  .child-avatar {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+  }
+  
+  .child-details h2 {
+    font-size: 24px;
+  }
+  
+  .child-type {
+    font-size: 14px;
   }
   
   .progress-summary {
-    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+  }
+  
+  .stat-item {
+    min-width: 120px;
+  }
+  
+  .stat-number {
+    font-size: 20px;
+  }
+  
+  .stat-label {
+    font-size: 12px;
   }
   
   .tabs-navigation {
     flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    margin-bottom: 16px;
+  }
+  
+  .tab-button {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  
+  .tab-content {
+    padding: 16px;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .section-header h3 {
+    font-size: 18px;
+  }
+  
+  .filters select {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  
+  .empty-state {
+    padding: 32px 16px;
+  }
+  
+  .empty-icon {
+    font-size: 36px;
+  }
+  
+  .empty-state h4 {
+    font-size: 18px;
+  }
+  
+  .empty-state p {
+    font-size: 14px;
+  }
+  
+  .quiz-history {
+    gap: 12px;
+  }
+  
+  .quiz-item {
+    padding: 16px;
   }
   
   .quiz-header {
     flex-direction: column;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .quiz-title h4 {
+    font-size: 16px;
+  }
+  
+  .quiz-date {
+    font-size: 12px;
+  }
+  
+  .quiz-score {
+    padding: 6px 12px;
+    font-size: 14px;
   }
   
   .quiz-details {
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
+  }
+  
+  .quiz-stats {
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+  }
+  
+  .quiz-progress {
+    max-width: 100%;
   }
   
   .stats-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .stat-card {
+    padding: 16px;
+  }
+  
+  .stat-card h4 {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+  
+  .score-breakdown {
+    gap: 8px;
+  }
+  
+  .score-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .score-type {
+    min-width: auto;
+    font-size: 14px;
+  }
+  
+  .score-bar {
+    width: 100%;
+  }
+  
+  .score-fill {
+    height: 6px;
+  }
+  
+  .score-value {
+    font-size: 12px;
+  }
+  
+  .monthly-progress {
+    gap: 8px;
+  }
+  
+  .month-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 6px 0;
+  }
+  
+  .month-name {
+    font-size: 14px;
+  }
+  
+  .month-stats {
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+  }
+  
+  .learning-time {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .time-value {
+    font-size: 18px;
+  }
+  
+  .time-label {
+    font-size: 12px;
+  }
+  
+  .achievements {
+    gap: 12px;
+  }
+  
+  .achievement-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+  }
+  
+  .achievement-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+  
+  .achievement-details h5 {
+    font-size: 14px;
+  }
+  
+  .achievement-details p {
+    font-size: 12px;
+  }
+  
+  .achievement-progress {
+    width: 100%;
+  }
+  
+  .progress-text {
+    font-size: 11px;
+  }
+  
+  .recommendations h3 {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+  
+  .recommendation-section {
+    margin-bottom: 24px;
+  }
+  
+  .recommendation-section h4 {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+  
+  .recommended-quizzes {
+    gap: 12px;
   }
   
   .recommended-quiz {
     flex-direction: column;
-    gap: 16px;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+  }
+  
+  .quiz-info h5 {
+    font-size: 14px;
+  }
+  
+  .quiz-info p {
+    font-size: 12px;
+  }
+  
+  .quiz-meta {
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+  }
+  
+  .start-quiz-btn {
+    padding: 6px 12px;
+    font-size: 14px;
+    width: 100%;
+  }
+  
+  .improvement-areas {
+    gap: 12px;
+  }
+  
+  .improvement-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+  }
+  
+  .improvement-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+  
+  .improvement-details h5 {
+    font-size: 14px;
+  }
+  
+  .improvement-details p {
+    font-size: 12px;
+  }
+  
+  .improvement-suggestions {
+    gap: 6px;
+  }
+  
+  .suggestion {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .progress-tracking {
+    padding: 8px;
+  }
+  
+  .child-header {
+    padding: 12px;
+  }
+  
+  .child-avatar {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+  
+  .child-details h2 {
+    font-size: 20px;
+  }
+  
+  .progress-summary {
+    gap: 12px;
+  }
+  
+  .stat-item {
+    min-width: 100px;
+  }
+  
+  .stat-number {
+    font-size: 18px;
+  }
+  
+  .tab-content {
+    padding: 12px;
+  }
+  
+  .quiz-item {
+    padding: 12px;
+  }
+  
+  .stat-card {
+    padding: 12px;
+  }
+  
+  .achievement-item {
+    padding: 8px;
+  }
+  
+  .recommended-quiz {
+    padding: 12px;
+  }
+  
+  .improvement-item {
+    padding: 12px;
   }
 }
 </style>

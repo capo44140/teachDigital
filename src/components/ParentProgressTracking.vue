@@ -1153,35 +1153,391 @@ export default {
 
 @media (max-width: 768px) {
   .parent-progress-tracking {
+    padding: 12px;
+  }
+  
+  .back-button-container {
+    margin-bottom: 16px;
+  }
+  
+  .back-button {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  
+  .header {
     padding: 16px;
+    margin-bottom: 16px;
   }
   
   .header-content {
     flex-direction: column;
     gap: 16px;
+    align-items: flex-start;
+  }
+  
+  .header-info h1 {
+    font-size: 24px;
+  }
+  
+  .header-info p {
+    font-size: 14px;
+  }
+  
+  .refresh-btn {
+    padding: 6px 12px;
+    font-size: 14px;
   }
   
   .stats-overview {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
   }
   
-  .children-grid {
-    grid-template-columns: 1fr;
+  .stat-card {
+    padding: 16px;
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+  
+  .stat-icon {
+    font-size: 24px;
+  }
+  
+  .stat-content h3 {
+    font-size: 20px;
+  }
+  
+  .stat-content p {
+    font-size: 12px;
   }
   
   .tabs-navigation {
     flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    margin-bottom: 16px;
+  }
+  
+  .tab-button {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  
+  .tab-content {
+    padding: 16px;
+  }
+  
+  .children-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .child-card {
+    padding: 16px;
+  }
+  
+  .child-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+  }
+  
+  .child-avatar {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+  
+  .child-info h3 {
+    font-size: 16px;
+  }
+  
+  .child-type {
+    font-size: 12px;
+  }
+  
+  .child-score {
+    margin-left: 0;
+  }
+  
+  .score-circle {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+  }
+  
+  .child-stats {
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0;
+  }
+  
+  .stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+  }
+  
+  .stat-number {
+    font-size: 16px;
+  }
+  
+  .stat-label {
+    font-size: 11px;
+  }
+  
+  .child-progress {
+    margin-bottom: 12px;
+  }
+  
+  .progress-text {
+    font-size: 11px;
+  }
+  
+  .view-progress-btn {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .section-header h3 {
+    font-size: 18px;
+  }
+  
+  .filters select {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  
+  .empty-state {
+    padding: 32px 16px;
+  }
+  
+  .empty-icon {
+    font-size: 36px;
+  }
+  
+  .empty-state h4 {
+    font-size: 18px;
+  }
+  
+  .empty-state p {
+    font-size: 14px;
+  }
+  
+  .quiz-history {
+    gap: 12px;
+  }
+  
+  .quiz-item {
+    padding: 16px;
+  }
+  
+  .quiz-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .quiz-child {
+    gap: 8px;
+  }
+  
+  .child-avatar-small {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+  
+  .child-name {
+    font-size: 14px;
+  }
+  
+  .quiz-score {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  
+  .quiz-content h4 {
+    font-size: 14px;
+  }
+  
+  .quiz-date {
+    font-size: 12px;
+  }
+  
+  .quiz-details {
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+  }
+  
+  .comparison-chart {
+    margin-bottom: 24px;
+  }
+  
+  .comparison-chart h3 {
+    font-size: 18px;
+    margin-bottom: 16px;
   }
   
   .chart-container {
     flex-direction: column;
     height: auto;
     align-items: center;
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .chart-item {
+    width: 100%;
+    max-width: 200px;
   }
   
   .chart-bar {
-    width: 60px;
-    height: 100px;
+    width: 100%;
+    height: 80px;
+  }
+  
+  .chart-label {
+    margin-top: 8px;
+  }
+  
+  .child-name {
+    font-size: 14px;
+  }
+  
+  .child-score {
+    font-size: 12px;
+  }
+  
+  .comparison-table {
+    margin-top: 24px;
+  }
+  
+  .comparison-table h3 {
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+  
+  .comparison-table table {
+    font-size: 12px;
+  }
+  
+  .comparison-table th,
+  .comparison-table td {
+    padding: 8px 6px;
+  }
+  
+  .child-cell {
+    gap: 6px;
+  }
+  
+  .child-avatar-small {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+  
+  .score-badge {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+  
+  .recommendations h3 {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+  
+  .child-recommendations {
+    margin-bottom: 16px;
+  }
+  
+  .recommendation-header {
+    padding: 12px;
+  }
+  
+  .child-info {
+    gap: 8px;
+  }
+  
+  .child-info h4 {
+    font-size: 14px;
+  }
+  
+  .recommendation-content {
+    padding: 12px;
+  }
+  
+  .recommendation-item {
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .recommendation-icon {
+    font-size: 16px;
+  }
+  
+  .recommendation-text h5 {
+    font-size: 13px;
+  }
+  
+  .recommendation-text p {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .parent-progress-tracking {
+    padding: 8px;
+  }
+  
+  .stats-overview {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .stat-card {
+    padding: 12px;
+  }
+  
+  .header {
+    padding: 12px;
+  }
+  
+  .header-info h1 {
+    font-size: 20px;
+  }
+  
+  .tab-content {
+    padding: 12px;
+  }
+  
+  .child-card {
+    padding: 12px;
+  }
+  
+  .quiz-item {
+    padding: 12px;
+  }
+  
+  .comparison-table {
+    overflow-x: auto;
+  }
+  
+  .comparison-table table {
+    min-width: 400px;
   }
 }
 </style>
