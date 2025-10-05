@@ -233,11 +233,11 @@ export class ProfileService {
     try {
       const stats = await sql`
         SELECT 
-          COUNT(*) as total_profiles,
-          COUNT(CASE WHEN is_active = true THEN 1 END) as active_profiles,
-          COUNT(CASE WHEN is_child = true THEN 1 END) as child_profiles,
-          COUNT(CASE WHEN is_teen = true THEN 1 END) as teen_profiles,
-          COUNT(CASE WHEN is_admin = true THEN 1 END) as admin_profiles
+          COUNT(*) as total,
+          COUNT(CASE WHEN is_active = true THEN 1 END) as active,
+          COUNT(CASE WHEN is_child = true THEN 1 END) as children,
+          COUNT(CASE WHEN is_teen = true THEN 1 END) as teens,
+          COUNT(CASE WHEN is_admin = true THEN 1 END) as admins
         FROM profiles
       `;
       return stats[0];
