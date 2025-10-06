@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+Toujours générer les messages de commit Git en français, de manière concise et professionnelle.
