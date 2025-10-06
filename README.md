@@ -1,6 +1,6 @@
 # TeachDigital
 
-Une application Vue.js moderne avec Tailwind CSS 4, optimisée pour le déploiement sur Vercel.
+Une application Vue.js moderne avec Tailwind CSS 4, optimisée pour le déploiement sur Vercel avec configuration de production avancée.
 
 ## 🚀 Technologies utilisées
 
@@ -8,17 +8,22 @@ Une application Vue.js moderne avec Tailwind CSS 4, optimisée pour le déploiem
 - **Vite** - Outil de build rapide et moderne
 - **Tailwind CSS 4** - Framework CSS utilitaire
 - **PostCSS** - Processeur CSS
+- **Pinia** - Gestion d'état Vue.js
+- **Neon Database** - Base de données PostgreSQL serverless
+- **Vercel** - Plateforme de déploiement optimisée
 
 ## 📦 Installation
 
+Ce projet utilise **pnpm** comme gestionnaire de paquets pour de meilleures performances.
+
 1. Installez les dépendances :
 ```bash
-npm install
+pnpm install
 ```
 
 2. Lancez le serveur de développement :
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 3. Ouvrez [http://localhost:3000](http://localhost:3000) dans votre navigateur.
@@ -26,32 +31,57 @@ npm run dev
 ## 🏗️ Build pour la production
 
 ```bash
-npm run build
+pnpm run build
 ```
 
-Le build sera généré dans le dossier `dist/`.
+Le build sera généré dans le dossier `dist/` avec optimisations avancées :
+- Minification avec Terser
+- Chunking intelligent des vendors
+- Noms de fichiers avec hash pour le cache
+- Configuration de production dédiée
 
-## 🚀 Déploiement
+## 🚀 Déploiement Vercel
 
-Ce projet peut être déployé sur n'importe quelle plateforme qui supporte les applications Vue.js statiques :
+Ce projet est optimisé pour Vercel avec une configuration de production avancée :
 
+### Configuration Vercel recommandée :
+- **Build Command** : `pnpm run build`
+- **Output Directory** : `dist`
+- **Install Command** : `pnpm install`
+- **Framework** : `vite`
+
+### Fonctionnalités de déploiement :
+- **Cache optimisé** - Headers de cache pour les assets statiques
+- **Build rapide** - Configuration Vite optimisée pour la production
+- **Variables d'environnement** - Support complet des variables Neon Database
+- **PWA Ready** - Service Worker et manifest configurés
+
+### Autres plateformes supportées :
 - **Netlify** - Déploiement automatique depuis Git
 - **GitHub Pages** - Hébergement gratuit
 - **Firebase Hosting** - Plateforme Google
-- **Surge.sh** - Déploiement simple en ligne de commande
 
 ## 📁 Structure du projet
 
 ```
 teachDigital/
-├── public/
+├── public/              # Assets statiques et PWA
 ├── src/
+│   ├── components/      # Composants Vue.js
+│   ├── services/        # Services (DB, AI, etc.)
+│   ├── stores/          # Gestion d'état Pinia
+│   ├── config/          # Configuration (DB, PIN)
+│   ├── router/          # Configuration Vue Router
 │   ├── App.vue          # Composant principal
 │   ├── main.js          # Point d'entrée
 │   └── style.css        # Styles Tailwind CSS
+├── scripts/             # Scripts de migration et utilitaires
+├── dist/                # Build de production
 ├── index.html           # Template HTML
 ├── package.json         # Dépendances et scripts
-├── vite.config.js       # Configuration Vite
+├── vite.config.js       # Configuration Vite (dev)
+├── vite.config.prod.js  # Configuration Vite (production)
+├── vercel.json          # Configuration Vercel
 ├── postcss.config.mjs   # Configuration PostCSS
 └── README.md
 ```
@@ -62,9 +92,24 @@ Le projet utilise Tailwind CSS 4 avec une configuration moderne. Vous pouvez per
 
 ## 📝 Scripts disponibles
 
-- `npm run dev` - Lance le serveur de développement
-- `npm run build` - Construit l'application pour la production
-- `npm run preview` - Prévisualise le build de production
+### Scripts de développement :
+- `pnpm run dev` - Lance le serveur de développement
+- `pnpm run build` - Construit l'application pour la production
+- `pnpm run preview` - Prévisualise le build de production
+
+### Scripts de base de données :
+- `pnpm run init-db` - Initialise la base de données
+- `pnpm run db:test` - Teste la connexion à la base de données
+- `pnpm run migrate-db` - Migre la base de données
+- `pnpm run migrate-pins` - Migre les codes PIN
+- `pnpm run migrate-teens` - Migre les profils adolescents
+
+### Scripts utilitaires :
+- `pnpm run generate-icons` - Génère les icônes PWA
+- `pnpm run test-pin-security` - Teste la sécurité des codes PIN
+- `pnpm run version:patch` - Incrémente la version (patch)
+- `pnpm run version:minor` - Incrémente la version (minor)
+- `pnpm run version:major` - Incrémente la version (major)
 
 ## 🤝 Contribution
 
