@@ -1,25 +1,27 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import ProfileSelector from '../components/ProfileSelector.vue'
-import Dashboard from '../components/Dashboard.vue'
-import UserDashboard from '../components/UserDashboard.vue'
-import ProfileManagement from '../components/ProfileManagement.vue'
-import PinLock from '../components/PinLock.vue'
-import PinSettings from '../components/PinSettings.vue'
-import EditProfilePage from '../components/EditProfilePage.vue'
-import ProfileSettings from '../components/ProfileSettings.vue'
-import LessonScanner from '../components/LessonScanner.vue'
-import QuizGenerator from '../components/QuizGenerator.vue'
-import SecurityDashboard from '../components/SecurityDashboard.vue'
-import ProfileTest from '../components/ProfileTest.vue'
-import SecurityTest from '../components/SecurityTest.vue'
-import NotificationTest from '../components/NotificationTest.vue'
-import ParentQuizManagement from '../components/ParentQuizManagement.vue'
-import TextQuizGenerator from '../components/TextQuizGenerator.vue'
-import ProgressTracking from '../components/ProgressTracking.vue'
-import ParentProgressTracking from '../components/ParentProgressTracking.vue'
-import ParentSettings from '../components/ParentSettings.vue'
 import { useProfileStore } from '../stores/profileStore.js'
 import sessionService from '../services/sessionService.js'
+
+// Imports dynamiques pour optimiser le code splitting
+const ProfileSelector = () => import('../components/ProfileSelector.vue')
+const Dashboard = () => import('../components/Dashboard.vue')
+const UserDashboard = () => import('../components/UserDashboard.vue')
+const ProfileManagement = () => import('../components/ProfileManagement.vue')
+const PinLock = () => import('../components/PinLock.vue')
+const PinSettings = () => import('../components/PinSettings.vue')
+const EditProfilePage = () => import('../components/EditProfilePage.vue')
+const ProfileSettings = () => import('../components/ProfileSettings.vue')
+const LessonScanner = () => import('../components/LessonScanner.vue')
+const QuizGenerator = () => import('../components/QuizGenerator.vue')
+const SecurityDashboard = () => import('../components/SecurityDashboard.vue')
+const ProfileTest = () => import('../components/ProfileTest.vue')
+const SecurityTest = () => import('../components/SecurityTest.vue')
+const NotificationTest = () => import('../components/NotificationTest.vue')
+const ParentQuizManagement = () => import('../components/ParentQuizManagement.vue')
+const TextQuizGenerator = () => import('../components/TextQuizGenerator.vue')
+const ProgressTracking = () => import('../components/ProgressTracking.vue')
+const ParentProgressTracking = () => import('../components/ParentProgressTracking.vue')
+const ParentSettings = () => import('../components/ParentSettings.vue')
 
 const routes = [
   {
