@@ -5,12 +5,15 @@
       <nav class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
-            <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div 
+              class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center cursor-pointer group relative"
+              title="TeachDigital"
+            >
               <span class="text-white font-bold text-lg">TD</span>
-            </div>
-            <div>
-              <h1 class="text-xl font-bold text-gray-800">TeachDigital</h1>
-              <p class="text-sm text-gray-600">Connecté en tant que {{ currentProfile?.name || 'Chargement...' }}</p>
+              <!-- Tooltip -->
+              <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                TeachDigital
+              </div>
             </div>
           </div>
           
