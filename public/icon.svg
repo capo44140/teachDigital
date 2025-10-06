@@ -1,0 +1,70 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fond avec dégradé -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E40AF;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#60A5FA;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F3F4F6;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FBBF24;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F59E0B;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Fond principal -->
+  <rect width="512" height="512" rx="80" fill="url(#bgGradient)"/>
+  
+  <!-- Cercle de fond pour l'icône -->
+  <circle cx="256" cy="256" r="180" fill="url(#iconGradient)" opacity="0.15"/>
+  
+  <!-- Icône principale - Livre ouvert avec écran -->
+  <g transform="translate(256, 256)">
+    <!-- Livre ouvert -->
+    <path d="M-80 -60 L-40 -60 L-40 60 L-80 60 Z" fill="url(#iconGradient)" stroke="url(#accentGradient)" stroke-width="3"/>
+    <path d="M40 -60 L80 -60 L80 60 L40 60 Z" fill="url(#iconGradient)" stroke="url(#accentGradient)" stroke-width="3"/>
+    
+    <!-- Pages du livre -->
+    <line x1="-60" y1="-40" x2="-60" y2="40" stroke="url(#accentGradient)" stroke-width="2" opacity="0.6"/>
+    <line x1="-50" y1="-30" x2="-50" y2="30" stroke="url(#accentGradient)" stroke-width="1" opacity="0.4"/>
+    <line x1="60" y1="-40" x2="60" y2="40" stroke="url(#accentGradient)" stroke-width="2" opacity="0.6"/>
+    <line x1="50" y1="-30" x2="50" y2="30" stroke="url(#accentGradient)" stroke-width="1" opacity="0.4"/>
+    
+    <!-- Écran/Tablette au centre -->
+    <rect x="-30" y="-40" width="60" height="80" rx="8" fill="url(#bgGradient)" stroke="url(#accentGradient)" stroke-width="2"/>
+    
+    <!-- Écran de la tablette -->
+    <rect x="-25" y="-35" width="50" height="70" rx="4" fill="#1F2937"/>
+    
+    <!-- Contenu de l'écran - Profils -->
+    <circle cx="-15" cy="-20" r="6" fill="#10B981"/>
+    <circle cx="15" cy="-20" r="6" fill="#F59E0B"/>
+    <circle cx="-15" cy="0" r="6" fill="#EF4444"/>
+    <circle cx="15" cy="0" r="6" fill="#8B5CF6"/>
+    
+    <!-- Lignes de connexion -->
+    <line x1="-15" y1="-14" x2="15" y2="-14" stroke="#6B7280" stroke-width="1" opacity="0.5"/>
+    <line x1="-15" y1="6" x2="15" y2="6" stroke="#6B7280" stroke-width="1" opacity="0.5"/>
+    
+    <!-- Icône de cadenas pour la sécurité -->
+    <g transform="translate(0, 25)">
+      <rect x="-8" y="-3" width="16" height="12" rx="2" fill="url(#accentGradient)"/>
+      <path d="M-4 -8 L-4 -3 M4 -8 L4 -3" stroke="url(#accentGradient)" stroke-width="2" fill="none"/>
+    </g>
+  </g>
+  
+  <!-- Éléments décoratifs -->
+  <circle cx="100" cy="100" r="8" fill="url(#accentGradient)" opacity="0.6"/>
+  <circle cx="412" cy="100" r="6" fill="url(#accentGradient)" opacity="0.4"/>
+  <circle cx="100" cy="412" r="6" fill="url(#accentGradient)" opacity="0.4"/>
+  <circle cx="412" cy="412" r="8" fill="url(#accentGradient)" opacity="0.6"/>
+  
+  <!-- Texte "TD" stylisé -->
+  <text x="256" y="320" font-family="Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle" fill="url(#accentGradient)">TD</text>
+</svg>

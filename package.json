@@ -1,0 +1,51 @@
+{
+  "name": "teachdigital",
+  "private": true,
+  "version": "0.0.15",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/generate-icons.js && vite build --config vite.config.prod.js --mode production",
+    "preview": "vite preview",
+    "generate-icons": "node scripts/generate-icons.js",
+    "init-db": "node scripts/init-db.js",
+    "db:init": "node scripts/init-db.js",
+    "db:test": "node -e \"import('./src/config/database.js').then(db => db.testConnection())\"",
+    "migrate-pins": "node scripts/migrate-pins.js migrate",
+    "check-pins": "node scripts/migrate-pins.js check",
+    "test-pin-security": "node scripts/test-pin-security.js",
+    "migrate-db": "node scripts/migrate-database.js migrate",
+    "check-db": "node scripts/migrate-database.js check",
+    "migrate-teens": "node scripts/migrate-teen-profiles.js migrate",
+    "check-profiles": "node scripts/migrate-teen-profiles.js check",
+    "create-teen": "node scripts/migrate-teen-profiles.js create",
+    "migrate-lessons": "node scripts/migrate-lessons.js",
+    "version:patch": "node scripts/version-bump.js patch",
+    "version:minor": "node scripts/version-bump.js minor",
+    "version:major": "node scripts/version-bump.js major",
+    "version:current": "node -p \"require('./package.json').version\"",
+    "setup:hooks": "node scripts/setup-git-hooks.js",
+    "test:version": "node scripts/test-version-display.js",
+    "test:notifications": "node scripts/test-notifications.js",
+    "update:deps:check": "node scripts/update-dependencies.js check",
+    "update:deps:minor": "node scripts/update-dependencies.js minor",
+    "update:deps:major": "node scripts/update-dependencies.js major"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "bcryptjs": "^3.0.2",
+    "pinia": "^3.0.3",
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "dotenv": "^17.2.3",
+    "postcss": "^8.4.0",
+    "sharp": "^0.34.4",
+    "tailwindcss": "^4.0.0",
+    "terser": "^5.24.0",
+    "vite": "^7.1.9"
+  }
+}
