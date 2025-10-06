@@ -1,7 +1,7 @@
 {
   "name": "teachdigital",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -19,7 +19,12 @@
     "migrate-teens": "node scripts/migrate-teen-profiles.js migrate",
     "check-profiles": "node scripts/migrate-teen-profiles.js check",
     "create-teen": "node scripts/migrate-teen-profiles.js create",
-    "migrate-lessons": "node scripts/migrate-lessons.js"
+    "migrate-lessons": "node scripts/migrate-lessons.js",
+    "version:patch": "node scripts/version-bump.js patch",
+    "version:minor": "node scripts/version-bump.js minor",
+    "version:major": "node scripts/version-bump.js major",
+    "version:current": "node -p \"require('./package.json').version\"",
+    "setup:hooks": "node scripts/setup-git-hooks.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

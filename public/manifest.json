@@ -57,7 +57,13 @@
       "purpose": "maskable any"
     }
   ],
-  "categories": ["education", "productivity", "utilities"],
+  "categories": [
+    "education",
+    "productivity",
+    "utilities"
+  ],
   "lang": "fr",
-  "dir": "ltr"
+  "dir": "ltr",
+  "version": "0.0.1",
+  "version_name": "0.0.1"
 }
