@@ -94,8 +94,15 @@
               <option value="français">Français</option>
               <option value="histoire">Histoire</option>
               <option value="géographie">Géographie</option>
+              <option value="physique">Physique</option>
               <option value="sciences">Sciences</option>
               <option value="anglais">Anglais</option>
+              <option value="espagnol">Espagnol</option>
+              <option value="musique">Musique</option>
+              <option value="art">Art</option>
+              <option value="eps">Éducation physique et sportive</option>
+              <option value="informatique">Informatique</option>
+              <option value="technologie">Technologie</option>
               <option value="autre">Autre</option>
             </select>
           </div>
