@@ -26,6 +26,7 @@
     "version:current": "node -p \"require('./package.json').version\"",
     "setup:hooks": "node scripts/setup-git-hooks.js",
     "test:version": "node scripts/test-version-display.js",
+    "test:notifications": "node scripts/test-notifications.js",
     "update:deps:check": "node scripts/update-dependencies.js check",
     "update:deps:minor": "node scripts/update-dependencies.js minor",
     "update:deps:major": "node scripts/update-dependencies.js major"

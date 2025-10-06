@@ -165,6 +165,17 @@
             </svg>
             <span>Test de sécurité</span>
           </button>
+          
+          <button 
+            @click="openNotificationTest"
+            class="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center space-x-2"
+            title="Test des notifications"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 0 0-15 0v5h5l-5 5-5-5h5v-5a7.5 7.5 0 0 0 15 0v5z"/>
+            </svg>
+            <span>Test des notifications</span>
+          </button>
           <button 
             @click="openProgressTracking"
             class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
@@ -461,6 +472,15 @@ export default {
     openSecurityTest() {
       this.$router.push({ 
         path: '/security-test', 
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        } 
+      })
+    },
+    openNotificationTest() {
+      this.$router.push({ 
+        path: '/notification-test', 
         query: { 
           profile: this.$route.query.profile || '1',
           unlocked: 'true'

@@ -12,6 +12,7 @@ import QuizGenerator from '../components/QuizGenerator.vue'
 import SecurityDashboard from '../components/SecurityDashboard.vue'
 import ProfileTest from '../components/ProfileTest.vue'
 import SecurityTest from '../components/SecurityTest.vue'
+import NotificationTest from '../components/NotificationTest.vue'
 import ParentQuizManagement from '../components/ParentQuizManagement.vue'
 import TextQuizGenerator from '../components/TextQuizGenerator.vue'
 import ProgressTracking from '../components/ProgressTracking.vue'
@@ -97,6 +98,12 @@ const routes = [
     path: '/security-test',
     name: 'SecurityTest',
     component: SecurityTest,
+    meta: { requiresAdmin: true }
+  },
+  {
+    path: '/notification-test',
+    name: 'NotificationTest',
+    component: NotificationTest,
     meta: { requiresAdmin: true }
   },
   {
