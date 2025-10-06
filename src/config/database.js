@@ -6,12 +6,12 @@ import { neon } from '@neondatabase/serverless';
 
 // Configuration de la base de données Neon
 const config = {
-  connectionString: process.env.DATABASE_URL || process.env.VITE_DATABASE_URL || import.meta.env.VITE_DATABASE_URL,
-  host: process.env.NEON_HOST || import.meta.env.VITE_NEON_HOST,
-  database: process.env.NEON_DATABASE || import.meta.env.VITE_NEON_DATABASE,
-  username: process.env.NEON_USERNAME || import.meta.env.VITE_NEON_USERNAME,
-  password: process.env.NEON_PASSWORD || import.meta.env.VITE_NEON_PASSWORD,
-  port: process.env.NEON_PORT || import.meta.env.VITE_NEON_PORT || 5432,
+  connectionString: process.env.DATABASE_URL || process.env.VITE_DATABASE_URL || (typeof import.meta !== 'undefined' ? import.meta.env.VITE_DATABASE_URL : undefined),
+  host: process.env.NEON_HOST || (typeof import.meta !== 'undefined' ? import.meta.env.VITE_NEON_HOST : undefined),
+  database: process.env.NEON_DATABASE || (typeof import.meta !== 'undefined' ? import.meta.env.VITE_NEON_DATABASE : undefined),
+  username: process.env.NEON_USERNAME || (typeof import.meta !== 'undefined' ? import.meta.env.VITE_NEON_USERNAME : undefined),
+  password: process.env.NEON_PASSWORD || (typeof import.meta !== 'undefined' ? import.meta.env.VITE_NEON_PASSWORD : undefined),
+  port: process.env.NEON_PORT || (typeof import.meta !== 'undefined' ? import.meta.env.VITE_NEON_PORT : undefined) || 5432,
   ssl: true
 };
 

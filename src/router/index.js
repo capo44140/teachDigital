@@ -22,6 +22,7 @@ const TextQuizGenerator = () => import('../components/TextQuizGenerator.vue')
 const ProgressTracking = () => import('../components/ProgressTracking.vue')
 const ParentProgressTracking = () => import('../components/ParentProgressTracking.vue')
 const ParentSettings = () => import('../components/ParentSettings.vue')
+const YouTubeVideoManager = () => import('../components/YouTubeVideoManager.vue')
 
 const routes = [
   {
@@ -142,6 +143,12 @@ const routes = [
     path: '/parent-settings',
     name: 'ParentSettings',
     component: ParentSettings,
+    meta: { requiresAdmin: true }
+  },
+  {
+    path: '/youtube-video-manager',
+    name: 'YouTubeVideoManager',
+    component: YouTubeVideoManager,
     meta: { requiresAdmin: true }
   }
 ]
