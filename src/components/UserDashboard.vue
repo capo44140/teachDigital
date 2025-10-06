@@ -63,6 +63,23 @@
         </p>
       </div>
 
+      <!-- Section des vidéos YouTube -->
+      <div class="mb-12">
+        <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">Mes vidéos éducatives</h3>
+        <div class="text-center mb-8">
+          <p class="text-gray-600 mb-6">Découvre des vidéos adaptées à ton âge pour apprendre en s'amusant !</p>
+          <button 
+            @click="openYouTubeViewer"
+            class="px-8 py-4 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-out hover:from-red-600 hover:to-pink-600 flex items-center mx-auto"
+          >
+            <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+            Voir mes vidéos
+          </button>
+        </div>
+      </div>
+
       <!-- Section des cours disponibles -->
       <div class="mb-12">
         <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">Mes cours disponibles</h3>
@@ -294,6 +311,8 @@ export default {
             name: 'Utilisateur',
             initial: 'U',
             bgColor: 'bg-purple-500',
+            is_child: true,  // Ajouter cette propriété
+            is_teen: false,  // Ajouter cette propriété
             welcomeMessage: 'Découvre de nouveaux cours passionnants !',
             courses: [
               {
@@ -331,6 +350,8 @@ export default {
           name: 'Utilisateur',
           initial: 'U',
           bgColor: 'bg-gray-500',
+          is_child: true,  // Ajouter cette propriété
+          is_teen: false,  // Ajouter cette propriété
           welcomeMessage: 'Bienvenue !',
           courses: []
         }
@@ -403,6 +424,28 @@ export default {
         query: {
           childId: this.currentProfile.id
         }
+      })
+    },
+    
+    openYouTubeViewer() {
+      console.log('Ouverture du visualiseur YouTube')
+      console.log('Profil actuel:', this.currentProfile)
+      console.log('ID du profil:', this.currentProfile?.id)
+      
+      if (!this.currentProfile?.id) {
+        console.error('Aucun profil chargé')
+        alert('Erreur: Aucun profil chargé. Veuillez vous reconnecter.')
+        return
+      }
+      
+      this.$router.push({
+        name: 'YouTubeKidsViewer',
+        query: {
+          profile: this.currentProfile.id
+        }
+      }).catch(error => {
+        console.error('Erreur de navigation:', error)
+        alert('Erreur de navigation: ' + error.message)
       })
     }
   }
