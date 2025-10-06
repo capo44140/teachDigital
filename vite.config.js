@@ -48,75 +48,24 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: false,
-      minify: 'terser',
-      terserOptions: {
-        compress: {
-          drop_console: false,
-          drop_debugger: true,
-          pure_funcs: ['console.log']
-        },
-        mangle: {
-          keep_fnames: true
-        }
-      },
+      minify: 'esbuild',
       chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
-          manualChunks: {
-            // Chunk pour Vue et ses dépendances
-            'vue-vendor': ['vue', 'vue-router', 'pinia'],
-            // Chunk pour la base de données
-            'database-vendor': ['@neondatabase/serverless', 'bcryptjs'],
-            // Chunk pour les services
-            'services': [
-              './src/services/activityService.js',
-              './src/services/aiService.js',
-              './src/services/auditLogService.js',
-              './src/services/encryptionService.js',
-              './src/services/hashService.js',
-              './src/services/imageValidationService.js',
-              './src/services/lessonService.js',
-              './src/services/notificationService.js',
-              './src/services/profileService.js',
-              './src/services/rateLimitService.js',
-              './src/services/sessionService.js'
-            ],
-            // Chunk pour les composants admin
-            'admin-components': [
-              './src/components/Dashboard.vue',
-              './src/components/ProfileManagement.vue',
-              './src/components/SecurityDashboard.vue',
-              './src/components/ParentQuizManagement.vue',
-              './src/components/ParentProgressTracking.vue',
-              './src/components/ParentActivityManagement.vue',
-              './src/components/ParentSettings.vue',
-              './src/components/LessonScanner.vue',
-              './src/components/TextQuizGenerator.vue'
-            ],
-            // Chunk pour les composants utilisateur
-            'user-components': [
-              './src/components/UserDashboard.vue',
-              './src/components/ProgressTracking.vue',
-              './src/components/QuizGenerator.vue'
-            ],
-            // Chunk pour les composants communs
-            'common-components': [
-              './src/components/ProfileSelector.vue',
-              './src/components/PinLock.vue',
-              './src/components/PinSettings.vue',
-              './src/components/EditProfilePage.vue',
-              './src/components/ProfileSettings.vue',
-              './src/components/ImageUpload.vue',
-              './src/components/VersionInfo.vue',
-              './src/components/NotificationCenter.vue'
-            ],
-            // Chunk pour les composants de test (en développement uniquement)
-            'test-components': [
-              './src/components/ProfileTest.vue',
-              './src/components/SecurityTest.vue',
-              './src/components/NotificationTest.vue',
-              './src/components/PinSecurityTest.vue'
-            ]
+          manualChunks: (id) => {
+            // Chunk pour les dépendances externes uniquement
+            if (id.includes('node_modules')) {
+              if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
+                return 'vue-vendor'
+              }
+              if (id.includes('@neondatabase') || id.includes('bcryptjs')) {
+                return 'database-vendor'
+              }
+              return 'vendor'
+            }
+            
+            // Ne pas créer de chunks pour les composants pour éviter les problèmes d'initialisation
+            // Laisser Vite gérer automatiquement le code splitting
           },
           // Configuration pour des noms de fichiers plus prévisibles
           chunkFileNames: 'assets/[name]-[hash].js',
