@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/generate-icons.js && vite build --mode production",
+    "build": "node scripts/generate-icons.js && vite build --config vite.config.prod.js --mode production",
     "preview": "vite preview",
     "generate-icons": "node scripts/generate-icons.js",
     "init-db": "node scripts/init-db.js",
