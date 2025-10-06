@@ -14,7 +14,7 @@
               </svg>
             </button>
             <div>
-              <h1 class="text-2xl font-bold text-gray-800">Scanner de Leçons</h1>
+              <h1 class="text-2xl font-bold text-gray-800">Scan de Leçons</h1>
               <p class="text-sm text-gray-600">Scannez une leçon pour générer une interrogation</p>
             </div>
           </div>
