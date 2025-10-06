@@ -1,0 +1,37 @@
+# Fichiers de développement
+node_modules
+.env.local
+.env.development
+.env.test
+
+# Fichiers de documentation
+*.md
+docs/
+
+# Fichiers de test
+tests/
+__tests__/
+*.test.js
+*.spec.js
+
+# Fichiers de configuration de développement
+.vscode/
+.idea/
+*.log
+
+# Fichiers temporaires
+.tmp/
+temp/
+
+# Fichiers de build locaux
+dist/
+build/
+
+# Fichiers Git
+.git/
+.gitignore
+
+# Fichiers de scripts de migration (non nécessaires en production)
+scripts/migrate-*.js
+scripts/test-*.js
+scripts/init-db.js
