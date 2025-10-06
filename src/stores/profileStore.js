@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
-import { ProfileService, PinService, SessionService } from '../services/profileService.js';
+import { ProfileService, PinService, SessionService } from '../services/profile/index.js';
+import { ProfileRepository } from '../repositories/profileRepository.js';
 
 export const useProfileStore = defineStore('profile', {
   state: () => ({
@@ -13,7 +14,10 @@ export const useProfileStore = defineStore('profile', {
       children: 0,
       teens: 0,
       admins: 0
-    }
+    },
+    
+    // Repository
+    profileRepository: new ProfileRepository()
   }),
 
   getters: {
@@ -51,7 +55,7 @@ export const useProfileStore = defineStore('profile', {
       this.error = null;
       
       try {
-        this.profiles = await ProfileService.getAllProfiles();
+        this.profiles = await this.profileRepository.findAllProfiles();
         await this.loadStats();
         console.log('✅ Profils chargés avec succès');
       } catch (error) {
@@ -65,7 +69,7 @@ export const useProfileStore = defineStore('profile', {
     // Charger les statistiques
     async loadStats() {
       try {
-        this.stats = await ProfileService.getProfileStats();
+        this.stats = await this.profileRepository.getProfileStats();
       } catch (error) {
         console.error('❌ Erreur lors du chargement des statistiques:', error);
       }
@@ -77,7 +81,7 @@ export const useProfileStore = defineStore('profile', {
       this.error = null;
       
       try {
-        this.currentProfile = await ProfileService.getProfileById(id);
+        this.currentProfile = await this.profileRepository.findProfileById(id);
         if (!this.currentProfile) {
           throw new Error('Profil non trouvé');
         }
