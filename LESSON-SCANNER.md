@@ -1,4 +1,4 @@
-# Scanner de Leçons avec IA g
+# Scanner de Leçons avec IA
 
 ## Fonctionnalité
 
