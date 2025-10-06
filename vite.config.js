@@ -17,7 +17,11 @@ export default defineConfig(({ mode }) => {
       output: {
         manualChunks: {
           vendor: ['vue']
-        }
+        },
+        // Configuration pour des noms de fichiers plus prévisibles
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       }
     }
   },
