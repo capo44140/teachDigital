@@ -6,14 +6,20 @@ import { neon } from '@neondatabase/serverless';
 
 // Configuration de la base de données Neon
 const config = {
-  connectionString: process.env.DATABASE_URL || process.env.VITE_DATABASE_URL,
-  host: process.env.NEON_HOST,
-  database: process.env.NEON_DATABASE,
-  username: process.env.NEON_USERNAME,
-  password: process.env.NEON_PASSWORD,
-  port: process.env.NEON_PORT || 5432,
+  connectionString: process.env.DATABASE_URL || process.env.VITE_DATABASE_URL || import.meta.env.VITE_DATABASE_URL,
+  host: process.env.NEON_HOST || import.meta.env.VITE_NEON_HOST,
+  database: process.env.NEON_DATABASE || import.meta.env.VITE_NEON_DATABASE,
+  username: process.env.NEON_USERNAME || import.meta.env.VITE_NEON_USERNAME,
+  password: process.env.NEON_PASSWORD || import.meta.env.VITE_NEON_PASSWORD,
+  port: process.env.NEON_PORT || import.meta.env.VITE_NEON_PORT || 5432,
   ssl: true
 };
+
+// Debug des variables d'environnement
+console.log('🔍 Variables d\'environnement détectées:');
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✅ Définie' : '❌ Non définie');
+console.log('VITE_DATABASE_URL:', process.env.VITE_DATABASE_URL ? '✅ Définie' : '❌ Non définie');
+console.log('import.meta.env.VITE_DATABASE_URL:', import.meta.env.VITE_DATABASE_URL ? '✅ Définie' : '❌ Non définie');
 
 // Créer l'instance de connexion Neon
 let sql;
@@ -21,16 +27,27 @@ let sql;
 try {
   if (config.connectionString) {
     // Utiliser la connection string complète
+    console.log('🔗 Utilisation de la connection string complète');
     sql = neon(config.connectionString);
-  } else {
+  } else if (config.host && config.username && config.password && config.database) {
     // Construire la connection string à partir des variables individuelles
     const connectionString = `postgresql://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}?sslmode=require`;
+    console.log('🔗 Construction de la connection string à partir des variables individuelles');
     sql = neon(connectionString);
+  } else {
+    throw new Error('Aucune configuration de base de données valide trouvée. Vérifiez vos variables d\'environnement.');
   }
   
   console.log('✅ Connexion à Neon DB configurée avec succès');
 } catch (error) {
   console.error('❌ Erreur de configuration Neon DB:', error);
+  console.error('Configuration actuelle:', {
+    hasConnectionString: !!config.connectionString,
+    hasHost: !!config.host,
+    hasUsername: !!config.username,
+    hasPassword: !!config.password,
+    hasDatabase: !!config.database
+  });
   throw error;
 }
 
