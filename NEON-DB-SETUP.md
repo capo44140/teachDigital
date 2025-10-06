@@ -1,4 +1,4 @@
-# 🗄️ Configuration Neon DB pour TeachDigital
+# 🗄️ Configuration Neon DB pour TeachDigital (bDD)
 
 ## 📋 Prérequis
 
