@@ -51,7 +51,7 @@ try {
   
   // Exécuter le build Vite
   console.log('🔨 Exécution du build Vite...')
-  execSync('vite build --config vite.config.prod.js --mode production', { 
+  execSync('vite build --mode production', { 
     stdio: 'inherit',
     cwd: process.cwd()
   })
