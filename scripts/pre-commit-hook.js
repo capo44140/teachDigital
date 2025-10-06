@@ -65,6 +65,8 @@ function main() {
   } else {
     console.log('ℹ️ Pas d\'incrémentation automatique sur cette branche')
   }
+  
+  console.log('✅ Hook pre-commit terminé avec succès')
 }
 
 // Exécuter le hook
