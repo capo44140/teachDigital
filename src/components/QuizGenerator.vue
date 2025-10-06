@@ -155,7 +155,7 @@
             Vous avez obtenu {{ correctAnswers }} bonnes réponses sur {{ quiz?.questions?.length || 0 }}
           </p>
           <div class="text-4xl font-bold mb-6" :class="scorePercentage >= 70 ? 'text-green-600' : 'text-blue-600'">
-            {{ scorePercentage }}%
+            {{ formatPercentage(scorePercentage) }}%
           </div>
         </div>
 
@@ -241,10 +241,14 @@ export default {
       return this.quiz?.questions[this.currentQuestionIndex] || null
     },
     progressPercentage() {
-      return this.quiz?.questions?.length ? ((this.currentQuestionIndex + 1) / this.quiz.questions.length) * 100 : 0
+      if (!this.quiz?.questions?.length) return 0
+      const progress = ((this.currentQuestionIndex + 1) / this.quiz.questions.length) * 100
+      return Math.round(progress) || 0
     },
     scorePercentage() {
-      return this.quiz?.questions?.length ? Math.round((this.correctAnswers / this.quiz.questions.length) * 100) : 0
+      if (!this.quiz?.questions?.length) return 0
+      const percentage = (this.correctAnswers / this.quiz.questions.length) * 100
+      return Math.round(percentage) || 0
     }
   },
   created() {
@@ -253,6 +257,18 @@ export default {
     // this.checkSecurity()
   },
   methods: {
+    // Fonction utilitaire pour formater les pourcentages
+    formatPercentage(value) {
+      if (isNaN(value) || value === null || value === undefined) return 0
+      return Math.round(Number(value)) || 0
+    },
+    
+    // Fonction utilitaire pour formater les nombres
+    formatNumber(value) {
+      if (isNaN(value) || value === null || value === undefined) return 0
+      return Math.round(Number(value)) || 0
+    },
+
     async initializeQuiz() {
       console.log('🚀 [QUIZ] Initialisation du quiz')
       console.log('📋 [QUIZ] Paramètres de route reçus:', this.$route.query)

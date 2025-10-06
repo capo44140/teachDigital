@@ -68,7 +68,7 @@
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-medium text-gray-600">Score moyen</p>
-              <p class="text-2xl font-bold text-purple-600">{{ Math.round(globalStats.averageScore || 0) }}%</p>
+              <p class="text-2xl font-bold text-purple-600">{{ formatPercentage(globalStats.averageScore) }}%</p>
             </div>
             <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
               <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,7 +129,7 @@
             </h3>
             <div class="flex items-center space-x-2">
               <span class="text-sm text-gray-500">Score moyen:</span>
-              <span class="text-lg font-bold text-blue-600">{{ Math.round(selectedChild.averageScore || 0) }}%</span>
+              <span class="text-lg font-bold text-blue-600">{{ formatPercentage(selectedChild.averageScore) }}%</span>
             </div>
           </div>
 
@@ -160,7 +160,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                 </svg>
               </div>
-              <p class="text-2xl font-bold text-gray-800">{{ Math.round(selectedChild.averageScore || 0) }}%</p>
+              <p class="text-2xl font-bold text-gray-800">{{ formatPercentage(selectedChild.averageScore) }}%</p>
               <p class="text-sm text-gray-600">Score moyen</p>
             </div>
           </div>
@@ -188,7 +188,7 @@
               <div class="flex items-center justify-between">
                 <div>
                   <p class="text-sm font-medium text-blue-600">Score moyen</p>
-                  <p class="text-2xl font-bold text-blue-700">{{ Math.round(selectedChild.averageScore || 0) }}%</p>
+                  <p class="text-2xl font-bold text-blue-700">{{ formatPercentage(selectedChild.averageScore) }}%</p>
                 </div>
                 <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,7 +295,7 @@
                            :class="lesson.bestScore >= 80 ? 'bg-green-100' : lesson.bestScore >= 60 ? 'bg-yellow-100' : 'bg-red-100'">
                         <span class="text-lg font-bold" 
                               :class="lesson.bestScore >= 80 ? 'text-green-600' : lesson.bestScore >= 60 ? 'text-yellow-600' : 'text-red-600'">
-                          {{ lesson.bestScore }}%
+                          {{ formatPercentage(lesson.bestScore) }}%
                         </span>
                       </div>
                       <div>
@@ -432,6 +432,18 @@ export default {
     next()
   },
   methods: {
+    // Fonction utilitaire pour formater les pourcentages
+    formatPercentage(value) {
+      if (isNaN(value) || value === null || value === undefined) return 0
+      return Math.round(Number(value)) || 0
+    },
+    
+    // Fonction utilitaire pour formater les nombres
+    formatNumber(value) {
+      if (isNaN(value) || value === null || value === undefined) return 0
+      return Math.round(Number(value)) || 0
+    },
+
     goBack() {
       this.$router.push('/dashboard')
     },

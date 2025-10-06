@@ -43,7 +43,7 @@
       <div class="stat-card">
         <div class="stat-icon">⭐</div>
         <div class="stat-content">
-          <h3>{{ averageScore }}%</h3>
+          <h3>{{ formatPercentage(averageScore) }}%</h3>
           <p>Score moyen</p>
         </div>
       </div>
@@ -88,7 +88,7 @@
               </div>
               <div class="child-score">
                 <div class="score-circle" :class="getScoreClass(child.averageScore)">
-                  {{ child.averageScore }}%
+                  {{ formatPercentage(child.averageScore) }}%
                 </div>
               </div>
             </div>
@@ -112,10 +112,10 @@
               <div class="progress-bar">
                 <div 
                   class="progress-fill" 
-                  :style="{ width: child.averageScore + '%' }"
+                  :style="{ width: formatPercentage(child.averageScore) + '%' }"
                 ></div>
               </div>
-              <span class="progress-text">Progrès: {{ child.averageScore }}%</span>
+              <span class="progress-text">Progrès: {{ formatPercentage(child.averageScore) }}%</span>
             </div>
 
             <div class="child-actions">
@@ -161,7 +161,7 @@
                 <span class="child-name">{{ quiz.childName }}</span>
               </div>
               <div class="quiz-score" :class="getScoreClass(quiz.percentage)">
-                {{ quiz.percentage }}%
+                {{ formatPercentage(quiz.percentage) }}%
               </div>
             </div>
             <div class="quiz-content">
@@ -185,12 +185,12 @@
               <div class="chart-bar">
                 <div 
                   class="bar-fill" 
-                  :style="{ height: child.averageScore + '%' }"
+                  :style="{ height: formatPercentage(child.averageScore) + '%' }"
                 ></div>
               </div>
               <div class="chart-label">
                 <span class="child-name">{{ child.name }}</span>
-                <span class="child-score">{{ child.averageScore }}%</span>
+                <span class="child-score">{{ formatPercentage(child.averageScore) }}%</span>
               </div>
             </div>
           </div>
@@ -221,7 +221,7 @@
                 <td>{{ child.totalQuizzes }}</td>
                 <td>
                   <span class="score-badge" :class="getScoreClass(child.averageScore)">
-                    {{ child.averageScore }}%
+                    {{ formatPercentage(child.averageScore) }}%
                   </span>
                 </td>
                 <td>{{ child.completedLessons }}</td>
@@ -252,7 +252,7 @@
                 <div class="recommendation-icon">⚠️</div>
                 <div class="recommendation-text">
                   <h5>Attention aux difficultés</h5>
-                  <p>Le score moyen de {{ child.name }} est de {{ child.averageScore }}%. Il serait bénéfique de revoir certains concepts.</p>
+                  <p>Le score moyen de {{ child.name }} est de {{ formatPercentage(child.averageScore) }}%. Il serait bénéfique de revoir certains concepts.</p>
                 </div>
               </div>
               
@@ -268,7 +268,7 @@
                 <div class="recommendation-icon">🎉</div>
                 <div class="recommendation-text">
                   <h5>Excellent travail !</h5>
-                  <p>{{ child.name }} obtient d'excellents résultats avec {{ child.averageScore }}% de moyenne. Continuez ainsi !</p>
+                  <p>{{ child.name }} obtient d'excellents résultats avec {{ formatPercentage(child.averageScore) }}% de moyenne. Continuez ainsi !</p>
                 </div>
               </div>
             </div>
@@ -303,21 +303,43 @@ export default {
   },
   computed: {
     totalQuizzesCompleted() {
-      return this.childrenStats.reduce((sum, child) => sum + child.totalQuizzes, 0)
+      return this.childrenStats.reduce((sum, child) => {
+        const quizzes = Number(child.totalQuizzes) || 0
+        return sum + quizzes
+      }, 0)
     },
     averageScore() {
       if (this.childrenStats.length === 0) return 0
-      const total = this.childrenStats.reduce((sum, child) => sum + child.averageScore, 0)
-      return Math.round(total / this.childrenStats.length)
+      const total = this.childrenStats.reduce((sum, child) => {
+        const score = Number(child.averageScore) || 0
+        return sum + score
+      }, 0)
+      const average = total / this.childrenStats.length
+      return Math.round(average) || 0
     },
     totalLessonsCompleted() {
-      return this.childrenStats.reduce((sum, child) => sum + child.completedLessons, 0)
+      return this.childrenStats.reduce((sum, child) => {
+        const lessons = Number(child.completedLessons) || 0
+        return sum + lessons
+      }, 0)
     }
   },
   async created() {
     await this.loadData()
   },
   methods: {
+    // Fonction utilitaire pour formater les pourcentages
+    formatPercentage(value) {
+      if (isNaN(value) || value === null || value === undefined) return 0
+      return Math.round(Number(value)) || 0
+    },
+    
+    // Fonction utilitaire pour formater les nombres
+    formatNumber(value) {
+      if (isNaN(value) || value === null || value === undefined) return 0
+      return Math.round(Number(value)) || 0
+    },
+
     async loadData() {
       this.isLoading = true
       try {

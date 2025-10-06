@@ -26,7 +26,7 @@
               <span class="stat-label">Quiz terminés</span>
             </div>
             <div class="stat-item">
-              <span class="stat-number">{{ averageScore }}%</span>
+              <span class="stat-number">{{ formatPercentage(averageScore) }}%</span>
               <span class="stat-label">Score moyen</span>
             </div>
             <div class="stat-item">
@@ -85,7 +85,7 @@
                 <span class="quiz-date">{{ formatDate(quiz.completedAt) }}</span>
               </div>
               <div class="quiz-score" :class="getScoreClass(quiz.percentage)">
-                {{ quiz.percentage }}%
+                {{ formatPercentage(quiz.percentage) }}%
               </div>
             </div>
             <div class="quiz-details">
@@ -97,7 +97,7 @@
                 <div class="progress-bar">
                   <div 
                     class="progress-fill" 
-                    :style="{ width: quiz.percentage + '%' }"
+                    :style="{ width: formatPercentage(quiz.percentage) + '%' }"
                   ></div>
                 </div>
               </div>
@@ -260,22 +260,32 @@ export default {
     },
     averageScore() {
       if (this.quizHistory.length === 0) return 0
-      const total = this.quizHistory.reduce((sum, quiz) => sum + quiz.percentage, 0)
-      return Math.round(total / this.quizHistory.length)
+      const total = this.quizHistory.reduce((sum, quiz) => {
+        const percentage = Number(quiz.percentage) || 0
+        return sum + percentage
+      }, 0)
+      const average = total / this.quizHistory.length
+      return Math.round(average) || 0
     },
     totalLessonsCompleted() {
       return new Set(this.quizHistory.map(quiz => quiz.lessonId)).size
     },
     totalLearningTime() {
-      const totalMinutes = this.quizHistory.reduce((sum, quiz) => sum + (quiz.duration || 0), 0)
+      const totalMinutes = this.quizHistory.reduce((sum, quiz) => {
+        const duration = Number(quiz.duration) || 0
+        return sum + duration
+      }, 0)
       const hours = Math.floor(totalMinutes / 60)
-      const minutes = totalMinutes % 60
+      const minutes = Math.round(totalMinutes % 60)
       return hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`
     },
     averageSessionTime() {
       if (this.quizHistory.length === 0) return '0min'
-      const totalMinutes = this.quizHistory.reduce((sum, quiz) => sum + (quiz.duration || 0), 0)
-      const average = Math.round(totalMinutes / this.quizHistory.length)
+      const totalMinutes = this.quizHistory.reduce((sum, quiz) => {
+        const duration = Number(quiz.duration) || 0
+        return sum + duration
+      }, 0)
+      const average = Math.round(totalMinutes / this.quizHistory.length) || 0
       return `${average}min`
     }
   },
@@ -284,6 +294,18 @@ export default {
     await this.loadProgressData()
   },
   methods: {
+    // Fonction utilitaire pour formater les pourcentages
+    formatPercentage(value) {
+      if (isNaN(value) || value === null || value === undefined) return 0
+      return Math.round(Number(value)) || 0
+    },
+    
+    // Fonction utilitaire pour formater les nombres
+    formatNumber(value) {
+      if (isNaN(value) || value === null || value === undefined) return 0
+      return Math.round(Number(value)) || 0
+    },
+
     async loadChildProfile() {
       const childId = this.$route.query.childId
       if (!childId) {
