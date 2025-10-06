@@ -24,7 +24,8 @@
     "version:minor": "node scripts/version-bump.js minor",
     "version:major": "node scripts/version-bump.js major",
     "version:current": "node -p \"require('./package.json').version\"",
-    "setup:hooks": "node scripts/setup-git-hooks.js"
+    "setup:hooks": "node scripts/setup-git-hooks.js",
+    "test:version": "node scripts/test-version-display.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

@@ -276,15 +276,22 @@
         </div>
       </div>
     </div>
+    
+    <!-- Affichage de la version -->
+    <VersionInfo position="bottom-right" />
   </div>
 </template>
 
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
 import { LessonService } from '../services/lessonService.js'
+import VersionInfo from './VersionInfo.vue'
 
 export default {
   name: 'ParentProgressTracking',
+  components: {
+    VersionInfo
+  },
   data() {
     return {
       activeTab: 'overview',

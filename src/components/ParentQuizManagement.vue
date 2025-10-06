@@ -381,15 +381,22 @@
         </div>
       </div>
     </main>
+    
+    <!-- Affichage de la version -->
+    <VersionInfo position="bottom-right" />
   </div>
 </template>
 
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
 import { LessonService } from '../services/lessonService.js'
+import VersionInfo from './VersionInfo.vue'
 
 export default {
   name: 'ParentQuizManagement',
+  components: {
+    VersionInfo
+  },
   data() {
     return {
       selectedChild: null,

@@ -181,6 +181,9 @@
         </div>
       </div>
     </main>
+    
+    <!-- Affichage de la version -->
+    <VersionInfo position="bottom-right" />
   </div>
 </template>
 
@@ -188,11 +191,13 @@
 import { useProfileStore } from '../stores/profileStore.js'
 import sessionService from '../services/sessionService.js'
 import NotificationCenter from './NotificationCenter.vue'
+import VersionInfo from './VersionInfo.vue'
 
 export default {
   name: 'Dashboard',
   components: {
-    NotificationCenter
+    NotificationCenter,
+    VersionInfo
   },
   setup() {
     const profileStore = useProfileStore()
