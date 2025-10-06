@@ -164,6 +164,8 @@
                   <option value="5">5 questions</option>
                   <option value="8">8 questions</option>
                   <option value="10">10 questions</option>
+                  <option value="20">20 questions</option>
+                  <option value="40">40 questions</option>
                 </select>
               </div>
               <div>
