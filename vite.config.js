@@ -42,83 +42,81 @@ export default defineConfig(({ mode }) => {
     ],
     optimizeDeps: {
       include: ["@neondatabase/serverless", "bcryptjs"],
+      exclude: ["vite-plugin-pwa"]
     },
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: false,
       minify: 'terser',
-      chunkSizeWarningLimit: 1000,
-      commonjsOptions: {
-        include: [/@neondatabase/, /bcryptjs/],
+      terserOptions: {
+        compress: {
+          drop_console: false,
+          drop_debugger: true,
+          pure_funcs: ['console.log']
+        },
+        mangle: {
+          keep_fnames: true
+        }
       },
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
-        external: [],
         output: {
-          globals: {
-            '@neondatabase/serverless': 'neon',
-            'bcryptjs': 'bcrypt'
-          },
-          manualChunks: (id) => {
-            // Chunk pour les dépendances externes
-            if (id.includes('node_modules')) {
-              if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
-                return 'vue-vendor'
-              }
-              if (id.includes('@neondatabase') || id.includes('bcryptjs')) {
-                return 'database-vendor'
-              }
-              return 'vendor'
-            }
-            
+          manualChunks: {
+            // Chunk pour Vue et ses dépendances
+            'vue-vendor': ['vue', 'vue-router', 'pinia'],
+            // Chunk pour la base de données
+            'database-vendor': ['@neondatabase/serverless', 'bcryptjs'],
             // Chunk pour les services
-            if (id.includes('/src/services/')) {
-              return 'services'
-            }
-            
+            'services': [
+              './src/services/activityService.js',
+              './src/services/aiService.js',
+              './src/services/auditLogService.js',
+              './src/services/encryptionService.js',
+              './src/services/hashService.js',
+              './src/services/imageValidationService.js',
+              './src/services/lessonService.js',
+              './src/services/notificationService.js',
+              './src/services/profileService.js',
+              './src/services/rateLimitService.js',
+              './src/services/sessionService.js'
+            ],
             // Chunk pour les composants admin
-            if (id.includes('/src/components/') && (
-              id.includes('Dashboard.vue') ||
-              id.includes('ProfileManagement.vue') ||
-              id.includes('SecurityDashboard.vue') ||
-              id.includes('ParentQuizManagement.vue') ||
-              id.includes('ParentProgressTracking.vue') ||
-              id.includes('ParentActivityManagement.vue') ||
-              id.includes('ParentSettings.vue') ||
-              id.includes('LessonScanner.vue') ||
-              id.includes('TextQuizGenerator.vue')
-            )) {
-              return 'admin-components'
-            }
-            
+            'admin-components': [
+              './src/components/Dashboard.vue',
+              './src/components/ProfileManagement.vue',
+              './src/components/SecurityDashboard.vue',
+              './src/components/ParentQuizManagement.vue',
+              './src/components/ParentProgressTracking.vue',
+              './src/components/ParentActivityManagement.vue',
+              './src/components/ParentSettings.vue',
+              './src/components/LessonScanner.vue',
+              './src/components/TextQuizGenerator.vue'
+            ],
             // Chunk pour les composants utilisateur
-            if (id.includes('/src/components/') && (
-              id.includes('UserDashboard.vue') ||
-              id.includes('ProgressTracking.vue') ||
-              id.includes('QuizGenerator.vue')
-            )) {
-              return 'user-components'
-            }
-            
-            // Chunk pour les composants de test (en développement uniquement)
-            if (id.includes('/src/components/') && (
-              id.includes('ProfileTest.vue') ||
-              id.includes('SecurityTest.vue') ||
-              id.includes('NotificationTest.vue') ||
-              id.includes('PinSecurityTest.vue')
-            )) {
-              return 'test-components'
-            }
-            
+            'user-components': [
+              './src/components/UserDashboard.vue',
+              './src/components/ProgressTracking.vue',
+              './src/components/QuizGenerator.vue'
+            ],
             // Chunk pour les composants communs
-            if (id.includes('/src/components/')) {
-              return 'common-components'
-            }
-            
-            // Chunk pour les stores et configuration
-            if (id.includes('/src/stores/') || id.includes('/src/config/')) {
-              return 'app-core'
-            }
+            'common-components': [
+              './src/components/ProfileSelector.vue',
+              './src/components/PinLock.vue',
+              './src/components/PinSettings.vue',
+              './src/components/EditProfilePage.vue',
+              './src/components/ProfileSettings.vue',
+              './src/components/ImageUpload.vue',
+              './src/components/VersionInfo.vue',
+              './src/components/NotificationCenter.vue'
+            ],
+            // Chunk pour les composants de test (en développement uniquement)
+            'test-components': [
+              './src/components/ProfileTest.vue',
+              './src/components/SecurityTest.vue',
+              './src/components/NotificationTest.vue',
+              './src/components/PinSecurityTest.vue'
+            ]
           },
           // Configuration pour des noms de fichiers plus prévisibles
           chunkFileNames: 'assets/[name]-[hash].js',
