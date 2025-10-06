@@ -111,6 +111,35 @@ Le projet utilise Tailwind CSS 4 avec une configuration moderne. Vous pouvez per
 - `pnpm run version:minor` - Incrémente la version (minor)
 - `pnpm run version:major` - Incrémente la version (major)
 
+## 🔧 Configuration Vercel
+
+Pour déployer sur Vercel, assurez-vous que les paramètres suivants sont configurés :
+
+1. **Framework Settings** :
+   - Framework Preset : `Vite`
+   - Build Command : `pnpm run build`
+   - Output Directory : `dist`
+   - Install Command : `pnpm install`
+   - Development Command : `vite`
+
+2. **Variables d'environnement** (à configurer dans Vercel) :
+   - `DATABASE_URL` - URL de connexion Neon Database
+   - `VITE_DATABASE_URL` - URL publique pour le client
+   - `NEON_HOST`, `NEON_DATABASE`, `NEON_USERNAME`, `NEON_PASSWORD`, `NEON_PORT`
+
+3. **Activation des Overrides** :
+   - Activez tous les toggles "Override" dans l'interface Vercel
+   - Cela synchronise les paramètres de projet avec ceux de production
+
+## 🚀 Fonctionnalités avancées
+
+- **PWA Ready** - Application Web Progressive avec Service Worker
+- **Gestion d'état** - Pinia pour la gestion d'état Vue.js
+- **Base de données** - Intégration Neon Database PostgreSQL
+- **Sécurité** - Système de codes PIN avec chiffrement
+- **Cache optimisé** - Headers de cache configurés pour Vercel
+- **Build optimisé** - Configuration de production dédiée
+
 ## 🤝 Contribution
 
 Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou une pull request.

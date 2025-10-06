@@ -39,6 +39,10 @@ function autoIncrementVersion() {
   try {
     console.log('🔄 Incrémentation automatique de la version...')
     execSync('node scripts/version-bump.js patch', { stdio: 'inherit' })
+    
+    // Ajouter les fichiers modifiés au staging area
+    execSync('git add package.json public/manifest.json src/version.json', { stdio: 'inherit' })
+    
     console.log('✅ Version incrémentée automatiquement')
   } catch (error) {
     console.error('❌ Erreur lors de l\'incrémentation automatique:', error.message)
