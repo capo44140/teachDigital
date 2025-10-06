@@ -129,16 +129,20 @@
             <button 
               type="button"
               @click="cancelChange"
-              class="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+              :disabled="isLoading"
+              class="px-4 py-2 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
             >
               Annuler
             </button>
             <button 
               type="submit"
-              :disabled="!isFormValid"
-              class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="!isFormValid || isLoading"
+              class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
-              Enregistrer
+              <svg v-if="isLoading" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              <span>{{ isLoading ? 'Modification...' : 'Enregistrer' }}</span>
             </button>
           </div>
         </form>
@@ -148,7 +152,7 @@
 </template>
 
 <script>
-import { getCurrentPin, setPin, resetPin, PIN_CONFIG } from '../config/pinConfig.js'
+import { useProfileStore } from '../stores/profileStore.js'
 
 export default {
   name: 'PinSettings',
@@ -158,12 +162,16 @@ export default {
       newPin: '',
       confirmPin: '',
       errorMessage: '',
-      successMessage: ''
+      successMessage: '',
+      isLoading: false
     }
   },
   computed: {
-    currentPin() {
-      return getCurrentPin()
+    profileStore() {
+      return useProfileStore()
+    },
+    currentProfile() {
+      return this.profileStore.currentProfile
     },
     maskedPin() {
       return '•'.repeat(4)
@@ -180,16 +188,25 @@ export default {
       this.$router.push('/manage-profiles')
     },
     
-    changePin() {
+    async changePin() {
       this.errorMessage = ''
       this.successMessage = ''
+      this.isLoading = true
       
       if (!this.isFormValid) {
         this.errorMessage = 'Veuillez saisir un code PIN valide de 4 chiffres identiques'
+        this.isLoading = false
         return
       }
       
-      if (setPin(this.newPin)) {
+      if (!this.currentProfile) {
+        this.errorMessage = 'Aucun profil sélectionné'
+        this.isLoading = false
+        return
+      }
+      
+      try {
+        await this.profileStore.updatePin(this.currentProfile.id, this.newPin)
         this.successMessage = 'Code PIN modifié avec succès !'
         this.newPin = ''
         this.confirmPin = ''
@@ -197,8 +214,11 @@ export default {
           this.showChangeForm = false
           this.successMessage = ''
         }, 2000)
-      } else {
-        this.errorMessage = 'Erreur lors de la modification du code PIN'
+      } catch (error) {
+        this.errorMessage = error.message || 'Erreur lors de la modification du code PIN'
+        console.error('Erreur lors de la modification du PIN:', error)
+      } finally {
+        this.isLoading = false
       }
     },
     
