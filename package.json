@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/generate-icons.js && vite build --mode production",
+    "build": "node scripts/generate-icons.js && vite build --mode production && node scripts/generate-sw.js",
     "build:vercel": "node scripts/build-vercel.js",
     "preview": "vite preview",
     "generate-icons": "node scripts/generate-icons.js",
