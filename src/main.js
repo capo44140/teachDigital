@@ -3,9 +3,17 @@ import { createPinia } from 'pinia'
 import './style.css'
 import App from './App.vue'
 import router from './router'
+import UpdateNotification from './components/UpdateNotification.vue'
+import { updateService } from './services/updateService.js'
 
 // Créer l'instance Pinia
 const pinia = createPinia()
+
+// Créer l'application Vue
+const app = createApp(App)
+
+// Enregistrer le composant global
+app.component('UpdateNotification', UpdateNotification)
 
 // Enregistrement du Service Worker pour PWA avec gestion des mises à jour
 if ('serviceWorker' in navigator) {
@@ -30,10 +38,8 @@ if ('serviceWorker' in navigator) {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               console.log('🆕 Service Worker: Nouvelle version installée');
               
-              // Notifier l'utilisateur de la mise à jour
-              if (confirm('Une nouvelle version de l\'application est disponible. Voulez-vous recharger la page pour l\'utiliser ?')) {
-                window.location.reload();
-              }
+              // Utiliser la popup personnalisée au lieu de confirm()
+              updateService.showUpdateNotification('0.0.15', '0.0.16');
             }
           });
         });
@@ -44,4 +50,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-createApp(App).use(pinia).use(router).mount('#app')
+// Fournir le service de mise à jour globalement
+app.provide('updateService', updateService)
+
+app.use(pinia).use(router).mount('#app')
