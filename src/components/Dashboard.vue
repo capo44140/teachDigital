@@ -186,6 +186,17 @@
             </svg>
             <span>Paramètres</span>
           </button>
+          
+          <button 
+            @click="openActivityManagement"
+            class="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center space-x-2"
+            title="Gestion des activités"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <span>Gestion des activités</span>
+          </button>
         </div>
       </div>
     </main>
@@ -468,6 +479,15 @@ export default {
     openParentSettings() {
       this.$router.push({ 
         path: '/parent-settings', 
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        } 
+      })
+    },
+    openActivityManagement() {
+      this.$router.push({ 
+        path: '/parent-activity-management', 
         query: { 
           profile: this.$route.query.profile || '1',
           unlocked: 'true'

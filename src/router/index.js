@@ -106,6 +106,12 @@ const routes = [
     meta: { requiresAdmin: true }
   },
   {
+    path: '/parent-activity-management',
+    name: 'ParentActivityManagement',
+    component: () => import('../components/ParentActivityManagement.vue'),
+    meta: { requiresAdmin: true }
+  },
+  {
     path: '/text-quiz-generator',
     name: 'TextQuizGenerator',
     component: TextQuizGenerator,

@@ -155,6 +155,26 @@
                 Scanner
               </button>
             </div>
+
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-medium text-gray-800">Gestion des activités</h3>
+                  <p class="text-sm text-gray-600">Organiser et suivre les activités des enfants</p>
+                </div>
+              </div>
+              <button 
+                @click="goToActivityManagement"
+                class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                Gérer
+              </button>
+            </div>
           </div>
         </div>
 
@@ -403,6 +423,16 @@ export default {
     goToLessonScanner() {
       this.$router.push({ 
         path: '/lesson-scanner',
+        query: { 
+          profile: this.$route.query.profile || '1',
+          unlocked: 'true'
+        }
+      })
+    },
+    
+    goToActivityManagement() {
+      this.$router.push({ 
+        path: '/parent-activity-management',
         query: { 
           profile: this.$route.query.profile || '1',
           unlocked: 'true'
