@@ -49,6 +49,7 @@
     "bundle:size": "npx vite-bundle-analyzer dist/assets/*.js"
   },
   "dependencies": {
+    "@iconify/vue": "^5.0.0",
     "@neondatabase/serverless": "^1.0.2",
     "bcryptjs": "^3.0.2",
     "pinia": "^3.0.3",
