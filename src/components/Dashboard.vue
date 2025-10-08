@@ -79,149 +79,199 @@
         <p class="mt-2 text-sm text-gray-500">Veuillez patienter...</p>
       </div>
 
-      <!-- Contenu spécifique au profil -->
-      <div v-if="currentProfile" class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <!-- Cartes de cours -->
-        <div v-for="course in currentProfile.courses" :key="course.id" 
-             class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-          <div class="flex items-center mb-4">
-            <div class="w-12 h-12 rounded-lg flex items-center justify-center" :class="course.color">
-              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="course.icon"></path>
-              </svg>
+      <!-- Fonctionnalités d'administration pour les parents -->
+      <div v-if="currentProfile && (currentProfile.isAdmin || currentProfile.name === 'Parent' || currentProfile.id === '1' || currentProfile.id === 1)" class="mt-8">
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <!-- Gérer les profils -->
+          <div @click="manageProfiles" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-amber-500">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-800 ml-4">Gérer les profils</h3>
             </div>
-            <h3 class="text-xl font-semibold text-gray-800 ml-4">{{ course.title }}</h3>
+            <p class="text-gray-600 mb-4">Configurez et gérez les profils de votre famille</p>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Administration</span>
+              <button class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors">
+                Accéder
+              </button>
+            </div>
           </div>
-          <p class="text-gray-600 mb-4">{{ course.description }}</p>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-500">{{ course.duration }}</span>
-            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              Commencer
-            </button>
-          </div>
-        </div>
-      </div>
 
-      <!-- Section admin pour les parents -->
-      <div v-if="currentProfile && (currentProfile.isAdmin || currentProfile.name === 'Parent' || currentProfile.id === '1' || currentProfile.id === 1)" class="mt-16 bg-yellow-50 border border-yellow-200 rounded-xl p-8">
-        <div class="flex items-center mb-4">
-          <svg class="w-8 h-8 text-yellow-600 mr-3" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
-          </svg>
-          <h3 class="text-2xl font-bold text-yellow-800">Panneau d'administration</h3>
-        </div>
-        <p class="text-yellow-700 mb-6">En tant que parent, vous avez accès aux fonctionnalités d'administration.</p>
-        
-        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <button 
-            @click="manageProfiles"
-            class="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors flex items-center justify-center space-x-2"
-            title="Gérer les profils"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            <span>Gérer les profils</span>
-          </button>
-          
-          <button 
-            @click="openLessonScanner"
-            class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
-            title="Scanner des leçons"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
-            </svg>
-            <span>Scanner des leçons</span>
-          </button>
-          
-          <button 
-            @click="openQuizManagement"
-            class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center space-x-2"
-            title="Gérer les interrogations"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <span>Gérer les interrogations</span>
-          </button>
-          
-          <button 
-            @click="openTextQuizGenerator"
-            class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2"
-            title="Créer un quiz à partir de texte"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-            </svg>
-            <span>Quiz à partir de texte</span>
-          </button>
-          
-          <button 
-            @click="openSecurityTest"
-            class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
-            title="Test de sécurité"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-            </svg>
-            <span>Test de sécurité</span>
-          </button>
-          
-          <button 
-            @click="openNotificationTest"
-            class="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors flex items-center justify-center space-x-2"
-            title="Test des notifications"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 0 0-15 0v5h5l-5 5-5-5h5v-5a7.5 7.5 0 0 0 15 0v5z"/>
-            </svg>
-            <span>Test des notifications</span>
-          </button>
-          <button 
-            @click="openProgressTracking"
-            class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
-            title="Suivi des progrès des enfants"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-            </svg>
-            <span>Suivi des progrès</span>
-          </button>
-          <button 
-            @click="openParentSettings"
-            class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2"
-            title="Paramètres parent"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            <span>Paramètres</span>
-          </button>
-          
-          <button 
-            @click="openActivityManagement"
-            class="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center space-x-2"
-            title="Gestion des activités"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-            <span>Gestion des activités</span>
-          </button>
-          
-          <button 
-            @click="openYouTubeManager"
-            class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
-            title="Gestion des vidéos YouTube"
-          >
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-            </svg>
-            <span>Vidéos YouTube</span>
-          </button>
+          <!-- Scanner des leçons -->
+          <div @click="openLessonScanner" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-500">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-800 ml-4">Scanner des leçons</h3>
+            </div>
+            <p class="text-gray-600 mb-4">Créez des quiz à partir d'images et documents</p>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">IA & Quiz</span>
+              <button class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                Scanner
+              </button>
+            </div>
+          </div>
+
+          <!-- Gérer les interrogations -->
+          <div @click="openQuizManagement" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-500">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-800 ml-4">Gérer les interrogations</h3>
+            </div>
+            <p class="text-gray-600 mb-4">Organisez et suivez les quiz des enfants</p>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Gestion</span>
+              <button class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors">
+                Gérer
+              </button>
+            </div>
+          </div>
+
+          <!-- Quiz à partir de texte -->
+          <div @click="openTextQuizGenerator" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-emerald-500">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-800 ml-4">Quiz à partir de texte</h3>
+            </div>
+            <p class="text-gray-600 mb-4">Générez des quiz depuis du texte libre</p>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Création</span>
+              <button class="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors">
+                Créer
+              </button>
+            </div>
+          </div>
+
+          <!-- Test de sécurité -->
+          <div @click="openSecurityTest" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-red-500">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-800 ml-4">Test de sécurité</h3>
+            </div>
+            <p class="text-gray-600 mb-4">Vérifiez la sécurité du système</p>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Sécurité</span>
+              <button class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                Tester
+              </button>
+            </div>
+          </div>
+
+          <!-- Test des notifications -->
+          <div @click="openNotificationTest" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-orange-500">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 0 0-15 0v5h5l-5 5-5-5h5v-5a7.5 7.5 0 0 0 15 0v5z"/>
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-800 ml-4">Test des notifications</h3>
+            </div>
+            <p class="text-gray-600 mb-4">Testez le système de notifications</p>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Test</span>
+              <button class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
+                Tester
+              </button>
+            </div>
+          </div>
+
+          <!-- Suivi des progrès -->
+          <div @click="openProgressTracking" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-green-500">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-800 ml-4">Suivi des progrès</h3>
+            </div>
+            <p class="text-gray-600 mb-4">Consultez les statistiques d'apprentissage</p>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Statistiques</span>
+              <button class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                Consulter
+              </button>
+            </div>
+          </div>
+
+          <!-- Paramètres -->
+          <div @click="openParentSettings" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-slate-500">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-800 ml-4">Paramètres</h3>
+            </div>
+            <p class="text-gray-600 mb-4">Configurez les paramètres de l'application</p>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Configuration</span>
+              <button class="px-4 py-2 bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-colors">
+                Configurer
+              </button>
+            </div>
+          </div>
+
+          <!-- Gestion des activités -->
+          <div @click="openActivityManagement" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-cyan-500">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-800 ml-4">Gestion des activités</h3>
+            </div>
+            <p class="text-gray-600 mb-4">Organisez les activités des enfants</p>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Organisation</span>
+              <button class="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors">
+                Organiser
+              </button>
+            </div>
+          </div>
+
+          <!-- Vidéos YouTube -->
+          <div @click="openYouTubeManager" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
+            <div class="flex items-center mb-4">
+              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-red-600">
+                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+              </div>
+              <h3 class="text-xl font-semibold text-gray-800 ml-4">Vidéos YouTube</h3>
+            </div>
+            <p class="text-gray-600 mb-4">Gérez les vidéos éducatives</p>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Médias</span>
+              <button class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                Gérer
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </main>
@@ -256,24 +306,7 @@ export default {
           bgColor: 'bg-teal-500',
           isAdmin: true,
           welcomeMessage: 'Gérez l\'apprentissage de votre famille',
-          courses: [
-            {
-              id: 1,
-              title: 'Gestion des profils',
-              description: 'Configurez et gérez les profils de votre famille',
-              duration: '5 min',
-              color: 'bg-yellow-500',
-              icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z'
-            },
-            {
-              id: 2,
-              title: 'Suivi des progrès',
-              description: 'Consultez les statistiques d\'apprentissage',
-              duration: '10 min',
-              color: 'bg-green-500',
-              icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
-            }
-          ]
+          courses: []
         },
         ayna: {
           name: 'Ayna',
