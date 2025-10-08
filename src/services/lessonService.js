@@ -13,29 +13,53 @@ export class LessonService {
    * Sauvegarde une leçon générée en base de données
    * @param {Object} lessonData - Données de la leçon
    * @param {number} profileId - ID du profil
-   * @param {File} imageFile - Fichier image (optionnel)
+   * @param {File|Array<File>} files - Fichier(s) (optionnel)
    * @returns {Promise<Object>} Leçon sauvegardée
    */
-  static async saveLesson(lessonData, profileId, imageFile = null) {
+  static async saveLesson(lessonData, profileId, files = null) {
     try {
       let imageData = null
       let imageFilename = null
+      let documentsData = null
       
-      // Traiter l'image si fournie
-      if (imageFile) {
-        imageData = await this.fileToBase64(imageFile)
-        imageFilename = imageFile.name
+      // Traiter les fichiers si fournis
+      if (files) {
+        if (Array.isArray(files)) {
+          // Plusieurs fichiers
+          const fileData = []
+          for (const file of files) {
+            const base64Data = await this.fileToBase64(file)
+            fileData.push({
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              data: base64Data
+            })
+          }
+          documentsData = JSON.stringify(fileData)
+          
+          // Utiliser le premier fichier image comme image principale
+          const firstImage = files.find(f => f.type.startsWith('image/'))
+          if (firstImage) {
+            imageData = await this.fileToBase64(firstImage)
+            imageFilename = firstImage.name
+          }
+        } else {
+          // Un seul fichier
+          imageData = await this.fileToBase64(files)
+          imageFilename = files.name
+        }
       }
       
       const result = await sql`
         INSERT INTO lessons (
           profile_id, title, description, subject, level, 
-          image_filename, image_data, quiz_data, is_published
+          image_filename, image_data, documents_data, quiz_data, is_published
         )
         VALUES (
           ${profileId}, ${lessonData.title}, ${lessonData.description || ''}, 
           ${lessonData.subject || ''}, ${lessonData.level || ''},
-          ${imageFilename}, ${imageData}, ${JSON.stringify(lessonData)}, true
+          ${imageFilename}, ${imageData}, ${documentsData}, ${JSON.stringify(lessonData)}, true
         )
         RETURNING *
       `;
@@ -48,7 +72,8 @@ export class LessonService {
         {
           lessonId: result[0].id,
           title: lessonData.title,
-          questionsCount: lessonData.questions?.length || 0
+          questionsCount: lessonData.questions?.length || 0,
+          fileCount: Array.isArray(files) ? files.length : (files ? 1 : 0)
         }
       );
       

@@ -61,6 +61,25 @@
           <p class="text-gray-600">Prenez une photo ou téléchargez une image de la leçon</p>
         </div>
 
+        <!-- Sélecteur du nombre de questions -->
+        <div class="bg-gray-50 rounded-lg p-4 mb-6">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Nombre de questions à générer
+          </label>
+          <select 
+            v-model="questionCount"
+            class="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="3">3 questions</option>
+            <option value="5">5 questions</option>
+            <option value="8">8 questions</option>
+            <option value="10">10 questions</option>
+            <option value="15">15 questions</option>
+            <option value="20">20 questions</option>
+            <option value="40">40 questions</option>
+          </select>
+        </div>
+
         <!-- Zone de téléchargement -->
         <div 
           @drop="handleDrop"
@@ -74,17 +93,18 @@
           <input
             ref="fileInput"
             type="file"
-            accept="image/*"
+            accept="image/*,.pdf"
             @change="handleFileSelect"
+            multiple
             class="hidden"
           />
           
-          <div v-if="!selectedFile" class="space-y-4">
+          <div v-if="selectedFiles.length === 0" class="space-y-4">
             <svg class="w-16 h-16 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
             </svg>
             <div>
-              <p class="text-lg font-medium text-gray-700">Glissez-déposez votre image ici</p>
+              <p class="text-lg font-medium text-gray-700">Glissez-déposez vos documents ici</p>
               <p class="text-gray-500">ou</p>
               <button 
                 @click="$refs.fileInput.click()"
@@ -93,30 +113,52 @@
                 Parcourir les fichiers
               </button>
             </div>
-            <p class="text-sm text-gray-500">Formats supportés: JPG, PNG, PDF</p>
+            <p class="text-sm text-gray-500">Formats supportés: JPG, PNG, PDF (plusieurs fichiers autorisés)</p>
           </div>
 
-          <!-- Aperçu du fichier sélectionné -->
+          <!-- Liste des fichiers sélectionnés -->
           <div v-else class="space-y-4">
-            <div class="relative inline-block">
-              <img 
-                v-if="filePreview" 
-                :src="filePreview" 
-                alt="Aperçu" 
-                class="max-w-xs max-h-48 rounded-lg shadow-md"
-              />
-              <button 
-                @click="removeFile"
-                class="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-              >
-                <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-            <div>
-              <p class="font-medium text-gray-800">{{ selectedFile.name }}</p>
-              <p class="text-sm text-gray-500">{{ formatFileSize(selectedFile.size) }}</p>
+            <div class="text-left">
+              <h3 class="text-lg font-medium text-gray-800 mb-3">
+                Documents sélectionnés ({{ selectedFiles.length }})
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div 
+                  v-for="(file, index) in selectedFiles" 
+                  :key="index"
+                  class="relative bg-white border border-gray-200 rounded-lg p-4"
+                >
+                  <button 
+                    @click="removeFile(index)"
+                    class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors flex items-center justify-center"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                  </button>
+                  
+                  <div class="flex items-center space-x-3">
+                    <div class="flex-shrink-0">
+                      <img 
+                        v-if="filePreviews[index]" 
+                        :src="filePreviews[index]" 
+                        alt="Aperçu" 
+                        class="w-16 h-16 object-cover rounded-lg"
+                      />
+                      <div v-else class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-gray-800 truncate">{{ file.name }}</p>
+                      <p class="text-xs text-gray-500">{{ formatFileSize(file.size) }}</p>
+                      <p class="text-xs text-gray-400">{{ file.type }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -137,11 +179,18 @@
         <!-- Boutons d'action -->
         <div class="flex justify-center space-x-4 mt-8">
           <button 
+            v-if="selectedFiles.length > 0"
+            @click="removeAllFiles"
+            class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            Supprimer tous les fichiers
+          </button>
+          <button 
             @click="scanLesson"
-            :disabled="!selectedFile || !selectedChild || isProcessing"
+            :disabled="selectedFiles.length === 0 || !selectedChild || isProcessing"
             :class="[
               'px-8 py-3 rounded-lg font-medium transition-colors',
-              (!selectedFile || !selectedChild || isProcessing)
+              (selectedFiles.length === 0 || !selectedChild || isProcessing)
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-blue-600 text-white hover:bg-blue-700'
             ]"
@@ -153,7 +202,7 @@
               </svg>
               <span>Analyse en cours...</span>
             </span>
-            <span v-else>Générer l'interrogation</span>
+            <span v-else>Générer l'interrogation ({{ questionCount }} questions)</span>
           </button>
         </div>
       </div>
@@ -201,15 +250,16 @@ export default {
   name: 'LessonScanner',
   data() {
     return {
-      selectedFile: null,
-      filePreview: null,
+      selectedFiles: [],
+      filePreviews: [],
       isDragOver: false,
       isProcessing: false,
       selectedChild: null,
       generatedQuiz: null,
       imageValidator: new ImageValidationService(),
       validationErrors: [],
-      validationWarnings: []
+      validationWarnings: [],
+      questionCount: 5
     }
   },
   computed: {
@@ -235,75 +285,99 @@ export default {
     handleDrop(e) {
       e.preventDefault()
       this.isDragOver = false
-      const files = e.dataTransfer.files
+      const files = Array.from(e.dataTransfer.files)
       if (files.length > 0) {
-        this.handleFile(files[0])
+        this.handleFiles(files)
       }
     },
     
     handleFileSelect(e) {
-      const file = e.target.files[0]
-      if (file) {
-        this.handleFile(file)
+      const files = Array.from(e.target.files)
+      if (files.length > 0) {
+        this.handleFiles(files)
       }
     },
     
-    async handleFile(file) {
-      if (!file.type.startsWith('image/')) {
-        alert('Veuillez sélectionner un fichier image')
-        return
+    async handleFiles(files) {
+      const validFiles = []
+      const validPreviews = []
+      
+      for (const file of files) {
+        // Vérifier le type de fichier
+        if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+          alert(`Le fichier ${file.name} n'est pas supporté. Formats acceptés: JPG, PNG, PDF`)
+          continue
+        }
+        
+        // Valider l'image côté serveur (pour les images uniquement)
+        if (file.type.startsWith('image/')) {
+          try {
+            const validation = await this.imageValidator.validateImage(file)
+            
+            if (!validation.valid) {
+              this.validationErrors = validation.errors
+              this.validationWarnings = validation.warnings
+              alert(`Erreur de validation pour ${file.name}: ${validation.errors.join(', ')}`)
+              continue
+            }
+            
+            this.validationErrors = []
+            this.validationWarnings = validation.warnings
+            
+            // Enregistrer l'upload d'image dans les logs d'audit
+            auditLogService.logDataAccess(
+              this.selectedChild?.id || 'unknown',
+              'image_upload',
+              'IMAGE_UPLOADED',
+              {
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                validation: validation.metadata
+              }
+            )
+          } catch (error) {
+            console.error('Erreur lors de la validation de l\'image:', error)
+            auditLogService.logSystemError(
+              'Image validation failed',
+              'LessonScanner',
+              { error: error.message, fileName: file.name }
+            )
+            alert(`Erreur lors de la validation de ${file.name}`)
+            continue
+          }
+        }
+        
+        validFiles.push(file)
+        
+        // Créer un aperçu pour les images
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            validPreviews.push(e.target.result)
+            this.filePreviews = [...validPreviews]
+          }
+          reader.readAsDataURL(file)
+        } else {
+          // Pour les PDF, on n'affiche pas d'aperçu
+          validPreviews.push(null)
+        }
       }
       
-      // Valider l'image côté serveur
-      try {
-        const validation = await this.imageValidator.validateImage(file)
-        
-        if (!validation.valid) {
-          this.validationErrors = validation.errors
-          this.validationWarnings = validation.warnings
-          alert(`Erreur de validation: ${validation.errors.join(', ')}`)
-          return
-        }
-        
-        this.validationErrors = []
-        this.validationWarnings = validation.warnings
-        
-        // Enregistrer l'upload d'image dans les logs d'audit
-        auditLogService.logDataAccess(
-          this.selectedChild?.id || 'unknown',
-          'image_upload',
-          'IMAGE_UPLOADED',
-          {
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type,
-            validation: validation.metadata
-          }
-        )
-        
-        this.selectedFile = file
-        
-        // Créer un aperçu
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          this.filePreview = e.target.result
-        }
-        reader.readAsDataURL(file)
-        
-      } catch (error) {
-        console.error('Erreur lors de la validation de l\'image:', error)
-        auditLogService.logSystemError(
-          'Image validation failed',
-          'LessonScanner',
-          { error: error.message, fileName: file.name }
-        )
-        alert('Erreur lors de la validation de l\'image')
-      }
+      // Ajouter les fichiers valides à la liste
+      this.selectedFiles = [...this.selectedFiles, ...validFiles]
+      this.filePreviews = [...this.filePreviews, ...validPreviews]
     },
     
-    removeFile() {
-      this.selectedFile = null
-      this.filePreview = null
+    removeFile(index) {
+      this.selectedFiles.splice(index, 1)
+      this.filePreviews.splice(index, 1)
+      this.generatedQuiz = null
+    },
+    
+    removeAllFiles() {
+      this.selectedFiles = []
+      this.filePreviews = []
       this.generatedQuiz = null
     },
     
@@ -316,7 +390,7 @@ export default {
     },
     
     async scanLesson() {
-      if (!this.selectedFile || !this.selectedChild) return
+      if (this.selectedFiles.length === 0 || !this.selectedChild) return
       
       this.isProcessing = true
       this.generatedQuiz = null
@@ -339,21 +413,26 @@ export default {
           true,
           {
             action: 'QUIZ_GENERATION_START',
-            fileName: this.selectedFile.name,
-            fileSize: this.selectedFile.size
+            fileCount: this.selectedFiles.length,
+            questionCount: parseInt(this.questionCount),
+            fileNames: this.selectedFiles.map(f => f.name)
           }
         )
         
-        // Simuler l'analyse de l'image et la génération du quiz
+        // Simuler l'analyse des documents et la génération du quiz
         const aiService = new AIService()
-        const quiz = await aiService.generateQuizFromImage(this.selectedFile, this.selectedChild)
+        const quiz = await aiService.generateQuizFromDocuments(
+          this.selectedFiles, 
+          this.selectedChild, 
+          parseInt(this.questionCount)
+        )
         this.generatedQuiz = quiz
         
         // Sauvegarder la leçon en base de données
         const savedLesson = await LessonService.saveLesson(
           quiz, 
           this.selectedChild.id, 
-          this.selectedFile
+          this.selectedFiles
         )
         
         // Ajouter l'ID de la leçon sauvegardée au quiz
@@ -367,7 +446,8 @@ export default {
           {
             action: 'QUIZ_GENERATION_SUCCESS',
             quizQuestions: quiz.questions?.length || 0,
-            lessonId: savedLesson.id
+            lessonId: savedLesson.id,
+            fileCount: this.selectedFiles.length
           }
         )
         
@@ -390,7 +470,8 @@ export default {
           false,
           {
             action: 'QUIZ_GENERATION_FAILED',
-            error: error.message
+            error: error.message,
+            fileCount: this.selectedFiles.length
           }
         )
         

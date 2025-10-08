@@ -71,6 +71,291 @@ class AIService {
   }
 
   /**
+   * Génère un quiz à partir de plusieurs documents (images et PDF)
+   * @param {Array<File>} files - Fichiers des documents
+   * @param {Object} childProfile - Profil de l'enfant
+   * @param {number} questionCount - Nombre de questions à générer
+   * @returns {Promise<Object>} Quiz généré
+   */
+  async generateQuizFromDocuments(files, childProfile, questionCount = 5) {
+    try {
+      if (!this.hasValidApiKey()) {
+        return this.getDemoQuizFromDocuments(childProfile, questionCount)
+      }
+
+      // Analyser tous les documents
+      const analyses = []
+      for (const file of files) {
+        if (file.type.startsWith('image/')) {
+          const base64Image = await this.fileToBase64(file)
+          const analysis = await this.analyzeImage(base64Image)
+          analyses.push({
+            type: 'image',
+            fileName: file.name,
+            analysis: analysis
+          })
+        } else if (file.type === 'application/pdf') {
+          // Pour les PDF, on simule une analyse (dans une vraie implémentation, 
+          // on utiliserait un service d'OCR ou d'extraction de texte)
+          const analysis = await this.analyzePDF(file)
+          analyses.push({
+            type: 'pdf',
+            fileName: file.name,
+            analysis: analysis
+          })
+        }
+      }
+
+      // Générer le quiz basé sur toutes les analyses
+      const quiz = await this.generateQuizFromMultipleAnalyses(analyses, childProfile, questionCount)
+      return quiz
+    } catch (error) {
+      console.error('Erreur lors de la génération du quiz multi-documents:', error)
+      throw new Error('Impossible de générer le quiz. Veuillez réessayer.')
+    }
+  }
+
+  /**
+   * Analyse un fichier PDF (simulation)
+   * @param {File} pdfFile - Fichier PDF
+   * @returns {Promise<Object>} Analyse du PDF
+   */
+  async analyzePDF(pdfFile) {
+    // Dans une vraie implémentation, on utiliserait un service d'OCR
+    // Pour l'instant, on simule une analyse
+    return {
+      subject: 'Document PDF',
+      topic: 'Contenu extrait du PDF',
+      concepts: ['concept 1', 'concept 2', 'concept 3'],
+      level: 'Primaire',
+      keyPoints: [
+        'Point important 1 du PDF',
+        'Point important 2 du PDF',
+        'Point important 3 du PDF'
+      ],
+      fileName: pdfFile.name
+    }
+  }
+
+  /**
+   * Génère un quiz basé sur plusieurs analyses
+   * @param {Array} analyses - Analyses des documents
+   * @param {Object} childProfile - Profil de l'enfant
+   * @param {number} questionCount - Nombre de questions
+   * @returns {Promise<Object>} Quiz généré
+   */
+  async generateQuizFromMultipleAnalyses(analyses, childProfile, questionCount) {
+    if (!this.hasValidApiKey()) {
+      return this.getDemoQuizFromDocuments(childProfile, questionCount)
+    }
+
+    // Essayer d'abord OpenAI
+    if (this.isValidOpenAIKey()) {
+      try {
+        const result = await this.generateQuizFromMultipleAnalysesWithOpenAI(analyses, childProfile, questionCount)
+        return result
+      } catch (error) {
+        console.warn('Erreur OpenAI, tentative avec Gemini:', error.message)
+      }
+    }
+
+    // Essayer Gemini si OpenAI échoue
+    if (this.isValidGeminiKey()) {
+      try {
+        const result = await this.generateQuizFromMultipleAnalysesWithGemini(analyses, childProfile, questionCount)
+        return result
+      } catch (error) {
+        console.warn('Erreur Gemini, tentative avec Groq:', error.message)
+      }
+    }
+
+    // Essayer Groq si Gemini échoue
+    if (this.isValidGroqKey()) {
+      try {
+        const result = await this.generateQuizFromMultipleAnalysesWithGroq(analyses, childProfile, questionCount)
+        return result
+      } catch (error) {
+        console.warn('Erreur Groq:', error.message)
+      }
+    }
+
+    // Fallback vers le mode démo
+    return this.getDemoQuizFromDocuments(childProfile, questionCount)
+  }
+
+  async generateQuizFromMultipleAnalysesWithOpenAI(analyses, childProfile, questionCount) {
+    const response = await fetch(`${this.openaiBaseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.openaiApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-5',
+        messages: [
+          {
+            role: 'system',
+            content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. 
+            Créez des questions claires, éducatives et adaptées au niveau de l'enfant.
+            L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}.
+            Générez exactement ${questionCount} questions avec 4 options chacune.`
+          },
+          {
+            role: 'user',
+            content: `Basé sur ces analyses de documents: ${JSON.stringify(analyses)}, 
+            générez un quiz de ${questionCount} questions qui couvre l'ensemble du contenu.
+            Format de réponse: JSON avec structure {title, description, questions: [{question, options: [], correctAnswer, explanation}]}`
+          }
+        ],
+        max_tokens: 2000
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`Erreur OpenAI: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return JSON.parse(data.choices[0].message.content)
+  }
+
+  async generateQuizFromMultipleAnalysesWithGemini(analyses, childProfile, questionCount) {
+    const response = await fetch(`${this.geminiBaseUrl}/models/gemini-2.5-flash:generateContent?key=${this.geminiApiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants.
+            
+            L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}.
+            Générez exactement ${questionCount} questions avec 4 options chacune.
+            
+            Basé sur ces analyses de documents: ${JSON.stringify(analyses)}, 
+            générez un quiz de ${questionCount} questions qui couvre l'ensemble du contenu.
+            
+            IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. 
+            Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
+          }]
+        }],
+        generationConfig: {
+          maxOutputTokens: 3000,
+          temperature: 0.7,
+          topP: 0.8,
+          topK: 40
+        }
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`Erreur Gemini: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const responseText = data.candidates[0].content.parts[0].text
+    
+    // Nettoyer le texte pour extraire le JSON
+    let jsonText = responseText.trim()
+    
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+    }
+    
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      jsonText = jsonMatch[0]
+    }
+    
+    try {
+      return JSON.parse(jsonText)
+    } catch (parseError) {
+      console.error('Erreur de parsing JSON Gemini:', parseError)
+      throw new Error('Impossible de parser la réponse de Gemini')
+    }
+  }
+
+  async generateQuizFromMultipleAnalysesWithGroq(analyses, childProfile, questionCount) {
+    const response = await fetch(`${this.groqBaseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.groqApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. 
+            Créez des questions claires, éducatives et adaptées au niveau de l'enfant.
+            L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}.
+            Générez exactement ${questionCount} questions avec 4 options chacune.`
+          },
+          {
+            role: 'user',
+            content: `Basé sur ces analyses de documents: ${JSON.stringify(analyses)}, 
+            générez un quiz de ${questionCount} questions qui couvre l'ensemble du contenu.
+            IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. 
+            Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.7
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`Erreur Groq: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const responseText = data.choices[0].message.content
+    
+    // Nettoyer le texte pour extraire le JSON
+    let jsonText = responseText.trim()
+    
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+    }
+    
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      jsonText = jsonMatch[0]
+    }
+    
+    try {
+      return JSON.parse(jsonText)
+    } catch (parseError) {
+      console.error('Erreur de parsing JSON Groq:', parseError)
+      throw new Error('Impossible de parser la réponse de Groq')
+    }
+  }
+
+  /**
+   * Quiz démo pour la génération à partir de plusieurs documents
+   * @param {Object} childProfile - Profil de l'enfant
+   * @param {number} questionCount - Nombre de questions
+   * @returns {Object} Quiz simulé
+   */
+  getDemoQuizFromDocuments(childProfile, questionCount) {
+    const questions = this.getDemoQuestionsByDifficulty('moyen', questionCount)
+    
+    return {
+      title: 'Quiz multi-documents',
+      description: `Quiz généré à partir de ${questionCount} documents - ${questionCount} questions`,
+      subject: 'Multi-matières',
+      level: childProfile.age < 10 ? 'Primaire' : 'Collège',
+      questions: questions
+    }
+  }
+
+  /**
    * Convertit un fichier en base64
    * @param {File} file - Fichier à convertir
    * @returns {Promise<string>} Base64 du fichier
