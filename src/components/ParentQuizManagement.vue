@@ -434,6 +434,7 @@
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
 import { LessonService } from '../services/lessonService.js'
+import { migrationService } from '../services/migrationService.js'
 import VersionInfo from './VersionInfo.vue'
 import { Icon } from '@iconify/vue'
 
@@ -523,8 +524,8 @@ export default {
       
       this.childrenStats = await Promise.all(
         children.map(async (child) => {
-          // Utiliser la nouvelle méthode pour récupérer les statistiques détaillées
-          const detailedStats = await LessonService.getDetailedChildStats(child.id)
+          // Utiliser le service de migration pour récupérer les statistiques détaillées
+          const detailedStats = await migrationService.getChildStats(child.id)
           
           return {
             ...child,

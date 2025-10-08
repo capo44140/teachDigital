@@ -5,6 +5,7 @@ import App from './App.vue'
 import router from './router'
 import UpdateNotification from './components/UpdateNotification.vue'
 import { updateService } from './services/updateService.js'
+import { useApiStore } from './stores/apiStore.js'
 
 // Créer l'instance Pinia
 const pinia = createPinia()
@@ -53,4 +54,10 @@ if ('serviceWorker' in navigator) {
 // Fournir le service de mise à jour globalement
 app.provide('updateService', updateService)
 
-app.use(pinia).use(router).mount('#app')
+app.use(pinia).use(router)
+
+// Initialiser le store API après l'installation de Pinia
+const apiStore = useApiStore()
+apiStore.initialize()
+
+app.mount('#app')

@@ -245,6 +245,7 @@ import { rateLimitService } from '../services/rateLimitService.js'
 import { ImageValidationService } from '../services/imageValidationService.js'
 import { auditLogService } from '../services/auditLogService.js'
 import { LessonService } from '../services/lessonService.js'
+import { migrationService } from '../services/migrationService.js'
 
 export default {
   name: 'LessonScanner',
@@ -428,8 +429,8 @@ export default {
         )
         this.generatedQuiz = quiz
         
-        // Sauvegarder la leçon en base de données
-        const savedLesson = await LessonService.saveLesson(
+        // Sauvegarder la leçon via le service de migration
+        const savedLesson = await migrationService.saveLesson(
           quiz, 
           this.selectedChild.id, 
           this.selectedFiles

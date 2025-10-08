@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useProfileStore } from '../stores/profileStore.js'
+import { useApiStore } from '../stores/apiStore.js'
 import sessionService from '../services/sessionService.js'
 
 // Imports dynamiques pour optimiser le code splitting
@@ -24,6 +25,8 @@ const ParentProgressTracking = () => import('../components/ParentProgressTrackin
 const ParentSettings = () => import('../components/ParentSettings.vue')
 const YouTubeVideoManager = () => import('../components/YouTubeVideoManager.vue')
 const YouTubeKidsViewer = () => import('../components/YouTubeKidsViewerSimple.vue')
+const ApiLoginForm = () => import('../components/ApiLoginForm.vue')
+const ApiDashboard = () => import('../components/ApiDashboard.vue')
 
 const routes = [
   {
@@ -157,6 +160,18 @@ const routes = [
     name: 'YouTubeKidsViewer',
     component: YouTubeKidsViewer,
     meta: { requiresChildOrTeen: true }
+  },
+  // Nouvelles routes API
+  {
+    path: '/api-login',
+    name: 'ApiLogin',
+    component: ApiLoginForm
+  },
+  {
+    path: '/api-dashboard',
+    name: 'ApiDashboard',
+    component: ApiDashboard,
+    meta: { requiresApiAuth: true }
   }
 ]
 
@@ -171,6 +186,22 @@ router.beforeEach(async (to, from, next) => {
   if (to.path === from.path) {
     next()
     return
+  }
+
+  // Vérifier l'authentification API
+  if (to.meta.requiresApiAuth) {
+    const apiStore = useApiStore()
+    
+    // Initialiser le store si nécessaire
+    if (!apiStore.isAuthenticated) {
+      await apiStore.initialize()
+    }
+    
+    if (!apiStore.isAuthenticated) {
+      console.log('Redirection vers la page de connexion API')
+      next({ path: '/api-login' })
+      return
+    }
   }
 
   // Vérifier les pages qui nécessitent des permissions admin

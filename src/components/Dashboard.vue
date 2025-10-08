@@ -261,6 +261,7 @@
     
     <!-- Affichage de la version -->
     <VersionInfo position="bottom-right" />
+    <MigrationControl />
   </div>
 </template>
 
@@ -269,6 +270,7 @@ import { useProfileStore } from '../stores/profileStore.js'
 import sessionService from '../services/sessionService.js'
 import NotificationCenter from './NotificationCenter.vue'
 import VersionInfo from './VersionInfo.vue'
+import MigrationControl from './MigrationControl.vue'
 import { Icon } from '@iconify/vue'
 
 export default {
@@ -276,6 +278,7 @@ export default {
   components: {
     NotificationCenter,
     VersionInfo,
+    MigrationControl,
     Icon
   },
   setup() {

@@ -59,7 +59,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { useProfileStore } from '../stores/profileStore.js'
-import youtubeVideoService from '../services/youtubeVideoService.js'
+import { migrationService } from '../services/migrationService.js'
 
 export default {
   name: 'YouTubeKidsViewerSimple',
@@ -76,8 +76,8 @@ export default {
         isLoading.value = true
         console.log('📺 Loading videos from database...')
         
-        // Charger les vidéos depuis la base de données
-        const data = await youtubeVideoService.getAllVideos()
+        // Charger les vidéos via le service de migration
+        const data = await migrationService.getYouTubeVideos()
         videos.value = data.filter(video => video.is_active)
         
         console.log('📺 Videos loaded:', videos.value.length)
