@@ -1,4 +1,4 @@
-# 📦 Analyse des Dépendances TeachDigital
+# 📦 Analyse des Dépendances TeachDigital est
 
 ## 🔍 État Actuel des Dépendances
 
