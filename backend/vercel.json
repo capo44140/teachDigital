@@ -3,7 +3,7 @@
   "buildCommand": "echo 'No build required for Vercel Functions'",
   "outputDirectory": ".",
   "functions": {
-    "api/**/*.js": {
+    "api/index.js": {
       "runtime": "@vercel/node@3.0.12"
     }
   },
