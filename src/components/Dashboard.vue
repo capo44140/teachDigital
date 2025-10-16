@@ -184,22 +184,6 @@
             </div>
           </div>
 
-          <!-- Test de reconnaissance faciale -->
-          <div @click="openFaceTest" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <div class="flex items-center mb-4">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-500">
-                <Icon icon="mdi:face-recognition" class="w-6 h-6 text-white" />
-              </div>
-              <h3 class="text-xl font-semibold text-gray-800 ml-4">Test de reconnaissance faciale</h3>
-            </div>
-            <p class="text-gray-600 mb-4">Testez le système de reconnaissance faciale</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">Test</span>
-              <button class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors">
-                Tester
-              </button>
-            </div>
-          </div>
 
           <!-- Suivi des progrès -->
           <div @click="openProgressTracking" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
@@ -533,15 +517,6 @@ export default {
     openNotificationTest() {
       this.$router.push({ 
         path: '/notification-test', 
-        query: { 
-          profile: this.$route.query.profile || '1',
-          unlocked: 'true'
-        } 
-      })
-    },
-    openFaceTest() {
-      this.$router.push({ 
-        path: '/face-test', 
         query: { 
           profile: this.$route.query.profile || '1',
           unlocked: 'true'

@@ -1,0 +1,54 @@
+---
+globs: src/services/*.js,src/config/*.js,backend/**/*.js
+description: Guidelines de sécurité pour TeachDigital
+---
+
+# Guidelines de Sécurité - TeachDigital
+
+## Sécurité des Données
+
+### Chiffrement et Hachage
+- **Service de chiffrement** : [src/services/encryptionService.js](mdc:src/services/encryptionService.js)
+- **Service de hachage** : [src/services/hashService.js](mdc:src/services/hashService.js)
+- **Sécurité des PINs** : Voir [PIN-SECURITY.md](mdc:PIN-SECURITY.md)
+
+### Gestion des mots de passe et PINs
+- Utiliser bcryptjs pour le hachage des mots de passe
+- Implémenter la validation des PINs selon [src/config/pinConfig.js](mdc:src/config/pinConfig.js)
+- Tester la sécurité des PINs avec [scripts/test-pin-security.js](mdc:scripts/test-pin-security.js)
+
+### Authentification et Sessions
+- **Service d'authentification** : [src/services/sessionService.js](mdc:src/services/sessionService.js)
+- **Store d'authentification** : [src/stores/authStore.js](mdc:src/stores/authStore.js)
+- **Backend auth** : [backend/lib/auth.js](mdc:backend/lib/auth.js)
+
+### Validation des données
+- **Service de validation d'images** : [src/services/imageValidationService.js](mdc:src/services/imageValidationService.js)
+- Valider toutes les entrées utilisateur
+- Sanitizer les données avant stockage
+
+### CORS et Headers de sécurité
+- Configuration CORS : [backend/lib/cors.js](mdc:backend/lib/cors.js)
+- Headers de sécurité appropriés
+- Limitation des requêtes : [src/services/rateLimitService.js](mdc:src/services/rateLimitService.js)
+
+### Audit et Logging
+- **Service d'audit** : [src/services/auditLogService.js](mdc:src/services/auditLogService.js)
+- Logger toutes les actions sensibles
+- Surveiller les tentatives d'accès non autorisées
+
+### Variables d'environnement
+- Ne jamais commiter les secrets
+- Utiliser [env.example](mdc:env.example) comme template
+- Rotation régulière des clés API
+
+### Reconnaissance faciale
+- **Service de reconnaissance** : [src/services/faceRecognitionService.js](mdc:src/services/faceRecognitionService.js)
+- Traitement local des données biométriques
+- Pas de stockage des données faciales sensibles
+
+### Bonnes pratiques
+- Utiliser HTTPS en production
+- Implémenter la validation côté serveur
+- Tester régulièrement la sécurité avec `pnpm run security:check`
+- Maintenir les dépendances à jour avec `pnpm run update:deps:check`

@@ -1,0 +1,86 @@
+---
+description: Fonctionnalités spécifiques de l'application TeachDigital
+---
+
+# Fonctionnalités Spécifiques - TeachDigital
+
+## Reconnaissance Faciale
+
+### Services de reconnaissance
+- **Service principal** : [src/services/faceRecognitionService.js](mdc:src/services/faceRecognitionService.js)
+- **Service simplifié** : [src/services/simpleFaceService.js](mdc:src/services/simpleFaceService.js)
+- **Guide complet** : [FACE-RECOGNITION-GUIDE.md](mdc:FACE-RECOGNITION-GUIDE.md)
+
+### Modèles de reconnaissance
+- **Modèles stockés** : [public/models/](mdc:public/models/)
+- **Scripts de téléchargement** : 
+  - [scripts/download-face-models.js](mdc:scripts/download-face-models.js)
+  - [scripts/download-face-models-robust.js](mdc:scripts/download-face-models-robust.js)
+  - [scripts/download-models-vladmandic.js](mdc:scripts/download-models-vladmandic.js)
+
+### Intégration
+- Utiliser @vladmandic/face-api
+- Traitement local des données
+- Pas de stockage des données biométriques
+
+## Gestion des Profils
+
+### Services de profil
+- **Service principal** : [src/services/profileService.js](mdc:src/services/profileService.js)
+- **Services spécialisés** : [src/services/profile/](mdc:src/services/profile/)
+- **Repository** : [src/repositories/profileRepository.js](mdc:src/repositories/profileRepository.js)
+
+### Types de profils
+- **Profils enfants** : Gestion des profils pour les enfants
+- **Profils adolescents** : Gestion des profils pour les adolescents
+- **Migration** : [scripts/migrate-teen-profiles.js](mdc:scripts/migrate-teen-profiles.js)
+
+## Système de Leçons
+
+### Gestion des leçons
+- **Service** : [src/services/lessonService.js](mdc:src/services/lessonService.js)
+- **Repository** : [src/repositories/lessonRepository.js](mdc:src/repositories/lessonRepository.js)
+- **Store** : [src/stores/lessonStore.js](mdc:src/stores/lessonStore.js)
+
+### Scanner de leçons
+- **Guide** : [LESSON-SCANNER.md](mdc:LESSON-SCANNER.md)
+- **Migration** : [scripts/migrate-lessons.js](mdc:scripts/migrate-lessons.js)
+
+## Intégration YouTube Kids
+
+### Services YouTube
+- **Service principal** : [src/services/youtubeVideoService.js](mdc:src/services/youtubeVideoService.js)
+- **Guide** : [YOUTUBE-KIDS-GUIDE.md](mdc:YOUTUBE-KIDS-GUIDE.md)
+- **Troubleshooting** : [YOUTUBE-TROUBLESHOOTING.md](mdc:YOUTUBE-TROUBLESHOOTING.md)
+
+### Scripts de test
+- **Test simple** : [scripts/test-youtube-extraction-simple.js](mdc:scripts/test-youtube-extraction-simple.js)
+- **Test complet** : [scripts/test-youtube-extraction.js](mdc:scripts/test-youtube-extraction.js)
+- **Test Kids viewer** : [scripts/test-youtube-kids-viewer.js](mdc:scripts/test-youtube-kids-viewer.js)
+
+### Base de données YouTube
+- **Setup** : [YOUTUBE-DB-SETUP.md](mdc:YOUTUBE-DB-SETUP.md)
+- **Migration** : [scripts/migrate-youtube-videos.js](mdc:scripts/migrate-youtube-videos.js)
+
+## Système de Notifications
+
+### Gestion des notifications
+- **Service** : [src/services/notificationService.js](mdc:src/services/notificationService.js)
+- **Repository** : [src/repositories/notificationRepository.js](mdc:src/repositories/notificationRepository.js)
+- **Store** : [src/stores/notificationStore.js](mdc:src/stores/notificationStore.js)
+
+### Tests
+- **Test des notifications** : [scripts/test-notifications.js](mdc:scripts/test-notifications.js)
+
+## Intelligence Artificielle
+
+### Services AI
+- **Service principal** : [src/services/aiService.js](mdc:src/services/aiService.js)
+- **Services métier** : [src/services/business/](mdc:src/services/business/)
+
+## Gestion des Activités
+
+### Services d'activité
+- **Service principal** : [src/services/activityService.js](mdc:src/services/activityService.js)
+- **Guide d'intégration** : [DASHBOARD-ACTIVITY-INTEGRATION.md](mdc:DASHBOARD-ACTIVITY-INTEGRATION.md)
+- **Guide de gestion** : [ACTIVITY-MANAGEMENT-GUIDE.md](mdc:ACTIVITY-MANAGEMENT-GUIDE.md)

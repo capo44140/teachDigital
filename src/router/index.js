@@ -27,9 +27,10 @@ const YouTubeVideoManager = () => import('../components/YouTubeVideoManager.vue'
 const YouTubeKidsViewer = () => import('../components/YouTubeKidsViewerSimple.vue')
 const ApiLoginForm = () => import('../components/ApiLoginForm.vue')
 const ApiDashboard = () => import('../components/ApiDashboard.vue')
-const FaceAuth = () => import('../components/FaceAuth.vue')
-const FaceRegister = () => import('../components/FaceRegister.vue')
-const FaceRecognitionTest = () => import('../components/FaceRecognitionTest.vue')
+// Routes de reconnaissance faciale supprimées
+// const FaceAuth = () => import('../components/FaceAuth.vue')
+// const FaceRegister = () => import('../components/FaceRegister.vue')
+// const FaceRecognitionTest = () => import('../components/FaceRecognitionTest.vue')
 
 const routes = [
   {
@@ -176,31 +177,31 @@ const routes = [
     component: ApiDashboard,
     meta: { requiresApiAuth: true }
   },
-  // Routes pour la reconnaissance faciale
-  {
-    path: '/face-auth',
-    name: 'FaceAuth',
-    component: FaceAuth,
-    props: route => ({ 
-      profileName: route.query.name || 'Parent',
-      profileId: route.query.profile || '1'
-    })
-  },
-  {
-    path: '/face-register',
-    name: 'FaceRegister',
-    component: FaceRegister,
-    props: route => ({ 
-      profileName: route.query.name || 'Parent',
-      profileId: route.query.profile || '1'
-    })
-  },
-  {
-    path: '/face-test',
-    name: 'FaceRecognitionTest',
-    component: FaceRecognitionTest,
-    meta: { requiresAdmin: true }
-  }
+  // Routes pour la reconnaissance faciale supprimées
+  // {
+  //   path: '/face-auth',
+  //   name: 'FaceAuth',
+  //   component: FaceAuth,
+  //   props: route => ({ 
+  //     profileName: route.query.name || 'Parent',
+  //     profileId: route.query.profile || '1'
+  //   })
+  // },
+  // {
+  //   path: '/face-register',
+  //   name: 'FaceRegister',
+  //   component: FaceRegister,
+  //   props: route => ({ 
+  //     profileName: route.query.name || 'Parent',
+  //     profileId: route.query.profile || '1'
+  //   })
+  // },
+  // {
+  //   path: '/face-test',
+  //   name: 'FaceRecognitionTest',
+  //   component: FaceRecognitionTest,
+  //   meta: { requiresAdmin: true }
+  // }
 ]
 
 const router = createRouter({

@@ -144,32 +144,14 @@ export default {
     },
 
     showAuthOptions(profile) {
-      // Créer une boîte de dialogue pour choisir la méthode d'authentification
-      const authMethod = confirm(
-        `Choisissez votre méthode d'authentification pour ${profile.name}:\n\n` +
-        'OK = Reconnaissance faciale\n' +
-        'Annuler = Code PIN'
-      )
-      
-      if (authMethod) {
-        // Reconnaissance faciale
-        this.$router.push({ 
-          path: '/face-auth', 
-          query: { 
-            profile: profile.id,
-            name: profile.name
-          } 
-        })
-      } else {
-        // Code PIN
-        this.$router.push({ 
-          path: '/pin-lock', 
-          query: { 
-            profile: profile.id,
-            name: profile.name
-          } 
-        })
-      }
+      // Rediriger directement vers l'authentification par code PIN
+      this.$router.push({ 
+        path: '/pin-lock', 
+        query: { 
+          profile: profile.id,
+          name: profile.name
+        } 
+      })
     },
     
     addProfile() {

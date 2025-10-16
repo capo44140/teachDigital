@@ -1,0 +1,67 @@
+---
+globs: *.vue,*.js
+description: Standards de codage Vue.js et JavaScript pour TeachDigital
+---
+
+# Standards de Codage Vue.js et JavaScript
+
+## Vue.js 3 - Composition API
+
+### Structure des composants Vue
+```vue
+<template>
+  <!-- Template avec classes TailwindCSS -->
+</template>
+
+<script>
+import { ref, computed, onMounted } from 'vue'
+import { useStore } from '@/stores/storeName'
+
+export default {
+  name: 'ComponentName',
+  setup() {
+    // Composition API setup
+    const store = useStore()
+    
+    return {
+      // Exposer les variables réactives
+    }
+  }
+}
+</script>
+
+<style scoped>
+/* Styles spécifiques au composant */
+</style>
+```
+
+### Règles de nommage
+- **Composants** : PascalCase (ex: `UserProfile.vue`)
+- **Variables réactives** : camelCase (ex: `userData`, `isLoading`)
+- **Fonctions** : camelCase (ex: `handleSubmit`, `fetchUserData`)
+- **Constantes** : UPPER_SNAKE_CASE (ex: `API_BASE_URL`)
+
+### Gestion d'état avec Pinia
+- Utiliser les stores Pinia pour l'état global
+- Préférer la composition API dans les stores
+- Exemple de store : [src/stores/profileStore.js](mdc:src/stores/profileStore.js)
+
+### Services et API
+- Organiser les services dans `src/services/`
+- Utiliser le pattern Repository pour l'accès aux données
+- Exemple : [src/repositories/profileRepository.js](mdc:src/repositories/profileRepository.js)
+
+### Gestion des erreurs
+- Toujours gérer les erreurs avec try/catch
+- Utiliser le service d'erreur centralisé : [src/services/errorService.js](mdc:src/services/errorService.js)
+
+### Commentaires et documentation
+- Commenter en français
+- Documenter les fonctions complexes
+- Utiliser JSDoc pour les fonctions publiques
+
+### ESLint Configuration
+Le projet utilise ESLint avec les règles définies dans [eslint.config.js](mdc:eslint.config.js) :
+- Pas de console.log en production (warn)
+- Variables non utilisées interdites
+- Noms de composants multi-mots désactivés

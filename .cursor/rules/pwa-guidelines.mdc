@@ -1,0 +1,57 @@
+---
+globs: public/*.js,src/main.js,vite.config.js
+description: Guidelines pour PWA et Service Workers
+---
+
+# Guidelines PWA et Service Workers - TeachDigital
+
+## Configuration PWA
+
+### Manifest et Icônes
+- **Manifest** : [public/manifest.json](mdc:public/manifest.json)
+- **Icônes** : Générées automatiquement par [scripts/generate-icons.js](mdc:scripts/generate-icons.js)
+- **Configuration Vite PWA** : Définie dans [vite.config.js](mdc:vite.config.js)
+
+### Service Worker
+- **Service Worker principal** : [public/sw.js](mdc:public/sw.js)
+- **Génération automatique** : [scripts/generate-sw.js](mdc:scripts/generate-sw.js)
+- **Enregistrement** : Dans [src/main.js](mdc:src/main.js)
+
+### Gestion des mises à jour
+- **Service de mise à jour** : [src/services/updateService.js](mdc:src/services/updateService.js)
+- **Composant de notification** : [src/components/UpdateNotification.vue](mdc:src/components/UpdateNotification.vue)
+- **Vérification automatique** : Toutes les 30 secondes
+
+### Configuration du Service Worker
+```javascript
+// Dans src/main.js
+navigator.serviceWorker.register('/sw.js', {
+  updateViaCache: 'none' // Forcer la vérification des mises à jour
+})
+```
+
+### Cache Strategy
+- **Cache First** : Pour les assets statiques (CSS, JS, images)
+- **Network First** : Pour les données API
+- **Stale While Revalidate** : Pour les ressources critiques
+
+### Offline Support
+- Mise en cache des ressources essentielles
+- Gestion des erreurs réseau
+- Interface utilisateur adaptée au mode hors ligne
+
+### Installation PWA
+- **Guide d'installation** : [PWA-INSTALL.md](mdc:PWA-INSTALL.md)
+- **Bouton d'installation** : Intégré dans l'interface
+- **Prompt d'installation** : Géré par le navigateur
+
+### Bonnes pratiques
+- Tester le Service Worker en mode développement
+- Vérifier la compatibilité des navigateurs
+- Optimiser la taille du cache
+- Gérer les mises à jour de manière transparente
+
+### Scripts utiles
+- `pnpm run generate-icons` : Générer les icônes PWA
+- `pnpm run generate-sw` : Générer le Service Worker
+- `pnpm run build` : Build complet avec PWA

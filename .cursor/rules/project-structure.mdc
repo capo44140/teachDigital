@@ -1,0 +1,34 @@
+---
+alwaysApply: true
+description: Guide de structure du projet TeachDigital
+---
+
+# Structure du Projet TeachDigital
+
+## Architecture Vue.js 3 + Vite
+
+Le projet utilise Vue.js 3 avec Composition API, Pinia pour la gestion d'état, et Vite comme bundler.
+
+### Points d'entrée principaux
+- **Application principale** : [src/main.js](mdc:src/main.js) - Point d'entrée avec configuration Pinia, router et Service Worker
+- **Composant racine** : [src/App.vue](mdc:src/App.vue) - Composant principal avec router-view
+- **Configuration Vite** : [vite.config.js](mdc:vite.config.js) - Configuration PWA, chunks et variables d'environnement
+
+### Structure des dossiers
+- `src/components/` - Composants Vue réutilisables
+- `src/services/` - Services métier (API, base de données, reconnaissance faciale)
+- `src/stores/` - Stores Pinia pour la gestion d'état
+- `src/repositories/` - Pattern Repository pour l'accès aux données
+- `src/router/` - Configuration Vue Router
+- `backend/` - API Vercel Functions
+- `scripts/` - Scripts utilitaires (migration, build, tests)
+
+### Technologies clés
+- **Frontend** : Vue 3, Pinia, Vue Router, TailwindCSS
+- **Backend** : Vercel Functions, Neon Database
+- **PWA** : Service Worker, Manifest, Cache
+- **Reconnaissance faciale** : @vladmandic/face-api
+- **Tests** : Vitest, ESLint
+
+### Variables d'environnement
+Le projet utilise des variables d'environnement pour la base de données Neon. Voir [env.example](mdc:env.example) pour la configuration.

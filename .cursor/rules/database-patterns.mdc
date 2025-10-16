@@ -1,0 +1,65 @@
+---
+globs: src/repositories/*.js,src/services/*.js,backend/**/*.js
+description: Patterns et conventions pour la base de données Neon
+---
+
+# Patterns de Base de Données - Neon Database
+
+## Configuration de la Base de Données
+
+### Configuration principale
+- **Configuration** : [src/config/database.js](mdc:src/config/database.js)
+- **Backend API** : [backend/api/index.js](mdc:src/backend/api/index.js)
+- **Variables d'environnement** : Utiliser les variables Neon définies dans [vite.config.js](mdc:vite.config.js)
+
+### Pattern Repository
+Utiliser le pattern Repository pour l'accès aux données :
+
+```javascript
+// Exemple basé sur src/repositories/baseRepository.js
+import { database } from '@/config/database.js'
+
+export class BaseRepository {
+  constructor(tableName) {
+    this.tableName = tableName
+  }
+  
+  async findById(id) {
+    // Implémentation standard
+  }
+  
+  async create(data) {
+    // Implémentation standard
+  }
+}
+```
+
+### Conventions de nommage des tables
+- **Tables** : snake_case (ex: `user_profiles`, `lesson_progress`)
+- **Colonnes** : snake_case (ex: `created_at`, `user_id`)
+- **Index** : `idx_` + nom de la table + colonnes (ex: `idx_profiles_user_id`)
+
+### Gestion des connexions
+- Utiliser le pool de connexions Neon
+- Fermer les connexions après utilisation
+- Gérer les erreurs de connexion gracieusement
+
+### Migrations
+- Scripts de migration dans `scripts/`
+- Exemple : [scripts/migrate-database.js](mdc:scripts/migrate-database.js)
+- Toujours tester les migrations avant déploiement
+
+### Sécurité des données
+- Utiliser des requêtes paramétrées
+- Valider les données avant insertion
+- Chiffrer les données sensibles (voir [src/services/encryptionService.js](mdc:src/services/encryptionService.js))
+
+### Exemples de repositories
+- **Profiles** : [src/repositories/profileRepository.js](mdc:src/repositories/profileRepository.js)
+- **Lessons** : [src/repositories/lessonRepository.js](mdc:src/repositories/lessonRepository.js)
+- **Notifications** : [src/repositories/notificationRepository.js](mdc:src/repositories/notificationRepository.js)
+
+### Gestion des erreurs
+- Logger les erreurs de base de données
+- Retourner des erreurs utilisateur-friendly
+- Implémenter des retry logic pour les connexions temporaires

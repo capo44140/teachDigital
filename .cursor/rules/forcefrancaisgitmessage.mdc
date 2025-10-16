@@ -1,4 +1,71 @@
 ---
 alwaysApply: true
 ---
+
+# Messages de Commit Git en Français
+
+## Règle Principale
 Toujours générer les messages de commit Git en français, de manière concise et professionnelle.
+
+## Format des Messages
+- **Format** : `type: description courte`
+- **Longueur** : Maximum 50 caractères pour le titre
+- **Style** : Impératif présent (ajoute, corrige, améliore, etc.)
+- **Langue** : Français uniquement
+
+## Types de Commit
+- `feat:` - Nouvelle fonctionnalité
+- `fix:` - Correction de bug
+- `docs:` - Documentation
+- `style:` - Formatage, point-virgules manquants, etc.
+- `refactor:` - Refactorisation du code
+- `test:` - Ajout ou modification de tests
+- `chore:` - Tâches de maintenance
+- `perf:` - Amélioration des performances
+- `ci:` - Configuration CI/CD
+- `build:` - Système de build
+- `revert:` - Annulation d'un commit précédent
+
+## Exemples de Messages
+- `feat: ajouter authentification par reconnaissance faciale`
+- `fix: corriger bug d'affichage des profils`
+- `docs: mettre à jour la documentation API`
+- `style: formater le code selon les standards`
+- `refactor: simplifier la logique de validation`
+- `test: ajouter tests unitaires pour ProfileService`
+- `chore: mettre à jour les dépendances`
+- `perf: optimiser les requêtes base de données`
+- `ci: configurer déploiement automatique`
+- `build: ajouter script de build pour production`
+- `revert: annuler modification du système de cache`
+
+## Règles de Rédaction
+1. **Commencez par un verbe** à l'impératif présent
+2. **Soyez concis** mais descriptif
+3. **Évitez** les articles (le, la, les) au début
+4. **Utilisez** la casse normale (pas de majuscules inutiles)
+5. **Terminez** sans point final
+6. **Privilégiez** les termes techniques français quand ils existent
+
+## Messages de Corps (optionnel)
+Si un message de corps est nécessaire :
+- Laissez une ligne vide après le titre
+- Expliquez le "quoi" et le "pourquoi", pas le "comment"
+- Utilisez des phrases complètes en français
+- Limitez les lignes à 72 caractères
+
+## Exemples de Messages Complets
+```
+feat: ajouter système de notifications push
+
+Implémente les notifications push pour informer les utilisateurs
+des nouvelles activités disponibles. Utilise l'API Notifications
+du navigateur avec fallback sur les notifications in-app.
+```
+
+```
+fix: corriger fuite mémoire dans FaceRecognitionService
+
+La détection des visages ne libérait pas correctement les ressources
+après utilisation, causant une accumulation progressive de la mémoire.
+```

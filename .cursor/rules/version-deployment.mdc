@@ -1,0 +1,67 @@
+---
+globs: scripts/*.js,package.json,src/version.json
+description: Gestion des versions et déploiement
+---
+
+# Gestion des Versions et Déploiement - TeachDigital
+
+## Gestion des Versions
+
+### Versioning
+- **Version principale** : Définie dans [package.json](mdc:package.json)
+- **Version de l'app** : [src/version.json](mdc:src/version.json)
+- **Scripts de version** : [scripts/version-bump.js](mdc:scripts/version-bump.js)
+
+### Scripts de version disponibles
+```bash
+pnpm run version:patch    # Version patch (0.0.1 -> 0.0.2)
+pnpm run version:minor    # Version minor (0.0.1 -> 0.1.0)
+pnpm run version:major    # Version major (0.0.1 -> 1.0.0)
+pnpm run version:current  # Afficher la version actuelle
+```
+
+### Affichage de la version
+- **Test d'affichage** : [scripts/test-version-display.js](mdc:scripts/test-version-display.js)
+- **Composant de version** : Intégré dans l'interface utilisateur
+
+## Déploiement
+
+### Build et déploiement
+- **Build standard** : `pnpm run build`
+- **Build Vercel** : `pnpm run build:vercel`
+- **Script de déploiement** : [scripts/build-vercel.js](mdc:scripts/build-vercel.js)
+
+### Backend (Vercel Functions)
+- **Configuration** : [backend/vercel.json](mdc:backend/vercel.json)
+- **Déploiement** : [scripts/deploy.js](mdc:scripts/deploy.js)
+- **Scripts disponibles** :
+  - `pnpm run deploy` : Déploiement production
+  - `pnpm run deploy:preview` : Déploiement preview
+
+### Variables d'environnement
+- **Setup automatique** : [scripts/setup-env.js](mdc:scripts/setup-env.js)
+- **Configuration** : [scripts/configure-env.js](mdc:scripts/configure-env.js)
+- **Template** : [env.example](mdc:env.example)
+
+## Git Hooks
+
+### Configuration des hooks
+- **Setup** : [scripts/setup-git-hooks.js](mdc:scripts/setup-git-hooks.js)
+- **Pre-commit** : [scripts/pre-commit-hook.js](mdc:scripts/pre-commit-hook.js)
+- **Installation** : `pnpm run setup:hooks`
+
+### Messages de commit
+- **Règle existante** : [.cursor/rules/forcefrancaisgitmessage.mdc](mdc:.cursor/rules/forcefrancaisgitmessage.mdc)
+- **Format** : Messages en français, concis et professionnels
+
+## Maintenance
+
+### Mise à jour des dépendances
+- **Check** : `pnpm run update:deps:check`
+- **Minor updates** : `pnpm run update:deps:minor`
+- **Major updates** : `pnpm run update:deps:major`
+
+### Scripts de maintenance
+- **Audit de sécurité** : `pnpm run audit`
+- **Linting** : `pnpm run lint`
+- **Tests** : `pnpm run test:run`

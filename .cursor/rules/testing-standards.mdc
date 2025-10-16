@@ -1,0 +1,77 @@
+---
+globs: tests/**/*.js,src/**/*.test.js,*.config.js
+description: Standards de test pour TeachDigital
+---
+
+# Standards de Test - TeachDigital
+
+## Configuration des Tests
+
+### Framework de test
+- **Vitest** : Framework principal (configuration dans [vitest.config.js](mdc:vitest.config.js))
+- **Setup** : [tests/setup.js](mdc:tests/setup.js)
+- **Coverage** : V8 coverage provider
+
+### Scripts de test disponibles
+```bash
+pnpm run test          # Tests en mode watch
+pnpm run test:run      # Tests une seule fois
+pnpm run test:ui       # Interface utilisateur Vitest
+pnpm run test:coverage # Tests avec couverture de code
+pnpm run test:watch    # Tests en mode watch
+```
+
+### Structure des tests
+- **Tests unitaires** : `tests/services/` ou `src/**/*.test.js`
+- **Tests d'intégration** : `tests/integration/`
+- **Tests E2E** : À implémenter avec Playwright ou Cypress
+
+### Exemple de test de service
+```javascript
+// Basé sur tests/services/profileService.test.js
+import { describe, it, expect, beforeEach } from 'vitest'
+import { ProfileService } from '@/services/profileService.js'
+
+describe('ProfileService', () => {
+  let profileService
+  
+  beforeEach(() => {
+    profileService = new ProfileService()
+  })
+  
+  it('should create a profile', async () => {
+    // Test implementation
+  })
+})
+```
+
+### Tests de base de données
+- **Configuration DB** : [scripts/test-database-config.js](mdc:scripts/test-database-config.js)
+- **Tests de migration** : Tester avec [scripts/migrate-database.js](mdc:scripts/migrate-database.js)
+- **Tests de sécurité** : [scripts/test-pin-security.js](mdc:scripts/test-pin-security.js)
+
+### Tests de services spécifiques
+- **Notifications** : [scripts/test-notifications.js](mdc:scripts/test-notifications.js)
+- **YouTube** : [scripts/test-youtube-service.js](mdc:scripts/test-youtube-service.js)
+- **Version** : [scripts/test-version-display.js](mdc:scripts/test-version-display.js)
+
+### Tests de composants Vue
+- Utiliser Vue Test Utils pour les composants
+- Tester les interactions utilisateur
+- Vérifier le rendu conditionnel
+
+### Bonnes pratiques
+- **Nommage** : `describe` pour les groupes, `it` pour les cas de test
+- **Assertions** : Utiliser les matchers Vitest
+- **Mocking** : Mocker les dépendances externes
+- **Coverage** : Viser au moins 80% de couverture
+
+### Tests de performance
+- **Bundle analysis** : `pnpm run build:analyze`
+- **Lighthouse** : `pnpm run lighthouse`
+- **Bundle size** : `pnpm run bundle:size`
+
+### Tests de sécurité
+- **Audit des dépendances** : `pnpm run audit`
+- **Linting** : `pnpm run lint:check`
+- **Check complet** : `pnpm run security:check`
