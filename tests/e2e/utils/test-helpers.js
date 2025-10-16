@@ -7,16 +7,20 @@
  * @param {import('@playwright/test').Page} page
  */
 export async function waitForAppLoad(page) {
-  // Attendre que Vue soit monté
-  await page.waitForFunction(() => window.Vue !== undefined, { timeout: 10000 })
+  // Attendre que la page soit complètement chargée
+  await page.waitForLoadState('networkidle')
   
-  // Attendre que le router soit prêt
-  await page.waitForFunction(() => window.location.pathname !== '/', { timeout: 5000 })
+  // Attendre que l'élément racine de l'application soit présent
+  await page.waitForSelector('#app', { state: 'attached', timeout: 10000 })
   
-  // Attendre que les stores Pinia soient initialisés
+  // Attendre que Vue soit monté (vérifier la présence d'éléments Vue)
   await page.waitForFunction(() => {
-    return window.__VUE_DEVTOOLS_GLOBAL_HOOK__?.apps?.length > 0
-  }, { timeout: 5000 })
+    const app = document.querySelector('#app')
+    return app && app.children.length > 0
+  }, { timeout: 10000 })
+  
+  // Attendre un peu pour que l'application soit stable
+  await page.waitForTimeout(500)
 }
 
 /**

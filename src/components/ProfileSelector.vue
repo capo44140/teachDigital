@@ -15,6 +15,7 @@
       <div 
         v-for="profile in profiles"
         :key="profile.id"
+        :data-testid="`profile-${profile.name.toLowerCase()}`"
         @click="selectProfile(profile)"
         class="profile-card group cursor-pointer transform transition-all duration-300 hover:scale-105"
       >
