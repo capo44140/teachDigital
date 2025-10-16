@@ -1,20 +1,20 @@
-# Configuration des fins de ligne pour tous les fichiers
-* text=auto eol=lf
-
-# Fichiers spécifiques
-*.js text eol=lf
-*.json text eol=lf
-*.md text eol=lf
-*.vue text eol=lf
-*.css text eol=lf
-*.html text eol=lf
-
-# Fichiers binaires
+# Playwright
+*.webm binary
 *.png binary
 *.jpg binary
 *.jpeg binary
 *.gif binary
-*.ico binary
 *.svg binary
-*.woff binary
-*.woff2 binary
+
+# Test results
+test-results/** -diff -merge
+playwright-report/** -diff -merge
+
+# Coverage reports
+coverage/** -diff -merge
+*.lcov -diff -merge
+
+# Lock files
+pnpm-lock.yaml -diff -merge
+package-lock.json -diff -merge
+yarn.lock -diff -merge
