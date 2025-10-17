@@ -9,6 +9,10 @@
     "build:vercel": "node scripts/build-vercel.js",
     "preview": "vite preview",
     "generate-icons": "node scripts/generate-icons.js",
+    "validate-manifest": "node scripts/validate-manifest.js",
+    "test-profile-cache": "node scripts/test-profile-cache.js",
+    "generate-vapid": "node scripts/generate-vapid-keys.js",
+    "test-vapid": "node scripts/test-vapid-endpoint.js",
     "init-db": "node scripts/init-db.js",
     "db:init": "node scripts/init-db.js",
     "db:test": "node -e \"import('./src/config/database.js').then(db => db.testConnection())\"",
@@ -59,9 +63,12 @@
     "audit": "pnpm audit",
     "audit:fix": "pnpm audit --fix",
     "security:check": "pnpm audit && pnpm run lint:check",
-    "build:analyze": "vite build --mode production && npx vite-bundle-analyzer dist/assets/*.js",
+    "build:analyze": "vite build --mode production && node scripts/analyze-bundle.js",
+    "build:analyze:visual": "vite build --mode production && npx vite-bundle-analyzer dist/assets/*.js",
     "lighthouse": "lighthouse http://localhost:3000 --output html --output-path ./lighthouse-report.html",
-    "bundle:size": "npx vite-bundle-analyzer dist/assets/*.js"
+    "bundle:size": "npx vite-bundle-analyzer dist/assets/*.js",
+    "bundle:analyze": "node scripts/analyze-bundle.js",
+    "performance:check": "pnpm run build && pnpm run bundle:analyze && pnpm run lighthouse"
   },
   "dependencies": {
     "@iconify/vue": "^5.0.0",

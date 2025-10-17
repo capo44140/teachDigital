@@ -7,6 +7,12 @@ import UpdateNotification from './components/UpdateNotification.vue'
 import { updateService } from './services/updateService.js'
 import { useApiStore } from './stores/apiStore.js'
 
+// Services PWA avancés
+import offlineDataService from './services/offlineDataService.js'
+import pushNotificationService from './services/pushNotificationService.js'
+import installService from './services/installService.js'
+import mobileOptimizationService from './services/mobileOptimizationService.js'
+
 // Créer l'instance Pinia
 const pinia = createPinia()
 
@@ -51,13 +57,51 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Fournir le service de mise à jour globalement
+// Fournir les services globalement
 app.provide('updateService', updateService)
+app.provide('offlineDataService', offlineDataService)
+app.provide('pushNotificationService', pushNotificationService)
+app.provide('installService', installService)
+app.provide('mobileOptimizationService', mobileOptimizationService)
 
 app.use(pinia).use(router)
 
-// Initialiser le store API après l'installation de Pinia
+// Initialiser les services après l'installation de Pinia
 const apiStore = useApiStore()
 apiStore.initialize()
 
+// Initialiser les services PWA
+async function initializePWAServices() {
+  const services = [
+    { name: 'Optimisation Mobile', init: () => mobileOptimizationService.init() },
+    { name: 'Données Offline', init: () => offlineDataService.preloadCriticalData() },
+    { name: 'Notifications Push', init: () => pushNotificationService.initialize() },
+    { name: 'Installation', init: () => installService.checkInstallationStatus() }
+  ]
+
+  console.log('🚀 Initialisation des services PWA...')
+  
+  const results = await Promise.allSettled(
+    services.map(service => service.init())
+  )
+
+  const successful = results.filter(result => result.status === 'fulfilled').length
+  const failed = results.filter(result => result.status === 'rejected').length
+
+  if (failed > 0) {
+    console.warn(`⚠️ Initialisation PWA partielle: ${successful} réussis, ${failed} échoués`)
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.warn(`❌ Échec de l'initialisation ${services[index].name}:`, result.reason)
+      }
+    })
+  } else {
+    console.log('✅ Services PWA initialisés avec succès')
+  }
+}
+
+// Initialiser les services PWA après le montage de l'app
 app.mount('#app')
+
+// Initialiser les services PWA de manière asynchrone
+initializePWAServices()

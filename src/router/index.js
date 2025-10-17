@@ -3,34 +3,54 @@ import { useProfileStore } from '../stores/profileStore.js'
 import { useApiStore } from '../stores/apiStore.js'
 import sessionService from '../services/sessionService.js'
 
-// Imports dynamiques pour optimiser le code splitting
+// Imports dynamiques optimisés avec chunking intelligent
+// Composants critiques (chargés immédiatement)
 const ProfileSelector = () => import('../components/ProfileSelector.vue')
 const Dashboard = () => import('../components/Dashboard.vue')
 const UserDashboard = () => import('../components/UserDashboard.vue')
-const ProfileManagement = () => import('../components/ProfileManagement.vue')
 const PinLock = () => import('../components/PinLock.vue')
-const PinSettings = () => import('../components/PinSettings.vue')
-const EditProfilePage = () => import('../components/EditProfilePage.vue')
-const ProfileSettings = () => import('../components/ProfileSettings.vue')
-const LessonScanner = () => import('../components/LessonScanner.vue')
-const QuizGenerator = () => import('../components/QuizGenerator.vue')
-const SecurityDashboard = () => import('../components/SecurityDashboard.vue')
-const ProfileTest = () => import('../components/ProfileTest.vue')
-const SecurityTest = () => import('../components/SecurityTest.vue')
-const NotificationTest = () => import('../components/NotificationTest.vue')
-const ParentQuizManagement = () => import('../components/ParentQuizManagement.vue')
-const TextQuizGenerator = () => import('../components/TextQuizGenerator.vue')
-const ProgressTracking = () => import('../components/ProgressTracking.vue')
-const ParentProgressTracking = () => import('../components/ParentProgressTracking.vue')
-const ParentSettings = () => import('../components/ParentSettings.vue')
-const YouTubeVideoManager = () => import('../components/YouTubeVideoManager.vue')
-const YouTubeKidsViewer = () => import('../components/YouTubeKidsViewerSimple.vue')
-const ApiLoginForm = () => import('../components/ApiLoginForm.vue')
-const ApiDashboard = () => import('../components/ApiDashboard.vue')
-// Routes de reconnaissance faciale supprimées
-// const FaceAuth = () => import('../components/FaceAuth.vue')
-// const FaceRegister = () => import('../components/FaceRegister.vue')
-// const FaceRecognitionTest = () => import('../components/FaceRecognitionTest.vue')
+
+// Composants de gestion des profils (chunk: profile-management)
+const ProfileManagement = () => import(/* webpackChunkName: "profile-management" */ '../components/ProfileManagement.vue')
+const EditProfilePage = () => import(/* webpackChunkName: "profile-management" */ '../components/EditProfilePage.vue')
+const ProfileSettings = () => import(/* webpackChunkName: "profile-management" */ '../components/ProfileSettings.vue')
+const PinSettings = () => import(/* webpackChunkName: "profile-management" */ '../components/PinSettings.vue')
+
+// Composants lourds avec IA (chunk: ai-components)
+const LessonScanner = () => import(/* webpackChunkName: "ai-components" */ '../components/LessonScanner.vue')
+const QuizGenerator = () => import(/* webpackChunkName: "ai-components" */ '../components/QuizGenerator.vue')
+const TextQuizGenerator = () => import(/* webpackChunkName: "ai-components" */ '../components/TextQuizGenerator.vue')
+
+// Composants YouTube (chunk: youtube-components)
+const YouTubeVideoManager = () => import(/* webpackChunkName: "youtube-components" */ '../components/YouTubeVideoManager.vue')
+const YouTubeKidsViewer = () => import(/* webpackChunkName: "youtube-components" */ '../components/YouTubeKidsViewerSimple.vue')
+
+// Composants de reconnaissance faciale (chunk: face-recognition)
+const FaceAuth = () => import(/* webpackChunkName: "face-recognition" */ '../components/FaceAuth.vue')
+const FaceRegister = () => import(/* webpackChunkName: "face-recognition" */ '../components/FaceRegister.vue')
+const FaceRecognitionTest = () => import(/* webpackChunkName: "face-recognition" */ '../components/FaceRecognitionTest.vue')
+
+// Composants de sécurité (chunk: security-components)
+const SecurityDashboard = () => import(/* webpackChunkName: "security-components" */ '../components/SecurityDashboard.vue')
+const SecurityTest = () => import(/* webpackChunkName: "security-components" */ '../components/SecurityTest.vue')
+
+// Composants de suivi et analytics (chunk: tracking-components)
+const ProgressTracking = () => import(/* webpackChunkName: "tracking-components" */ '../components/ProgressTracking.vue')
+const ParentProgressTracking = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentProgressTracking.vue')
+const ParentQuizManagement = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentQuizManagement.vue')
+const ParentActivityManagement = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentActivityManagement.vue')
+
+// Composants de test et développement (chunk: dev-components)
+const ProfileTest = () => import(/* webpackChunkName: "dev-components" */ '../components/ProfileTest.vue')
+const NotificationTest = () => import(/* webpackChunkName: "dev-components" */ '../components/NotificationTest.vue')
+const PerformanceDashboard = () => import(/* webpackChunkName: "dev-components" */ '../components/PerformanceDashboard.vue')
+
+// Composants API (chunk: api-components)
+const ApiLoginForm = () => import(/* webpackChunkName: "api-components" */ '../components/ApiLoginForm.vue')
+const ApiDashboard = () => import(/* webpackChunkName: "api-components" */ '../components/ApiDashboard.vue')
+
+// Composants de paramètres (chunk: settings-components)
+const ParentSettings = () => import(/* webpackChunkName: "settings-components" */ '../components/ParentSettings.vue')
 
 const routes = [
   {
@@ -118,6 +138,12 @@ const routes = [
     meta: { requiresAdmin: true }
   },
   {
+    path: '/performance-dashboard',
+    name: 'PerformanceDashboard',
+    component: PerformanceDashboard,
+    meta: { requiresAdmin: true }
+  },
+  {
     path: '/parent-quiz-management',
     name: 'ParentQuizManagement',
     component: ParentQuizManagement,
@@ -126,7 +152,7 @@ const routes = [
   {
     path: '/parent-activity-management',
     name: 'ParentActivityManagement',
-    component: () => import('../components/ParentActivityManagement.vue'),
+    component: ParentActivityManagement,
     meta: { requiresAdmin: true }
   },
   {
@@ -177,31 +203,31 @@ const routes = [
     component: ApiDashboard,
     meta: { requiresApiAuth: true }
   },
-  // Routes pour la reconnaissance faciale supprimées
-  // {
-  //   path: '/face-auth',
-  //   name: 'FaceAuth',
-  //   component: FaceAuth,
-  //   props: route => ({ 
-  //     profileName: route.query.name || 'Parent',
-  //     profileId: route.query.profile || '1'
-  //   })
-  // },
-  // {
-  //   path: '/face-register',
-  //   name: 'FaceRegister',
-  //   component: FaceRegister,
-  //   props: route => ({ 
-  //     profileName: route.query.name || 'Parent',
-  //     profileId: route.query.profile || '1'
-  //   })
-  // },
-  // {
-  //   path: '/face-test',
-  //   name: 'FaceRecognitionTest',
-  //   component: FaceRecognitionTest,
-  //   meta: { requiresAdmin: true }
-  // }
+  // Routes pour la reconnaissance faciale
+  {
+    path: '/face-auth',
+    name: 'FaceAuth',
+    component: FaceAuth,
+    props: route => ({ 
+      profileName: route.query.name || 'Parent',
+      profileId: route.query.profile || '1'
+    })
+  },
+  {
+    path: '/face-register',
+    name: 'FaceRegister',
+    component: FaceRegister,
+    props: route => ({ 
+      profileName: route.query.name || 'Parent',
+      profileId: route.query.profile || '1'
+    })
+  },
+  {
+    path: '/face-test',
+    name: 'FaceRecognitionTest',
+    component: FaceRecognitionTest,
+    meta: { requiresAdmin: true }
+  }
 ]
 
 const router = createRouter({

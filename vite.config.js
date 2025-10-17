@@ -41,42 +41,181 @@ export default defineConfig(({ mode }) => {
       }),
     ],
     optimizeDeps: {
-      include: ["@neondatabase/serverless", "bcryptjs"],
-      exclude: ["vite-plugin-pwa"]
+      include: [
+        "@neondatabase/serverless", 
+        "bcryptjs",
+        "vue",
+        "vue-router",
+        "pinia",
+        "@iconify/vue"
+      ],
+      exclude: ["vite-plugin-pwa", "@vladmandic/face-api"]
     },
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: false,
-      minify: 'esbuild',
+      minify: 'terser',
       chunkSizeWarningLimit: 1000,
+      terserOptions: {
+        compress: {
+          drop_console: true,
+          drop_debugger: true,
+          pure_funcs: ['console.log', 'console.info', 'console.debug'],
+          // Optimisations supplémentaires pour mobile
+          passes: 2,
+          unsafe: true,
+          unsafe_comps: true,
+          unsafe_math: true,
+          unsafe_proto: true,
+          unsafe_regexp: true,
+          unsafe_undefined: true
+        },
+        mangle: {
+          safari10: true,
+          // Optimisations pour les appareils mobiles
+          properties: {
+            regex: /^_/
+          }
+        },
+        format: {
+          // Optimiser pour la taille
+          comments: false,
+          ascii_only: true
+        }
+      },
+      // Optimisations pour les performances mobiles
+      target: ['es2015', 'chrome58', 'firefox57', 'safari11', 'edge16'],
+      cssCodeSplit: true,
+      reportCompressedSize: false,
+      // Optimiser les assets
+      assetsInlineLimit: 4096,
       rollupOptions: {
         output: {
           manualChunks: (id) => {
-            // Chunk pour les dépendances externes uniquement
+            // Chunking intelligent basé sur les dépendances et l'usage
+            
+            // Dépendances Vue.js (critiques, chargées en premier)
             if (id.includes('node_modules')) {
-              if (id.includes('vue') || id.includes('vue-router') || id.includes('pinia')) {
-                return 'vue-vendor'
+              if (id.includes('vue') || id.includes('@vue')) {
+                return 'vue-core'
               }
+              if (id.includes('vue-router')) {
+                return 'vue-router'
+              }
+              if (id.includes('pinia')) {
+                return 'pinia'
+              }
+              
+              // Reconnaissance faciale (lourd, chargé à la demande)
+              if (id.includes('@vladmandic/face-api') || id.includes('face-api')) {
+                return 'face-recognition'
+              }
+              
+              // Base de données et crypto
               if (id.includes('@neondatabase') || id.includes('bcryptjs')) {
-                return 'database-vendor'
+                return 'database-crypto'
               }
+              
+              // UI et icônes
+              if (id.includes('@iconify') || id.includes('tailwindcss')) {
+                return 'ui-vendor'
+              }
+              
+              // Autres dépendances
               return 'vendor'
             }
             
-            // Ne pas créer de chunks pour les composants pour éviter les problèmes d'initialisation
-            // Laisser Vite gérer automatiquement le code splitting
+            // Chunking des composants basé sur les chunks définis dans le router
+            if (id.includes('src/components/')) {
+              if (id.includes('FaceRecognition') || id.includes('FaceAuth') || id.includes('FaceRegister')) {
+                return 'face-recognition'
+              }
+              if (id.includes('YouTube') || id.includes('youtube')) {
+                return 'youtube-components'
+              }
+              if (id.includes('LessonScanner') || id.includes('QuizGenerator') || id.includes('TextQuizGenerator')) {
+                return 'ai-components'
+              }
+              if (id.includes('Security') || id.includes('security')) {
+                return 'security-components'
+              }
+              if (id.includes('Progress') || id.includes('Activity') || id.includes('Parent')) {
+                return 'tracking-components'
+              }
+              if (id.includes('Profile') || id.includes('profile')) {
+                return 'profile-management'
+              }
+              if (id.includes('Api') || id.includes('api')) {
+                return 'api-components'
+              }
+              if (id.includes('Test') || id.includes('test')) {
+                return 'dev-components'
+              }
+              if (id.includes('Settings') || id.includes('settings')) {
+                return 'settings-components'
+              }
+            }
+            
+            // Services spécialisés
+            if (id.includes('src/services/')) {
+              if (id.includes('face') || id.includes('Face')) {
+                return 'face-recognition'
+              }
+              if (id.includes('youtube') || id.includes('YouTube')) {
+                return 'youtube-components'
+              }
+              if (id.includes('lesson') || id.includes('quiz') || id.includes('ai')) {
+                return 'ai-components'
+              }
+              if (id.includes('security') || id.includes('audit') || id.includes('encryption')) {
+                return 'security-components'
+              }
+              if (id.includes('cache') || id.includes('image')) {
+                return 'utility-services'
+              }
+            }
           },
-          // Configuration pour des noms de fichiers plus prévisibles
-          chunkFileNames: 'assets/[name]-[hash].js',
+          // Configuration optimisée pour les noms de fichiers
+          chunkFileNames: (chunkInfo) => {
+            const facadeModuleId = chunkInfo.facadeModuleId
+            if (facadeModuleId) {
+              // Noms plus lisibles pour les chunks de composants
+              if (facadeModuleId.includes('src/components/')) {
+                const componentName = facadeModuleId.split('/').pop().replace('.vue', '')
+                return `assets/components/${componentName}-[hash].js`
+              }
+              if (facadeModuleId.includes('src/services/')) {
+                const serviceName = facadeModuleId.split('/').pop().replace('.js', '')
+                return `assets/services/${serviceName}-[hash].js`
+              }
+            }
+            return 'assets/chunks/[name]-[hash].js'
+          },
           entryFileNames: 'assets/[name]-[hash].js',
-          assetFileNames: 'assets/[name]-[hash].[ext]'
+          assetFileNames: (assetInfo) => {
+            const info = assetInfo.name.split('.')
+            const ext = info[info.length - 1]
+            if (/\.(png|jpe?g|gif|svg|webp|avif)$/.test(assetInfo.name)) {
+              return `assets/images/[name]-[hash].${ext}`
+            }
+            if (/\.(woff2?|eot|ttf|otf)$/.test(assetInfo.name)) {
+              return `assets/fonts/[name]-[hash].${ext}`
+            }
+            return `assets/[name]-[hash].${ext}`
+          }
         }
       }
     },
     server: {
       port: 3000,
-      open: true
+      open: true,
+      hmr: {
+        overlay: true
+      },
+      fs: {
+        strict: false
+      }
     },
     define: {
       // Exposer les variables d'environnement pour le navigateur

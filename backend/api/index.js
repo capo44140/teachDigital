@@ -69,6 +69,11 @@ export default async function handler(req, res) {
       return await handleInitPins(req, res);
     }
 
+    // Route pour la clé VAPID publique
+    if (pathname === '/api/vapid-public-key') {
+      return await handleVapidPublicKey(req, res);
+    }
+
     // Route non trouvée
     res.status(404).json({ 
       success: false, 

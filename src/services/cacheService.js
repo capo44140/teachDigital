@@ -1,327 +1,472 @@
 /**
- * Service de cache intelligent avec TTL et invalidation
- * Améliore les performances en évitant les requêtes répétitives
+ * Service de cache intelligent avec TTL (Time To Live)
+ * Gestion du cache en mémoire et localStorage avec stratégies avancées
  */
 
-export class CacheService {
+class CacheService {
   constructor() {
-    this.cache = new Map()
-    this.timers = new Map()
-    this.maxSize = 1000 // Taille maximale du cache
+    this.memoryCache = new Map()
+    this.storageKey = 'teachdigital_cache'
+    this.maxMemorySize = 50 // Nombre maximum d'éléments en mémoire
     this.defaultTTL = 5 * 60 * 1000 // 5 minutes par défaut
+    this.cleanupInterval = 60 * 1000 // Nettoyage toutes les minutes
+    this.stats = {
+      hits: 0,
+      misses: 0,
+      sets: 0,
+      deletes: 0,
+      cleanups: 0
+    }
+
+    // Démarrer le nettoyage automatique
+    this.startCleanup()
+    
+    // Charger le cache depuis localStorage au démarrage
+    this.loadFromStorage()
   }
 
   /**
-   * Stocke une valeur dans le cache avec TTL
-   * @param {string} key - Clé de cache
-   * @param {any} value - Valeur à stocker
-   * @param {number} ttl - Durée de vie en millisecondes (optionnel)
-   * @returns {boolean} True si stocké avec succès
+   * Définit une valeur dans le cache
+   * @param {string} key - Clé du cache
+   * @param {any} value - Valeur à mettre en cache
+   * @param {Object} options - Options de cache
    */
-  set(key, value, ttl = this.defaultTTL) {
-    try {
-      // Nettoyer l'ancien timer s'il existe
-      this.clearTimer(key)
+  set(key, value, options = {}) {
+    const {
+      ttl = this.defaultTTL,
+      persistent = false,
+      tags = [],
+      priority = 'normal' // 'low', 'normal', 'high'
+    } = options
 
-      // Vérifier la taille du cache
-      if (this.cache.size >= this.maxSize) {
-        this.evictOldest()
-      }
-
-      // Stocker la valeur avec métadonnées
-      const cacheEntry = {
-        value: this.serialize(value),
-        timestamp: Date.now(),
-        ttl,
-        accessCount: 0,
-        lastAccess: Date.now()
-      }
-
-      this.cache.set(key, cacheEntry)
-
-      // Programmer la suppression automatique
-      const timer = setTimeout(() => {
-        this.delete(key)
-      }, ttl)
-
-      this.timers.set(key, timer)
-
-      return true
-    } catch (error) {
-      console.warn('Erreur lors du stockage en cache:', error)
-      return false
+    const cacheEntry = {
+      value,
+      timestamp: Date.now(),
+      ttl,
+      persistent,
+      tags,
+      priority,
+      accessCount: 0,
+      lastAccess: Date.now()
     }
+
+    // Mettre en cache mémoire
+    this.memoryCache.set(key, cacheEntry)
+    this.stats.sets++
+
+    // Mettre en cache persistant si demandé
+    if (persistent) {
+      this.setPersistent(key, cacheEntry)
+    }
+
+    // Nettoyer si nécessaire
+    this.cleanupIfNeeded()
+
+    return true
   }
 
   /**
    * Récupère une valeur du cache
-   * @param {string} key - Clé de cache
-   * @returns {any|null} Valeur ou null si non trouvée/expirée
+   * @param {string} key - Clé du cache
+   * @param {any} defaultValue - Valeur par défaut si non trouvée
+   * @returns {any} - Valeur mise en cache ou valeur par défaut
    */
-  get(key) {
-    try {
-      const entry = this.cache.get(key)
-      
-      if (!entry) {
-        return null
+  get(key, defaultValue = null) {
+    // Vérifier d'abord le cache mémoire
+    let entry = this.memoryCache.get(key)
+    
+    if (!entry && this.isPersistentKey(key)) {
+      // Essayer de charger depuis le cache persistant
+      entry = this.getPersistent(key)
+      if (entry) {
+        this.memoryCache.set(key, entry)
       }
-
-      // Vérifier si l'entrée a expiré
-      const now = Date.now()
-      if (now - entry.timestamp > entry.ttl) {
-        this.delete(key)
-        return null
-      }
-
-      // Mettre à jour les statistiques d'accès
-      entry.accessCount++
-      entry.lastAccess = now
-
-      return this.deserialize(entry.value)
-    } catch (error) {
-      console.warn('Erreur lors de la récupération du cache:', error)
-      return null
     }
+
+    if (!entry) {
+      this.stats.misses++
+      return defaultValue
+    }
+
+    // Vérifier si l'entrée a expiré
+    if (this.isExpired(entry)) {
+      this.delete(key)
+      this.stats.misses++
+      return defaultValue
+    }
+
+    // Mettre à jour les statistiques d'accès
+    entry.accessCount++
+    entry.lastAccess = Date.now()
+    this.stats.hits++
+
+    return entry.value
   }
 
   /**
    * Vérifie si une clé existe dans le cache
    * @param {string} key - Clé à vérifier
-   * @returns {boolean} True si la clé existe et n'est pas expirée
+   * @returns {boolean} - True si la clé existe et n'est pas expirée
    */
   has(key) {
-    const entry = this.cache.get(key)
+    const entry = this.memoryCache.get(key)
     if (!entry) return false
-
-    const now = Date.now()
-    if (now - entry.timestamp > entry.ttl) {
-      this.delete(key)
-      return false
-    }
-
-    return true
+    return !this.isExpired(entry)
   }
 
   /**
    * Supprime une entrée du cache
    * @param {string} key - Clé à supprimer
-   * @returns {boolean} True si supprimée
+   * @returns {boolean} - True si supprimée avec succès
    */
   delete(key) {
-    this.clearTimer(key)
-    return this.cache.delete(key)
+    const deleted = this.memoryCache.delete(key)
+    if (deleted) {
+      this.stats.deletes++
+    }
+    
+    // Supprimer aussi du cache persistant
+    this.deletePersistent(key)
+    
+    return deleted
   }
 
   /**
-   * Vide complètement le cache
+   * Vide tout le cache
+   * @param {boolean} includePersistent - Inclure le cache persistant
    */
-  clear() {
-    // Nettoyer tous les timers
-    this.timers.forEach(timer => clearTimeout(timer))
-    this.timers.clear()
+  clear(includePersistent = false) {
+    this.memoryCache.clear()
+    this.stats = {
+      hits: 0,
+      misses: 0,
+      sets: 0,
+      deletes: 0,
+      cleanups: 0
+    }
+
+    if (includePersistent) {
+      localStorage.removeItem(this.storageKey)
+    }
+  }
+
+  /**
+   * Supprime les entrées par tags
+   * @param {string|Array} tags - Tags à supprimer
+   */
+  deleteByTags(tags) {
+    const tagsArray = Array.isArray(tags) ? tags : [tags]
     
-    // Vider le cache
-    this.cache.clear()
+    for (const [key, entry] of this.memoryCache.entries()) {
+      if (entry.tags && entry.tags.some(tag => tagsArray.includes(tag))) {
+        this.delete(key)
+      }
+    }
+  }
+
+  /**
+   * Met à jour le TTL d'une entrée
+   * @param {string} key - Clé à mettre à jour
+   * @param {number} ttl - Nouveau TTL en millisecondes
+   */
+  updateTTL(key, ttl) {
+    const entry = this.memoryCache.get(key)
+    if (entry) {
+      entry.ttl = ttl
+      entry.timestamp = Date.now()
+    }
   }
 
   /**
    * Récupère plusieurs valeurs en une fois
-   * @param {string[]} keys - Clés à récupérer
-   * @returns {Object} Objet avec les clés et valeurs trouvées
+   * @param {Array} keys - Clés à récupérer
+   * @returns {Object} - Objet avec les clés et valeurs
    */
-  mget(keys) {
+  getMany(keys) {
     const result = {}
-    keys.forEach(key => {
-      const value = this.get(key)
-      if (value !== null) {
-        result[key] = value
-      }
-    })
+    for (const key of keys) {
+      result[key] = this.get(key)
+    }
     return result
   }
 
   /**
-   * Stocke plusieurs valeurs en une fois
-   * @param {Object} entries - Objet clé-valeur à stocker
-   * @param {number} ttl - TTL pour toutes les entrées
-   * @returns {boolean} True si toutes stockées avec succès
+   * Définit plusieurs valeurs en une fois
+   * @param {Object} entries - Objet avec clés et valeurs
+   * @param {Object} options - Options pour toutes les entrées
    */
-  mset(entries, ttl = this.defaultTTL) {
-    try {
-      Object.entries(entries).forEach(([key, value]) => {
-        this.set(key, value, ttl)
-      })
-      return true
-    } catch (error) {
-      console.warn('Erreur lors du stockage multiple:', error)
-      return false
+  setMany(entries, options = {}) {
+    for (const [key, value] of Object.entries(entries)) {
+      this.set(key, value, options)
     }
   }
 
   /**
-   * Prolonge la durée de vie d'une entrée
-   * @param {string} key - Clé à prolonger
-   * @param {number} additionalTTL - TTL additionnel en millisecondes
-   * @returns {boolean} True si prolongée
+   * Vérifie si une entrée a expiré
+   * @param {Object} entry - Entrée du cache
+   * @returns {boolean} - True si expirée
    */
-  extend(key, additionalTTL) {
-    const entry = this.cache.get(key)
-    if (!entry) return false
-
-    entry.ttl += additionalTTL
-    this.clearTimer(key)
-
-    const timer = setTimeout(() => {
-      this.delete(key)
-    }, entry.ttl)
-
-    this.timers.set(key, timer)
-    return true
-  }
-
-  /**
-   * Récupère les statistiques du cache
-   * @returns {Object} Statistiques du cache
-   */
-  getStats() {
-    const entries = Array.from(this.cache.values())
-    const now = Date.now()
-
-    return {
-      size: this.cache.size,
-      maxSize: this.maxSize,
-      hitRate: this.calculateHitRate(),
-      averageAge: this.calculateAverageAge(entries, now),
-      memoryUsage: this.estimateMemoryUsage(),
-      expiredEntries: this.countExpiredEntries(entries, now)
-    }
+  isExpired(entry) {
+    return Date.now() - entry.timestamp > entry.ttl
   }
 
   /**
    * Nettoie les entrées expirées
-   * @returns {number} Nombre d'entrées nettoyées
    */
   cleanup() {
-    const now = Date.now()
     let cleaned = 0
 
-    for (const [key, entry] of this.cache.entries()) {
-      if (now - entry.timestamp > entry.ttl) {
-        this.delete(key)
+    for (const [key, entry] of this.memoryCache.entries()) {
+      if (this.isExpired(entry)) {
+        this.memoryCache.delete(key)
+        this.deletePersistent(key)
         cleaned++
       }
+    }
+
+    this.stats.cleanups++
+    
+    if (cleaned > 0) {
+      console.log(`🧹 Cache nettoyé: ${cleaned} entrées expirées supprimées`)
     }
 
     return cleaned
   }
 
   /**
-   * Supprime les entrées les moins utilisées
+   * Nettoie si nécessaire (basé sur la taille)
    */
-  evictOldest() {
-    const entries = Array.from(this.cache.entries())
-    entries.sort((a, b) => a[1].lastAccess - b[1].lastAccess)
+  cleanupIfNeeded() {
+    if (this.memoryCache.size > this.maxMemorySize) {
+      this.evictLeastUsed()
+    }
+  }
+
+  /**
+   * Supprime les entrées les moins utilisées (LRU)
+   */
+  evictLeastUsed() {
+    const entries = Array.from(this.memoryCache.entries())
     
-    // Supprimer les 10% les plus anciens
-    const toRemove = Math.ceil(entries.length * 0.1)
+    // Trier par priorité puis par dernière utilisation
+    entries.sort((a, b) => {
+      const priorityOrder = { low: 0, normal: 1, high: 2 }
+      const priorityDiff = priorityOrder[b[1].priority] - priorityOrder[a[1].priority]
+      
+      if (priorityDiff !== 0) return priorityDiff
+      
+      return a[1].lastAccess - b[1].lastAccess
+    })
+
+    // Supprimer les 25% les moins utilisées
+    const toRemove = Math.ceil(entries.length * 0.25)
     for (let i = 0; i < toRemove; i++) {
       this.delete(entries[i][0])
     }
+
+    console.log(`🗑️ Cache: ${toRemove} entrées supprimées (LRU)`)
   }
 
   /**
-   * Sériealise une valeur pour le stockage
-   * @param {any} value - Valeur à sérialiser
-   * @returns {string} Valeur sérialisée
+   * Démarre le nettoyage automatique
    */
-  serialize(value) {
+  startCleanup() {
+    setInterval(() => {
+      this.cleanup()
+    }, this.cleanupInterval)
+  }
+
+  /**
+   * Sauvegarde le cache persistant
+   */
+  saveToStorage() {
     try {
-      return JSON.stringify(value)
+      const persistentEntries = {}
+      
+      for (const [key, entry] of this.memoryCache.entries()) {
+        if (entry.persistent && !this.isExpired(entry)) {
+          persistentEntries[key] = entry
+        }
+      }
+
+      localStorage.setItem(this.storageKey, JSON.stringify(persistentEntries))
     } catch (error) {
-      console.warn('Erreur de sérialisation:', error)
-      return String(value)
+      console.warn('Impossible de sauvegarder le cache:', error)
     }
   }
 
   /**
-   * Désérialise une valeur stockée
-   * @param {string} serializedValue - Valeur sérialisée
-   * @returns {any} Valeur désérialisée
+   * Charge le cache depuis localStorage
    */
-  deserialize(serializedValue) {
+  loadFromStorage() {
     try {
-      return JSON.parse(serializedValue)
+      const stored = localStorage.getItem(this.storageKey)
+      if (stored) {
+        const persistentEntries = JSON.parse(stored)
+        
+        for (const [key, entry] of Object.entries(persistentEntries)) {
+          if (!this.isExpired(entry)) {
+            this.memoryCache.set(key, entry)
+          }
+        }
+
+        console.log(`📦 Cache chargé: ${Object.keys(persistentEntries).length} entrées persistantes`)
+      }
     } catch (error) {
-      console.warn('Erreur de désérialisation:', error)
-      return serializedValue
+      console.warn('Impossible de charger le cache:', error)
     }
   }
 
   /**
-   * Nettoie le timer d'une clé
-   * @param {string} key - Clé dont nettoyer le timer
+   * Gestion du cache persistant
    */
-  clearTimer(key) {
-    const timer = this.timers.get(key)
-    if (timer) {
-      clearTimeout(timer)
-      this.timers.delete(key)
+  setPersistent(key, entry) {
+    try {
+      const stored = localStorage.getItem(this.storageKey)
+      const persistentEntries = stored ? JSON.parse(stored) : {}
+      persistentEntries[key] = entry
+      localStorage.setItem(this.storageKey, JSON.stringify(persistentEntries))
+    } catch (error) {
+      console.warn('Impossible de sauvegarder en cache persistant:', error)
+    }
+  }
+
+  getPersistent(key) {
+    try {
+      const stored = localStorage.getItem(this.storageKey)
+      if (stored) {
+        const persistentEntries = JSON.parse(stored)
+        return persistentEntries[key]
+      }
+    } catch (error) {
+      console.warn('Impossible de charger depuis le cache persistant:', error)
+    }
+    return null
+  }
+
+  deletePersistent(key) {
+    try {
+      const stored = localStorage.getItem(this.storageKey)
+      if (stored) {
+        const persistentEntries = JSON.parse(stored)
+        delete persistentEntries[key]
+        localStorage.setItem(this.storageKey, JSON.stringify(persistentEntries))
+      }
+    } catch (error) {
+      console.warn('Impossible de supprimer du cache persistant:', error)
+    }
+  }
+
+  isPersistentKey(key) {
+    const entry = this.memoryCache.get(key)
+    return entry && entry.persistent
+  }
+
+  /**
+   * Statistiques du cache
+   */
+  getStats() {
+    const hitRate = this.stats.hits + this.stats.misses > 0 
+      ? Math.round((this.stats.hits / (this.stats.hits + this.stats.misses)) * 100)
+      : 0
+
+    return {
+      ...this.stats,
+      hitRate,
+      size: this.memoryCache.size,
+      maxSize: this.maxMemorySize,
+      memoryUsage: this.getMemoryUsage()
     }
   }
 
   /**
-   * Calcule le taux de succès du cache
-   * @returns {number} Taux de succès (0-1)
+   * Estimation de l'utilisation mémoire
    */
-  calculateHitRate() {
-    const entries = Array.from(this.cache.values())
-    const totalAccess = entries.reduce((sum, entry) => sum + entry.accessCount, 0)
-    return totalAccess > 0 ? entries.length / totalAccess : 0
-  }
-
-  /**
-   * Calcule l'âge moyen des entrées
-   * @param {Array} entries - Entrées du cache
-   * @param {number} now - Timestamp actuel
-   * @returns {number} Âge moyen en millisecondes
-   */
-  calculateAverageAge(entries, now) {
-    if (entries.length === 0) return 0
-    const totalAge = entries.reduce((sum, entry) => sum + (now - entry.timestamp), 0)
-    return totalAge / entries.length
-  }
-
-  /**
-   * Estime l'utilisation mémoire
-   * @returns {number} Estimation en bytes
-   */
-  estimateMemoryUsage() {
-    let total = 0
-    for (const [key, entry] of this.cache.entries()) {
-      total += key.length * 2 // Unicode
-      total += entry.value.length * 2
-      total += 100 // Métadonnées approximatives
+  getMemoryUsage() {
+    let totalSize = 0
+    
+    for (const [key, entry] of this.memoryCache.entries()) {
+      totalSize += key.length * 2 // UTF-16
+      totalSize += JSON.stringify(entry).length * 2
     }
-    return total
+
+    return {
+      bytes: totalSize,
+      kb: Math.round(totalSize / 1024 * 100) / 100,
+      mb: Math.round(totalSize / 1024 / 1024 * 100) / 100
+    }
   }
 
   /**
-   * Compte les entrées expirées
-   * @param {Array} entries - Entrées du cache
-   * @param {number} now - Timestamp actuel
-   * @returns {number} Nombre d'entrées expirées
+   * Méthodes utilitaires pour les cas d'usage courants
    */
-  countExpiredEntries(entries, now) {
-    return entries.filter(entry => now - entry.timestamp > entry.ttl).length
+
+  /**
+   * Cache avec fonction de fallback
+   * @param {string} key - Clé du cache
+   * @param {Function} fetchFn - Fonction pour récupérer la donnée
+   * @param {Object} options - Options de cache
+   */
+  async getOrSet(key, fetchFn, options = {}) {
+    const cached = this.get(key)
+    if (cached !== null) {
+      return cached
+    }
+
+    try {
+      const value = await fetchFn()
+      this.set(key, value, options)
+      return value
+    } catch (error) {
+      console.error(`Erreur lors de la récupération de ${key}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Cache avec invalidation automatique
+   * @param {string} key - Clé du cache
+   * @param {Function} fetchFn - Fonction pour récupérer la donnée
+   * @param {number} ttl - TTL en millisecondes
+   */
+  async getOrFetch(key, fetchFn, ttl = this.defaultTTL) {
+    return this.getOrSet(key, fetchFn, { ttl, persistent: false })
+  }
+
+  /**
+   * Cache persistant pour les données importantes
+   * @param {string} key - Clé du cache
+   * @param {Function} fetchFn - Fonction pour récupérer la donnée
+   * @param {number} ttl - TTL en millisecondes
+   */
+  async getOrFetchPersistent(key, fetchFn, ttl = this.defaultTTL) {
+    return this.getOrSet(key, fetchFn, { ttl, persistent: true })
+  }
+
+  /**
+   * Cache avec tags pour invalidation groupée
+   * @param {string} key - Clé du cache
+   * @param {Function} fetchFn - Fonction pour récupérer la donnée
+   * @param {Array} tags - Tags pour l'invalidation
+   * @param {Object} options - Options de cache
+   */
+  async getOrFetchWithTags(key, fetchFn, tags = [], options = {}) {
+    return this.getOrSet(key, fetchFn, { ...options, tags })
   }
 }
 
 // Instance singleton
-export const cacheService = new CacheService()
+const cacheService = new CacheService()
 
-// Nettoyage automatique toutes les 5 minutes
+// Sauvegarder le cache avant de quitter la page
+window.addEventListener('beforeunload', () => {
+  cacheService.saveToStorage()
+})
+
+// Sauvegarder périodiquement
 setInterval(() => {
-  cacheService.cleanup()
-}, 5 * 60 * 1000)
+  cacheService.saveToStorage()
+}, 30 * 1000) // Toutes les 30 secondes
 
 export default cacheService
+export { CacheService }
