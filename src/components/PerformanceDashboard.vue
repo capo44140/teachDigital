@@ -223,7 +223,7 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue'
-import Icon from '@iconify/vue'
+import { Icon } from '@iconify/vue'
 import CacheStats from './CacheStats.vue'
 import ImageOptimizer from './ImageOptimizer.vue'
 import cachedApiService from '../services/cachedApiService.js'

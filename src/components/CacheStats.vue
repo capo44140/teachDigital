@@ -163,7 +163,7 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import Icon from '@iconify/vue'
+import { Icon } from '@iconify/vue'
 import cachedApiService from '../services/cachedApiService.js'
 
 export default {
@@ -345,6 +345,8 @@ export default {
 </script>
 
 <style scoped>
+@import "tailwindcss" reference;
+
 .stat-card {
   @apply text-center p-4 bg-gray-50 rounded-lg;
 }

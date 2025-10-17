@@ -247,7 +247,7 @@
 
 <script>
 import { ref, computed } from 'vue'
-import Icon from '@iconify/vue'
+import { Icon } from '@iconify/vue'
 import imageOptimizationService from '../services/imageOptimizationService.js'
 
 export default {
@@ -416,6 +416,8 @@ export default {
 </script>
 
 <style scoped>
+@import "tailwindcss" reference;
+
 .drop-zone {
   @apply border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-colors;
 }

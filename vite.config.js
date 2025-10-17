@@ -85,7 +85,7 @@ export default defineConfig(({ mode }) => {
         }
       },
       // Optimisations pour les performances mobiles
-      target: ['es2015', 'chrome58', 'firefox57', 'safari11', 'edge16'],
+      target: ['es2020', 'chrome80', 'firefox78', 'safari14', 'edge80'],
       cssCodeSplit: true,
       reportCompressedSize: false,
       // Optimiser les assets
