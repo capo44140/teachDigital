@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs';
+import { hashPin as cryptoHashPin, verifyPin as cryptoVerifyPin } from './cryptoWrapper.js';
 
 /**
  * Service de hachage sécurisé pour les codes PIN
@@ -24,7 +24,7 @@ export class HashService {
         throw new Error('Le code PIN doit contenir entre 4 et 8 caractères');
       }
       
-      const hashedPin = await bcrypt.hash(pin, this.SALT_ROUNDS);
+      const hashedPin = await cryptoHashPin(pin, this.SALT_ROUNDS);
       console.log('✅ Code PIN haché avec succès');
       return hashedPin;
     } catch (error) {
@@ -46,7 +46,7 @@ export class HashService {
         return false;
       }
       
-      const isValid = await bcrypt.compare(pin, hashedPin);
+      const isValid = await cryptoVerifyPin(pin, hashedPin);
       console.log(isValid ? '✅ Code PIN valide' : '❌ Code PIN invalide');
       return isValid;
     } catch (error) {

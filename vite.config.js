@@ -49,7 +49,8 @@ export default defineConfig(({ mode }) => {
         "pinia",
         "@iconify/vue"
       ],
-      exclude: ["vite-plugin-pwa", "@vladmandic/face-api"]
+      exclude: ["vite-plugin-pwa", "@vladmandic/face-api"],
+      force: true
     },
     build: {
       outDir: 'dist',
@@ -57,19 +58,19 @@ export default defineConfig(({ mode }) => {
       sourcemap: false,
       minify: 'terser',
       chunkSizeWarningLimit: 1000,
-      terserOptions: {
+        terserOptions: {
         compress: {
           drop_console: true,
           drop_debugger: true,
           pure_funcs: ['console.log', 'console.info', 'console.debug'],
           // Optimisations supplémentaires pour mobile
           passes: 2,
-          unsafe: true,
-          unsafe_comps: true,
-          unsafe_math: true,
-          unsafe_proto: true,
-          unsafe_regexp: true,
-          unsafe_undefined: true
+          unsafe: false, // Désactivé pour éviter les problèmes avec bcryptjs
+          unsafe_comps: false,
+          unsafe_math: false,
+          unsafe_proto: false,
+          unsafe_regexp: false,
+          unsafe_undefined: false
         },
         mangle: {
           safari10: true,
@@ -112,9 +113,12 @@ export default defineConfig(({ mode }) => {
                 return 'face-recognition'
               }
               
-              // Base de données et crypto
-              if (id.includes('@neondatabase') || id.includes('bcryptjs')) {
-                return 'database-crypto'
+              // Base de données et crypto (séparés pour éviter les conflits)
+              if (id.includes('@neondatabase')) {
+                return 'database'
+              }
+              if (id.includes('bcryptjs')) {
+                return 'crypto'
               }
               
               // UI et icônes
