@@ -70,7 +70,10 @@ export default defineConfig(({ mode }) => {
           unsafe_math: false,
           unsafe_proto: false,
           unsafe_regexp: false,
-          unsafe_undefined: false
+          unsafe_undefined: false,
+          // Préserver les propriétés des objets pour bcryptjs
+          keep_fargs: true,
+          keep_fnames: true
         },
         mangle: {
           safari10: true,
@@ -113,12 +116,9 @@ export default defineConfig(({ mode }) => {
                 return 'face-recognition'
               }
               
-              // Base de données et crypto (séparés pour éviter les conflits)
-              if (id.includes('@neondatabase')) {
+              // Base de données et crypto (groupés pour éviter les conflits d'initialisation)
+              if (id.includes('@neondatabase') || id.includes('bcryptjs')) {
                 return 'database'
-              }
-              if (id.includes('bcryptjs')) {
-                return 'crypto'
               }
               
               // UI et icônes
