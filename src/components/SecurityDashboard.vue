@@ -239,8 +239,6 @@
 </template>
 
 <script>
-import { auditLogService } from '../services/auditLogService.js'
-
 export default {
   name: 'SecurityDashboard',
   data() {
@@ -255,21 +253,30 @@ export default {
         startDate: '',
         endDate: ''
       },
-      selectedLog: null
+      selectedLog: null,
+      auditLogService: null
     }
   },
   async created() {
+    // Import dynamique pour éviter les problèmes d'initialisation
+    const { auditLogService } = await import('../services/auditLogService.js')
+    this.auditLogService = auditLogService
+    
     await this.loadSecurityStats()
     await this.loadLogs()
     await this.loadUsers()
   },
   methods: {
     async loadSecurityStats() {
-      this.securityStats = auditLogService.getSecurityStats(7)
+      if (this.auditLogService) {
+        this.securityStats = this.auditLogService.getSecurityStats(7)
+      }
     },
     
     async loadLogs() {
-      this.filteredLogs = auditLogService.getLogs(this.filters)
+      if (this.auditLogService) {
+        this.filteredLogs = this.auditLogService.getLogs(this.filters)
+      }
     },
     
     async loadUsers() {
@@ -303,14 +310,16 @@ export default {
     },
     
     exportLogs() {
-      const logs = auditLogService.exportLogs(this.filters)
-      const blob = new Blob([logs], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.json`
-      a.click()
-      URL.revokeObjectURL(url)
+      if (this.auditLogService) {
+        const logs = this.auditLogService.exportLogs(this.filters)
+        const blob = new Blob([logs], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.json`
+        a.click()
+        URL.revokeObjectURL(url)
+      }
     },
     
     showLogDetails(log) {

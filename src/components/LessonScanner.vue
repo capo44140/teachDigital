@@ -243,7 +243,7 @@ import { useProfileStore } from '../stores/profileStore.js'
 import { AIService } from '../services/aiService.js'
 import { rateLimitService } from '../services/rateLimitService.js'
 import { ImageValidationService } from '../services/imageValidationService.js'
-import { auditLogService } from '../services/auditLogService.js'
+// Import dynamique pour éviter les problèmes d'initialisation
 import { LessonService } from '../services/lessonService.js'
 import { migrationService } from '../services/migrationService.js'
 
@@ -260,7 +260,8 @@ export default {
       imageValidator: new ImageValidationService(),
       validationErrors: [],
       validationWarnings: [],
-      questionCount: 5
+      questionCount: 5,
+      auditLogService: null
     }
   },
   computed: {
@@ -271,6 +272,10 @@ export default {
     }
   },
   async created() {
+    // Import dynamique pour éviter les problèmes d'initialisation
+    const { auditLogService } = await import('../services/auditLogService.js')
+    this.auditLogService = auditLogService
+    
     const store = useProfileStore()
     await store.loadProfiles()
   },
@@ -326,24 +331,28 @@ export default {
             this.validationWarnings = validation.warnings
             
             // Enregistrer l'upload d'image dans les logs d'audit
-            auditLogService.logDataAccess(
-              this.selectedChild?.id || 'unknown',
-              'image_upload',
-              'IMAGE_UPLOADED',
-              {
-                fileName: file.name,
-                fileSize: file.size,
-                fileType: file.type,
-                validation: validation.metadata
-              }
-            )
+            if (this.auditLogService) {
+              this.auditLogService.logDataAccess(
+                this.selectedChild?.id || 'unknown',
+                'image_upload',
+                'IMAGE_UPLOADED',
+                {
+                  fileName: file.name,
+                  fileSize: file.size,
+                  fileType: file.type,
+                  validation: validation.metadata
+                }
+              )
+            }
           } catch (error) {
             console.error('Erreur lors de la validation de l\'image:', error)
-            auditLogService.logSystemError(
-              'Image validation failed',
-              'LessonScanner',
-              { error: error.message, fileName: file.name }
-            )
+            if (this.auditLogService) {
+              this.auditLogService.logSystemError(
+                'Image validation failed',
+                'LessonScanner',
+                { error: error.message, fileName: file.name }
+              )
+            }
             alert(`Erreur lors de la validation de ${file.name}`)
             continue
           }
@@ -408,17 +417,19 @@ export default {
         rateLimitService.recordRequest(this.selectedChild.id, 'openai')
         
         // Enregistrer le début de l'analyse dans les logs d'audit
-        auditLogService.logApiUsage(
-          this.selectedChild.id,
-          'openai',
-          true,
-          {
-            action: 'QUIZ_GENERATION_START',
-            fileCount: this.selectedFiles.length,
-            questionCount: parseInt(this.questionCount),
-            fileNames: this.selectedFiles.map(f => f.name)
-          }
-        )
+        if (this.auditLogService) {
+          this.auditLogService.logApiUsage(
+            this.selectedChild.id,
+            'openai',
+            true,
+            {
+              action: 'QUIZ_GENERATION_START',
+              fileCount: this.selectedFiles.length,
+              questionCount: parseInt(this.questionCount),
+              fileNames: this.selectedFiles.map(f => f.name)
+            }
+          )
+        }
         
         // Simuler l'analyse des documents et la génération du quiz
         const aiService = new AIService()
@@ -440,17 +451,19 @@ export default {
         this.generatedQuiz.lessonId = savedLesson.id
         
         // Enregistrer le succès de l'analyse
-        auditLogService.logApiUsage(
-          this.selectedChild.id,
-          'openai',
-          true,
-          {
-            action: 'QUIZ_GENERATION_SUCCESS',
-            quizQuestions: quiz.questions?.length || 0,
-            lessonId: savedLesson.id,
-            fileCount: this.selectedFiles.length
-          }
-        )
+        if (this.auditLogService) {
+          this.auditLogService.logApiUsage(
+            this.selectedChild.id,
+            'openai',
+            true,
+            {
+              action: 'QUIZ_GENERATION_SUCCESS',
+              quizQuestions: quiz.questions?.length || 0,
+              lessonId: savedLesson.id,
+              fileCount: this.selectedFiles.length
+            }
+          )
+        }
         
         // Rediriger vers le quiz
         this.$router.push({
@@ -465,16 +478,18 @@ export default {
         console.error('Erreur lors de la génération du quiz:', error)
         
         // Enregistrer l'échec de l'analyse
-        auditLogService.logApiUsage(
-          this.selectedChild.id,
-          'openai',
-          false,
-          {
-            action: 'QUIZ_GENERATION_FAILED',
-            error: error.message,
-            fileCount: this.selectedFiles.length
-          }
-        )
+        if (this.auditLogService) {
+          this.auditLogService.logApiUsage(
+            this.selectedChild.id,
+            'openai',
+            false,
+            {
+              action: 'QUIZ_GENERATION_FAILED',
+              error: error.message,
+              fileCount: this.selectedFiles.length
+            }
+          )
+        }
         
         alert('Erreur lors de la génération du quiz. Veuillez réessayer.')
       } finally {

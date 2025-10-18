@@ -316,7 +316,7 @@
 import { useProfileStore } from '../stores/profileStore.js'
 import { AIService } from '../services/aiService.js'
 import { rateLimitService } from '../services/rateLimitService.js'
-import { auditLogService } from '../services/auditLogService.js'
+// Import dynamique pour éviter les problèmes d'initialisation
 import { LessonService } from '../services/lessonService.js'
 
 export default {
@@ -334,7 +334,8 @@ export default {
       showPreview: false,
       isProcessing: false,
       showValidation: false,
-      characterCount: 0
+      characterCount: 0,
+      auditLogService: null
     }
   },
   computed: {
@@ -347,6 +348,10 @@ export default {
     }
   },
   async created() {
+    // Import dynamique pour éviter les problèmes d'initialisation
+    const { auditLogService } = await import('../services/auditLogService.js')
+    this.auditLogService = auditLogService
+    
     const store = useProfileStore()
     await store.loadProfiles()
   },
@@ -398,18 +403,20 @@ export default {
         rateLimitService.recordRequest(this.selectedChild.id, 'openai')
         
         // Enregistrer le début de la génération dans les logs d'audit
-        auditLogService.logApiUsage(
-          this.selectedChild.id,
-          'openai',
-          true,
-          {
-            action: 'TEXT_QUIZ_GENERATION_START',
-            lessonTitle: this.lessonTitle,
-            textLength: this.lessonText.length,
-            questionCount: this.questionCount,
-            difficulty: this.difficulty
-          }
-        )
+        if (this.auditLogService) {
+          this.auditLogService.logApiUsage(
+            this.selectedChild.id,
+            'openai',
+            true,
+            {
+              action: 'TEXT_QUIZ_GENERATION_START',
+              lessonTitle: this.lessonTitle,
+              textLength: this.lessonText.length,
+              questionCount: this.questionCount,
+              difficulty: this.difficulty
+            }
+          )
+        }
         
         // Générer le quiz à partir du texte
         const aiService = new AIService()
@@ -443,30 +450,34 @@ export default {
         this.generatedQuiz.lessonId = savedLesson.id
         
         // Enregistrer le succès de la génération
-        auditLogService.logApiUsage(
-          this.selectedChild.id,
-          'openai',
-          true,
-          {
-            action: 'TEXT_QUIZ_GENERATION_SUCCESS',
-            quizQuestions: quiz.questions?.length || 0,
-            lessonId: savedLesson.id
-          }
-        )
+        if (this.auditLogService) {
+          this.auditLogService.logApiUsage(
+            this.selectedChild.id,
+            'openai',
+            true,
+            {
+              action: 'TEXT_QUIZ_GENERATION_SUCCESS',
+              quizQuestions: quiz.questions?.length || 0,
+              lessonId: savedLesson.id
+            }
+          )
+        }
         
       } catch (error) {
         console.error('Erreur lors de la génération du quiz:', error)
         
         // Enregistrer l'échec de la génération
-        auditLogService.logApiUsage(
-          this.selectedChild.id,
-          'openai',
-          false,
-          {
-            action: 'TEXT_QUIZ_GENERATION_FAILED',
-            error: error.message
-          }
-        )
+        if (this.auditLogService) {
+          this.auditLogService.logApiUsage(
+            this.selectedChild.id,
+            'openai',
+            false,
+            {
+              action: 'TEXT_QUIZ_GENERATION_FAILED',
+              error: error.message
+            }
+          )
+        }
         
         alert('Erreur lors de la génération du quiz. Veuillez réessayer.')
       } finally {
