@@ -1,5 +1,5 @@
 // Import des dépendances
-import bcrypt from 'bcryptjs';
+import { NativeHashService } from '../lib/nativeHash.js';
 import sql from '../lib/database.js';
 import { generateToken, createSession, authenticateToken, deleteSession } from '../lib/auth.js';
 import { successResponse, errorResponse, unauthorizedResponse, handleError } from '../lib/response.js';
@@ -116,7 +116,7 @@ async function handleLogin(req, res) {
       return;
     }
 
-    const isValidPin = await bcrypt.compare(pin, pinData[0].pin_code);
+    const isValidPin = await NativeHashService.verifyPin(pin, pinData[0].pin_code);
     if (!isValidPin) {
       res.status(401).json({ 
         success: false, 

@@ -43,7 +43,6 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       include: [
         "@neondatabase/serverless", 
-        "bcryptjs",
         "vue",
         "vue-router",
         "pinia",
@@ -116,8 +115,8 @@ export default defineConfig(({ mode }) => {
                 return 'face-recognition'
               }
               
-              // Base de données et crypto (groupés pour éviter les conflits d'initialisation)
-              if (id.includes('@neondatabase') || id.includes('bcryptjs')) {
+              // Base de données
+              if (id.includes('@neondatabase')) {
                 return 'database'
               }
               

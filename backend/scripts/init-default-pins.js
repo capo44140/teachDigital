@@ -1,5 +1,5 @@
 // Script pour initialiser les codes PIN par défaut
-import bcrypt from 'bcryptjs';
+import { NativeHashService } from '../lib/nativeHash.js';
 import sql from '../lib/database.js';
 
 async function initDefaultPins() {
@@ -20,8 +20,7 @@ async function initDefaultPins() {
     
     // Code PIN par défaut
     const defaultPin = '1234';
-    const saltRounds = 12;
-    const hashedPin = await bcrypt.hash(defaultPin, saltRounds);
+    const hashedPin = await NativeHashService.hashPin(defaultPin);
     
     console.log(`\n🔑 Code PIN par défaut: ${defaultPin}`);
     console.log('🔒 Code PIN haché:', hashedPin.substring(0, 20) + '...');
