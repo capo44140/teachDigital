@@ -66,7 +66,6 @@ console.log('Permission:', Notification.permission);
 **Solutions**:
 - Vérifier que l'application est en HTTPS
 - Demander la permission explicitement
-- Vérifier la configuration VAPID
 
 ### 5. Installation PWA Échouée
 
@@ -182,7 +181,6 @@ node scripts/test-pwa-services.js
 ```env
 # Production
 VITE_API_URL=https://teachdigital.vercel.app
-VITE_VAPID_PUBLIC_KEY=your_vapid_public_key
 
 # Base de données
 DATABASE_URL=your_database_url

@@ -128,7 +128,7 @@ export default {
 
     // Injecter les services PWA
     const installService = inject('installService', null)
-    const pushNotificationService = inject('pushNotificationService', null)
+    // Service de notifications push supprimé
 
     // Indicateurs de statut
     const statusIndicators = computed(() => [
@@ -196,16 +196,8 @@ export default {
       return { text: 'N/A', class: 'error' }
     })
 
-    // Statut de l'abonnement
+    // Statut de l'abonnement (service supprimé)
     const subscriptionStatus = computed(() => {
-      if (pushNotificationService) {
-        const stats = pushNotificationService.getStats()
-        if (stats.isSubscribed) {
-          return { text: 'Actif', class: 'success' }
-        } else if (stats.isSupported) {
-          return { text: 'Inactif', class: 'warning' }
-        }
-      }
       return null
     })
 
@@ -231,9 +223,7 @@ export default {
 
     // Peut s'abonner aux notifications
     const canSubscribe = computed(() => {
-      return pushNotificationService && 
-             pushNotificationService.getStats().isSupported && 
-             !pushNotificationService.getStats().isSubscribed
+      return false // Service de notifications push supprimé
     })
 
     // Actualiser le statut
@@ -304,15 +294,9 @@ export default {
       }
     }
 
-    // Vérifier les notifications
+    // Vérifier les notifications (service supprimé)
     const checkNotifications = async () => {
-      if (pushNotificationService) {
-        try {
-          await pushNotificationService.initialize()
-        } catch (error) {
-          errors.value.push(`Erreur notifications: ${error.message}`)
-        }
-      }
+      // Service de notifications push supprimé
     }
 
     // Afficher le prompt d'installation
@@ -326,15 +310,9 @@ export default {
       }
     }
 
-    // S'abonner aux notifications
+    // S'abonner aux notifications (service supprimé)
     const subscribeNotifications = async () => {
-      if (pushNotificationService) {
-        try {
-          await pushNotificationService.subscribe()
-        } catch (error) {
-          errors.value.push(`Erreur notifications: ${error.message}`)
-        }
-      }
+      // Service de notifications push supprimé
     }
 
     // Initialiser au montage

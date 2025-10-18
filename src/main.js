@@ -9,7 +9,6 @@ import { useApiStore } from './stores/apiStore.js'
 
 // Services PWA avancés
 import offlineDataService from './services/offlineDataService.js'
-import pushNotificationService from './services/pushNotificationService.js'
 import installService from './services/installService.js'
 import mobileOptimizationService from './services/mobileOptimizationService.js'
 
@@ -60,7 +59,6 @@ if ('serviceWorker' in navigator) {
 // Fournir les services globalement
 app.provide('updateService', updateService)
 app.provide('offlineDataService', offlineDataService)
-app.provide('pushNotificationService', pushNotificationService)
 app.provide('installService', installService)
 app.provide('mobileOptimizationService', mobileOptimizationService)
 
@@ -75,7 +73,6 @@ async function initializePWAServices() {
   const services = [
     { name: 'Optimisation Mobile', init: () => mobileOptimizationService.init() },
     { name: 'Données Offline', init: () => offlineDataService.preloadCriticalData() },
-    { name: 'Notifications Push', init: () => pushNotificationService.initialize() },
     { name: 'Installation', init: () => installService.checkInstallationStatus() }
   ]
 

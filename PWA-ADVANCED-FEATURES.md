@@ -24,7 +24,7 @@ Ce document décrit les fonctionnalités PWA avancées implémentées dans Teach
 
 ### 2. Notifications Push Avancées
 
-**Service**: `pushNotificationService.js`
+**Service**: Supprimé (VAPID retiré)
 **Composant**: `PushNotificationManager.vue`
 
 - **Inscription automatique** aux notifications push
@@ -38,7 +38,6 @@ Ce document décrit les fonctionnalités PWA avancées implémentées dans Teach
 - **Actions contextuelles** dans les notifications
 
 **Fonctionnalités clés**:
-- Support VAPID pour la sécurité
 - Notifications locales pour les tests
 - Gestion des clics et actions
 - Paramètres utilisateur personnalisables
@@ -147,7 +146,7 @@ Tous les services PWA sont disponibles globalement dans l'application :
 ```javascript
 // Dans un composant Vue
 const offlineDataService = inject('offlineDataService')
-const pushNotificationService = inject('pushNotificationService')
+// Service de notifications push supprimé
 const installService = inject('installService')
 const mobileOptimizationService = inject('mobileOptimizationService')
 ```
@@ -185,7 +184,6 @@ Le composant `MobilePerformanceMonitor` fournit :
 
 ### Notifications Push
 
-- **VAPID** pour l'authentification
 - **HTTPS** obligatoire
 - **Permissions** explicites utilisateur
 - **Validation** des données
@@ -210,7 +208,6 @@ Le composant `MobilePerformanceMonitor` fournit :
 
 ```env
 VITE_API_URL=https://teachdigital.vercel.app
-VITE_VAPID_PUBLIC_KEY=your_vapid_public_key
 ```
 
 ### Build de Production
