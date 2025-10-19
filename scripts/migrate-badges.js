@@ -5,7 +5,33 @@
  * Exécute: node scripts/migrate-badges.js
  */
 
-import sql from '../src/config/database.js'
+import { config } from 'dotenv'
+import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'path'
+import { neon } from '@neondatabase/serverless'
+
+// Charger les variables d'environnement
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const envPath = resolve(__dirname, '../.env')
+const result = config({ path: envPath })
+
+if (result.error) {
+  console.error('❌ Erreur lors du chargement du fichier .env:', result.error)
+  process.exit(1)
+}
+
+console.log('✅ Fichier .env chargé depuis:', envPath)
+console.log('DATABASE_URL présente:', !!process.env.DATABASE_URL)
+
+// Créer la connexion directement ici
+if (!process.env.DATABASE_URL) {
+  console.error('❌ DATABASE_URL n\'est pas définie dans le fichier .env')
+  console.error('Veuillez configurer votre fichier .env avec l\'URL de connexion Neon')
+  process.exit(1)
+}
+
+const sql = neon(process.env.DATABASE_URL)
 
 async function migrateBadges() {
   try {

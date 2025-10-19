@@ -4,14 +4,25 @@ import { neon } from '@neondatabase/serverless';
 // En production, les variables d'environnement sont injectées par Vercel
 // En développement, elles sont chargées automatiquement par Vite
 
+// Helper pour accéder aux variables d'environnement de manière sécurisée
+const getEnvVar = (key, viteKey) => {
+  // Priorité: process.env.KEY > process.env.VITE_KEY > import.meta.env.VITE_KEY
+  if (process.env[key]) return process.env[key];
+  if (process.env[viteKey]) return process.env[viteKey];
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[viteKey]) {
+    return import.meta.env[viteKey];
+  }
+  return undefined;
+};
+
 // Configuration de la base de données Neon
 const config = {
-  connectionString: process.env.DATABASE_URL || process.env.VITE_DATABASE_URL || (typeof import.meta !== 'undefined' ? import.meta.env.VITE_DATABASE_URL : undefined),
-  host: process.env.NEON_HOST || (typeof import.meta !== 'undefined' ? import.meta.env.VITE_NEON_HOST : undefined),
-  database: process.env.NEON_DATABASE || (typeof import.meta !== 'undefined' ? import.meta.env.VITE_NEON_DATABASE : undefined),
-  username: process.env.NEON_USERNAME || (typeof import.meta !== 'undefined' ? import.meta.env.VITE_NEON_USERNAME : undefined),
-  password: process.env.NEON_PASSWORD || (typeof import.meta !== 'undefined' ? import.meta.env.VITE_NEON_PASSWORD : undefined),
-  port: process.env.NEON_PORT || (typeof import.meta !== 'undefined' ? import.meta.env.VITE_NEON_PORT : undefined) || 5432,
+  connectionString: getEnvVar('DATABASE_URL', 'VITE_DATABASE_URL'),
+  host: getEnvVar('NEON_HOST', 'VITE_NEON_HOST'),
+  database: getEnvVar('NEON_DATABASE', 'VITE_NEON_DATABASE'),
+  username: getEnvVar('NEON_USERNAME', 'VITE_NEON_USERNAME'),
+  password: getEnvVar('NEON_PASSWORD', 'VITE_NEON_PASSWORD'),
+  port: getEnvVar('NEON_PORT', 'VITE_NEON_PORT') || 5432,
   ssl: true
 };
 
@@ -19,7 +30,9 @@ const config = {
 console.log('🔍 Variables d\'environnement détectées:');
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✅ Définie' : '❌ Non définie');
 console.log('VITE_DATABASE_URL:', process.env.VITE_DATABASE_URL ? '✅ Définie' : '❌ Non définie');
-console.log('import.meta.env.VITE_DATABASE_URL:', import.meta.env.VITE_DATABASE_URL ? '✅ Définie' : '❌ Non définie');
+if (typeof import.meta !== 'undefined' && import.meta.env) {
+  console.log('import.meta.env.VITE_DATABASE_URL:', import.meta.env.VITE_DATABASE_URL ? '✅ Définie' : '❌ Non définie');
+}
 
 // Créer l'instance de connexion Neon
 let sql;
