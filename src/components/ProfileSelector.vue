@@ -44,13 +44,13 @@
           </div>
           <div 
             v-if="profile.is_child"
-            class="absolute -bottom-1 -right-1 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold"
+            class="absolute -bottom-1 -right-1 bg-red-700 text-white text-xs px-2 py-1 rounded-full font-semibold"
           >
             jeunesse
           </div>
           <div 
             v-if="profile.is_teen"
-            class="absolute -bottom-1 -right-1 bg-orange-500 text-white text-xs px-2 py-1 rounded-full font-semibold"
+            class="absolute -bottom-1 -right-1 bg-orange-700 text-white text-xs px-2 py-1 rounded-full font-semibold"
           >
             adolescent
           </div>
