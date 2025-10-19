@@ -55,38 +55,8 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: false,
-      minify: 'terser',
+      minify: false, // Désactiver la minification/compression
       chunkSizeWarningLimit: 1000,
-        terserOptions: {
-        compress: {
-          drop_console: true,
-          drop_debugger: true,
-          pure_funcs: ['console.log', 'console.info', 'console.debug'],
-          // Optimisations supplémentaires pour mobile
-          passes: 2,
-          unsafe: false, // Désactivé pour éviter les problèmes avec bcryptjs
-          unsafe_comps: false,
-          unsafe_math: false,
-          unsafe_proto: false,
-          unsafe_regexp: false,
-          unsafe_undefined: false,
-          // Préserver les propriétés des objets pour bcryptjs
-          keep_fargs: true,
-          keep_fnames: true
-        },
-        mangle: {
-          safari10: true,
-          // Optimisations pour les appareils mobiles
-          properties: {
-            regex: /^_/
-          }
-        },
-        format: {
-          // Optimiser pour la taille
-          comments: false,
-          ascii_only: true
-        }
-      },
       // Optimisations pour les performances mobiles
       target: ['es2020', 'chrome80', 'firefox78', 'safari14', 'edge80'],
       cssCodeSplit: true,
