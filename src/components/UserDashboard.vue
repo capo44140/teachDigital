@@ -415,7 +415,12 @@ export default {
     },
     showHelp() {
       console.log('Affichage de l\'aide')
-      alert('Fonctionnalité d\'aide à implémenter')
+      this.$router.push({
+        name: 'ChildHelp',
+        query: {
+          profile: this.currentProfile.id
+        }
+      })
     },
     viewProgress() {
       console.log('Accès au suivi des progrès')

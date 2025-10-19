@@ -40,6 +40,9 @@ const ParentProgressTracking = () => import(/* webpackChunkName: "tracking-compo
 const ParentQuizManagement = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentQuizManagement.vue')
 const ParentActivityManagement = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentActivityManagement.vue')
 
+// Composants d'aide (chunk: help-components)
+const ChildHelp = () => import(/* webpackChunkName: "help-components" */ '../components/ChildHelp.vue')
+
 // Composants de test et développement (chunk: dev-components)
 const ProfileTest = () => import(/* webpackChunkName: "dev-components" */ '../components/ProfileTest.vue')
 const NotificationTest = () => import(/* webpackChunkName: "dev-components" */ '../components/NotificationTest.vue')
@@ -189,6 +192,12 @@ const routes = [
     path: '/youtube-kids-viewer',
     name: 'YouTubeKidsViewer',
     component: YouTubeKidsViewer,
+    meta: { requiresChildOrTeen: true }
+  },
+  {
+    path: '/child-help',
+    name: 'ChildHelp',
+    component: ChildHelp,
     meta: { requiresChildOrTeen: true }
   },
   // Nouvelles routes API
