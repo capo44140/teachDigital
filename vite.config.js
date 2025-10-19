@@ -55,8 +55,35 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: false,
-      minify: 'esbuild', // Utiliser esbuild pour une minification légère qui préserve l'ordre des modules
+      minify: 'terser', // Revenir à terser avec des options plus conservatrices
       chunkSizeWarningLimit: 1000,
+      terserOptions: {
+        compress: {
+          drop_console: false, // Garder les console.log pour le debug
+          drop_debugger: false,
+          pure_funcs: [], // Ne pas supprimer les fonctions
+          // Désactiver les optimisations agressives
+          passes: 1,
+          unsafe: false,
+          unsafe_comps: false,
+          unsafe_math: false,
+          unsafe_proto: false,
+          unsafe_regexp: false,
+          unsafe_undefined: false,
+          // Préserver l'ordre des modules
+          keep_fargs: true,
+          keep_fnames: true,
+          // Éviter les problèmes d'initialisation
+          hoist_funs: false,
+          hoist_vars: false,
+          reduce_vars: false
+        },
+        mangle: false, // Désactiver le mangle pour éviter les problèmes de noms
+        format: {
+          comments: true, // Garder les commentaires
+          ascii_only: false
+        }
+      },
       // Optimisations pour les performances mobiles
       target: ['es2020', 'chrome80', 'firefox78', 'safari14', 'edge80'],
       cssCodeSplit: true,
