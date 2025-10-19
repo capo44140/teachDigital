@@ -411,7 +411,12 @@ export default {
     
     showSettings() {
       console.log('Affichage des paramètres')
-      alert('Fonctionnalité de paramètres à implémenter')
+      this.$router.push({
+        name: 'ChildSettings',
+        query: {
+          profile: this.currentProfile.id
+        }
+      })
     },
     showHelp() {
       console.log('Affichage de l\'aide')

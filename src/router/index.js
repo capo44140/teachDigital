@@ -54,6 +54,7 @@ const ApiDashboard = () => import(/* webpackChunkName: "api-components" */ '../c
 
 // Composants de paramètres (chunk: settings-components)
 const ParentSettings = () => import(/* webpackChunkName: "settings-components" */ '../components/ParentSettings.vue')
+const ChildSettings = () => import(/* webpackChunkName: "settings-components" */ '../components/ChildSettings.vue')
 
 const routes = [
   {
@@ -181,6 +182,12 @@ const routes = [
     name: 'ParentSettings',
     component: ParentSettings,
     meta: { requiresAdmin: true }
+  },
+  {
+    path: '/child-settings',
+    name: 'ChildSettings',
+    component: ChildSettings,
+    meta: { requiresChildOrTeen: true }
   },
   {
     path: '/youtube-video-manager',
