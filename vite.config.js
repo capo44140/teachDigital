@@ -42,46 +42,65 @@ export default defineConfig(({ mode }) => {
     ],
     optimizeDeps: {
       include: [
-        "@neondatabase/serverless", 
         "vue",
         "vue-router",
-        "pinia",
-        "@iconify/vue"
+        "pinia"
       ],
-      exclude: ["vite-plugin-pwa"],
-      force: true
+      exclude: [
+        "vite-plugin-pwa",
+        "@vladmandic/face-api" // ✅ Lazy-load seulement quand nécessaire
+      ],
+      esbuildOptions: {
+        target: 'es2020',
+        treeShaking: true // ✅ Tree-shaking activé
+      }
     },
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: false,
-      minify: 'terser', // Revenir à terser avec des options plus conservatrices
+      minify: 'terser',
       chunkSizeWarningLimit: 1000,
       terserOptions: {
         compress: {
-          drop_console: false, // Garder les console.log pour le debug
-          drop_debugger: false,
-          pure_funcs: [], // Ne pas supprimer les fonctions
-          // Désactiver les optimisations agressives
-          passes: 1,
-          unsafe: false,
+          // ✅ Optimisations de production activées
+          drop_console: true, // Supprimer console.log en production
+          drop_debugger: true, // Supprimer debugger en production
+          pure_funcs: ['console.log', 'console.info', 'console.debug'], // Fonctions à supprimer
+          // ✅ Optimisations sécurisées
+          passes: 2, // 2 passes d'optimisation
+          unsafe: false, // Rester safe
           unsafe_comps: false,
           unsafe_math: false,
           unsafe_proto: false,
           unsafe_regexp: false,
           unsafe_undefined: false,
-          // Préserver l'ordre des modules
-          keep_fargs: true,
-          keep_fnames: true,
-          // Éviter les problèmes d'initialisation
-          hoist_funs: false,
-          hoist_vars: false,
-          reduce_vars: false
+          // ✅ Tree-shaking amélioré
+          dead_code: true, // Supprimer code mort
+          unused: true, // Supprimer variables inutilisées
+          // ✅ Optimisations de taille
+          collapse_vars: true,
+          reduce_vars: true,
+          booleans: true,
+          if_return: true,
+          sequences: true,
+          join_vars: true,
+          // ⚠️ Conserver ce qui est nécessaire pour Vue
+          keep_fargs: false, // Optimiser les arguments
+          keep_fnames: false, // Optimiser les noms (sauf composants Vue)
+          keep_classnames: true, // ✅ Important pour Vue.js
         },
-        mangle: false, // Désactiver le mangle pour éviter les problèmes de noms
+        mangle: {
+          // ✅ Minifier les noms mais préserver ce qui est important
+          toplevel: false,
+          keep_classnames: true, // ✅ Critique pour Vue.js
+          keep_fnames: false,
+          safari10: true // Compatibilité Safari
+        },
         format: {
-          comments: true, // Garder les commentaires
-          ascii_only: false
+          comments: false, // Supprimer les commentaires en production
+          ascii_only: false,
+          ecma: 2020
         }
       },
       // Optimisations pour les performances mobiles

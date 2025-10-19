@@ -1,6 +1,7 @@
 {
   "version": 2,
   "buildCommand": "echo 'No build required for Vercel Functions'",
+  "devCommand": "echo 'Running local development server'",
   "outputDirectory": ".",
   "functions": {
     "api/index.js": {

@@ -1,10 +1,33 @@
-import * as faceapi from '@vladmandic/face-api'
+// ✅ Lazy-loading de face-api pour réduire le bundle initial
+let faceapi = null
 
 class FaceRecognitionService {
   constructor() {
     this.isInitialized = false
     this.modelsLoaded = false
     this.faceDescriptors = new Map() // Stockage des descripteurs faciaux
+    this.faceApiModule = null
+  }
+
+  /**
+   * Charge face-api.js dynamiquement (lazy-loading)
+   */
+  async loadFaceApi() {
+    if (this.faceApiModule) {
+      return this.faceApiModule
+    }
+
+    console.log('📦 Chargement dynamique de face-api...')
+    try {
+      // Import dynamique - ne se charge que quand nécessaire
+      this.faceApiModule = await import('@vladmandic/face-api')
+      faceapi = this.faceApiModule
+      console.log('✅ Face-api chargé dynamiquement')
+      return this.faceApiModule
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement de face-api:', error)
+      throw error
+    }
   }
 
   /**
@@ -17,6 +40,9 @@ class FaceRecognitionService {
 
     try {
       console.log('🚀 Initialisation de face-api.js...')
+      
+      // ✅ Charger face-api dynamiquement d'abord
+      await this.loadFaceApi()
       
       // Essayer de charger les modèles depuis le CDN
       try {

@@ -67,7 +67,10 @@
     "lighthouse": "lighthouse http://localhost:3000 --output html --output-path ./lighthouse-report.html",
     "bundle:size": "npx vite-bundle-analyzer dist/assets/*.js",
     "bundle:analyze": "node scripts/analyze-bundle.js",
-    "performance:check": "pnpm run build && pnpm run bundle:analyze && pnpm run lighthouse"
+    "performance:check": "pnpm run build && pnpm run bundle:analyze && pnpm run lighthouse",
+    "check:performance": "node scripts/check-performance.js",
+    "check:optimizations": "node scripts/check-performance.js",
+    "optimize:analyze": "node scripts/optimize-bundle.js"
   },
   "dependencies": {
     "@iconify/vue": "^5.0.0",
