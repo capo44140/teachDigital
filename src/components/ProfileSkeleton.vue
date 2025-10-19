@@ -67,22 +67,22 @@ export default {
 .profile-card-skeleton {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 1rem;
-  padding: 2rem;
+  padding: 1.25rem;
   text-align: center;
-  min-width: 200px;
+  min-width: 160px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .skeleton-image {
-  width: 96px;
-  height: 96px;
+  width: 72px;
+  height: 72px;
   border-radius: 0.5rem;
   background: rgba(255, 255, 255, 0.2);
-  margin: 0 auto 1rem;
+  margin: 0 auto 0.75rem;
 }
 
 .skeleton-name {
-  height: 1.5rem;
+  height: 1.25rem;
   width: 60%;
   background: rgba(255, 255, 255, 0.3);
   border-radius: 0.25rem;
@@ -99,15 +99,15 @@ export default {
 .skeleton-item {
   background: rgba(31, 41, 55, 0.5);
   border-radius: 0.5rem;
-  padding: 1.5rem;
+  padding: 1rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .skeleton-avatar {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: 0.5rem;
   background: rgba(107, 114, 128, 0.3);
   flex-shrink: 0;
@@ -121,21 +121,21 @@ export default {
 }
 
 .skeleton-title {
-  height: 1.25rem;
+  height: 1rem;
   width: 40%;
   background: rgba(107, 114, 128, 0.3);
   border-radius: 0.25rem;
 }
 
 .skeleton-subtitle {
-  height: 1rem;
+  height: 0.875rem;
   width: 60%;
   background: rgba(107, 114, 128, 0.2);
   border-radius: 0.25rem;
 }
 
 .skeleton-meta {
-  height: 0.875rem;
+  height: 0.75rem;
   width: 30%;
   background: rgba(107, 114, 128, 0.2);
   border-radius: 0.25rem;
@@ -147,33 +147,33 @@ export default {
 }
 
 .skeleton-button {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 0.5rem;
   background: rgba(107, 114, 128, 0.3);
 }
 
 /* Skeleton pour Dashboard */
 .dashboard-skeleton {
-  padding: 2rem;
+  padding: 1.5rem;
 }
 
 .skeleton-header {
-  height: 2.5rem;
-  width: 300px;
+  height: 2rem;
+  width: 250px;
   background: rgba(107, 114, 128, 0.3);
   border-radius: 0.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .skeleton-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
 }
 
 .skeleton-card {
-  height: 200px;
+  height: 160px;
   background: rgba(31, 41, 55, 0.5);
   border-radius: 1rem;
 }
