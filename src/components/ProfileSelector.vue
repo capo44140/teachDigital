@@ -3,10 +3,13 @@
     <!-- Titre -->
     <h1 class="text-4xl font-bold text-white mb-12">Qui est-ce ?</h1>
     
-    <!-- Indicateur de chargement -->
-    <div v-if="isLoading" class="mb-12">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-      <p class="mt-2 text-gray-400">Chargement des profils...</p>
+    <!-- Skeleton loading pendant le chargement -->
+    <div v-if="isLoading" class="grid grid-cols-2 md:grid-cols-5 gap-6 mb-12 max-w-4xl">
+      <ProfileSkeleton 
+        v-for="n in 4" 
+        :key="n" 
+        type="selector" 
+      />
     </div>
 
     <!-- Grille des profils -->
@@ -85,9 +88,13 @@
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
 import sessionService from '../services/sessionService.js'
+import ProfileSkeleton from './ProfileSkeleton.vue'
 
 export default {
   name: 'ProfileSelector',
+  components: {
+    ProfileSkeleton
+  },
   setup() {
     const profileStore = useProfileStore()
     return { profileStore }

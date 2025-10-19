@@ -64,19 +64,55 @@ app.provide('mobileOptimizationService', mobileOptimizationService)
 
 app.use(pinia).use(router)
 
-// Initialiser les services après l'installation de Pinia
-const apiStore = useApiStore()
-apiStore.initialize()
+// Monter l'app immédiatement pour un affichage rapide
+app.mount('#app')
 
-// Initialiser les services PWA
+// Polyfill pour requestIdleCallback (non supporté par Safari)
+const scheduleIdleTask = window.requestIdleCallback || ((cb) => setTimeout(cb, 1))
+
+// Initialiser les services de manière asynchrone après le premier rendu
+// Cela améliore le temps de premier affichage (FCP - First Contentful Paint)
+scheduleIdleTask(() => {
+  initializeServicesAsync()
+})
+
+/**
+ * Initialise les services de manière asynchrone après le montage de l'app
+ * Optimise le chemin critique en différant les requêtes non essentielles
+ */
+async function initializeServicesAsync() {
+  console.log('🚀 Initialisation asynchrone des services...')
+  
+  // Étape 1 : Initialiser l'apiStore depuis le cache local (rapide)
+  const apiStore = useApiStore()
+  apiStore.initialize()
+  
+  // Étape 2 : Précharger uniquement les profils en priorité
+  // Les autres données seront chargées à la demande
+  try {
+    await offlineDataService.preloadProfiles()
+    console.log('✅ Profils préchargés')
+  } catch (error) {
+    console.warn('⚠️ Erreur préchargement profils:', error)
+  }
+  
+  // Étape 3 : Initialiser les autres services en arrière-plan
+  // Sans bloquer l'interface utilisateur
+  scheduleIdleTask(() => {
+    initializePWAServices()
+  })
+}
+
+/**
+ * Initialise les services PWA en arrière-plan
+ */
 async function initializePWAServices() {
   const services = [
     { name: 'Optimisation Mobile', init: () => mobileOptimizationService.init() },
-    { name: 'Données Offline', init: () => offlineDataService.preloadCriticalData() },
     { name: 'Installation', init: () => installService.checkInstallationStatus() }
   ]
 
-  console.log('🚀 Initialisation des services PWA...')
+  console.log('🔧 Initialisation des services PWA...')
   
   const results = await Promise.allSettled(
     services.map(service => service.init())
@@ -95,10 +131,24 @@ async function initializePWAServices() {
   } else {
     console.log('✅ Services PWA initialisés avec succès')
   }
+  
+  // Précharger les leçons et notifications en très basse priorité
+  scheduleIdleTask(() => {
+    preloadSecondaryData()
+  })
 }
 
-// Initialiser les services PWA après le montage de l'app
-app.mount('#app')
-
-// Initialiser les services PWA de manière asynchrone
-initializePWAServices()
+/**
+ * Précharge les données secondaires en arrière-plan
+ */
+async function preloadSecondaryData() {
+  try {
+    await Promise.allSettled([
+      offlineDataService.preloadLessons(),
+      offlineDataService.preloadNotifications()
+    ])
+    console.log('✅ Données secondaires préchargées')
+  } catch (error) {
+    console.warn('⚠️ Erreur préchargement données secondaires:', error)
+  }
+}

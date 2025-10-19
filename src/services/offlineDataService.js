@@ -77,7 +77,7 @@ class OfflineDataService {
   }
 
   /**
-   * Récupère les données critiques depuis le cache
+   * Récupère les données critiques depuis le cache avec stratégie stale-while-revalidate
    * @param {string} dataType - Type de données
    * @param {Function} fetchFn - Fonction de récupération en ligne
    * @param {Object} options - Options
@@ -85,13 +85,33 @@ class OfflineDataService {
   async getCriticalData(dataType, fetchFn, options = {}) {
     const cacheKey = `${this.cachePrefix}${dataType}`
     const lastSyncKey = `${cacheKey}_last_sync`
+    const { staleWhileRevalidate = true } = options
     
     // Essayer de récupérer depuis le cache
     const cachedData = cacheService.get(cacheKey)
     const lastSync = cacheService.get(lastSyncKey, 0)
+    const isFresh = cachedData && this.isDataFresh(lastSync, options.maxAge)
     
-    if (cachedData && this.isDataFresh(lastSync, options.maxAge)) {
-      console.log(`📱 Données récupérées depuis le cache: ${dataType}`)
+    // Stratégie stale-while-revalidate :
+    // Retourner immédiatement les données en cache et revalider en arrière-plan
+    if (cachedData && staleWhileRevalidate && this.isOnline && fetchFn) {
+      console.log(`📱 Stale-while-revalidate: retour immédiat du cache pour ${dataType}`)
+      
+      // Si les données sont fraîches, les retourner immédiatement
+      if (isFresh) {
+        return cachedData
+      }
+      
+      // Si les données sont périmées, les retourner quand même mais revalider en arrière-plan
+      console.log(`🔄 Revalidation en arrière-plan pour ${dataType}`)
+      this.revalidateInBackground(dataType, fetchFn, options)
+      
+      return cachedData
+    }
+    
+    // Si pas de cache ou stratégie désactivée, comportement classique
+    if (isFresh && cachedData) {
+      console.log(`📱 Données fraîches récupérées depuis le cache: ${dataType}`)
       return cachedData
     }
 
@@ -125,6 +145,31 @@ class OfflineDataService {
     }
 
     throw new Error(`Aucune donnée disponible pour ${dataType} en mode offline`)
+  }
+
+  /**
+   * Revalide les données en arrière-plan sans bloquer
+   * @param {string} dataType - Type de données
+   * @param {Function} fetchFn - Fonction de récupération
+   * @param {Object} options - Options
+   */
+  revalidateInBackground(dataType, fetchFn, options = {}) {
+    // Utiliser setTimeout pour ne pas bloquer le thread principal
+    setTimeout(async () => {
+      try {
+        console.log(`🔄 Début de revalidation pour ${dataType}`)
+        const freshData = await fetchFn()
+        await this.cacheCriticalData(dataType, freshData, options)
+        console.log(`✅ Revalidation terminée pour ${dataType}`)
+        
+        // Émettre un événement pour notifier de la mise à jour
+        window.dispatchEvent(new CustomEvent('data-revalidated', {
+          detail: { dataType, data: freshData }
+        }))
+      } catch (error) {
+        console.warn(`⚠️ Échec de revalidation pour ${dataType}:`, error)
+      }
+    }, 100) // Délai court pour éviter de bloquer
   }
 
   /**
