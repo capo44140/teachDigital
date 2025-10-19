@@ -55,7 +55,7 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: false,
-      minify: false, // Désactiver la minification/compression
+      minify: 'esbuild', // Utiliser esbuild pour une minification légère qui préserve l'ordre des modules
       chunkSizeWarningLimit: 1000,
       // Optimisations pour les performances mobiles
       target: ['es2020', 'chrome80', 'firefox78', 'safari14', 'edge80'],
