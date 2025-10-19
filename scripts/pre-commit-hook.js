@@ -14,7 +14,7 @@ function checkIfVersionFilesChanged() {
     const result = execSync('git diff --cached --name-only', { encoding: 'utf8' })
     const changedFiles = result.trim().split('\n').filter(Boolean)
     
-    const versionFiles = ['package.json', 'public/manifest.json', 'src/version.json']
+    const versionFiles = ['package.json', 'public/manifest.json', 'public/version.json']
     const hasVersionChanges = versionFiles.some(file => changedFiles.includes(file))
     
     return hasVersionChanges
@@ -41,7 +41,7 @@ function autoIncrementVersion() {
     execSync('node scripts/version-bump.js patch', { stdio: 'inherit' })
     
     // Ajouter les fichiers modifiés au staging area
-    execSync('git add package.json public/manifest.json src/version.json', { stdio: 'inherit' })
+    execSync('git add package.json public/manifest.json public/version.json', { stdio: 'inherit' })
     
     console.log('✅ Version incrémentée automatiquement')
   } catch (error) {

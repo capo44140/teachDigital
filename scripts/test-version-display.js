@@ -18,14 +18,14 @@ function testVersionFiles() {
     console.error('❌ Erreur package.json:', error.message)
   }
   
-  // Vérifier src/version.json
+  // Vérifier public/version.json
   try {
-    const versionJson = JSON.parse(fs.readFileSync('src/version.json', 'utf8'))
-    console.log(`✅ src/version.json - Version: ${versionJson.version}`)
+    const versionJson = JSON.parse(fs.readFileSync('public/version.json', 'utf8'))
+    console.log(`✅ public/version.json - Version: ${versionJson.version}`)
     console.log(`   Build Date: ${versionJson.buildDate}`)
     console.log(`   Build Number: ${versionJson.buildNumber}`)
   } catch (error) {
-    console.error('❌ Erreur src/version.json:', error.message)
+    console.error('❌ Erreur public/version.json:', error.message)
   }
   
   // Vérifier public/manifest.json
@@ -42,7 +42,7 @@ function testVersionConsistency() {
   
   try {
     const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'))
-    const versionJson = JSON.parse(fs.readFileSync('src/version.json', 'utf8'))
+    const versionJson = JSON.parse(fs.readFileSync('public/version.json', 'utf8'))
     const manifestJson = JSON.parse(fs.readFileSync('public/manifest.json', 'utf8'))
     
     const versions = {

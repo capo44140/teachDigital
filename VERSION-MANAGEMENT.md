@@ -12,7 +12,7 @@ npm run setup:hooks
 
 Cette commande va :
 - Configurer les hooks Git automatiques
-- Créer le fichier `src/version.json`
+- Créer le fichier `public/version.json`
 - Ajouter les scripts de version au `package.json`
 
 ## 📋 Commandes Disponibles
@@ -44,7 +44,7 @@ L'incrémentation automatique se fait :
 Le hook `pre-commit` s'exécute automatiquement avant chaque commit et :
 1. Vérifie si des fichiers de version sont déjà modifiés
 2. Si non, incrémente automatiquement la version patch
-3. Met à jour `package.json`, `public/manifest.json` et `src/version.json`
+3. Met à jour `package.json`, `public/manifest.json` et `public/version.json`
 4. Crée un commit automatique pour la version
 
 ### Hook Pre-push
@@ -56,9 +56,9 @@ Le système de version met à jour automatiquement :
 
 - **`package.json`** : Version principale du projet
 - **`public/manifest.json`** : Version de l'application PWA
-- **`src/version.json`** : Informations détaillées de build
+- **`public/version.json`** : Informations détaillées de build
 
-### Exemple de `src/version.json`
+### Exemple de `public/version.json`
 ```json
 {
   "version": "1.2.3",

@@ -74,7 +74,7 @@ export default {
     async loadVersionInfo() {
       try {
         // Charger les informations de version depuis le fichier version.json
-        const response = await fetch('/src/version.json')
+        const response = await fetch('/version.json')
         if (response.ok) {
           const versionData = await response.json()
           this.appVersion = versionData.version || '0.0.1'

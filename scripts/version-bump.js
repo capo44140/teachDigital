@@ -84,7 +84,7 @@ function createVersionFile(newVersion) {
   }
   
   try {
-    fs.writeFileSync('src/version.json', JSON.stringify(versionInfo, null, 2) + '\n')
+    fs.writeFileSync('public/version.json', JSON.stringify(versionInfo, null, 2) + '\n')
     console.log(`✅ Fichier version.json créé: ${newVersion}`)
   } catch (error) {
     console.warn('⚠️ Impossible de créer version.json:', error.message)
@@ -94,7 +94,7 @@ function createVersionFile(newVersion) {
 function commitVersionChange(newVersion) {
   try {
     // Ajouter les fichiers modifiés
-    execSync('git add package.json public/manifest.json src/version.json', { stdio: 'inherit' })
+    execSync('git add package.json public/manifest.json public/version.json', { stdio: 'inherit' })
     
     // Créer un commit pour la version
     execSync(`git commit -m "chore: bump version to ${newVersion}"`, { stdio: 'inherit' })
@@ -103,7 +103,7 @@ function commitVersionChange(newVersion) {
   } catch (error) {
     console.warn('⚠️ Impossible de créer le commit automatique:', error.message)
     console.log('💡 Vous pouvez créer le commit manuellement avec:')
-    console.log(`   git add package.json public/manifest.json src/version.json`)
+    console.log(`   git add package.json public/manifest.json public/version.json`)
     console.log(`   git commit -m "chore: bump version to ${newVersion}"`)
   }
 }

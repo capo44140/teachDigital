@@ -16,6 +16,7 @@
     "db:test": "node -e \"import('./src/config/database.js').then(db => db.testConnection())\"",
     "migrate-pins": "node scripts/migrate-pins.js migrate",
     "check-pins": "node scripts/migrate-pins.js check",
+    "update-parent-pin": "node scripts/update-parent-pin.js",
     "test-pin-security": "node scripts/test-pin-security.js",
     "migrate-db": "node scripts/migrate-database.js migrate",
     "check-db": "node scripts/migrate-database.js check",

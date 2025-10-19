@@ -329,16 +329,18 @@ export default {
       }
     },
     
-    loadAppVersion() {
+    async loadAppVersion() {
       // Charger la version depuis le fichier version.json
       try {
-        import('../version.json').then(versionData => {
-          this.appVersion = versionData.default?.version || '1.0.0'
-        }).catch(() => {
+        const response = await fetch('/version.json')
+        if (response.ok) {
+          const versionData = await response.json()
+          this.appVersion = versionData.version || '1.0.0'
+        } else {
           this.appVersion = '1.0.0'
-        })
+        }
       } catch (error) {
-        console.warn('Impossible de charger la version:', error)
+        console.warn('Impossible de charger les informations de version:', error)
         this.appVersion = '1.0.0'
       }
     },

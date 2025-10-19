@@ -53,7 +53,7 @@ function createVersionFile() {
     fs.mkdirSync('src', { recursive: true })
   }
   
-  fs.writeFileSync('src/version.json', JSON.stringify(versionInfo, null, 2) + '\n')
+  fs.writeFileSync('public/version.json', JSON.stringify(versionInfo, null, 2) + '\n')
   console.log('✅ Fichier version.json initial créé')
 }
 
