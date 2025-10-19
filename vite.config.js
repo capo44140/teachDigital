@@ -48,7 +48,7 @@ export default defineConfig(({ mode }) => {
         "pinia",
         "@iconify/vue"
       ],
-      exclude: ["vite-plugin-pwa", "@vladmandic/face-api"],
+      exclude: ["vite-plugin-pwa"],
       force: true
     },
     build: {
@@ -93,23 +93,12 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks: (id) => {
-            // Chunking intelligent basé sur les dépendances et l'usage
+            // Stratégie ultra-simplifiée : tout regrouper par type de dépendance
             
-            // Dépendances Vue.js (critiques, chargées en premier)
             if (id.includes('node_modules')) {
-              if (id.includes('vue') || id.includes('@vue')) {
-                return 'vue-core'
-              }
-              if (id.includes('vue-router')) {
-                return 'vue-router'
-              }
-              if (id.includes('pinia')) {
-                return 'pinia'
-              }
-              
-              // Reconnaissance faciale (lourd, chargé à la demande)
-              if (id.includes('@vladmandic/face-api') || id.includes('face-api')) {
-                return 'face-recognition'
+              // Vue.js et son écosystème
+              if (id.includes('vue') || id.includes('@vue') || id.includes('vue-router') || id.includes('pinia')) {
+                return 'vue-vendor'
               }
               
               // Base de données
@@ -117,63 +106,14 @@ export default defineConfig(({ mode }) => {
                 return 'database'
               }
               
-              // UI et icônes
-              if (id.includes('@iconify') || id.includes('tailwindcss')) {
-                return 'ui-vendor'
-              }
-              
-              // Autres dépendances
+              // Toutes les autres dépendances
               return 'vendor'
             }
             
-            // Chunking des composants basé sur les chunks définis dans le router
-            if (id.includes('src/components/')) {
-              if (id.includes('FaceRecognition') || id.includes('FaceAuth') || id.includes('FaceRegister')) {
-                return 'face-recognition'
-              }
-              if (id.includes('YouTube') || id.includes('youtube')) {
-                return 'youtube-components'
-              }
-              if (id.includes('LessonScanner') || id.includes('QuizGenerator') || id.includes('TextQuizGenerator')) {
-                return 'ai-components'
-              }
-              if (id.includes('Security') || id.includes('security')) {
-                return 'security-components'
-              }
-              if (id.includes('Progress') || id.includes('Activity') || id.includes('Parent')) {
-                return 'tracking-components'
-              }
-              if (id.includes('Profile') || id.includes('profile')) {
-                return 'profile-management'
-              }
-              if (id.includes('Api') || id.includes('api')) {
-                return 'api-components'
-              }
-              if (id.includes('Test') || id.includes('test')) {
-                return 'dev-components'
-              }
-              if (id.includes('Settings') || id.includes('settings')) {
-                return 'settings-components'
-              }
-            }
-            
-            // Services spécialisés
-            if (id.includes('src/services/')) {
-              if (id.includes('face') || id.includes('Face')) {
-                return 'face-recognition'
-              }
-              if (id.includes('youtube') || id.includes('YouTube')) {
-                return 'youtube-components'
-              }
-              if (id.includes('lesson') || id.includes('quiz') || id.includes('ai')) {
-                return 'ai-components'
-              }
-              if (id.includes('security') || id.includes('audit') || id.includes('encryption')) {
-                return 'security-components'
-              }
-              if (id.includes('cache') || id.includes('image')) {
-                return 'utility-services'
-              }
+            // Regrouper TOUS les composants et services dans un seul chunk
+            // Cela évite les problèmes d'ordre d'initialisation entre chunks
+            if (id.includes('src/')) {
+              return 'app'
             }
           },
           // Configuration optimisée pour les noms de fichiers
