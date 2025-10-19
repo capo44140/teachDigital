@@ -1,4 +1,4 @@
-# 🚀 TeachDigital Backend API TEST
+# 🚀 TeachDigital Backend API
 
 Backend API pour l'application TeachDigital utilisant Vercel Functions.
 
