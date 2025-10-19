@@ -39,6 +39,8 @@ const ProgressTracking = () => import(/* webpackChunkName: "tracking-components"
 const ParentProgressTracking = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentProgressTracking.vue')
 const ParentQuizManagement = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentQuizManagement.vue')
 const ParentActivityManagement = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentActivityManagement.vue')
+const BadgeManager = () => import(/* webpackChunkName: "tracking-components" */ '../components/BadgeManager.vue')
+const BadgeAdminManager = () => import(/* webpackChunkName: "tracking-components" */ '../components/BadgeAdminManager.vue')
 
 // Composants d'aide (chunk: help-components)
 const ChildHelp = () => import(/* webpackChunkName: "help-components" */ '../components/ChildHelp.vue')
@@ -206,6 +208,18 @@ const routes = [
     name: 'ChildHelp',
     component: ChildHelp,
     meta: { requiresChildOrTeen: true }
+  },
+  {
+    path: '/badge-manager',
+    name: 'BadgeManager',
+    component: BadgeManager,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/badge-admin-manager',
+    name: 'BadgeAdminManager',
+    component: BadgeAdminManager,
+    meta: { requiresAdmin: true }
   },
   // Nouvelles routes API
   {

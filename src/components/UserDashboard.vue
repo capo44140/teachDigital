@@ -128,26 +128,26 @@
             </div>
           </div>
 
-          <div class="bg-gradient-to-r from-green-400 to-blue-500 p-6 rounded-xl text-white">
+          <div class="bg-gradient-to-r from-green-400 to-blue-500 p-6 rounded-xl text-white cursor-pointer hover:shadow-xl transition-all" @click="viewBadges">
             <div class="flex items-center mb-4">
               <svg class="w-8 h-8 mr-3" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
               </svg>
               <h4 class="text-xl font-bold">Mes badges</h4>
             </div>
-            <p class="mb-4">Tu as gagné 5 badges cette semaine ! Continue comme ça !</p>
-            <div class="flex space-x-2">
-              <div class="w-8 h-8 bg-yellow-300 rounded-full flex items-center justify-center">
-                <span class="text-yellow-800 font-bold">1</span>
+            <p class="mb-4">{{ badgeMessage }}</p>
+            <div class="flex items-center justify-between">
+              <div class="flex space-x-2">
+                <div v-for="badge in recentBadgesDisplay" :key="badge.id" class="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-xl backdrop-blur-sm">
+                  {{ badge.icon }}
+                </div>
+                <div v-for="n in Math.max(0, 4 - recentBadgesDisplay.length)" :key="'empty-' + n" class="w-10 h-10 bg-white bg-opacity-10 rounded-full flex items-center justify-center">
+                  <span class="text-white opacity-50 font-bold">?</span>
+                </div>
               </div>
-              <div class="w-8 h-8 bg-yellow-300 rounded-full flex items-center justify-center">
-                <span class="text-yellow-800 font-bold">2</span>
-              </div>
-              <div class="w-8 h-8 bg-yellow-300 rounded-full flex items-center justify-center">
-                <span class="text-yellow-800 font-bold">3</span>
-              </div>
-              <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <span class="text-gray-600 font-bold">?</span>
+              <div class="text-right">
+                <div class="text-2xl font-bold">{{ badgeStats.unlocked }}/{{ badgeStats.total }}</div>
+                <div class="text-sm opacity-90">Débloqués</div>
               </div>
             </div>
           </div>
@@ -249,19 +249,27 @@
 
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
+import { useBadgeStore } from '../stores/badgeStore.js'
 import { LessonService } from '../services/lessonService.js'
 
 export default {
   name: 'UserDashboard',
   setup() {
     const profileStore = useProfileStore()
-    return { profileStore }
+    const badgeStore = useBadgeStore()
+    return { profileStore, badgeStore }
   },
   data() {
     return {
       currentProfile: null,
       userLessons: [],
       isLoadingLessons: false,
+      badgeStats: {
+        total: 0,
+        unlocked: 0,
+        points: 0
+      },
+      recentBadges: [],
       recentActivities: [
         {
           id: 1,
@@ -290,6 +298,20 @@ export default {
       ]
     }
   },
+  computed: {
+    badgeMessage() {
+      if (this.badgeStats.unlocked === 0) {
+        return 'Commence à apprendre pour débloquer des badges !'
+      } else if (this.badgeStats.unlocked < 3) {
+        return `Tu as débloqué ${this.badgeStats.unlocked} badge${this.badgeStats.unlocked > 1 ? 's' : ''} ! Continue comme ça !`
+      } else {
+        return `Bravo ! ${this.badgeStats.unlocked} badges débloqués ! Tu es sur la bonne voie !`
+      }
+    },
+    recentBadgesDisplay() {
+      return this.recentBadges.slice(0, 4)
+    }
+  },
   async created() {
     await this.loadCurrentProfile()
   },
@@ -304,6 +326,8 @@ export default {
           this.currentProfile = this.profileStore.currentProfile
           // Charger les leçons du profil
           await this.loadUserLessons(profileId)
+          // Charger les badges du profil
+          await this.loadBadges(profileId)
         } else {
           // Profil par défaut pour les utilisateurs non-admin
           this.currentProfile = {
@@ -355,6 +379,17 @@ export default {
           welcomeMessage: 'Bienvenue !',
           courses: []
         }
+      }
+    },
+    
+    async loadBadges(profileId) {
+      try {
+        await this.badgeStore.loadProfileBadges(profileId)
+        this.badgeStats = this.badgeStore.badgeStats
+        this.recentBadges = await this.badgeStore.getRecentBadges(profileId, 5)
+      } catch (error) {
+        console.error('Erreur lors du chargement des badges:', error)
+        // Ne pas bloquer l'application si les badges ne chargent pas
       }
     },
     
@@ -433,6 +468,16 @@ export default {
         name: 'ProgressTracking',
         query: {
           childId: this.currentProfile.id
+        }
+      })
+    },
+    
+    viewBadges() {
+      console.log('Accès aux badges')
+      this.$router.push({
+        name: 'BadgeManager',
+        query: {
+          profile: this.currentProfile.id
         }
       })
     },
