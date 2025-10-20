@@ -47,8 +47,7 @@ export default defineConfig(({ mode }) => {
         "pinia"
       ],
       exclude: [
-        "vite-plugin-pwa",
-        "@vladmandic/face-api" // ✅ Lazy-load seulement quand nécessaire
+        "vite-plugin-pwa"
       ],
       esbuildOptions: {
         target: 'es2020',

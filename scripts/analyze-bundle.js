@@ -121,7 +121,6 @@ class BundleAnalyzer {
     if (filename.includes('vue-core')) return 'Vue Core'
     if (filename.includes('vue-router')) return 'Vue Router'
     if (filename.includes('pinia')) return 'Pinia'
-    if (filename.includes('face-recognition')) return 'Reconnaissance Faciale'
     if (filename.includes('youtube')) return 'YouTube'
     if (filename.includes('ai-components')) return 'Composants IA'
     if (filename.includes('security')) return 'Sécurité'
@@ -138,9 +137,6 @@ class BundleAnalyzer {
   getChunkPriority(filename) {
     if (filename.includes('vue-core') || filename.includes('vue-router') || filename.includes('pinia')) {
       return 'critique'
-    }
-    if (filename.includes('face-recognition')) {
-      return 'lazy'
     }
     if (filename.includes('vendor')) {
       return 'normal'

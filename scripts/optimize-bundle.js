@@ -17,12 +17,6 @@ console.log('🔍 Analyse du bundle pour optimisations...\n')
 
 // Liste des dépendances à analyser
 const dependencies = {
-  '@vladmandic/face-api': {
-    size: '~250 KB',
-    usage: 'Reconnaissance faciale',
-    optimization: 'Lazy-loading ✅ (déjà optimisé)',
-    impact: 'High'
-  },
   'vue': {
     size: '~150 KB',
     usage: 'Framework principal',
@@ -121,7 +115,6 @@ console.log('\n' + '='.repeat(80))
 console.log('✨ RECOMMANDATIONS D\'OPTIMISATION\n')
 
 console.log('1. ✅ DÉJÀ OPTIMISÉ:')
-console.log('   • Face-API en lazy-loading')
 console.log('   • Code splitting des routes')
 console.log('   • Terser avec tree-shaking')
 console.log('   • Skeleton loading UI')

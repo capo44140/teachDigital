@@ -25,10 +25,6 @@ const TextQuizGenerator = () => import(/* webpackChunkName: "ai-components" */ '
 const YouTubeVideoManager = () => import(/* webpackChunkName: "youtube-components" */ '../components/YouTubeVideoManager.vue')
 const YouTubeKidsViewer = () => import(/* webpackChunkName: "youtube-components" */ '../components/YouTubeKidsViewerSimple.vue')
 
-// Composants de reconnaissance faciale (chunk: face-recognition)
-const FaceAuth = () => import(/* webpackChunkName: "face-recognition" */ '../components/FaceAuth.vue')
-const FaceRegister = () => import(/* webpackChunkName: "face-recognition" */ '../components/FaceRegister.vue')
-const FaceRecognitionTest = () => import(/* webpackChunkName: "face-recognition" */ '../components/FaceRecognitionTest.vue')
 
 // Composants de sécurité (chunk: security-components)
 const SecurityDashboard = () => import(/* webpackChunkName: "security-components" */ '../components/SecurityDashboard.vue')
@@ -233,31 +229,6 @@ const routes = [
     component: ApiDashboard,
     meta: { requiresApiAuth: true }
   },
-  // Routes pour la reconnaissance faciale
-  {
-    path: '/face-auth',
-    name: 'FaceAuth',
-    component: FaceAuth,
-    props: route => ({ 
-      profileName: route.query.name || 'Parent',
-      profileId: route.query.profile || '1'
-    })
-  },
-  {
-    path: '/face-register',
-    name: 'FaceRegister',
-    component: FaceRegister,
-    props: route => ({ 
-      profileName: route.query.name || 'Parent',
-      profileId: route.query.profile || '1'
-    })
-  },
-  {
-    path: '/face-test',
-    name: 'FaceRecognitionTest',
-    component: FaceRecognitionTest,
-    meta: { requiresAdmin: true }
-  }
 ]
 
 const router = createRouter({

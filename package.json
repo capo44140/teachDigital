@@ -76,7 +76,6 @@
   "dependencies": {
     "@iconify/vue": "^5.0.0",
     "@neondatabase/serverless": "^1.0.2",
-    "@vladmandic/face-api": "^1.7.15",
     "pinia": "^3.0.3",
     "vue": "^3.4.0",
     "vue-router": "^4.2.0"

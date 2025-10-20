@@ -100,7 +100,7 @@
           </h2>
         </div>
         <div class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
               @click="loadComponent('LessonScanner')"
               :disabled="loadingComponents.LessonScanner"
@@ -124,19 +124,6 @@
               <p class="text-sm text-gray-600">Gestionnaire vidéos</p>
               <div v-if="loadingComponents.YouTubeVideoManager" class="mt-2">
                 <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mx-auto"></div>
-              </div>
-            </button>
-
-            <button
-              @click="loadComponent('FaceRecognition')"
-              :disabled="loadingComponents.FaceRecognition"
-              class="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-            >
-              <Icon name="mdi:face-recognition" class="w-8 h-8 mx-auto mb-2 text-green-600" />
-              <h3 class="font-medium text-gray-900">Reconnaissance Faciale</h3>
-              <p class="text-sm text-gray-600">Composant IA avancé</p>
-              <div v-if="loadingComponents.FaceRecognition" class="mt-2">
-                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mx-auto"></div>
               </div>
             </button>
           </div>
@@ -243,8 +230,7 @@ export default {
     const optimizedImagesCount = ref(0)
     const loadingComponents = ref({
       LessonScanner: false,
-      YouTubeVideoManager: false,
-      FaceRecognition: false
+      YouTubeVideoManager: false
     })
     const loadedComponent = ref(null)
     const componentLoadTime = ref(0)
