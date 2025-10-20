@@ -1,6 +1,6 @@
 // Utilitaires pour les réponses API standardisées
 
-export function successResponse(data, message = 'Succès', statusCode = 200) {
+function successResponse(data, message = 'Succès', statusCode = 200) {
   return {
     statusCode,
     body: JSON.stringify({
@@ -11,7 +11,7 @@ export function successResponse(data, message = 'Succès', statusCode = 200) {
   };
 }
 
-export function errorResponse(message = 'Erreur interne du serveur', statusCode = 500, details = null) {
+function errorResponse(message = 'Erreur interne du serveur', statusCode = 500, details = null) {
   return {
     statusCode,
     body: JSON.stringify({
@@ -22,7 +22,7 @@ export function errorResponse(message = 'Erreur interne du serveur', statusCode 
   };
 }
 
-export function validationErrorResponse(errors) {
+function validationErrorResponse(errors) {
   return {
     statusCode: 400,
     body: JSON.stringify({
@@ -33,7 +33,7 @@ export function validationErrorResponse(errors) {
   };
 }
 
-export function unauthorizedResponse(message = 'Non autorisé') {
+function unauthorizedResponse(message = 'Non autorisé') {
   return {
     statusCode: 401,
     body: JSON.stringify({
@@ -43,7 +43,7 @@ export function unauthorizedResponse(message = 'Non autorisé') {
   };
 }
 
-export function forbiddenResponse(message = 'Accès refusé') {
+function forbiddenResponse(message = 'Accès refusé') {
   return {
     statusCode: 403,
     body: JSON.stringify({
@@ -53,7 +53,7 @@ export function forbiddenResponse(message = 'Accès refusé') {
   };
 }
 
-export function notFoundResponse(message = 'Ressource non trouvée') {
+function notFoundResponse(message = 'Ressource non trouvée') {
   return {
     statusCode: 404,
     body: JSON.stringify({
@@ -64,7 +64,7 @@ export function notFoundResponse(message = 'Ressource non trouvée') {
 }
 
 // Middleware pour gérer les erreurs
-export function handleError(error, defaultMessage = 'Erreur interne du serveur') {
+function handleError(error, defaultMessage = 'Erreur interne du serveur') {
   console.error('Erreur API:', error);
   
   if (error.message === 'Token manquant' || error.message === 'Token invalide') {
@@ -77,4 +77,14 @@ export function handleError(error, defaultMessage = 'Erreur interne du serveur')
   
   return errorResponse(defaultMessage);
 }
+
+module.exports = {
+  successResponse,
+  errorResponse,
+  validationErrorResponse,
+  unauthorizedResponse,
+  forbiddenResponse,
+  notFoundResponse,
+  handleError
+};
 

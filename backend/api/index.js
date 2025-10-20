@@ -1,11 +1,11 @@
 // Import des dépendances
-import { NativeHashService } from '../lib/nativeHash.js';
-import sql from '../lib/database.js';
-import { generateToken, createSession, authenticateToken, deleteSession } from '../lib/auth.js';
-import { successResponse, errorResponse, unauthorizedResponse, handleError } from '../lib/response.js';
-import { handleCors } from '../lib/cors.js';
+const { NativeHashService } = require('../lib/nativeHash.js');
+const sql = require('../lib/database.js').default;
+const { generateToken, createSession, authenticateToken, deleteSession } = require('../lib/auth.js');
+const { successResponse, errorResponse, unauthorizedResponse, handleError } = require('../lib/response.js');
+const { handleCors } = require('../lib/cors.js');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Configuration CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');

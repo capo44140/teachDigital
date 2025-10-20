@@ -2,14 +2,14 @@
  * Middleware CORS pour Vercel Functions
  */
 
-export function setCorsHeaders(res) {
+function setCorsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 }
 
-export function handleCors(req, res) {
+function handleCors(req, res) {
   setCorsHeaders(res);
   
   if (req.method === 'OPTIONS') {
@@ -19,3 +19,8 @@ export function handleCors(req, res) {
   
   return false;
 }
+
+module.exports = {
+  setCorsHeaders,
+  handleCors
+};

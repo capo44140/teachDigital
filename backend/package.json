@@ -1,7 +1,6 @@
 {
   "name": "teachdigital-backend",
   "version": "1.0.0",
-  "type": "module",
   "description": "Backend API pour TeachDigital - Vercel Functions",
   "scripts": {
     "dev": "node scripts/test-local.js",

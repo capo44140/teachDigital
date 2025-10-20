@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless';
+const { neon } = require('@neondatabase/serverless');
 
 // Configuration de la base de données Neon
 const config = {
@@ -22,7 +22,7 @@ try {
 }
 
 // Fonction pour tester la connexion
-export async function testConnection() {
+async function testConnection() {
   try {
     const result = await sql`SELECT 1 as test`;
     console.log('✅ Connexion à la base de données testée avec succès');
@@ -33,5 +33,8 @@ export async function testConnection() {
   }
 }
 
-export default sql;
+module.exports = {
+  default: sql,
+  testConnection
+};
 

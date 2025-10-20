@@ -2,13 +2,13 @@
  * Service de hachage natif pour Node.js
  * Utilise l'API crypto native de Node.js
  */
-import crypto from 'crypto';
+const crypto = require('crypto');
 
 /**
  * Service de hachage sécurisé pour les codes PIN
  * Utilise l'API crypto native de Node.js
  */
-export class NativeHashService {
+class NativeHashService {
   
   /**
    * Hache un code PIN de manière sécurisée
@@ -173,4 +173,7 @@ export class NativeHashService {
   }
 }
 
-export default NativeHashService;
+module.exports = {
+  NativeHashService,
+  default: NativeHashService
+};

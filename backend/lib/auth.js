@@ -1,8 +1,8 @@
-import jwt from 'jsonwebtoken';
-import sql from './database.js';
+const jwt = require('jsonwebtoken');
+const sql = require('./database.js').default;
 
 // Middleware d'authentification pour Vercel Functions
-export function authenticateToken(req) {
+function authenticateToken(req) {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -19,12 +19,12 @@ export function authenticateToken(req) {
 }
 
 // Générer un token JWT
-export function generateToken(payload) {
+function generateToken(payload) {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
 }
 
 // Vérifier une session en base de données
-export async function verifySession(sessionToken) {
+async function verifySession(sessionToken) {
   try {
     const sessions = await sql`
       SELECT s.*, p.name, p.type, p.is_admin, p.is_child, p.is_teen
@@ -41,7 +41,7 @@ export async function verifySession(sessionToken) {
 }
 
 // Créer une session
-export async function createSession(profileId, sessionToken, expiresAt) {
+async function createSession(profileId, sessionToken, expiresAt) {
   try {
     const result = await sql`
       INSERT INTO sessions (profile_id, session_token, expires_at)
@@ -56,7 +56,7 @@ export async function createSession(profileId, sessionToken, expiresAt) {
 }
 
 // Supprimer une session
-export async function deleteSession(sessionToken) {
+async function deleteSession(sessionToken) {
   try {
     const result = await sql`
       DELETE FROM sessions 
@@ -69,4 +69,12 @@ export async function deleteSession(sessionToken) {
     throw error;
   }
 }
+
+module.exports = {
+  authenticateToken,
+  generateToken,
+  verifySession,
+  createSession,
+  deleteSession
+};
 
