@@ -42,6 +42,7 @@ console.log('\n📁 Vérification de la structure des fichiers:')
 const requiredFiles = [
   'vercel.json',
   'package.json',
+  'api/index.js',
   'backend/api/index.js',
   'backend/lib/database.js',
   'public/icon.svg',

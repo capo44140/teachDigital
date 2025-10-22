@@ -2,11 +2,6 @@
   "version": 2,
   "buildCommand": "pnpm run build:vercel",
   "outputDirectory": "dist",
-  "functions": {
-    "backend/api/index.js": {
-      "runtime": "@vercel/node@3.0.12"
-    }
-  },
   "headers": [
     {
       "source": "/api/(.*)",
@@ -33,7 +28,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/backend/api/index.js"
+      "destination": "/api"
     },
     {
       "source": "/(.*)",
