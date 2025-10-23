@@ -9,7 +9,13 @@ class ApiService {
     this.baseURL = isDevelopment 
       ? (import.meta.env.VITE_API_URL || 'http://localhost:3001')
       : (import.meta.env.VITE_API_URL_PROD || 'https://backend-sepia-mu.vercel.app');
-    this.token = localStorage.getItem('auth_token');
+  }
+
+  /**
+   * Obtenir le token actuel du localStorage
+   */
+  getToken() {
+    return localStorage.getItem('auth_token');
   }
 
   /**
@@ -17,6 +23,7 @@ class ApiService {
    */
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
+    const token = this.getToken();
     
     const config = {
       headers: {
@@ -27,8 +34,8 @@ class ApiService {
     };
 
     // Ajouter le token d'authentification si disponible
-    if (this.token) {
-      config.headers['Authorization'] = `Bearer ${this.token}`;
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
 
     try {
@@ -39,7 +46,7 @@ class ApiService {
         if (response.status === 401) {
           // Token expiré ou invalide
           this.logout();
-          throw new Error('Session expirée');
+          throw new Error('Session expirée - Veuillez vous reconnecter');
         }
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
@@ -63,8 +70,8 @@ class ApiService {
       });
 
       if (response.success) {
-        this.token = response.data.token;
-        localStorage.setItem('auth_token', this.token);
+        const token = response.data.token;
+        localStorage.setItem('auth_token', token);
         localStorage.setItem('user_profile', JSON.stringify(response.data.profile));
         return response.data;
       } else {
@@ -81,7 +88,8 @@ class ApiService {
    */
   async logout() {
     try {
-      if (this.token) {
+      const token = this.getToken();
+      if (token) {
         await this.request('/api/auth/logout', {
           method: 'POST'
         });
@@ -89,7 +97,6 @@ class ApiService {
     } catch (error) {
       console.error('Erreur de déconnexion:', error);
     } finally {
-      this.token = null;
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_profile');
     }
@@ -112,14 +119,7 @@ class ApiService {
    * Vérifier si l'utilisateur est authentifié
    */
   isAuthenticated() {
-    return !!this.token;
-  }
-
-  /**
-   * Obtenir le token d'authentification
-   */
-  getToken() {
-    return this.token;
+    return !!this.getToken();
   }
 
   /**

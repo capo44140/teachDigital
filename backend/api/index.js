@@ -192,9 +192,8 @@ async function handleLogout(req, res) {
 // Handler des profils
 async function handleProfiles(req, res) {
   try {
-    const user = authenticateToken(req);
-
     if (req.method === 'GET') {
+      // GET est public - récupérer tous les profils
       const profiles = await sql`
         SELECT 
           id, name, description, type, is_admin, is_child, is_teen, 
@@ -211,6 +210,9 @@ async function handleProfiles(req, res) {
       });
 
     } else if (req.method === 'POST') {
+      // POST requiert l'authentification
+      const user = authenticateToken(req);
+      
       if (!user.isAdmin) {
         res.status(403).json({ 
           success: false, 
