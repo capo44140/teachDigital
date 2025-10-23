@@ -1,54 +1,54 @@
-﻿# Correction de la Fuite de SÃ©curitÃ© - Frontend Base de DonnÃ©es
+﻿# Correction de la Fuite de Sécurité - Frontend Base de Données
 
-## ðŸš¨ ProblÃ¨me IdentifiÃ©
+## 🚨 Problème Identifié
 
-Votre application avait une **fuite de sÃ©curitÃ© critique** :
-- Le frontend essayait d'accÃ©der directement Ã  PostgreSQL/Neon
-- Les secrets de base de donnÃ©es Ã©taient exposÃ©s dans le navigateur  
-- Cela causait l'erreur `DATABASE_URL` non dÃ©finie sur Vercel/Chrome
+Votre application avait une **fuite de sécurité critique** :
+- Le frontend essayait d'accéder directement à PostgreSQL/Neon
+- Les secrets de base de données étaient exposés dans le navigateur  
+- Cela causait l'erreur `DATABASE_URL` non définie sur Vercel/Chrome
 
-## âœ… Solutions AppliquÃ©es
+## ✅ Solutions Appliquées
 
 ### 1. Suppression du fichier database.js du frontend
 - **Avant** : `src/config/database.js` tentait une connexion PostgreSQL directe depuis le navigateur
-- **AprÃ¨s** : RemplacÃ© par un stub qui affiche une erreur critique si utilisÃ© du frontend
+- **Après** : Remplacé par un stub qui affiche une erreur critique si utilisé du frontend
 
 ### 2. Restructuration des Stores Pinia
 - Suppression des imports de `Repository` dans les stores
-- Les repositories ne doivent JAMAIS Ãªtre instanciÃ©es cÃ´tÃ© frontend
+- Les repositories ne doivent JAMAIS être instanciées côté frontend
 - Remplacement par des appels aux services
 
-### 3. Architecture Correcte ImplÃ©mentÃ©e
+### 3. Architecture Correcte Implémentée
 ```
 Frontend (Vue.js/Browser)
-    â†“
+    ↓
 API Service (apiService.js)
-    â†“
+    ↓
 Backend API (Vercel Functions)
-    â†“
-Base de DonnÃ©es Neon (PostgreSQL)
+    ↓
+Base de Données Neon (PostgreSQL)
 ```
 
 **JAMAIS:**
 ```
-Frontend â†’ Base de DonnÃ©es directement âŒ
+Frontend → Base de Données directement ❌
 ```
 
-## ðŸ“‹ Fichiers ModifiÃ©s
+## 📋 Fichiers Modifiés
 
-- `src/config/database.js` - CrÃ©ation d'un stub de sÃ©curitÃ©
+- `src/config/database.js` - Création d'un stub de sécurité
 - `src/stores/profileStore.js` - Suppression de ProfileRepository
 - `src/stores/lessonStore.js` - Suppression de LessonRepository/QuizRepository  
 - `src/stores/notificationStore.js` - Suppression de NotificationRepository
 
-## ðŸ”’ Recommandations Futures
+## 🔒 Recommandations Futures
 
-1. **Audit de sÃ©curitÃ©** : VÃ©rifier que AUCUN autre service n'accÃ¨s directement la DB
-2. **Environnement de build** : Les secrets ne doivent JAMAIS Ãªtre dans le bundle frontend
+1. **Audit de sécurité** : Vérifier que AUCUN autre service n'accès directement la DB
+2. **Environnement de build** : Les secrets ne doivent JAMAIS être dans le bundle frontend
 3. **Vercel** : Configurer les env vars pour backend uniquement
 
-## ðŸ§ª Test de VÃ©rification
+## 🧪 Test de Vérification
 
 Le build produit compile maintenant sans erreur!
 
-`$ pnpm run build` âœ… SuccÃ¨s
+`$ pnpm run build` ✅ Succès
