@@ -1,9 +1,11 @@
 /**
  * Service de gestion des leçons et quiz
  * Gère le stockage, la récupération et la publication des leçons
+ * 
+ * ⚠️ IMPORTANT: Ce service communique via l'API backend, pas d'accès direct DB
  */
 
-import sql from '../config/database.js'
+import { apiService } from './apiService.js'
 import { auditLogService } from './auditLogService.js'
 import { NotificationService } from './notificationService.js'
 
@@ -20,24 +22,10 @@ export class LessonService {
     try {
       let imageData = null
       let imageFilename = null
-      let documentsData = null
       
       // Traiter les fichiers si fournis
       if (files) {
         if (Array.isArray(files)) {
-          // Plusieurs fichiers
-          const fileData = []
-          for (const file of files) {
-            const base64Data = await this.fileToBase64(file)
-            fileData.push({
-              name: file.name,
-              type: file.type,
-              size: file.size,
-              data: base64Data
-            })
-          }
-          documentsData = JSON.stringify(fileData)
-          
           // Utiliser le premier fichier image comme image principale
           const firstImage = files.find(f => f.type.startsWith('image/'))
           if (firstImage) {
@@ -51,18 +39,16 @@ export class LessonService {
         }
       }
       
-      const result = await sql`
-        INSERT INTO lessons (
-          profile_id, title, description, subject, level, 
-          image_filename, image_data, documents_data, quiz_data, is_published
-        )
-        VALUES (
-          ${profileId}, ${lessonData.title}, ${lessonData.description || ''}, 
-          ${lessonData.subject || ''}, ${lessonData.level || ''},
-          ${imageFilename}, ${imageData}, ${documentsData}, ${JSON.stringify(lessonData)}, true
-        )
-        RETURNING *
-      `;
+      const result = await apiService.createLesson({
+        title: lessonData.title,
+        description: lessonData.description || '',
+        subject: lessonData.subject || '',
+        level: lessonData.level || '',
+        imageFilename,
+        imageData,
+        quizData: lessonData,
+        isPublished: true
+      });
       
       // Enregistrer la création de la leçon dans les logs d'audit
       auditLogService.logDataAccess(
@@ -70,14 +56,14 @@ export class LessonService {
         'lesson_creation',
         'LESSON_CREATED',
         {
-          lessonId: result[0].id,
+          lessonId: result.id,
           title: lessonData.title,
           questionsCount: lessonData.questions?.length || 0,
           fileCount: Array.isArray(files) ? files.length : (files ? 1 : 0)
         }
       );
       
-      return result[0];
+      return result;
     } catch (error) {
       console.error('Erreur lors de la sauvegarde de la leçon:', error);
       auditLogService.logSystemError(
@@ -96,13 +82,10 @@ export class LessonService {
    */
   static async getLessonsByProfile(profileId) {
     try {
-      const lessons = await sql`
-        SELECT id, title, description, subject, level, 
-               image_filename, created_at, updated_at
-        FROM lessons 
-        WHERE profile_id = ${profileId} AND is_published = true
-        ORDER BY created_at DESC
-      `;
+      const lessons = await apiService.getLessons({
+        profileId,
+        published: true
+      });
       
       return lessons;
     } catch (error) {
@@ -117,13 +100,9 @@ export class LessonService {
    */
   static async getAllAvailableLessons() {
     try {
-      const lessons = await sql`
-        SELECT id, title, description, subject, level, 
-               image_filename, created_at, updated_at, profile_id
-        FROM lessons 
-        WHERE is_published = true
-        ORDER BY created_at DESC
-      `;
+      const lessons = await apiService.getLessons({
+        published: true
+      });
       
       return lessons;
     } catch (error) {
@@ -139,15 +118,13 @@ export class LessonService {
    */
   static async getLessonById(lessonId) {
     try {
-      const result = await sql`
-        SELECT * FROM lessons WHERE id = ${lessonId}
-      `;
+      const result = await apiService.getLesson(lessonId);
       
-      if (result.length === 0) {
+      if (!result) {
         throw new Error('Leçon non trouvée');
       }
       
-      return result[0];
+      return result;
     } catch (error) {
       console.error('Erreur lors de la récupération de la leçon:', error);
       throw error;
@@ -170,20 +147,15 @@ export class LessonService {
         results
       })
       
-      console.log('🗄️ [SERVICE] Exécution de la requête SQL...')
-      const result = await sql`
-        INSERT INTO quiz_results (
-          lesson_id, profile_id, score, total_questions, 
-          percentage, answers
-        )
-        VALUES (
-          ${lessonId}, ${profileId}, ${results.score}, ${results.totalQuestions},
-          ${results.percentage}, ${JSON.stringify(results.answers)}
-        )
-        RETURNING *
-      `;
+      console.log('🗄️ [SERVICE] Exécution de la requête API...')
+      const result = await apiService.saveQuizResult(lessonId, {
+        score: results.score,
+        totalQuestions: results.totalQuestions,
+        percentage: results.percentage,
+        answers: results.answers
+      });
       
-      console.log('✅ [SERVICE] Résultats insérés en base:', result[0])
+      console.log('✅ [SERVICE] Résultats insérés:', result)
       
       // Enregistrer les résultats dans les logs d'audit
       console.log('📝 [SERVICE] Enregistrement des logs d\'audit...')
@@ -213,7 +185,7 @@ export class LessonService {
       });
       
       console.log('🎉 [SERVICE] Sauvegarde complète réussie!')
-      return result[0];
+      return result;
     } catch (error) {
       console.error('❌ [SERVICE] Erreur lors de la sauvegarde des résultats:', error);
       console.error('🔍 [SERVICE] Détails de l\'erreur:', {
@@ -235,13 +207,16 @@ export class LessonService {
    */
   static async getQuizResults(lessonId, profileId) {
     try {
-      const results = await sql`
-        SELECT * FROM quiz_results 
-        WHERE lesson_id = ${lessonId} AND profile_id = ${profileId}
-        ORDER BY completed_at DESC
-      `;
+      const results = await apiService.request(
+        `/api/lessons/${lessonId}/quiz-results?profileId=${profileId}`,
+        { method: 'GET' }
+      );
       
-      return results;
+      if (results.success) {
+        return results.data.results || [];
+      } else {
+        return [];
+      }
     } catch (error) {
       console.error('Erreur lors de la récupération des résultats:', error);
       throw error;
@@ -255,18 +230,16 @@ export class LessonService {
    */
   static async getProfileStats(profileId) {
     try {
-      const stats = await sql`
-        SELECT 
-          COUNT(DISTINCT l.id) as total_lessons,
-          COUNT(DISTINCT qr.id) as total_quizzes_completed,
-          AVG(qr.percentage) as average_score,
-          MAX(qr.completed_at) as last_quiz_date
-        FROM lessons l
-        LEFT JOIN quiz_results qr ON l.id = qr.lesson_id AND qr.profile_id = ${profileId}
-        WHERE l.profile_id = ${profileId} AND l.is_published = true
-      `;
+      const stats = await apiService.request(
+        `/api/profiles/${profileId}/stats`,
+        { method: 'GET' }
+      );
       
-      return stats[0];
+      if (stats.success) {
+        return stats.data.stats;
+      } else {
+        return null;
+      }
     } catch (error) {
       console.error('Erreur lors de la récupération des statistiques:', error);
       throw error;
@@ -282,33 +255,35 @@ export class LessonService {
     try {
       console.log('📚 [SERVICE] Récupération de l\'historique des quiz pour le profil:', profileId)
       
-      const quizHistory = await sql`
-        SELECT 
-          qr.*,
-          l.title as lesson_title,
-          l.description as lesson_description,
-          l.subject as lesson_subject
-        FROM quiz_results qr
-        LEFT JOIN lessons l ON qr.lesson_id = l.id
-        WHERE qr.profile_id = ${profileId}
-        ORDER BY qr.completed_at DESC
-      `;
+      const allLessons = await this.getAllAvailableLessons();
+      const quizHistory = [];
+      
+      for (const lesson of allLessons) {
+        const quizResults = await this.getQuizResults(lesson.id, profileId);
+        
+        for (const quiz of quizResults) {
+          quizHistory.push({
+            id: quiz.id,
+            lessonId: lesson.id,
+            lessonTitle: lesson.title,
+            lessonDescription: lesson.description,
+            lessonSubject: lesson.subject,
+            score: quiz.score,
+            totalQuestions: quiz.total_questions,
+            percentage: quiz.percentage,
+            completedAt: quiz.completed_at,
+            duration: quiz.duration || 0,
+            answers: quiz.answers
+          });
+        }
+      }
+      
+      // Trier par date décroissante
+      quizHistory.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
       
       console.log('📈 [SERVICE] Historique des quiz récupéré:', quizHistory?.length || 0)
       
-      return quizHistory.map(quiz => ({
-        id: quiz.id,
-        lessonId: quiz.lesson_id,
-        lessonTitle: quiz.lesson_title,
-        lessonDescription: quiz.lesson_description,
-        lessonSubject: quiz.lesson_subject,
-        score: quiz.score,
-        totalQuestions: quiz.total_questions,
-        percentage: quiz.percentage,
-        completedAt: quiz.completed_at,
-        duration: quiz.duration || 0, // Durée en minutes
-        answers: quiz.answers
-      }));
+      return quizHistory;
     } catch (error) {
       console.error('❌ [SERVICE] Erreur lors de la récupération de l\'historique des quiz:', error);
       throw error;
@@ -321,17 +296,16 @@ export class LessonService {
    */
   static async getGlobalStats() {
     try {
-      const stats = await sql`
-        SELECT 
-          COUNT(DISTINCT l.id) as total_lessons,
-          COUNT(DISTINCT qr.id) as total_quizzes_completed,
-          AVG(qr.percentage) as average_score
-        FROM lessons l
-        LEFT JOIN quiz_results qr ON l.id = qr.lesson_id
-        WHERE l.is_published = true
-      `;
+      const stats = await apiService.request(
+        '/api/lessons/stats/global',
+        { method: 'GET' }
+      );
       
-      return stats[0];
+      if (stats.success) {
+        return stats.data.stats;
+      } else {
+        return null;
+      }
     } catch (error) {
       console.error('Erreur lors de la récupération des statistiques globales:', error);
       throw error;
@@ -348,7 +322,7 @@ export class LessonService {
       // Statistiques de base
       const basicStats = await this.getProfileStats(profileId);
       
-      // Récupérer TOUTES les leçons disponibles (pas seulement celles créées par l'enfant)
+      // Récupérer TOUTES les leçons disponibles
       const allLessons = await this.getAllAvailableLessons();
       
       const enrichedLessons = await Promise.all(
@@ -391,10 +365,10 @@ export class LessonService {
       return {
         ...basicStats,
         lessons: enrichedLessons,
-        quizHistory: quizHistory.slice(0, 20), // Limiter à 20 derniers quiz
-        totalLessons: basicStats.total_lessons || 0,
-        totalQuizzes: basicStats.total_quizzes_completed || 0,
-        averageScore: basicStats.average_score || 0
+        quizHistory: quizHistory.slice(0, 20),
+        totalLessons: basicStats?.total_lessons || 0,
+        totalQuizzes: basicStats?.total_quizzes_completed || 0,
+        averageScore: basicStats?.average_score || 0
       };
     } catch (error) {
       console.error('Erreur lors de la récupération des statistiques détaillées:', error);
@@ -410,13 +384,9 @@ export class LessonService {
    */
   static async deleteLesson(lessonId, profileId) {
     try {
-      const result = await sql`
-        DELETE FROM lessons 
-        WHERE id = ${lessonId} AND profile_id = ${profileId}
-        RETURNING id
-      `;
+      const result = await apiService.deleteLesson(lessonId);
       
-      if (result.length === 0) {
+      if (!result) {
         throw new Error('Leçon non trouvée ou non autorisée');
       }
       

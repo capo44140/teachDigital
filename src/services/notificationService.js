@@ -1,6 +1,11 @@
-import sql from '../config/database.js';
+import { apiService } from './apiService.js';
 import { auditLogService } from './auditLogService.js';
 
+/**
+ * Service de gestion des notifications
+ * 
+ * ⚠️ IMPORTANT: Ce service communique via l'API backend, pas d'accès direct DB
+ */
 export class NotificationService {
   
   /**
@@ -14,26 +19,35 @@ export class NotificationService {
    */
   static async createNotification(profileId, type, title, message, data = null) {
     try {
-      const result = await sql`
-        INSERT INTO notifications (profile_id, type, title, message, data)
-        VALUES (${profileId}, ${type}, ${title}, ${message}, ${data ? JSON.stringify(data) : null})
-        RETURNING *
-      `;
-      
-      // Enregistrer dans les logs d'audit
-      auditLogService.logDataAccess(
-        profileId,
-        'notification_created',
-        'NOTIFICATION_CREATED',
-        {
-          notificationId: result[0].id,
+      const result = await apiService.request('/api/notifications', {
+        method: 'POST',
+        body: JSON.stringify({
+          profileId,
           type,
-          title
-        }
-      );
+          title,
+          message,
+          data
+        })
+      });
       
-      console.log('✅ Notification créée avec succès');
-      return result[0];
+      if (result.success) {
+        // Enregistrer dans les logs d'audit
+        auditLogService.logDataAccess(
+          profileId,
+          'notification_created',
+          'NOTIFICATION_CREATED',
+          {
+            notificationId: result.data.notification.id,
+            type,
+            title
+          }
+        );
+        
+        console.log('✅ Notification créée avec succès');
+        return result.data.notification;
+      } else {
+        throw new Error(result.message || 'Erreur lors de la création de la notification');
+      }
     } catch (error) {
       console.error('❌ Erreur lors de la création de la notification:', error);
       throw error;
@@ -48,19 +62,10 @@ export class NotificationService {
    */
   static async getNotifications(profileId, unreadOnly = false) {
     try {
-      let query = sql`
-        SELECT * FROM notifications 
-        WHERE profile_id = ${profileId}
-      `;
-      
-      if (unreadOnly) {
-        query = sql`
-          SELECT * FROM notifications 
-          WHERE profile_id = ${profileId} AND is_read = false
-        `;
-      }
-      
-      const notifications = await query;
+      const notifications = await apiService.getNotifications({
+        profileId,
+        isRead: unreadOnly ? false : undefined
+      });
       return notifications;
     } catch (error) {
       console.error('❌ Erreur lors de la récupération des notifications:', error);
@@ -75,15 +80,10 @@ export class NotificationService {
    */
   static async markAsRead(notificationId) {
     try {
-      const result = await sql`
-        UPDATE notifications 
-        SET is_read = true 
-        WHERE id = ${notificationId}
-        RETURNING *
-      `;
+      const result = await apiService.markNotificationAsRead(notificationId);
       
       console.log('✅ Notification marquée comme lue');
-      return result[0];
+      return result;
     } catch (error) {
       console.error('❌ Erreur lors du marquage de la notification:', error);
       throw error;
@@ -97,14 +97,10 @@ export class NotificationService {
    */
   static async markAllAsRead(profileId) {
     try {
-      const result = await sql`
-        UPDATE notifications 
-        SET is_read = true 
-        WHERE profile_id = ${profileId} AND is_read = false
-      `;
+      const result = await apiService.markAllNotificationsAsRead(profileId);
       
-      console.log(`✅ ${result.count} notifications marquées comme lues`);
-      return result.count;
+      console.log(`✅ Notifications marquées comme lues`);
+      return result;
     } catch (error) {
       console.error('❌ Erreur lors du marquage des notifications:', error);
       throw error;
@@ -118,13 +114,16 @@ export class NotificationService {
    */
   static async deleteNotification(notificationId) {
     try {
-      await sql`
-        DELETE FROM notifications 
-        WHERE id = ${notificationId}
-      `;
+      const result = await apiService.request(`/api/notifications/${notificationId}`, {
+        method: 'DELETE'
+      });
       
-      console.log('✅ Notification supprimée');
-      return true;
+      if (result.success) {
+        console.log('✅ Notification supprimée');
+        return true;
+      } else {
+        throw new Error(result.message || 'Erreur lors de la suppression');
+      }
     } catch (error) {
       console.error('❌ Erreur lors de la suppression de la notification:', error);
       throw error;
@@ -138,13 +137,19 @@ export class NotificationService {
    */
   static async deleteReadNotifications(profileId) {
     try {
-      const result = await sql`
-        DELETE FROM notifications 
-        WHERE profile_id = ${profileId} AND is_read = true
-      `;
+      const notifications = await apiService.getNotifications({
+        profileId,
+        isRead: true
+      });
       
-      console.log(`✅ ${result.count} notifications supprimées`);
-      return result.count;
+      let deletedCount = 0;
+      for (const notification of notifications) {
+        await this.deleteNotification(notification.id);
+        deletedCount++;
+      }
+      
+      console.log(`✅ ${deletedCount} notifications supprimées`);
+      return deletedCount;
     } catch (error) {
       console.error('❌ Erreur lors de la suppression des notifications:', error);
       throw error;
@@ -195,16 +200,15 @@ export class NotificationService {
    */
   static async getNotificationStats(profileId) {
     try {
-      const stats = await sql`
-        SELECT 
-          COUNT(*) as total,
-          COUNT(CASE WHEN is_read = false THEN 1 END) as unread,
-          COUNT(CASE WHEN type = 'quiz_completed' THEN 1 END) as quiz_notifications
-        FROM notifications 
-        WHERE profile_id = ${profileId}
-      `;
+      const notifications = await apiService.getNotifications({ profileId });
       
-      return stats[0];
+      const stats = {
+        total: notifications.length,
+        unread: notifications.filter(n => !n.is_read).length,
+        quiz_notifications: notifications.filter(n => n.type === 'quiz_completed').length
+      };
+      
+      return stats;
     } catch (error) {
       console.error('❌ Erreur lors de la récupération des statistiques:', error);
       throw error;
