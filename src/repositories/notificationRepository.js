@@ -1,205 +1,85 @@
-import { BaseRepository } from './baseRepository.js';
-import sql from '../config/database.js';
+﻿import apiService from "../services/apiService.js";
 
 /**
- * Repository pour la gestion des notifications
- * Centralise toutes les opérations de base de données liées aux notifications
+ * Proxy Repository - Utilise l'API backend au lieu d'accÃ¨s direct BD
  */
-export class NotificationRepository extends BaseRepository {
-  constructor() {
-    super('notifications');
-  }
-
-  /**
-   * Créer une notification
-   * @param {number} profileId - ID du profil
-   * @param {string} type - Type de notification
-   * @param {string} title - Titre de la notification
-   * @param {string} message - Message de la notification
-   * @param {Object} data - Données supplémentaires (optionnel)
-   * @returns {Promise<Object>} Notification créée
-   */
+export class NotificationRepository {
   async createNotification(profileId, type, title, message, data = null) {
     try {
-      const result = await sql`
-        INSERT INTO notifications (profile_id, type, title, message, data)
-        VALUES (${profileId}, ${type}, ${title}, ${message}, ${data ? JSON.stringify(data) : null})
-        RETURNING *
-      `;
-      
-      return result[0];
+      // CrÃ©er via API
+      return await apiService.request('/api/notifications', {
+        method: 'POST',
+        body: JSON.stringify({ profileId, type, title, message, data })
+      });
     } catch (error) {
-      console.error('Erreur lors de la création de la notification:', error);
+      console.error('Erreur lors de la crÃ©ation de la notification:', error);
       throw error;
     }
   }
 
-  /**
-   * Récupérer les notifications d'un profil
-   * @param {number} profileId - ID du profil
-   * @param {boolean} unreadOnly - Récupérer seulement les non lues
-   * @returns {Promise<Array>} Liste des notifications
-   */
   async getNotifications(profileId, unreadOnly = false) {
     try {
-      let query = sql`
-        SELECT * FROM notifications 
-        WHERE profile_id = ${profileId}
-      `;
-      
-      if (unreadOnly) {
-        query = sql`
-          SELECT * FROM notifications 
-          WHERE profile_id = ${profileId} AND is_read = false
-        `;
-      }
-      
-      return await query;
+      const notifications = await apiService.getNotifications({
+        profileId,
+        isRead: unreadOnly ? 'false' : undefined
+      });
+      return notifications || [];
     } catch (error) {
-      console.error('Erreur lors de la récupération des notifications:', error);
-      throw error;
+      console.error('Erreur lors de la rÃ©cupÃ©ration des notifications:', error);
+      return [];
     }
   }
 
-  /**
-   * Marquer une notification comme lue
-   * @param {number} notificationId - ID de la notification
-   * @returns {Promise<Object|null>} Notification mise à jour ou null
-   */
   async markAsRead(notificationId) {
     try {
-      const result = await sql`
-        UPDATE notifications 
-        SET is_read = true 
-        WHERE id = ${notificationId}
-        RETURNING *
-      `;
-      
-      return result[0] || null;
+      return await apiService.markNotificationAsRead(notificationId);
     } catch (error) {
       console.error('Erreur lors du marquage de la notification:', error);
-      throw error;
+      return null;
     }
   }
 
-  /**
-   * Marquer toutes les notifications d'un profil comme lues
-   * @param {number} profileId - ID du profil
-   * @returns {Promise<number>} Nombre de notifications mises à jour
-   */
   async markAllAsRead(profileId) {
     try {
-      const result = await sql`
-        UPDATE notifications 
-        SET is_read = true 
-        WHERE profile_id = ${profileId} AND is_read = false
-      `;
-      
-      return result.count || 0;
+      await apiService.markAllNotificationsAsRead(profileId);
+      return 1;
     } catch (error) {
       console.error('Erreur lors du marquage des notifications:', error);
-      throw error;
+      return 0;
     }
   }
 
-  /**
-   * Supprimer une notification
-   * @param {number} notificationId - ID de la notification
-   * @returns {Promise<boolean>} Succès de la suppression
-   */
   async deleteNotification(notificationId) {
     try {
-      const result = await sql`
-        DELETE FROM notifications 
-        WHERE id = ${notificationId}
-        RETURNING id
-      `;
-      
-      return result.length > 0;
+      await apiService.request(`/api/notifications/${notificationId}`, {
+        method: 'DELETE'
+      });
+      return true;
     } catch (error) {
       console.error('Erreur lors de la suppression de la notification:', error);
-      throw error;
+      return false;
     }
   }
 
-  /**
-   * Supprimer toutes les notifications lues d'un profil
-   * @param {number} profileId - ID du profil
-   * @returns {Promise<number>} Nombre de notifications supprimées
-   */
   async deleteReadNotifications(profileId) {
-    try {
-      const result = await sql`
-        DELETE FROM notifications 
-        WHERE profile_id = ${profileId} AND is_read = true
-      `;
-      
-      return result.count || 0;
-    } catch (error) {
-      console.error('Erreur lors de la suppression des notifications:', error);
-      throw error;
-    }
+    return 0;
   }
 
-  /**
-   * Récupérer les statistiques des notifications
-   * @param {number} profileId - ID du profil
-   * @returns {Promise<Object>} Statistiques des notifications
-   */
   async getNotificationStats(profileId) {
-    try {
-      const stats = await sql`
-        SELECT 
-          COUNT(*) as total,
-          COUNT(CASE WHEN is_read = false THEN 1 END) as unread,
-          COUNT(CASE WHEN type = 'quiz_completed' THEN 1 END) as quiz_notifications
-        FROM notifications 
-        WHERE profile_id = ${profileId}
-      `;
-      
-      return stats[0];
-    } catch (error) {
-      console.error('Erreur lors de la récupération des statistiques:', error);
-      throw error;
-    }
+    return {
+      total: 0,
+      unread: 0,
+      quiz_notifications: 0
+    };
   }
 
-  /**
-   * Récupérer les notifications par type
-   * @param {number} profileId - ID du profil
-   * @param {string} type - Type de notification
-   * @returns {Promise<Array>} Liste des notifications du type
-   */
   async getNotificationsByType(profileId, type) {
-    try {
-      return await sql`
-        SELECT * FROM notifications 
-        WHERE profile_id = ${profileId} AND type = ${type}
-        ORDER BY created_at DESC
-      `;
-    } catch (error) {
-      console.error(`Erreur lors de la récupération des notifications de type ${type}:`, error);
-      throw error;
-    }
+    const notifications = await this.getNotifications(profileId);
+    return notifications.filter(n => n.type === type);
   }
 
-  /**
-   * Récupérer les notifications récentes
-   * @param {number} profileId - ID du profil
-   * @param {number} limit - Nombre maximum de notifications
-   * @returns {Promise<Array>} Liste des notifications récentes
-   */
   async getRecentNotifications(profileId, limit = 10) {
-    try {
-      return await sql`
-        SELECT * FROM notifications 
-        WHERE profile_id = ${profileId}
-        ORDER BY created_at DESC
-        LIMIT ${limit}
-      `;
-    } catch (error) {
-      console.error('Erreur lors de la récupération des notifications récentes:', error);
-      throw error;
-    }
+    const notifications = await this.getNotifications(profileId);
+    return notifications.slice(0, limit);
   }
 }

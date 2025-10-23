@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ProfileService, PinService } from '../services/profile/index.js';
 import offlineDataService from '../services/offlineDataService.js';
+import { ProfileRepository } from '../repositories/profileRepository.js';
 
 export const useProfileStore = defineStore('profile', {
   state: () => ({
@@ -16,7 +17,7 @@ export const useProfileStore = defineStore('profile', {
       admins: 0
     },
     
-    // Repository
+    profileRepository: new ProfileRepository()
   }),
 
   getters: {
@@ -341,3 +342,5 @@ export const useProfileStore = defineStore('profile', {
     }
   }
 });
+
+

@@ -1,9 +1,11 @@
-﻿import { defineStore } from 'pinia';
+import { defineStore } from 'pinia';
 import { LessonService } from '../services/lessonService.js';
+import { LessonRepository } from '../repositories/lessonRepository.js';
+import { QuizRepository } from '../repositories/quizRepository.js';
 
 /**
- * Store pour la gestion des leÃ§ons et quiz
- * GÃ¨re l'Ã©tat des leÃ§ons, quiz et statistiques
+ * Store pour la gestion des leçons et quiz
+ * Gère l'état des leçons, quiz et statistiques
  */
 export const useLessonStore = defineStore('lesson', {
   state: () => ({
@@ -18,45 +20,48 @@ export const useLessonStore = defineStore('lesson', {
       lastQuizDate: null
     },
     isLoading: false,
-    error: null,  }),
+    error: null,
+    lessonRepository: new LessonRepository(),
+    quizRepository: new QuizRepository()
+  }),
 
   getters: {
-    // RÃ©cupÃ©rer les leÃ§ons disponibles
+    // Récupérer les leçons disponibles
     availableLessons: (state) => state.lessons.filter(lesson => lesson.is_published),
     
-    // RÃ©cupÃ©rer les leÃ§ons d'un profil
+    // Récupérer les leçons d'un profil
     lessonsByProfile: (state) => (profileId) => 
       state.lessons.filter(lesson => lesson.profile_id === profileId),
     
-    // RÃ©cupÃ©rer les leÃ§ons par sujet
+    // Récupérer les leçons par sujet
     lessonsBySubject: (state) => (subject) => 
       state.lessons.filter(lesson => lesson.subject === subject),
     
-    // RÃ©cupÃ©rer les leÃ§ons par niveau
+    // Récupérer les leçons par niveau
     lessonsByLevel: (state) => (level) => 
       state.lessons.filter(lesson => lesson.level === level),
     
-    // RÃ©cupÃ©rer les quiz terminÃ©s
+    // Récupérer les quiz terminés
     completedQuizzes: (state) => state.quizResults.filter(result => result.completed_at),
     
-    // RÃ©cupÃ©rer les quiz d'un profil
+    // Récupérer les quiz d'un profil
     quizzesByProfile: (state) => (profileId) => 
       state.quizResults.filter(result => result.profile_id === profileId),
     
-    // RÃ©cupÃ©rer les meilleurs scores
+    // Récupérer les meilleurs scores
     bestScores: (state) => 
       state.quizResults
         .sort((a, b) => b.percentage - a.percentage)
         .slice(0, 10),
     
-    // VÃ©rifier si une leÃ§on a Ã©tÃ© complÃ©tÃ©e
+    // Vérifier si une leçon a été complétée
     isLessonCompleted: (state) => (lessonId, profileId) => 
       state.quizResults.some(result => 
         result.lesson_id === lessonId && 
         result.profile_id === profileId
       ),
     
-    // RÃ©cupÃ©rer le meilleur score pour une leÃ§on
+    // Récupérer le meilleur score pour une leçon
     getBestScoreForLesson: (state) => (lessonId, profileId) => {
       const results = state.quizResults.filter(result => 
         result.lesson_id === lessonId && 
@@ -70,7 +75,7 @@ export const useLessonStore = defineStore('lesson', {
 
   actions: {
     /**
-     * Charger toutes les leÃ§ons disponibles
+     * Charger toutes les leçons disponibles
      */
     async loadLessons() {
       this.isLoading = true;
@@ -78,10 +83,10 @@ export const useLessonStore = defineStore('lesson', {
       
       try {
         this.lessons = await this.lessonRepository.findAvailableLessons();
-        console.log('âœ… LeÃ§ons chargÃ©es avec succÃ¨s');
+        console.log('✅ Leçons chargées avec succès');
       } catch (error) {
         this.error = error.message;
-        console.error('âŒ Erreur lors du chargement des leÃ§ons:', error);
+        console.error('❌ Erreur lors du chargement des leçons:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -89,7 +94,7 @@ export const useLessonStore = defineStore('lesson', {
     },
 
     /**
-     * Charger les leÃ§ons d'un profil
+     * Charger les leçons d'un profil
      * @param {number} profileId - ID du profil
      */
     async loadLessonsByProfile(profileId) {
@@ -98,10 +103,10 @@ export const useLessonStore = defineStore('lesson', {
       
       try {
         this.lessons = await this.lessonRepository.findByProfileId(profileId);
-        console.log('âœ… LeÃ§ons du profil chargÃ©es avec succÃ¨s');
+        console.log('✅ Leçons du profil chargées avec succès');
       } catch (error) {
         this.error = error.message;
-        console.error('âŒ Erreur lors du chargement des leÃ§ons du profil:', error);
+        console.error('❌ Erreur lors du chargement des leçons du profil:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -109,8 +114,8 @@ export const useLessonStore = defineStore('lesson', {
     },
 
     /**
-     * Charger une leÃ§on par ID
-     * @param {number} lessonId - ID de la leÃ§on
+     * Charger une leçon par ID
+     * @param {number} lessonId - ID de la leçon
      */
     async loadLesson(lessonId) {
       this.isLoading = true;
@@ -119,12 +124,12 @@ export const useLessonStore = defineStore('lesson', {
       try {
         this.currentLesson = await this.lessonRepository.findLessonById(lessonId);
         if (!this.currentLesson) {
-          throw new Error('LeÃ§on non trouvÃ©e');
+          throw new Error('Leçon non trouvée');
         }
-        console.log('âœ… LeÃ§on chargÃ©e avec succÃ¨s');
+        console.log('✅ Leçon chargée avec succès');
       } catch (error) {
         this.error = error.message;
-        console.error('âŒ Erreur lors du chargement de la leÃ§on:', error);
+        console.error('❌ Erreur lors du chargement de la leçon:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -132,8 +137,8 @@ export const useLessonStore = defineStore('lesson', {
     },
 
     /**
-     * CrÃ©er une nouvelle leÃ§on
-     * @param {Object} lessonData - DonnÃ©es de la leÃ§on
+     * Créer une nouvelle leçon
+     * @param {Object} lessonData - Données de la leçon
      * @param {number} profileId - ID du profil
      * @param {File} imageFile - Fichier image (optionnel)
      */
@@ -158,11 +163,11 @@ export const useLessonStore = defineStore('lesson', {
         );
         
         this.lessons.unshift(newLesson);
-        console.log('âœ… LeÃ§on crÃ©Ã©e avec succÃ¨s');
+        console.log('✅ Leçon créée avec succès');
         return newLesson;
       } catch (error) {
         this.error = error.message;
-        console.error('âŒ Erreur lors de la crÃ©ation de la leÃ§on:', error);
+        console.error('❌ Erreur lors de la création de la leçon:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -170,8 +175,8 @@ export const useLessonStore = defineStore('lesson', {
     },
 
     /**
-     * Supprimer une leÃ§on
-     * @param {number} lessonId - ID de la leÃ§on
+     * Supprimer une leçon
+     * @param {number} lessonId - ID de la leçon
      * @param {number} profileId - ID du profil
      */
     async deleteLesson(lessonId, profileId) {
@@ -186,13 +191,13 @@ export const useLessonStore = defineStore('lesson', {
           if (this.currentLesson && this.currentLesson.id === lessonId) {
             this.currentLesson = null;
           }
-          console.log('âœ… LeÃ§on supprimÃ©e avec succÃ¨s');
+          console.log('✅ Leçon supprimée avec succès');
         } else {
-          throw new Error('LeÃ§on non trouvÃ©e ou non autorisÃ©e');
+          throw new Error('Leçon non trouvée ou non autorisée');
         }
       } catch (error) {
         this.error = error.message;
-        console.error('âŒ Erreur lors de la suppression de la leÃ§on:', error);
+        console.error('❌ Erreur lors de la suppression de la leçon:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -200,10 +205,10 @@ export const useLessonStore = defineStore('lesson', {
     },
 
     /**
-     * Sauvegarder les rÃ©sultats d'un quiz
-     * @param {number} lessonId - ID de la leÃ§on
+     * Sauvegarder les résultats d'un quiz
+     * @param {number} lessonId - ID de la leçon
      * @param {number} profileId - ID du profil
-     * @param {Object} results - RÃ©sultats du quiz
+     * @param {Object} results - Résultats du quiz
      */
     async saveQuizResults(lessonId, profileId, results) {
       this.isLoading = true;
@@ -216,17 +221,17 @@ export const useLessonStore = defineStore('lesson', {
           results
         );
         
-        // Mettre Ã  jour l'Ã©tat local
+        // Mettre à jour l'état local
         this.quizResults.unshift(savedResults);
         
         // Recharger les statistiques
         await this.loadStats(profileId);
         
-        console.log('âœ… RÃ©sultats de quiz sauvegardÃ©s avec succÃ¨s');
+        console.log('✅ Résultats de quiz sauvegardés avec succès');
         return savedResults;
       } catch (error) {
         this.error = error.message;
-        console.error('âŒ Erreur lors de la sauvegarde des rÃ©sultats:', error);
+        console.error('❌ Erreur lors de la sauvegarde des résultats:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -243,10 +248,10 @@ export const useLessonStore = defineStore('lesson', {
       
       try {
         this.quizHistory = await this.quizRepository.getChildQuizHistory(profileId);
-        console.log('âœ… Historique des quiz chargÃ© avec succÃ¨s');
+        console.log('✅ Historique des quiz chargé avec succès');
       } catch (error) {
         this.error = error.message;
-        console.error('âŒ Erreur lors du chargement de l\'historique:', error);
+        console.error('❌ Erreur lors du chargement de l\'historique:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -260,9 +265,9 @@ export const useLessonStore = defineStore('lesson', {
     async loadStats(profileId) {
       try {
         this.stats = await this.quizRepository.getProfileStats(profileId);
-        console.log('âœ… Statistiques chargÃ©es avec succÃ¨s');
+        console.log('✅ Statistiques chargées avec succès');
       } catch (error) {
-        console.error('âŒ Erreur lors du chargement des statistiques:', error);
+        console.error('❌ Erreur lors du chargement des statistiques:', error);
       }
     },
 
@@ -272,14 +277,14 @@ export const useLessonStore = defineStore('lesson', {
     async loadGlobalStats() {
       try {
         this.stats = await this.quizRepository.getGlobalStats();
-        console.log('âœ… Statistiques globales chargÃ©es avec succÃ¨s');
+        console.log('✅ Statistiques globales chargées avec succès');
       } catch (error) {
-        console.error('âŒ Erreur lors du chargement des statistiques globales:', error);
+        console.error('❌ Erreur lors du chargement des statistiques globales:', error);
       }
     },
 
     /**
-     * Rechercher des leÃ§ons
+     * Rechercher des leçons
      * @param {string} searchTerm - Terme de recherche
      */
     async searchLessons(searchTerm) {
@@ -288,10 +293,10 @@ export const useLessonStore = defineStore('lesson', {
       
       try {
         this.lessons = await this.lessonRepository.searchLessons(searchTerm);
-        console.log('âœ… Recherche de leÃ§ons terminÃ©e');
+        console.log('✅ Recherche de leçons terminée');
       } catch (error) {
         this.error = error.message;
-        console.error('âŒ Erreur lors de la recherche:', error);
+        console.error('❌ Erreur lors de la recherche:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -299,8 +304,8 @@ export const useLessonStore = defineStore('lesson', {
     },
 
     /**
-     * Filtrer les leÃ§ons par sujet
-     * @param {string} subject - Sujet des leÃ§ons
+     * Filtrer les leçons par sujet
+     * @param {string} subject - Sujet des leçons
      */
     async filterBySubject(subject) {
       this.isLoading = true;
@@ -308,10 +313,10 @@ export const useLessonStore = defineStore('lesson', {
       
       try {
         this.lessons = await this.lessonRepository.findBySubject(subject);
-        console.log('âœ… Filtrage par sujet terminÃ©');
+        console.log('✅ Filtrage par sujet terminé');
       } catch (error) {
         this.error = error.message;
-        console.error('âŒ Erreur lors du filtrage:', error);
+        console.error('❌ Erreur lors du filtrage:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -319,8 +324,8 @@ export const useLessonStore = defineStore('lesson', {
     },
 
     /**
-     * Filtrer les leÃ§ons par niveau
-     * @param {string} level - Niveau des leÃ§ons
+     * Filtrer les leçons par niveau
+     * @param {string} level - Niveau des leçons
      */
     async filterByLevel(level) {
       this.isLoading = true;
@@ -328,10 +333,10 @@ export const useLessonStore = defineStore('lesson', {
       
       try {
         this.lessons = await this.lessonRepository.findByLevel(level);
-        console.log('âœ… Filtrage par niveau terminÃ©');
+        console.log('✅ Filtrage par niveau terminé');
       } catch (error) {
         this.error = error.message;
-        console.error('âŒ Erreur lors du filtrage:', error);
+        console.error('❌ Erreur lors du filtrage:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -346,7 +351,7 @@ export const useLessonStore = defineStore('lesson', {
     },
 
     /**
-     * RÃ©initialiser l'Ã©tat
+     * Réinitialiser l'état
      */
     reset() {
       this.lessons = [];
@@ -364,5 +369,12 @@ export const useLessonStore = defineStore('lesson', {
     }
   }
 });
+
+
+
+
+
+
+
 
 
