@@ -1,47 +1,42 @@
-import { defineStore } from 'pinia';
+﻿import { defineStore } from 'pinia';
 import { NotificationService } from '../services/notificationService.js';
-import { NotificationRepository } from '../repositories/notificationRepository.js';
 
 /**
  * Store pour la gestion des notifications
- * Gère l'état des notifications et leurs interactions
+ * GÃ¨re l'Ã©tat des notifications et leurs interactions
  */
 export const useNotificationStore = defineStore('notification', {
   state: () => ({
     notifications: [],
     unreadCount: 0,
     isLoading: false,
-    error: null,
-    
-    // Repository
-    notificationRepository: new NotificationRepository()
-  }),
+    error: null,  }),
 
   getters: {
-    // Récupérer les notifications non lues
+    // RÃ©cupÃ©rer les notifications non lues
     unreadNotifications: (state) => state.notifications.filter(notification => !notification.is_read),
     
-    // Récupérer les notifications lues
+    // RÃ©cupÃ©rer les notifications lues
     readNotifications: (state) => state.notifications.filter(notification => notification.is_read),
     
-    // Récupérer les notifications par type
+    // RÃ©cupÃ©rer les notifications par type
     notificationsByType: (state) => (type) => 
       state.notifications.filter(notification => notification.type === type),
     
-    // Récupérer les notifications récentes
+    // RÃ©cupÃ©rer les notifications rÃ©centes
     recentNotifications: (state) => 
       state.notifications
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         .slice(0, 10),
     
-    // Récupérer les notifications de quiz
+    // RÃ©cupÃ©rer les notifications de quiz
     quizNotifications: (state) => 
       state.notifications.filter(notification => notification.type === 'quiz_completed'),
     
-    // Vérifier s'il y a des notifications non lues
+    // VÃ©rifier s'il y a des notifications non lues
     hasUnreadNotifications: (state) => state.unreadCount > 0,
     
-    // Récupérer le nombre de notifications par type
+    // RÃ©cupÃ©rer le nombre de notifications par type
     getNotificationCountByType: (state) => (type) => 
       state.notifications.filter(notification => notification.type === type).length
   },
@@ -59,10 +54,10 @@ export const useNotificationStore = defineStore('notification', {
       try {
         this.notifications = await this.notificationRepository.getNotifications(profileId, unreadOnly);
         this.updateUnreadCount();
-        console.log('✅ Notifications chargées avec succès');
+        console.log('âœ… Notifications chargÃ©es avec succÃ¨s');
       } catch (error) {
         this.error = error.message;
-        console.error('❌ Erreur lors du chargement des notifications:', error);
+        console.error('âŒ Erreur lors du chargement des notifications:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -70,7 +65,7 @@ export const useNotificationStore = defineStore('notification', {
     },
 
     /**
-     * Charger les notifications récentes
+     * Charger les notifications rÃ©centes
      * @param {number} profileId - ID du profil
      * @param {number} limit - Nombre maximum de notifications
      */
@@ -81,10 +76,10 @@ export const useNotificationStore = defineStore('notification', {
       try {
         this.notifications = await this.notificationRepository.getRecentNotifications(profileId, limit);
         this.updateUnreadCount();
-        console.log('✅ Notifications récentes chargées avec succès');
+        console.log('âœ… Notifications rÃ©centes chargÃ©es avec succÃ¨s');
       } catch (error) {
         this.error = error.message;
-        console.error('❌ Erreur lors du chargement des notifications récentes:', error);
+        console.error('âŒ Erreur lors du chargement des notifications rÃ©centes:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -92,12 +87,12 @@ export const useNotificationStore = defineStore('notification', {
     },
 
     /**
-     * Créer une notification
+     * CrÃ©er une notification
      * @param {number} profileId - ID du profil
      * @param {string} type - Type de notification
      * @param {string} title - Titre de la notification
      * @param {string} message - Message de la notification
-     * @param {Object} data - Données supplémentaires (optionnel)
+     * @param {Object} data - DonnÃ©es supplÃ©mentaires (optionnel)
      */
     async createNotification(profileId, type, title, message, data = null) {
       this.isLoading = true;
@@ -114,11 +109,11 @@ export const useNotificationStore = defineStore('notification', {
         
         this.notifications.unshift(notification);
         this.updateUnreadCount();
-        console.log('✅ Notification créée avec succès');
+        console.log('âœ… Notification crÃ©Ã©e avec succÃ¨s');
         return notification;
       } catch (error) {
         this.error = error.message;
-        console.error('❌ Erreur lors de la création de la notification:', error);
+        console.error('âŒ Erreur lors de la crÃ©ation de la notification:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -126,9 +121,9 @@ export const useNotificationStore = defineStore('notification', {
     },
 
     /**
-     * Créer une notification de quiz terminé
+     * CrÃ©er une notification de quiz terminÃ©
      * @param {number} profileId - ID du profil
-     * @param {Object} quizData - Données du quiz
+     * @param {Object} quizData - DonnÃ©es du quiz
      */
     async createQuizCompletionNotification(profileId, quizData) {
       try {
@@ -139,11 +134,11 @@ export const useNotificationStore = defineStore('notification', {
         
         this.notifications.unshift(notification);
         this.updateUnreadCount();
-        console.log('✅ Notification de quiz créée avec succès');
+        console.log('âœ… Notification de quiz crÃ©Ã©e avec succÃ¨s');
         return notification;
       } catch (error) {
         this.error = error.message;
-        console.error('❌ Erreur lors de la création de la notification de quiz:', error);
+        console.error('âŒ Erreur lors de la crÃ©ation de la notification de quiz:', error);
         throw error;
       }
     },
@@ -160,17 +155,17 @@ export const useNotificationStore = defineStore('notification', {
         const updatedNotification = await this.notificationRepository.markAsRead(notificationId);
         
         if (updatedNotification) {
-          // Mettre à jour dans la liste locale
+          // Mettre Ã  jour dans la liste locale
           const index = this.notifications.findIndex(n => n.id === notificationId);
           if (index !== -1) {
             this.notifications[index] = updatedNotification;
           }
           this.updateUnreadCount();
-          console.log('✅ Notification marquée comme lue');
+          console.log('âœ… Notification marquÃ©e comme lue');
         }
       } catch (error) {
         this.error = error.message;
-        console.error('❌ Erreur lors du marquage de la notification:', error);
+        console.error('âŒ Erreur lors du marquage de la notification:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -188,18 +183,18 @@ export const useNotificationStore = defineStore('notification', {
       try {
         const updatedCount = await this.notificationRepository.markAllAsRead(profileId);
         
-        // Mettre à jour toutes les notifications locales
+        // Mettre Ã  jour toutes les notifications locales
         this.notifications = this.notifications.map(notification => ({
           ...notification,
           is_read: true
         }));
         
         this.updateUnreadCount();
-        console.log(`✅ ${updatedCount} notifications marquées comme lues`);
+        console.log(`âœ… ${updatedCount} notifications marquÃ©es comme lues`);
         return updatedCount;
       } catch (error) {
         this.error = error.message;
-        console.error('❌ Erreur lors du marquage des notifications:', error);
+        console.error('âŒ Erreur lors du marquage des notifications:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -220,11 +215,11 @@ export const useNotificationStore = defineStore('notification', {
         if (success) {
           this.notifications = this.notifications.filter(n => n.id !== notificationId);
           this.updateUnreadCount();
-          console.log('✅ Notification supprimée');
+          console.log('âœ… Notification supprimÃ©e');
         }
       } catch (error) {
         this.error = error.message;
-        console.error('❌ Erreur lors de la suppression de la notification:', error);
+        console.error('âŒ Erreur lors de la suppression de la notification:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -246,11 +241,11 @@ export const useNotificationStore = defineStore('notification', {
         this.notifications = this.notifications.filter(notification => !notification.is_read);
         this.updateUnreadCount();
         
-        console.log(`✅ ${deletedCount} notifications supprimées`);
+        console.log(`âœ… ${deletedCount} notifications supprimÃ©es`);
         return deletedCount;
       } catch (error) {
         this.error = error.message;
-        console.error('❌ Erreur lors de la suppression des notifications:', error);
+        console.error('âŒ Erreur lors de la suppression des notifications:', error);
         throw error;
       } finally {
         this.isLoading = false;
@@ -265,10 +260,10 @@ export const useNotificationStore = defineStore('notification', {
       try {
         const stats = await this.notificationRepository.getNotificationStats(profileId);
         this.unreadCount = stats.unread;
-        console.log('✅ Statistiques des notifications chargées');
+        console.log('âœ… Statistiques des notifications chargÃ©es');
         return stats;
       } catch (error) {
-        console.error('❌ Erreur lors du chargement des statistiques:', error);
+        console.error('âŒ Erreur lors du chargement des statistiques:', error);
       }
     },
 
@@ -293,7 +288,7 @@ export const useNotificationStore = defineStore('notification', {
     },
 
     /**
-     * Mettre à jour le compteur de notifications non lues
+     * Mettre Ã  jour le compteur de notifications non lues
      */
     updateUnreadCount() {
       this.unreadCount = this.notifications.filter(notification => !notification.is_read).length;
@@ -307,7 +302,7 @@ export const useNotificationStore = defineStore('notification', {
     },
 
     /**
-     * Réinitialiser l'état
+     * RÃ©initialiser l'Ã©tat
      */
     reset() {
       this.notifications = [];
@@ -317,3 +312,5 @@ export const useNotificationStore = defineStore('notification', {
     }
   }
 });
+
+

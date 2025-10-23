@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia';
 import { ProfileService, PinService } from '../services/profile/index.js';
-import { ProfileRepository } from '../repositories/profileRepository.js';
 import offlineDataService from '../services/offlineDataService.js';
 
 export const useProfileStore = defineStore('profile', {
@@ -18,7 +17,6 @@ export const useProfileStore = defineStore('profile', {
     },
     
     // Repository
-    profileRepository: new ProfileRepository()
   }),
 
   getters: {
@@ -59,7 +57,7 @@ export const useProfileStore = defineStore('profile', {
         // Utiliser le service de cache offline pour charger les profils
         this.profiles = await offlineDataService.getCriticalData(
           'profiles',
-          () => this.profileRepository.findAllProfiles(),
+          () => ProfileService.findAllProfiles(),
           { 
             maxAge: 30 * 60 * 1000, // 30 minutes
             ttl: 30 * 60 * 1000,
@@ -82,7 +80,7 @@ export const useProfileStore = defineStore('profile', {
     // Charger les statistiques
     async loadStats() {
       try {
-        this.stats = await this.profileRepository.getProfileStats();
+        this.stats = await ProfileService.getProfileStats();
       } catch (error) {
         console.error('❌ Erreur lors du chargement des statistiques:', error);
       }
@@ -97,7 +95,7 @@ export const useProfileStore = defineStore('profile', {
         // Utiliser le cache pour charger un profil spécifique
         this.currentProfile = await offlineDataService.getCriticalData(
           `profile_${id}`,
-          () => this.profileRepository.findProfileById(id),
+          () => ProfileService.findProfileById(id),
           { 
             maxAge: 15 * 60 * 1000, // 15 minutes
             ttl: 15 * 60 * 1000,
