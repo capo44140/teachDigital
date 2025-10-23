@@ -4,8 +4,11 @@
 
 class ApiService {
   constructor() {
-    // URL du backend - à adapter selon votre déploiement
-    this.baseURL = import.meta.env.VITE_API_URL || 'https://backend-sepia-mu.vercel.app';
+    // URL du backend - adapter selon l'environnement
+    const isDevelopment = import.meta.env.DEV;
+    this.baseURL = isDevelopment 
+      ? (import.meta.env.VITE_API_URL || 'http://localhost:3001')
+      : (import.meta.env.VITE_API_URL_PROD || 'https://backend-sepia-mu.vercel.app');
     this.token = localStorage.getItem('auth_token');
   }
 

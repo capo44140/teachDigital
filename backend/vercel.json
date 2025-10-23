@@ -4,7 +4,8 @@
   "outputDirectory": ".",
   "functions": {
     "api/index.js": {
-      "runtime": "@vercel/node@3.0.12"
+      "runtime": "@vercel/node@3.0.12",
+      "maxDuration": 60
     }
   },
   "headers": [
@@ -17,15 +18,19 @@
         },
         {
           "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
+          "value": "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD"
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization"
+          "value": "Content-Type, Authorization, X-Requested-With"
         },
         {
-          "key": "Access-Control-Allow-Credentials",
-          "value": "true"
+          "key": "Access-Control-Max-Age",
+          "value": "86400"
+        },
+        {
+          "key": "Vary",
+          "value": "Origin"
         }
       ]
     }
@@ -33,7 +38,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "destination": "/api"
     }
   ]
 }
