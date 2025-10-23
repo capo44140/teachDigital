@@ -1,44 +1,59 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+  <!-- 
+    LIQUID GLASS DESIGN - Dashboard Parent
+    
+    ✨ Backdrop blur translucide
+    🌈 Gradients animés en arrière-plan
+    💎 Cartes glass semi-transparentes
+    ✨ Animations fluides
+  -->
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
+    <!-- Background animated elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    </div>
+
     <!-- Header avec profil sélectionné -->
-    <header class="bg-white shadow-lg">
+    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
       <nav class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
+          <!-- Logo -->
           <div class="flex items-center space-x-4">
             <div 
-              class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center cursor-pointer group relative"
+              class="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center cursor-pointer group relative backdrop-blur-xl shadow-lg"
               title="TeachDigital"
             >
               <span class="text-white font-bold text-lg">TD</span>
               <!-- Tooltip -->
-              <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+              <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-1 bg-slate-800/80 backdrop-blur-xl text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap border border-white/20">
                 TeachDigital
               </div>
             </div>
+            <h1 class="text-2xl font-bold text-white hidden sm:block">TeachDigital</h1>
           </div>
           
+          <!-- Profil et actions -->
           <div class="flex items-center space-x-4">
-            <!-- Centre de notifications -->
-            <NotificationCenter />
-            
             <!-- Profil actuel -->
-            <div v-if="currentProfile" class="flex items-center space-x-2">
-              <div class="w-8 h-8 rounded-full flex items-center justify-center" :class="currentProfile.bgColor">
+            <div v-if="currentProfile" class="flex items-center space-x-2 px-4 py-2 bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 hover:bg-white/10 transition-all">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-purple-400 to-pink-400">
                 <span class="text-white text-sm font-semibold">{{ currentProfile.initial }}</span>
               </div>
-              <span class="text-gray-700 font-medium">{{ currentProfile.name }}</span>
+              <span class="text-white font-medium text-sm hidden sm:inline">{{ currentProfile.name }}</span>
             </div>
-            <div v-else class="flex items-center space-x-2">
-              <div class="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center">
+            <div v-else class="flex items-center space-x-2 px-4 py-2 bg-white/5 backdrop-blur-xl rounded-xl border border-white/10">
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center">
                 <span class="text-white text-sm font-semibold">?</span>
               </div>
-              <span class="text-gray-700 font-medium">Chargement...</span>
+              <span class="text-white/60 font-medium text-sm">Chargement...</span>
             </div>
             
             <!-- Bouton changer de profil -->
             <button 
               @click="changeProfile"
-              class="p-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+              class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Changer de profil"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,7 +64,7 @@
             <!-- Bouton de déconnexion -->
             <button 
               @click="logout"
-              class="p-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors"
+              class="p-2 text-red-400/80 hover:text-red-300 border border-red-400/20 hover:border-red-400/40 rounded-xl backdrop-blur-xl hover:bg-red-400/10 transition-all"
               title="Se déconnecter"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -62,224 +77,230 @@
     </header>
 
     <!-- Contenu principal -->
-    <main class="container mx-auto px-6 py-12">
-      <div class="text-center mb-12">
-        <h2 class="text-4xl font-bold text-gray-800 mb-4">
-          Bienvenue {{ currentProfile?.name || 'Chargement...' }} !
+    <main class="relative z-10 container mx-auto px-6 py-12">
+      <!-- Bienvenue -->
+      <div class="text-center mb-16">
+        <h2 class="text-5xl font-bold text-white mb-4">
+          Bienvenue {{ currentProfile?.name || 'Administrateur' }} ! 👋
         </h2>
-        <p class="text-xl text-gray-600">
-          {{ currentProfile?.welcomeMessage || 'Chargement du profil...' }}
+        <p class="text-white/60 text-lg">
+          {{ currentProfile?.welcomeMessage || 'Gérez l\'apprentissage de votre famille' }}
         </p>
       </div>
 
       <!-- Indicateur de chargement -->
-      <div v-if="isLoadingProfile" class="text-center py-12">
-        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <p class="mt-4 text-gray-600">Chargement du profil...</p>
-        <p class="mt-2 text-sm text-gray-500">Veuillez patienter...</p>
+      <div v-if="isLoadingProfile" class="text-center py-16">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-white/20 border-t-white/80 mb-4"></div>
+        <p class="text-white/60 text-lg">Chargement du profil...</p>
       </div>
 
-      <!-- Fonctionnalités d'administration pour les parents -->
-      <div v-if="currentProfile && (currentProfile.isAdmin || currentProfile.name === 'Parent' || currentProfile.id === '1' || currentProfile.id === 1)" class="mt-8">
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <!-- Fonctionnalités d'administration -->
+      <div v-else-if="currentProfile && (currentProfile.isAdmin || currentProfile.name === 'Parent' || currentProfile.id === '1' || currentProfile.id === 1)">
+        <!-- Grille des cartes -->
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <!-- Gérer les profils -->
-          <div @click="manageProfiles" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <div class="flex items-center mb-4">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-amber-500">
-                <Icon icon="mdi:account-group" class="w-6 h-6 text-white" />
+          <div 
+            @click="manageProfiles"
+            class="glass-card-dashboard group cursor-pointer"
+          >
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+                </svg>
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 ml-4">Gérer les profils</h3>
-            </div>
-            <p class="text-gray-600 mb-4">Configurez et gérez les profils de votre famille</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">Administration</span>
-              <button class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors">
-                Accéder
-              </button>
+              <div class="flex-1">
+                <h3 class="text-xl font-bold text-white group-hover:text-white transition-colors">Gérer les profils</h3>
+                <p class="text-white/60 text-sm mt-1">Configurez les profils de votre famille</p>
+              </div>
             </div>
           </div>
 
           <!-- Scanner des leçons -->
-          <div @click="openLessonScanner" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <div class="flex items-center mb-4">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-500">
-                <Icon icon="mdi:scanner" class="w-6 h-6 text-white" />
+          <div 
+            @click="openLessonScanner"
+            class="glass-card-dashboard group cursor-pointer"
+          >
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 ml-4">Scanner des leçons</h3>
-            </div>
-            <p class="text-gray-600 mb-4">Créez des quiz à partir d'images et documents</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">IA & Quiz</span>
-              <button class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                Scanner
-              </button>
+              <div class="flex-1">
+                <h3 class="text-xl font-bold text-white group-hover:text-white transition-colors">Scanner des leçons</h3>
+                <p class="text-white/60 text-sm mt-1">Créez des quiz à partir d'images</p>
+              </div>
             </div>
           </div>
 
           <!-- Gérer les interrogations -->
-          <div @click="openQuizManagement" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <div class="flex items-center mb-4">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-500">
-                <Icon icon="mdi:quiz" class="w-6 h-6 text-white" />
+          <div 
+            @click="openQuizManagement"
+            class="glass-card-dashboard group cursor-pointer"
+          >
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-violet-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                </svg>
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 ml-4">Gérer les interrogations</h3>
-            </div>
-            <p class="text-gray-600 mb-4">Organisez et suivez les quiz des enfants</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">Gestion</span>
-              <button class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors">
-                Gérer
-              </button>
+              <div class="flex-1">
+                <h3 class="text-xl font-bold text-white group-hover:text-white transition-colors">Gérer les interrogations</h3>
+                <p class="text-white/60 text-sm mt-1">Organisez et suivez les quiz</p>
+              </div>
             </div>
           </div>
 
           <!-- Quiz à partir de texte -->
-          <div @click="openTextQuizGenerator" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <div class="flex items-center mb-4">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-emerald-500">
-                <Icon icon="mdi:text-box" class="w-6 h-6 text-white" />
+          <div 
+            @click="openTextQuizGenerator"
+            class="glass-card-dashboard group cursor-pointer"
+          >
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 ml-4">Quiz à partir de texte</h3>
-            </div>
-            <p class="text-gray-600 mb-4">Générez des quiz depuis du texte libre</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">Création</span>
-              <button class="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors">
-                Créer
-              </button>
+              <div class="flex-1">
+                <h3 class="text-xl font-bold text-white group-hover:text-white transition-colors">Quiz à partir de texte</h3>
+                <p class="text-white/60 text-sm mt-1">Générez des quiz depuis du texte</p>
+              </div>
             </div>
           </div>
 
           <!-- Test de sécurité -->
-          <div @click="openSecurityTest" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <div class="flex items-center mb-4">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-red-500">
-                <Icon icon="mdi:shield-check" class="w-6 h-6 text-white" />
+          <div 
+            @click="openSecurityTest"
+            class="glass-card-dashboard group cursor-pointer"
+          >
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-400 to-rose-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m7 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 ml-4">Test de sécurité</h3>
-            </div>
-            <p class="text-gray-600 mb-4">Vérifiez la sécurité du système</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">Sécurité</span>
-              <button class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                Tester
-              </button>
+              <div class="flex-1">
+                <h3 class="text-xl font-bold text-white group-hover:text-white transition-colors">Test de sécurité</h3>
+                <p class="text-white/60 text-sm mt-1">Vérifiez la sécurité du système</p>
+              </div>
             </div>
           </div>
 
           <!-- Test des notifications -->
-          <div @click="openNotificationTest" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <div class="flex items-center mb-4">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-orange-500">
-                <Icon icon="mdi:bell-ring" class="w-6 h-6 text-white" />
+          <div 
+            @click="openNotificationTest"
+            class="glass-card-dashboard group cursor-pointer"
+          >
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-yellow-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 ml-4">Test des notifications</h3>
-            </div>
-            <p class="text-gray-600 mb-4">Testez le système de notifications</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">Test</span>
-              <button class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
-                Tester
-              </button>
+              <div class="flex-1">
+                <h3 class="text-xl font-bold text-white group-hover:text-white transition-colors">Test des notifications</h3>
+                <p class="text-white/60 text-sm mt-1">Testez le système de notifications</p>
+              </div>
             </div>
           </div>
 
-
           <!-- Suivi des progrès -->
-          <div @click="openProgressTracking" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <div class="flex items-center mb-4">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-green-500">
-                <Icon icon="mdi:chart-line" class="w-6 h-6 text-white" />
+          <div 
+            @click="openProgressTracking"
+            class="glass-card-dashboard group cursor-pointer"
+          >
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 ml-4">Suivi des progrès</h3>
-            </div>
-            <p class="text-gray-600 mb-4">Consultez les statistiques d'apprentissage</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">Statistiques</span>
-              <button class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
-                Consulter
-              </button>
+              <div class="flex-1">
+                <h3 class="text-xl font-bold text-white group-hover:text-white transition-colors">Suivi des progrès</h3>
+                <p class="text-white/60 text-sm mt-1">Consultez les statistiques</p>
+              </div>
             </div>
           </div>
 
           <!-- Paramètres -->
-          <div @click="openParentSettings" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <div class="flex items-center mb-4">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-slate-500">
-                <Icon icon="mdi:cog" class="w-6 h-6 text-white" />
+          <div 
+            @click="openParentSettings"
+            class="glass-card-dashboard group cursor-pointer"
+          >
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 ml-4">Paramètres</h3>
-            </div>
-            <p class="text-gray-600 mb-4">Configurez les paramètres de l'application</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">Configuration</span>
-              <button class="px-4 py-2 bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-colors">
-                Configurer
-              </button>
+              <div class="flex-1">
+                <h3 class="text-xl font-bold text-white group-hover:text-white transition-colors">Paramètres</h3>
+                <p class="text-white/60 text-sm mt-1">Configurez l'application</p>
+              </div>
             </div>
           </div>
 
           <!-- Gestion des activités -->
-          <div @click="openActivityManagement" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <div class="flex items-center mb-4">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-cyan-500">
+          <div 
+            @click="openActivityManagement"
+            class="glass-card-dashboard group cursor-pointer"
+          >
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                 </svg>
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 ml-4">Gestion des activités</h3>
-            </div>
-            <p class="text-gray-600 mb-4">Organisez les activités des enfants</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">Organisation</span>
-              <button class="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors">
-                Organiser
-              </button>
+              <div class="flex-1">
+                <h3 class="text-xl font-bold text-white group-hover:text-white transition-colors">Gestion des activités</h3>
+                <p class="text-white/60 text-sm mt-1">Organisez les activités</p>
+              </div>
             </div>
           </div>
 
           <!-- Vidéos YouTube -->
-          <div @click="openYouTubeManager" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <div class="flex items-center mb-4">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-red-600">
+          <div 
+            @click="openYouTubeManager"
+            class="glass-card-dashboard group cursor-pointer"
+          >
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
                 <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                 </svg>
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 ml-4">Vidéos YouTube</h3>
-            </div>
-            <p class="text-gray-600 mb-4">Gérez les vidéos éducatives</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">Médias</span>
-              <button class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                Gérer
-              </button>
+              <div class="flex-1">
+                <h3 class="text-xl font-bold text-white group-hover:text-white transition-colors">Vidéos YouTube</h3>
+                <p class="text-white/60 text-sm mt-1">Gérez les vidéos éducatives</p>
+              </div>
             </div>
           </div>
 
           <!-- Gestion des badges -->
-          <div @click="openBadgeManager" class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-            <div class="flex items-center mb-4">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center bg-yellow-500">
+          <div 
+            @click="openBadgeManager"
+            class="glass-card-dashboard group cursor-pointer"
+          >
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                 </svg>
               </div>
-              <h3 class="text-xl font-semibold text-gray-800 ml-4">Gestion des badges</h3>
-            </div>
-            <p class="text-gray-600 mb-4">Créez et gérez les badges de réussite</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">Gamification</span>
-              <button class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors">
-                Gérer
-              </button>
+              <div class="flex-1">
+                <h3 class="text-xl font-bold text-white group-hover:text-white transition-colors">Gestion des badges</h3>
+                <p class="text-white/60 text-sm mt-1">Créez et gérez les badges</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </main>
     
-    <!-- Affichage de la version -->
+    <!-- Footer -->
     <VersionInfo position="bottom-right" />
     <MigrationControl />
   </div>
@@ -288,18 +309,14 @@
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
 import sessionService from '../services/sessionService.js'
-import NotificationCenter from './NotificationCenter.vue'
 import VersionInfo from './VersionInfo.vue'
 import MigrationControl from './MigrationControl.vue'
-import { Icon } from '@iconify/vue'
 
 export default {
   name: 'Dashboard',
   components: {
-    NotificationCenter,
     VersionInfo,
-    MigrationControl,
-    Icon
+    MigrationControl
   },
   setup() {
     const profileStore = useProfileStore()
@@ -315,81 +332,6 @@ export default {
           isAdmin: true,
           welcomeMessage: 'Gérez l\'apprentissage de votre famille',
           courses: []
-        },
-        ayna: {
-          name: 'Ayna',
-          initial: 'A',
-          bgColor: 'bg-purple-500',
-          isAdmin: false,
-          welcomeMessage: 'Découvre de nouveaux cours passionnants !',
-          courses: [
-            {
-              id: 1,
-              title: 'Programmation créative',
-              description: 'Apprends à créer des animations et des jeux',
-              duration: '2h',
-              color: 'bg-purple-500',
-              icon: 'mdi:code-braces'
-            },
-            {
-              id: 2,
-              title: 'Design numérique',
-              description: 'Crée des designs modernes et attrayants',
-              duration: '1h30',
-              color: 'bg-pink-500',
-              icon: 'mdi:palette'
-            }
-          ]
-        },
-        nolann: {
-          name: 'Nolann',
-          initial: 'N',
-          bgColor: 'bg-red-500',
-          isAdmin: false,
-          welcomeMessage: 'Prêt pour de nouvelles aventures numériques ?',
-          courses: [
-            {
-              id: 1,
-              title: 'Robots et IA',
-              description: 'Découvre le monde fascinant de la robotique',
-              duration: '1h',
-              color: 'bg-red-500',
-              icon: 'mdi:robot'
-            },
-            {
-              id: 2,
-              title: 'Mathématiques amusantes',
-              description: 'Apprends les maths en jouant',
-              duration: '45 min',
-              color: 'bg-blue-500',
-              icon: 'mdi:calculator'
-            }
-          ]
-        },
-        elyo: {
-          name: 'Elyo',
-          initial: 'E',
-          bgColor: 'bg-green-500',
-          isAdmin: false,
-          welcomeMessage: 'Explorons ensemble le monde numérique !',
-          courses: [
-            {
-              id: 1,
-              title: 'Découverte des couleurs',
-              description: 'Apprends les couleurs avec des jeux interactifs',
-              duration: '30 min',
-              color: 'bg-green-500',
-              icon: 'mdi:palette-outline'
-            },
-            {
-              id: 2,
-              title: 'Formes et motifs',
-              description: 'Reconnais les formes et crée des motifs',
-              duration: '25 min',
-              color: 'bg-yellow-500',
-              icon: 'mdi:shape'
-            }
-          ]
         }
       },
       currentProfile: null
@@ -410,17 +352,10 @@ export default {
       this.currentProfile = this.profiles.parent
     }
     
-    // S'assurer que le profil parent a les droits d'admin et ses propriétés par défaut
+    // S'assurer que le profil parent a les droits d'admin
     if (this.currentProfile && (this.currentProfile.name === 'Parent' || this.currentProfile.id === '1' || this.currentProfile.id === 1)) {
       this.currentProfile.isAdmin = true
-      // S'assurer que le profil parent a ses propriétés par défaut
-      if (!this.currentProfile.welcomeMessage) {
-        this.currentProfile.welcomeMessage = 'Gérez l\'apprentissage de votre famille'
-      }
-      if (!this.currentProfile.courses) {
-        this.currentProfile.courses = this.profiles.parent.courses
-      }
-      console.log('✅ [DASHBOARD] Droits admin et propriétés par défaut confirmés pour le profil parent')
+      console.log('✅ [DASHBOARD] Droits admin confirmés pour le profil parent')
     }
     
     console.log('🏁 [DASHBOARD] Profil final dans created():', this.currentProfile)
@@ -433,18 +368,17 @@ export default {
         // Récupérer le profil depuis les paramètres d'URL ou localStorage
         const profileId = this.$route.query.profile
         console.log('🔍 [DASHBOARD] ProfileId depuis URL:', profileId)
-        console.log('🔍 [DASHBOARD] Paramètres de route complets:', this.$route.query)
         
         if (profileId) {
           console.log('📚 [DASHBOARD] Chargement du profil depuis la base de données...')
           // Charger le profil depuis la base de données
           await this.profileStore.loadProfile(profileId)
           this.currentProfile = this.profileStore.currentProfile
-          console.log('📊 [DASHBOARD] Profil chargé depuis la base de données:', this.currentProfile)
+          console.log('📊 [DASHBOARD] Profil chargé:', this.currentProfile)
           
           // Si le profil n'est pas trouvé, utiliser le profil parent par défaut
           if (!this.currentProfile) {
-            console.warn('⚠️ [DASHBOARD] Profil non trouvé dans la base de données, utilisation du profil parent par défaut')
+            console.warn('⚠️ [DASHBOARD] Profil non trouvé, utilisation du profil parent par défaut')
             this.currentProfile = this.profiles.parent
           }
         } else {
@@ -453,30 +387,13 @@ export default {
           this.currentProfile = this.profiles.parent
         }
         
-        // S'assurer que le profil parent a les droits d'admin et ses propriétés par défaut
+        // S'assurer que le profil parent a les droits d'admin
         if (this.currentProfile && (this.currentProfile.name === 'Parent' || this.currentProfile.id === '1' || this.currentProfile.id === 1)) {
           this.currentProfile.isAdmin = true
-          // S'assurer que le profil parent a ses propriétés par défaut
-          if (!this.currentProfile.welcomeMessage) {
-            this.currentProfile.welcomeMessage = 'Gérez l\'apprentissage de votre famille'
-          }
-          if (!this.currentProfile.courses) {
-            this.currentProfile.courses = this.profiles.parent.courses
-          }
-          console.log('✅ [DASHBOARD] Droits admin et propriétés par défaut accordés au profil parent')
+          console.log('✅ [DASHBOARD] Droits admin accordés au profil parent')
         }
         
         console.log('🏁 [DASHBOARD] Profil final utilisé:', this.currentProfile)
-        console.log('🔍 [DASHBOARD] État du profil:', {
-          hasProfile: !!this.currentProfile,
-          profileName: this.currentProfile?.name,
-          profileId: this.currentProfile?.id,
-          isAdmin: this.currentProfile?.isAdmin,
-          hasWelcomeMessage: !!this.currentProfile?.welcomeMessage,
-          welcomeMessage: this.currentProfile?.welcomeMessage,
-          hasCourses: !!this.currentProfile?.courses,
-          coursesCount: this.currentProfile?.courses?.length || 0
-        })
       } catch (error) {
         console.error('❌ [DASHBOARD] Erreur lors du chargement du profil:', error)
         // En cas d'erreur, utiliser le profil parent par défaut
@@ -604,3 +521,84 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* Animations */
+@keyframes blob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Glass Card Dashboard */
+.glass-card-dashboard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.glass-card-dashboard:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .glass-card-dashboard {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+
+  h2 {
+    font-size: 2rem;
+  }
+
+  p {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .glass-card-dashboard {
+    padding: 1.25rem;
+    border-radius: 1.25rem;
+  }
+}
+</style>
