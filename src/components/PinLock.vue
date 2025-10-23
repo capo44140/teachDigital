@@ -1,11 +1,28 @@
 <template>
-  <div class="min-h-screen bg-black flex items-center justify-center p-6">
-    <div class="w-full max-w-md">
+  <!-- 
+    LIQUID GLASS DESIGN - PIN Lock
+    
+    ✨ Backdrop blur translucide
+    🌈 Gradients animés en arrière-plan
+    💎 Cartes glass semi-transparentes
+    ✨ Animations fluides
+  -->
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden flex items-center justify-center p-6">
+    <!-- Background animated elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    </div>
+
+    <!-- Contenu relatif -->
+    <div class="relative z-10 w-full max-w-md">
       <!-- Bouton de fermeture -->
       <div class="flex justify-end mb-8">
         <button 
           @click="goBack"
-          class="text-white hover:text-gray-300 transition-colors"
+          class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
+          title="Retour"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -13,61 +30,74 @@
         </button>
       </div>
 
-      <!-- Message d'état -->
-      <div class="text-center mb-8">
-        <p class="text-sm text-gray-400 mb-4">Le profil est actuellement verrouillé.</p>
-        <h1 class="text-2xl font-semibold text-white mb-8">Entrez votre code PIN pour accéder à ce profil.</h1>
-      </div>
-
-      <!-- Champs de saisie PIN -->
-      <div class="flex justify-center space-x-4 mb-8">
-        <div 
-          v-for="(digit, index) in pinDigits" 
-          :key="index"
-          class="w-16 h-16 border-2 border-white rounded-lg flex items-center justify-center text-2xl font-bold text-white"
-          :class="{ 'bg-white text-black': digit !== '' }"
-        >
-          {{ digit }}
+      <!-- Glass card principale -->
+      <div class="glass-card-pinlock">
+        <!-- Message d'état -->
+        <div class="text-center mb-12">
+          <div class="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center mx-auto mb-6 backdrop-blur-xl shadow-lg">
+            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+          <p class="text-sm text-white/60 mb-3">Accès sécurisé</p>
+          <h1 class="text-3xl font-bold text-white mb-3">Entrez votre PIN</h1>
+          <p class="text-white/60">Profil: <span class="font-semibold text-white">{{ profileName }}</span></p>
         </div>
-      </div>
 
-      <!-- Clavier numérique -->
-      <div class="grid grid-cols-3 gap-4 mb-8">
-        <button 
-          v-for="number in 9" 
-          :key="number"
-          @click="addDigit(number)"
-          class="w-16 h-16 bg-gray-800 text-white text-2xl font-bold rounded-lg hover:bg-gray-700 transition-colors mx-auto"
-        >
-          {{ number }}
-        </button>
-        <button 
-          @click="addDigit(0)"
-          class="w-16 h-16 bg-gray-800 text-white text-2xl font-bold rounded-lg hover:bg-gray-700 transition-colors mx-auto col-start-2"
-        >
-          0
-        </button>
-        <button 
-          @click="removeDigit"
-          class="w-16 h-16 bg-gray-800 text-white text-2xl font-bold rounded-lg hover:bg-gray-700 transition-colors mx-auto"
-        >
-          ⌫
-        </button>
-      </div>
+        <!-- Champs de saisie PIN -->
+        <div class="flex justify-center space-x-3 mb-12">
+          <div 
+            v-for="(digit, index) in pinDigits" 
+            :key="index"
+            class="w-14 h-14 border-2 border-white/30 rounded-xl flex items-center justify-center text-2xl font-bold transition-all"
+            :class="{
+              'bg-gradient-to-br from-purple-400/30 to-pink-400/30 border-purple-400/60 text-white': digit !== '',
+              'text-white/40 bg-white/5': digit === ''
+            }"
+          >
+            <span v-if="digit" class="text-white">●</span>
+          </div>
+        </div>
 
-      <!-- Message d'erreur -->
-      <div v-if="errorMessage" class="text-center mb-6">
-        <p class="text-red-400 text-sm">{{ errorMessage }}</p>
-      </div>
+        <!-- Clavier numérique -->
+        <div class="grid grid-cols-3 gap-3 mb-8">
+          <button 
+            v-for="number in 9" 
+            :key="number"
+            @click="addDigit(number)"
+            class="glass-button-pin h-12"
+          >
+            {{ number }}
+          </button>
+          <button 
+            @click="addDigit(0)"
+            class="glass-button-pin h-12 col-start-2"
+          >
+            0
+          </button>
+          <button 
+            @click="removeDigit"
+            class="glass-button-pin h-12 text-lg"
+            title="Supprimer"
+          >
+            ⌫
+          </button>
+        </div>
 
-      <!-- Lien mot de passe oublié -->
-      <div class="text-center">
-        <button 
-          @click="forgotPin"
-          class="text-sm text-gray-400 hover:text-white transition-colors"
-        >
-          Vous avez oublié votre code PIN ?
-        </button>
+        <!-- Message d'erreur -->
+        <div v-if="errorMessage" class="text-center mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+          <p class="text-red-300 text-sm">{{ errorMessage }}</p>
+        </div>
+
+        <!-- Lien mot de passe oublié -->
+        <div class="text-center pt-6 border-t border-white/10">
+          <button 
+            @click="forgotPin"
+            class="text-sm text-white/60 hover:text-white transition-colors"
+          >
+            Vous avez oublié votre code PIN ?
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -218,21 +248,89 @@ export default {
 </script>
 
 <style scoped>
-/* Animation pour les champs de saisie */
-.pin-field {
-  transition: all 0.2s ease;
+/* Animations */
+@keyframes blob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
 }
 
-.pin-field:focus {
-  transform: scale(1.05);
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 
-/* Animation pour les boutons */
-button {
-  transition: all 0.2s ease;
+.animate-blob {
+  animation: blob 7s infinite;
 }
 
-button:active {
-  transform: scale(0.95);
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Glass Card PIN Lock */
+.glass-card-pinlock {
+  padding: 2rem;
+  border-radius: 2rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Glass Button PIN */
+.glass-button-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  font-weight: 600;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.glass-button-pin:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.glass-button-pin:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .glass-card-pinlock {
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  .glass-button-pin {
+    font-size: 1rem;
+  }
 }
 </style>
