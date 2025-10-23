@@ -1,51 +1,64 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100">
+  <!-- 
+    LIQUID GLASS DESIGN - User Dashboard
+    
+    ✨ Backdrop blur translucide
+    🌈 Gradients animés en arrière-plan
+    💎 Cartes glass semi-transparentes
+    ✨ Animations fluides
+  -->
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
+    <!-- Background animated elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    </div>
+
     <!-- Header avec profil sélectionné -->
-    <header class="bg-white shadow-lg">
+    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
       <nav class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
+          <!-- Logo -->
           <div class="flex items-center space-x-4">
             <div 
-              class="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg flex items-center justify-center cursor-pointer group relative"
+              class="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center cursor-pointer group relative backdrop-blur-xl shadow-lg"
               title="TeachDigital"
             >
               <span class="text-white font-bold text-lg">TD</span>
               <!-- Tooltip -->
-              <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+              <div class="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-1 bg-slate-800/80 backdrop-blur-xl text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap border border-white/20">
                 TeachDigital
               </div>
             </div>
+            <h1 class="text-2xl font-bold text-white hidden sm:block">TeachDigital</h1>
           </div>
           
+          <!-- Profil et actions -->
           <div class="flex items-center space-x-4">
             <!-- Profil actuel -->
-            <div v-if="currentProfile" class="flex items-center space-x-2">
-              <div class="w-8 h-8 rounded-full flex items-center justify-center" :class="currentProfile.bgColor">
+            <div v-if="currentProfile" class="flex items-center space-x-2 px-4 py-2 bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 hover:bg-white/10 transition-all">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-purple-400 to-pink-400">
                 <span class="text-white text-sm font-semibold">{{ currentProfile.initial }}</span>
               </div>
-              <span class="text-gray-700 font-medium">{{ currentProfile.name }}</span>
+              <span class="text-white font-medium text-sm hidden sm:inline">{{ currentProfile.name }}</span>
             </div>
-            <div v-else class="flex items-center space-x-2">
-              <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-400">
+            <div v-else class="flex items-center space-x-2 px-4 py-2 bg-white/5 backdrop-blur-xl rounded-xl border border-white/10">
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center">
                 <span class="text-white text-sm font-semibold">?</span>
               </div>
-              <span class="text-gray-700 font-medium">Chargement...</span>
+              <span class="text-white/60 font-medium text-sm">Chargement...</span>
             </div>
             
-            <!-- Bouton changer de profil (seulement pour les profils non-admin) -->
+            <!-- Bouton changer de profil -->
             <button 
               @click="changeProfile"
-              class="group relative px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-out hover:from-purple-600 hover:to-pink-600"
+              class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Changer de profil"
             >
-              <div class="flex items-center space-x-2">
-                <svg class="w-4 h-4 transition-transform duration-300 group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                </svg>
-                <span class="text-sm font-medium">Changer</span>
-              </div>
-              <!-- Effet de brillance au survol -->
-              <div class="absolute inset-0 rounded-xl bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+              </svg>
             </button>
           </div>
         </div>
@@ -53,193 +66,207 @@
     </header>
 
     <!-- Contenu principal -->
-    <main class="container mx-auto px-6 py-12">
-      <div class="text-center mb-12">
-        <h2 class="text-4xl font-bold text-gray-800 mb-4">
+    <main class="relative z-10 container mx-auto px-6 py-12">
+      <!-- Bienvenue -->
+      <div class="text-center mb-16">
+        <h2 class="text-5xl font-bold text-white mb-4">
           Salut {{ currentProfile?.name || 'Utilisateur' }} ! 👋
         </h2>
-        <p class="text-xl text-gray-600">
+        <p class="text-white/60 text-lg">
           {{ currentProfile?.welcomeMessage || 'Bienvenue dans votre espace d\'apprentissage !' }}
         </p>
       </div>
 
-      <!-- Section des vidéos YouTube -->
-      <div class="mb-12">
-        <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">Mes vidéos éducatives</h3>
+      <!-- Mes vidéos éducatives -->
+      <div class="mb-16">
+        <h3 class="text-3xl font-bold text-white mb-8 text-center">Mes vidéos éducatives 🎬</h3>
         <div class="text-center mb-8">
-          <p class="text-gray-600 mb-6">Découvre des vidéos adaptées à ton âge pour apprendre en s'amusant !</p>
+          <p class="text-white/60 mb-6 text-lg">Découvre des vidéos adaptées à ton âge pour apprendre en s'amusant !</p>
           <button 
             @click="openYouTubeViewer"
-            class="px-8 py-4 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-out hover:from-red-600 hover:to-pink-600 flex items-center mx-auto"
+            class="glass-button-action group"
           >
-            <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 24 24">
+            <svg class="w-6 h-6 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
               <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
             </svg>
-            Voir mes vidéos
+            <span>Voir mes vidéos</span>
           </button>
         </div>
       </div>
 
-      <!-- Section des cours disponibles -->
-      <div class="mb-12">
-        <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">Mes cours disponibles</h3>
+      <!-- Mes cours disponibles -->
+      <div class="mb-16">
+        <h3 class="text-3xl font-bold text-white mb-8 text-center">Mes cours disponibles 📚</h3>
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div v-for="course in (currentProfile?.courses || [])" :key="course.id" 
-               class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-            <div class="flex items-center mb-4">
-              <div class="w-12 h-12 rounded-lg flex items-center justify-center" :class="course.color">
+               class="glass-card-user group cursor-pointer"
+               @click="startCourse(course)">
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
+                   :class="course.color">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="course.icon"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.5 6.253 2 10.998 2 17.5 2 21.08 4.905 24 8.5 24m0-13c5.5 0 10 4.745 10 10.5 0 3.582-2.905 6.5-6.5 6.5m0-13v13m0 0c3.595 0 6.5-2.918 6.5-6.5 0-5.755-4.5-10.5-10-10.5"/>
                 </svg>
               </div>
-              <h4 class="text-xl font-semibold text-gray-800 ml-4">{{ course.title }}</h4>
-            </div>
-            <p class="text-gray-600 mb-4">{{ course.description }}</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">{{ course.duration }}</span>
-              <button 
-                @click="startCourse(course)"
-                class="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105"
-              >
-                Commencer
-              </button>
+              <div class="flex-1 min-w-0">
+                <h4 class="text-lg font-bold text-white mb-1 truncate">{{ course.title }}</h4>
+                <p class="text-white/60 text-sm mb-3 line-clamp-2">{{ course.description }}</p>
+                <div class="flex items-center justify-between pt-2 border-t border-white/10">
+                  <span class="text-xs text-white/50">⏱️ {{ course.duration }}</span>
+                  <span class="text-xs px-2 py-1 rounded-full bg-white/10 text-white/80">Commencer →</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Section des défis et récompenses -->
-      <div class="mb-12">
-        <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">Mes défis du jour</h3>
+      <!-- Mes défis du jour -->
+      <div class="mb-16">
+        <h3 class="text-3xl font-bold text-white mb-8 text-center">Mes défis du jour 🎯</h3>
         <div class="grid md:grid-cols-2 gap-6">
-          <div class="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 rounded-xl text-white">
-            <div class="flex items-center mb-4">
-              <svg class="w-8 h-8 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
-              <h4 class="text-xl font-bold">Défi du jour</h4>
-            </div>
-            <p class="mb-4">Complète 3 exercices de programmation pour débloquer un nouveau badge !</p>
-            <div class="flex items-center justify-between">
-              <span class="text-sm">Progression: 1/3</span>
-              <div class="w-24 bg-white bg-opacity-30 rounded-full h-2">
-                <div class="bg-white h-2 rounded-full" style="width: 33%"></div>
+          <!-- Défi du jour -->
+          <div class="glass-card-challenge from-yellow-500/20 to-orange-500/20 border-yellow-400/30">
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h4 class="text-xl font-bold text-white mb-2">Défi du jour</h4>
+                <p class="text-white/70 mb-4">Complète 3 exercices de programmation pour débloquer un nouveau badge !</p>
+                <div class="flex items-center justify-between pt-4 border-t border-yellow-400/20">
+                  <span class="text-sm text-white/60">Progression: 1/3</span>
+                  <div class="w-24 bg-white/10 rounded-full h-2">
+                    <div class="bg-gradient-to-r from-yellow-400 to-orange-500 h-2 rounded-full" style="width: 33%"></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="bg-gradient-to-r from-green-400 to-blue-500 p-6 rounded-xl text-white cursor-pointer hover:shadow-xl transition-all" @click="viewBadges">
-            <div class="flex items-center mb-4">
-              <svg class="w-8 h-8 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
-              <h4 class="text-xl font-bold">Mes badges</h4>
-            </div>
-            <p class="mb-4">{{ badgeMessage }}</p>
-            <div class="flex items-center justify-between">
-              <div class="flex space-x-2">
-                <div v-for="badge in recentBadgesDisplay" :key="badge.id" class="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-xl backdrop-blur-sm">
-                  {{ badge.icon }}
-                </div>
-                <div v-for="n in Math.max(0, 4 - recentBadgesDisplay.length)" :key="'empty-' + n" class="w-10 h-10 bg-white bg-opacity-10 rounded-full flex items-center justify-center">
-                  <span class="text-white opacity-50 font-bold">?</span>
-                </div>
+          <!-- Mes badges -->
+          <div class="glass-card-challenge from-green-500/20 to-blue-500/20 border-green-400/30 cursor-pointer group hover:border-green-400/50 transition-all"
+               @click="viewBadges">
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
               </div>
-              <div class="text-right">
-                <div class="text-2xl font-bold">{{ badgeStats.unlocked }}/{{ badgeStats.total }}</div>
-                <div class="text-sm opacity-90">Débloqués</div>
+              <div class="flex-1">
+                <h4 class="text-xl font-bold text-white mb-2">Mes badges</h4>
+                <p class="text-white/70 mb-4">{{ badgeMessage }}</p>
+                <div class="flex items-center justify-between pt-4 border-t border-green-400/20">
+                  <div class="flex space-x-2">
+                    <div v-for="badge in recentBadgesDisplay" :key="badge.id" class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm backdrop-blur-sm">
+                      {{ badge.icon }}
+                    </div>
+                    <div v-for="n in Math.max(0, 3 - recentBadgesDisplay.length)" :key="'empty-' + n" class="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
+                      <span class="text-white/40 text-xs">?</span>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-2xl font-bold text-white">{{ badgeStats.unlocked }}/{{ badgeStats.total }}</div>
+                    <div class="text-xs text-white/50">Débloqués</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Section des leçons générées -->
-      <div class="mb-12" v-if="userLessons.length > 0">
-        <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">Mes interrogations</h3>
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <div v-if="isLoadingLessons" class="text-center py-8">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p class="mt-2 text-gray-600">Chargement des leçons...</p>
-          </div>
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div v-for="lesson in userLessons" :key="lesson.id" 
-                 class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                 @click="startLesson(lesson)">
-              <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                  </svg>
-                </div>
-                <span class="text-sm text-gray-500">{{ formatDate(lesson.created_at) }}</span>
+      <!-- Mes interrogations -->
+      <div v-if="userLessons.length > 0" class="mb-16">
+        <h3 class="text-3xl font-bold text-white mb-8 text-center">Mes interrogations 📝</h3>
+        <div v-if="isLoadingLessons" class="text-center py-12">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-white/20 border-t-white/80 mb-4"></div>
+          <p class="text-white/60">Chargement des leçons...</p>
+        </div>
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div v-for="lesson in userLessons" :key="lesson.id" 
+               class="glass-card-user group cursor-pointer"
+               @click="startLesson(lesson)">
+            <div class="flex items-start space-x-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
               </div>
-              <h4 class="font-bold text-gray-800 mb-2">{{ lesson.title }}</h4>
-              <p class="text-sm text-gray-600 mb-3">{{ lesson.description || 'Aucune description' }}</p>
-              <div class="flex items-center justify-between">
-                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                  {{ lesson.subject || 'Général' }}
-                </span>
-                <span class="text-xs text-gray-500">{{ lesson.level || 'Tous niveaux' }}</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between mb-2">
+                  <h4 class="font-bold text-white truncate flex-1">{{ lesson.title }}</h4>
+                  <span class="text-xs text-white/50 ml-2">{{ formatDate(lesson.created_at) }}</span>
+                </div>
+                <p class="text-white/60 text-sm mb-3 line-clamp-2">{{ lesson.description || 'Aucune description' }}</p>
+                <div class="flex items-center justify-between pt-2 border-t border-white/10">
+                  <span class="text-xs px-2 py-1 rounded-full bg-blue-500/30 text-blue-200">
+                    {{ lesson.subject || 'Général' }}
+                  </span>
+                  <span class="text-xs text-white/40">{{ lesson.level || 'Tous niveaux' }}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Section des activités récentes -->
-      <div class="mb-12">
-        <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">Mes activités récentes</h3>
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <div class="space-y-4">
-            <div v-for="activity in recentActivities" :key="activity.id" 
-                 class="flex items-center p-4 bg-gray-50 rounded-lg">
-              <div class="w-10 h-10 rounded-full flex items-center justify-center mr-4" :class="activity.color">
+      <!-- Mes activités récentes -->
+      <div class="mb-16">
+        <h3 class="text-3xl font-bold text-white mb-8 text-center">Mes activités récentes 📊</h3>
+        <div class="space-y-4">
+          <div v-for="activity in recentActivities" :key="activity.id" 
+               class="glass-card-activity">
+            <div class="flex items-start space-x-4">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
+                   :class="activity.color">
                 <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="activity.icon"></path>
                 </svg>
               </div>
-              <div class="flex-1">
-                <p class="font-semibold text-gray-800">{{ activity.title }}</p>
-                <p class="text-sm text-gray-600">{{ activity.description }}</p>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-white">{{ activity.title }}</p>
+                <p class="text-sm text-white/60">{{ activity.description }}</p>
               </div>
-              <span class="text-sm text-gray-500">{{ activity.time }}</span>
+              <span class="text-sm text-white/40 ml-4 flex-shrink-0">{{ activity.time }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Section des paramètres rapides -->
+      <!-- Paramètres rapides -->
       <div class="text-center">
-        <h3 class="text-2xl font-bold text-gray-800 mb-6">Paramètres rapides</h3>
-        <div class="flex justify-center space-x-4">
+        <h3 class="text-3xl font-bold text-white mb-8">Paramètres rapides ⚙️</h3>
+        <div class="flex flex-wrap justify-center gap-4">
           <button 
             @click="viewProgress"
-            class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
+            class="glass-button-quick"
           >
-            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
             </svg>
-            Suivi des progrès
+            <span>Suivi des progrès</span>
           </button>
           <button 
             @click="showSettings"
-            class="px-6 py-3 bg-white text-purple-600 border border-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
+            class="glass-button-quick glass-button-secondary"
           >
-            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
             </svg>
-            Paramètres
+            <span>Paramètres</span>
           </button>
           <button 
             @click="showHelp"
-            class="px-6 py-3 bg-white text-purple-600 border border-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
+            class="glass-button-quick glass-button-secondary"
           >
-            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            Aide
+            <span>Aide</span>
           </button>
         </div>
       </div>
@@ -309,7 +336,7 @@ export default {
       }
     },
     recentBadgesDisplay() {
-      return this.recentBadges.slice(0, 4)
+      return this.recentBadges.slice(0, 3)
     }
   },
   async created() {
@@ -335,8 +362,8 @@ export default {
             name: 'Utilisateur',
             initial: 'U',
             bgColor: 'bg-purple-500',
-            is_child: true,  // Ajouter cette propriété
-            is_teen: false,  // Ajouter cette propriété
+            is_child: true,
+            is_teen: false,
             welcomeMessage: 'Découvre de nouveaux cours passionnants !',
             courses: [
               {
@@ -374,8 +401,8 @@ export default {
           name: 'Utilisateur',
           initial: 'U',
           bgColor: 'bg-gray-500',
-          is_child: true,  // Ajouter cette propriété
-          is_teen: false,  // Ajouter cette propriété
+          is_child: true,
+          is_teen: false,
           welcomeMessage: 'Bienvenue !',
           courses: []
         }
@@ -389,7 +416,6 @@ export default {
         this.recentBadges = await this.badgeStore.getRecentBadges(profileId, 5)
       } catch (error) {
         console.error('Erreur lors du chargement des badges:', error)
-        // Ne pas bloquer l'application si les badges ne chargent pas
       }
     },
     
@@ -406,26 +432,21 @@ export default {
     },
     
     changeProfile() {
-      // Vérifier que l'utilisateur n'est pas un profil admin
       if (this.currentProfile && this.currentProfile.is_admin) {
         console.warn('Tentative de changement de profil depuis un compte admin - redirection vers le dashboard admin')
         this.$router.push({ path: '/dashboard', query: { profile: this.currentProfile.id } })
         return
       }
-      
-      // Pour les profils enfants/teens, rediriger vers le sélecteur de profil
       this.$router.push('/')
     },
     
     startCourse(course) {
       console.log('Démarrage du cours:', course.title)
-      // Ici, vous pourriez rediriger vers une page de cours spécifique
       alert(`Démarrage du cours: ${course.title}`)
     },
     
     startLesson(lesson) {
       console.log('Démarrer la leçon:', lesson)
-      // Rediriger vers le quiz de la leçon
       this.$router.push({
         name: 'QuizGenerator',
         query: {
@@ -484,8 +505,6 @@ export default {
     
     openYouTubeViewer() {
       console.log('Ouverture du visualiseur YouTube')
-      console.log('Profil actuel:', this.currentProfile)
-      console.log('ID du profil:', this.currentProfile?.id)
       
       if (!this.currentProfile?.id) {
         console.error('Aucun profil chargé')
@@ -508,41 +527,191 @@ export default {
 </script>
 
 <style scoped>
-/* Animations personnalisées */
-@keyframes bounce {
-  0%, 20%, 53%, 80%, 100% {
-    transform: translate3d(0,0,0);
+/* Animations */
+@keyframes blob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
   }
-  40%, 43% {
-    transform: translate3d(0, -8px, 0);
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
   }
-  70% {
-    transform: translate3d(0, -4px, 0);
-  }
-  90% {
-    transform: translate3d(0, -2px, 0);
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
   }
 }
 
-.hover\:scale-105:hover {
-  transform: scale(1.05);
+.animate-blob {
+  animation: blob 7s infinite;
 }
 
-/* Gradient animé pour les boutons */
-.bg-gradient-to-r {
-  background-size: 200% 200%;
-  animation: gradient 3s ease infinite;
+.animation-delay-2000 {
+  animation-delay: 2s;
 }
 
-@keyframes gradient {
-  0% {
-    background-position: 0% 50%;
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Glass Card User */
+.glass-card-user {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.glass-card-user:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+}
+
+/* Glass Card Challenge */
+.glass-card-challenge {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.glass-card-challenge:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+}
+
+/* Glass Card Activity */
+.glass-card-activity {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.glass-card-activity:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Glass Button Action */
+.glass-button-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2rem;
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.glass-button-action:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Glass Button Quick */
+.glass-button-quick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.2));
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-weight: 500;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.glass-button-quick:hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3));
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.glass-button-secondary {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.glass-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .glass-card-user,
+  .glass-card-challenge {
+    padding: 1rem;
+    border-radius: 1rem;
   }
-  50% {
-    background-position: 100% 50%;
+
+  .glass-card-activity {
+    padding: 0.75rem;
+    border-radius: 0.75rem;
   }
-  100% {
-    background-position: 0% 50%;
+
+  h2 {
+    font-size: 2rem;
   }
+
+  h3 {
+    font-size: 1.5rem;
+  }
+
+  p {
+    font-size: 0.95rem;
+  }
+
+  .glass-button-quick {
+    padding: 0.625rem 1rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .glass-card-user,
+  .glass-card-challenge {
+    padding: 1.25rem;
+    border-radius: 1.25rem;
+  }
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>
