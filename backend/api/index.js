@@ -269,7 +269,6 @@ async function handleProfiles(req, res) {
 // Handler d'un profil spécifique
 async function handleProfile(req, res) {
   try {
-    const user = authenticateToken(req);
     const url = new URL(req.url, `http://${req.headers.host}`);
     const id = url.pathname.split('/').pop();
 
@@ -306,6 +305,9 @@ async function handleProfile(req, res) {
       });
 
     } else if (req.method === 'PUT') {
+      // Authentification requise pour PUT
+      const user = authenticateToken(req);
+      
       if (!user.isAdmin) {
         res.status(403).json({ 
           success: false, 
@@ -347,6 +349,9 @@ async function handleProfile(req, res) {
       });
 
     } else if (req.method === 'DELETE') {
+      // Authentification requise pour DELETE
+      const user = authenticateToken(req);
+      
       if (!user.isAdmin) {
         res.status(403).json({ 
           success: false, 
@@ -391,8 +396,6 @@ async function handleProfile(req, res) {
 // Handler des leçons
 async function handleLessons(req, res) {
   try {
-    const user = authenticateToken(req);
-
     if (req.method === 'GET') {
       const { profileId, published } = req.query;
 
@@ -442,6 +445,9 @@ async function handleLessons(req, res) {
       });
 
     } else if (req.method === 'POST') {
+      // Authentification requise pour POST
+      const user = authenticateToken(req);
+      
       const { 
         title, description, subject, level, 
         imageFilename, imageData, quizData, isPublished = true 
@@ -489,7 +495,6 @@ async function handleLessons(req, res) {
 // Handler d'une leçon spécifique
 async function handleLesson(req, res) {
   try {
-    const user = authenticateToken(req);
     const url = new URL(req.url, `http://${req.headers.host}`);
     const id = url.pathname.split('/').pop();
 
@@ -528,6 +533,9 @@ async function handleLesson(req, res) {
       });
 
     } else if (req.method === 'PUT') {
+      // Authentification requise pour PUT
+      const user = authenticateToken(req);
+      
       const { 
         title, description, subject, level, 
         imageFilename, imageData, quizData, isPublished 
@@ -576,6 +584,9 @@ async function handleLesson(req, res) {
       });
 
     } else if (req.method === 'DELETE') {
+      // Authentification requise pour DELETE
+      const user = authenticateToken(req);
+      
       const existingLesson = await sql`
         SELECT * FROM lessons WHERE id = ${id}
       `;
@@ -624,8 +635,6 @@ async function handleLesson(req, res) {
 // Handler des notifications
 async function handleNotifications(req, res) {
   try {
-    const user = authenticateToken(req);
-
     if (req.method === 'GET') {
       const { profileId, isRead, type } = req.query;
 
@@ -641,7 +650,9 @@ async function handleNotifications(req, res) {
 
       if (profileId) {
         query = sql`${query} AND n.profile_id = ${profileId}`;
-      } else if (!user.isAdmin) {
+      } else {
+        // Si pas de profileId, il faut être authentifié
+        const user = authenticateToken(req);
         query = sql`${query} AND n.profile_id = ${user.profileId}`;
       }
 
@@ -663,6 +674,9 @@ async function handleNotifications(req, res) {
       });
 
     } else if (req.method === 'POST') {
+      // Authentification requise pour POST
+      const user = authenticateToken(req);
+      
       if (!user.isAdmin) {
         res.status(403).json({ 
           success: false, 
@@ -721,7 +735,6 @@ async function handleNotifications(req, res) {
 // Handler d'une notification spécifique
 async function handleNotification(req, res) {
   try {
-    const user = authenticateToken(req);
     const url = new URL(req.url, `http://${req.headers.host}`);
     const id = url.pathname.split('/').pop();
 
@@ -752,14 +765,6 @@ async function handleNotification(req, res) {
         return;
       }
 
-      if (!user.isAdmin && notifications[0].profile_id !== user.profileId) {
-        res.status(403).json({ 
-          success: false, 
-          message: 'Accès refusé' 
-        });
-        return;
-      }
-
       res.status(200).json({
         success: true,
         message: 'Notification récupérée avec succès',
@@ -767,6 +772,9 @@ async function handleNotification(req, res) {
       });
 
     } else if (req.method === 'PUT') {
+      // Authentification requise pour PUT
+      const user = authenticateToken(req);
+      
       const { isRead } = req.body;
 
       const existingNotification = await sql`
@@ -805,6 +813,9 @@ async function handleNotification(req, res) {
       });
 
     } else if (req.method === 'DELETE') {
+      // Authentification requise pour DELETE
+      const user = authenticateToken(req);
+      
       const existingNotification = await sql`
         SELECT * FROM notifications WHERE id = ${id}
       `;
