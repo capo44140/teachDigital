@@ -64,7 +64,7 @@ const routes = [
     path: '/pin-lock',
     name: 'PinLock',
     component: PinLock,
-    props: route => ({ profileName: route.query.profile || 'Parent' })
+    props: route => ({ profileName: route.query.name || 'Parent' })
   },
   {
     path: '/dashboard',
