@@ -1,6 +1,8 @@
 /**
  * Module d'exportation pour les repositories
  * Centralise l'exportation de tous les repositories
+ * Utilisé dans le fichier apiService.js
+ * Pour appeler les méthodes des repositories
  */
 
 export { BaseRepository } from './baseRepository.js';
