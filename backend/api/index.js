@@ -271,12 +271,10 @@ async function handleProfile(req, res) {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const pathname = url.pathname;
-    const pathParts = pathname.split('/').filter(p => p);
     
-    // Déterminer si c'est une route imbriquée (ex: /api/profiles/1/pin)
-    const isNestedRoute = pathParts.length > 3;
-    const nestedPath = isNestedRoute ? pathParts[pathParts.length - 1] : null;
-    const id = pathParts[2]; // ID du profil
+    // Extraire l'ID du profil avec une regex (/api/profiles/123 ou /api/profiles/123/pin)
+    const idMatch = pathname.match(/\/api\/profiles\/(\d+)/);
+    const id = idMatch ? idMatch[1] : null;
 
     if (!id) {
       res.status(400).json({ 
@@ -285,6 +283,11 @@ async function handleProfile(req, res) {
       });
       return;
     }
+
+    // Déterminer si c'est une route imbriquée (ex: /api/profiles/1/pin)
+    const isNestedRoute = pathname.includes(`/api/profiles/${id}/`);
+    const nestedMatch = pathname.match(new RegExp(`/api/profiles/${id}/([a-z-]+)`));
+    const nestedPath = nestedMatch ? nestedMatch[1] : null;
 
     // Gérer les routes imbriquées
     if (nestedPath === 'pin') {
