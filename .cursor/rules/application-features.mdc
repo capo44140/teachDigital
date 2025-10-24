@@ -4,22 +4,8 @@ description: Fonctionnalités spécifiques de l'application TeachDigital
 
 # Fonctionnalités Spécifiques - TeachDigital
 
-## Reconnaissance Faciale
-
-### Services de reconnaissance
-- **Service principal** : [src/services/faceRecognitionService.js](mdc:src/services/faceRecognitionService.js)
-- **Service simplifié** : [src/services/simpleFaceService.js](mdc:src/services/simpleFaceService.js)
-- **Guide complet** : [FACE-RECOGNITION-GUIDE.md](mdc:FACE-RECOGNITION-GUIDE.md)
-
-### Modèles de reconnaissance
-- **Modèles stockés** : [public/models/](mdc:public/models/)
-- **Scripts de téléchargement** : 
-  - [scripts/download-face-models.js](mdc:scripts/download-face-models.js)
-  - [scripts/download-face-models-robust.js](mdc:scripts/download-face-models-robust.js)
-  - [scripts/download-models-vladmandic.js](mdc:scripts/download-models-vladmandic.js)
 
 ### Intégration
-- Utiliser @vladmandic/face-api
 - Traitement local des données
 - Pas de stockage des données biométriques
 

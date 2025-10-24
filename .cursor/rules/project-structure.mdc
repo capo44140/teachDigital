@@ -27,7 +27,6 @@ Le projet utilise Vue.js 3 avec Composition API, Pinia pour la gestion d'état, 
 - **Frontend** : Vue 3, Pinia, Vue Router, TailwindCSS
 - **Backend** : Vercel Functions, Neon Database
 - **PWA** : Service Worker, Manifest, Cache
-- **Reconnaissance faciale** : @vladmandic/face-api
 - **Tests** : Vitest, ESLint
 
 ### Variables d'environnement
