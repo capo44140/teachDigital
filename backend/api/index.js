@@ -270,7 +270,13 @@ async function handleProfiles(req, res) {
 async function handleProfile(req, res) {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
-    const id = url.pathname.split('/').pop();
+    const pathname = url.pathname;
+    const pathParts = pathname.split('/').filter(p => p);
+    
+    // Déterminer si c'est une route imbriquée (ex: /api/profiles/1/pin)
+    const isNestedRoute = pathParts.length > 3;
+    const nestedPath = isNestedRoute ? pathParts[pathParts.length - 1] : null;
+    const id = pathParts[2]; // ID du profil
 
     if (!id) {
       res.status(400).json({ 
@@ -280,6 +286,12 @@ async function handleProfile(req, res) {
       return;
     }
 
+    // Gérer les routes imbriquées
+    if (nestedPath === 'pin') {
+      return await handleProfilePin(req, res, id);
+    }
+
+    // Gérer les routes standard du profil
     if (req.method === 'GET') {
       const profiles = await sql`
         SELECT 
@@ -389,6 +401,162 @@ async function handleProfile(req, res) {
 
   } catch (error) {
     const errorResponse = handleError(error, 'Erreur lors de la gestion du profil');
+    res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+  }
+}
+
+// Handler d'un profil spécifique (route imbriquée pour le pin)
+async function handleProfilePin(req, res, profileId) {
+  try {
+    if (req.method === 'GET') {
+      // GET /api/profiles/:id/pin - Récupérer le statut du PIN (admin seulement)
+      const user = authenticateToken(req);
+      
+      if (!user.isAdmin) {
+        res.status(403).json({ 
+          success: false, 
+          message: 'Accès refusé - Admin requis' 
+        });
+        return;
+      }
+
+      const pinData = await sql`
+        SELECT pin_code, created_at FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1
+      `;
+
+      if (!pinData[0]) {
+        res.status(404).json({ 
+          success: false, 
+          message: 'Code PIN non trouvé pour ce profil' 
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Code PIN récupéré avec succès',
+        data: { 
+          profileId,
+          created_at: pinData[0].created_at
+        }
+      });
+
+    } else if (req.method === 'POST') {
+      // POST /api/profiles/:id/pin - Vérifier le PIN
+      const { pin } = req.body;
+
+      if (!pin) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Code PIN requis' 
+        });
+        return;
+      }
+
+      const existingPin = await sql`
+        SELECT pin_code FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1
+      `;
+
+      if (!existingPin[0]) {
+        res.status(404).json({ 
+          success: false, 
+          message: 'Code PIN non trouvé pour ce profil' 
+        });
+        return;
+      }
+
+      const isValidPin = await NativeHashService.verifyPin(pin, existingPin[0].pin_code);
+      if (!isValidPin) {
+        res.status(401).json({ 
+          success: false, 
+          message: 'Code PIN incorrect' 
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Code PIN vérifié avec succès'
+      });
+
+    } else if (req.method === 'PUT') {
+      // PUT /api/profiles/:id/pin - Mettre à jour le PIN (authentification requise)
+      const user = authenticateToken(req);
+      const { newPin, currentPin } = req.body;
+
+      if (!newPin) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Nouveau code PIN requis' 
+        });
+        return;
+      }
+
+      // Vérifier que le profil existe
+      const profile = await sql`
+        SELECT id FROM profiles WHERE id = ${profileId}
+      `;
+
+      if (!profile[0]) {
+        res.status(404).json({ 
+          success: false, 
+          message: 'Profil non trouvé' 
+        });
+        return;
+      }
+
+      // Vérifier le PIN actuel si fourni (sécurité additionnelle)
+      if (currentPin) {
+        const existingPin = await sql`
+          SELECT pin_code FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1
+        `;
+
+        if (!existingPin[0]) {
+          res.status(404).json({ 
+            success: false, 
+            message: 'Code PIN non trouvé pour ce profil' 
+          });
+          return;
+        }
+
+        const isValidPin = await NativeHashService.verifyPin(currentPin, existingPin[0].pin_code);
+        if (!isValidPin) {
+          res.status(401).json({ 
+            success: false, 
+            message: 'Code PIN actuel incorrect' 
+          });
+          return;
+        }
+      }
+
+      // Hacher le nouveau PIN
+      const hashedPin = await NativeHashService.hashPin(newPin);
+
+      // Mettre à jour ou créer le PIN
+      const result = await sql`
+        INSERT INTO pin_codes (profile_id, pin_code)
+        VALUES (${profileId}, ${hashedPin})
+        RETURNING profile_id, created_at
+      `;
+
+      res.status(200).json({
+        success: true,
+        message: 'Code PIN mis à jour avec succès',
+        data: {
+          profileId,
+          created_at: result[0].created_at
+        }
+      });
+
+    } else {
+      res.status(405).json({ 
+        success: false, 
+        message: 'Méthode non autorisée' 
+      });
+    }
+
+  } catch (error) {
+    const errorResponse = handleError(error, 'Erreur lors de la gestion du code PIN du profil');
     res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
   }
 }
