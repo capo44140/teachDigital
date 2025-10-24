@@ -570,22 +570,11 @@ async function handleLessons(req, res) {
     if (req.method === 'GET') {
       const { profileId, published } = req.query;
 
-      const conditions = [];
-      const params = [];
-
-      if (profileId) {
-        conditions.push(`l.profile_id = $${params.length + 1}`);
-        params.push(profileId);
-      }
-
-      if (published !== undefined) {
-        conditions.push(`l.is_published = $${params.length + 1}`);
-        params.push(published === 'true');
-      }
-
-      let query;
-      if (conditions.length > 0) {
-        query = sql`
+      let lessons;
+      
+      if (profileId && published !== undefined) {
+        // Les deux paramètres sont fournis
+        lessons = await sql`
           SELECT 
             l.id, l.title, l.description, l.subject, l.level, 
             l.image_filename, l.image_data, l.quiz_data, 
@@ -593,11 +582,39 @@ async function handleLessons(req, res) {
             p.name as profile_name
           FROM lessons l
           JOIN profiles p ON l.profile_id = p.id
-          WHERE ${sql.unsafe(conditions.join(' AND '), params)}
+          WHERE l.profile_id = ${parseInt(profileId)} 
+            AND l.is_published = ${published === 'true'}
+          ORDER BY l.created_at DESC
+        `;
+      } else if (profileId) {
+        // Seulement profileId
+        lessons = await sql`
+          SELECT 
+            l.id, l.title, l.description, l.subject, l.level, 
+            l.image_filename, l.image_data, l.quiz_data, 
+            l.is_published, l.created_at, l.updated_at,
+            p.name as profile_name
+          FROM lessons l
+          JOIN profiles p ON l.profile_id = p.id
+          WHERE l.profile_id = ${parseInt(profileId)}
+          ORDER BY l.created_at DESC
+        `;
+      } else if (published !== undefined) {
+        // Seulement published
+        lessons = await sql`
+          SELECT 
+            l.id, l.title, l.description, l.subject, l.level, 
+            l.image_filename, l.image_data, l.quiz_data, 
+            l.is_published, l.created_at, l.updated_at,
+            p.name as profile_name
+          FROM lessons l
+          JOIN profiles p ON l.profile_id = p.id
+          WHERE l.is_published = ${published === 'true'}
           ORDER BY l.created_at DESC
         `;
       } else {
-        query = sql`
+        // Aucun paramètre - toutes les leçons
+        lessons = await sql`
           SELECT 
             l.id, l.title, l.description, l.subject, l.level, 
             l.image_filename, l.image_data, l.quiz_data, 
@@ -608,8 +625,6 @@ async function handleLessons(req, res) {
           ORDER BY l.created_at DESC
         `;
       }
-
-      const lessons = await query;
 
       res.status(200).json({
         success: true,
