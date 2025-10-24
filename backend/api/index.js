@@ -570,16 +570,6 @@ async function handleLessons(req, res) {
     if (req.method === 'GET') {
       const { profileId, published } = req.query;
 
-      let query = sql`
-        SELECT 
-          l.id, l.title, l.description, l.subject, l.level, 
-          l.image_filename, l.image_data, l.quiz_data, 
-          l.is_published, l.created_at, l.updated_at,
-          p.name as profile_name
-        FROM lessons l
-        JOIN profiles p ON l.profile_id = p.id
-      `;
-
       const conditions = [];
       const params = [];
 
@@ -593,6 +583,7 @@ async function handleLessons(req, res) {
         params.push(published === 'true');
       }
 
+      let query;
       if (conditions.length > 0) {
         query = sql`
           SELECT 
@@ -603,10 +594,21 @@ async function handleLessons(req, res) {
           FROM lessons l
           JOIN profiles p ON l.profile_id = p.id
           WHERE ${sql.unsafe(conditions.join(' AND '), params)}
+          ORDER BY l.created_at DESC
+        `;
+      } else {
+        query = sql`
+          SELECT 
+            l.id, l.title, l.description, l.subject, l.level, 
+            l.image_filename, l.image_data, l.quiz_data, 
+            l.is_published, l.created_at, l.updated_at,
+            p.name as profile_name
+          FROM lessons l
+          JOIN profiles p ON l.profile_id = p.id
+          ORDER BY l.created_at DESC
         `;
       }
 
-      query = sql`${query} ORDER BY l.created_at DESC`;
       const lessons = await query;
 
       res.status(200).json({
