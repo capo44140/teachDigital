@@ -1,4 +1,4 @@
-import sql from '../../config/database.js';
+import { apiService } from '../apiService.js';
 import { HashService } from '../hashService.js';
 
 /**
@@ -10,14 +10,10 @@ export class PinService {
   // Récupérer le code PIN haché d'un profil
   static async getPinByProfileId(profileId) {
     try {
-      const pins = await sql`
-        SELECT pin_code, created_at, updated_at
-        FROM pin_codes 
-        WHERE profile_id = ${profileId}
-        ORDER BY created_at DESC
-        LIMIT 1
-      `;
-      return pins[0] || null;
+      const response = await apiService.request(`/api/profiles/${profileId}/pin`, {
+        method: 'GET'
+      });
+      return response.success ? response.data : null;
     } catch (error) {
       console.error('Erreur lors de la récupération du code PIN:', error);
       throw error;
@@ -25,7 +21,7 @@ export class PinService {
   }
   
   // Mettre à jour le code PIN d'un profil avec hachage sécurisé
-  static async updatePin(profileId, newPin) {
+  static async updatePin(profileId, newPin, currentPin = null) {
     try {
       // Valider le format du code PIN
       const validation = HashService.validatePinFormat(newPin);
@@ -33,33 +29,16 @@ export class PinService {
         throw new Error(validation.message);
       }
       
-      // Hacher le code PIN
-      const hashedPin = await HashService.hashPin(newPin);
+      const response = await apiService.request(`/api/profiles/${profileId}/pin`, {
+        method: 'PUT',
+        body: JSON.stringify({ newPin, currentPin })
+      });
       
-      // Vérifier si un code PIN existe déjà
-      const existingPin = await this.getPinByProfileId(profileId);
-      
-      if (existingPin) {
-        // Mettre à jour le code PIN existant
-        const result = await sql`
-          UPDATE pin_codes 
-          SET 
-            pin_code = ${hashedPin},
-            updated_at = CURRENT_TIMESTAMP
-          WHERE profile_id = ${profileId}
-          RETURNING *
-        `;
+      if (response.success) {
         console.log('✅ Code PIN mis à jour avec succès');
-        return result[0];
+        return response.data.pin;
       } else {
-        // Créer un nouveau code PIN
-        const result = await sql`
-          INSERT INTO pin_codes (profile_id, pin_code)
-          VALUES (${profileId}, ${hashedPin})
-          RETURNING *
-        `;
-        console.log('✅ Code PIN créé avec succès');
-        return result[0];
+        throw new Error(response.message || 'Erreur lors de la mise à jour du code PIN');
       }
     } catch (error) {
       console.error('Erreur lors de la mise à jour du code PIN:', error);
@@ -70,22 +49,23 @@ export class PinService {
   // Vérifier un code PIN avec hachage sécurisé
   static async verifyPin(profileId, inputPin) {
     try {
-      const pinRecord = await this.getPinByProfileId(profileId);
-      if (!pinRecord) {
+      const response = await apiService.request(`/api/profiles/${profileId}/pin`, {
+        method: 'POST',
+        body: JSON.stringify({ pin: inputPin })
+      });
+      
+      if (response.success) {
+        const isValid = response.data.isValid;
+        if (isValid) {
+          console.log('✅ Code PIN vérifié avec succès');
+        } else {
+          console.log('❌ Code PIN incorrect');
+        }
+        return isValid;
+      } else {
         console.log('❌ Aucun code PIN trouvé pour ce profil');
         return false;
       }
-      
-      // Vérifier le code PIN avec le hachage
-      const isValid = await HashService.verifyPin(inputPin, pinRecord.pin_code);
-      
-      if (isValid) {
-        console.log('✅ Code PIN vérifié avec succès');
-      } else {
-        console.log('❌ Code PIN incorrect');
-      }
-      
-      return isValid;
     } catch (error) {
       console.error('Erreur lors de la vérification du code PIN:', error);
       return false;
@@ -108,16 +88,12 @@ export class PinService {
   static async initializeDefaultPin(profileId = 1) {
     try {
       const defaultPin = '1234';
-      const hashedPin = await HashService.hashPin(defaultPin);
       
       // Vérifier si un code PIN existe déjà
       const existingPin = await this.getPinByProfileId(profileId);
       
       if (!existingPin) {
-        await sql`
-          INSERT INTO pin_codes (profile_id, pin_code)
-          VALUES (${profileId}, ${hashedPin})
-        `;
+        await this.updatePin(profileId, defaultPin);
         console.log('✅ Code PIN par défaut initialisé avec succès');
       }
     } catch (error) {

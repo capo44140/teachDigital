@@ -2,8 +2,7 @@
 const { NativeHashService } = require('../lib/nativeHash.js');
 const sql = require('../lib/database.js').default;
 const { generateToken, createSession, authenticateToken, deleteSession } = require('../lib/auth.js');
-const { successResponse, errorResponse, unauthorizedResponse, handleError } = require('../lib/response.js');
-const { handleCors } = require('../lib/cors.js');
+const { handleError } = require('../lib/response.js');
 
 module.exports = async function handler(req, res) {
   // Configuration CORS complète
@@ -64,6 +63,11 @@ module.exports = async function handler(req, res) {
     // Routes des vidéos YouTube
     if (pathname === '/api/youtube-videos') {
       return await handleYoutubeVideos(req, res);
+    }
+
+    // Routes des codes PIN
+    if (pathname.startsWith('/api/profiles/') && pathname.includes('/pin')) {
+      return await handlePin(req, res);
     }
 
     // Route d'initialisation des pins
@@ -170,7 +174,7 @@ async function handleLogout(req, res) {
   }
 
   try {
-    const user = authenticateToken(req);
+    const _user = authenticateToken(req);
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
     
@@ -211,7 +215,7 @@ async function handleProfiles(req, res) {
 
     } else if (req.method === 'POST') {
       // POST requiert l'authentification
-      const user = authenticateToken(req);
+      const _user = authenticateToken(req);
       
       if (!user.isAdmin) {
         res.status(403).json({ 
@@ -269,7 +273,7 @@ async function handleProfiles(req, res) {
 // Handler d'un profil spécifique
 async function handleProfile(req, res) {
   try {
-    const user = authenticateToken(req);
+    const _user = authenticateToken(req);
     const url = new URL(req.url, `http://${req.headers.host}`);
     const id = url.pathname.split('/').pop();
 
@@ -391,7 +395,7 @@ async function handleProfile(req, res) {
 // Handler des leçons
 async function handleLessons(req, res) {
   try {
-    const user = authenticateToken(req);
+    const _user = authenticateToken(req);
 
     if (req.method === 'GET') {
       const { profileId, published } = req.query;
@@ -489,7 +493,7 @@ async function handleLessons(req, res) {
 // Handler d'une leçon spécifique
 async function handleLesson(req, res) {
   try {
-    const user = authenticateToken(req);
+    const _user = authenticateToken(req);
     const url = new URL(req.url, `http://${req.headers.host}`);
     const id = url.pathname.split('/').pop();
 
@@ -624,7 +628,7 @@ async function handleLesson(req, res) {
 // Handler des notifications
 async function handleNotifications(req, res) {
   try {
-    const user = authenticateToken(req);
+    const _user = authenticateToken(req);
 
     if (req.method === 'GET') {
       const { profileId, isRead, type } = req.query;
@@ -721,7 +725,7 @@ async function handleNotifications(req, res) {
 // Handler d'une notification spécifique
 async function handleNotification(req, res) {
   try {
-    const user = authenticateToken(req);
+    const _user = authenticateToken(req);
     const url = new URL(req.url, `http://${req.headers.host}`);
     const id = url.pathname.split('/').pop();
 
@@ -987,6 +991,174 @@ async function handleYoutubeVideos(req, res) {
 
   } catch (error) {
     const errorResponse = handleError(error, 'Erreur lors de la gestion des vidéos YouTube');
+    res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+  }
+}
+
+// Handler des codes PIN
+async function handlePin(req, res) {
+  try {
+    const _user = authenticateToken(req);
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const pathParts = url.pathname.split('/');
+    const profileId = pathParts[3]; // /api/profiles/{id}/pin
+
+    if (!profileId) {
+      res.status(400).json({ 
+        success: false, 
+        message: 'ID de profil requis' 
+      });
+      return;
+    }
+
+    if (req.method === 'GET') {
+      // Récupérer le code PIN (pour vérification)
+      const pinData = await sql`
+        SELECT pin_code, created_at, updated_at
+        FROM pin_codes 
+        WHERE profile_id = ${profileId}
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+
+      if (!pinData[0]) {
+        res.status(404).json({ 
+          success: false, 
+          message: 'Code PIN non trouvé' 
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Code PIN récupéré avec succès',
+        data: { 
+          hasPin: true,
+          createdAt: pinData[0].created_at,
+          updatedAt: pinData[0].updated_at
+        }
+      });
+
+    } else if (req.method === 'POST') {
+      // Vérifier un code PIN
+      const { pin } = req.body;
+
+      if (!pin) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Code PIN requis' 
+        });
+        return;
+      }
+
+      const pinData = await sql`
+        SELECT pin_code FROM pin_codes 
+        WHERE profile_id = ${profileId}
+        ORDER BY created_at DESC
+        LIMIT 1
+      `;
+
+      if (!pinData[0]) {
+        res.status(404).json({ 
+          success: false, 
+          message: 'Code PIN non trouvé' 
+        });
+        return;
+      }
+
+      const isValidPin = await NativeHashService.verifyPin(pin, pinData[0].pin_code);
+      
+      res.status(200).json({
+        success: true,
+        message: isValidPin ? 'Code PIN valide' : 'Code PIN invalide',
+        data: { isValid: isValidPin }
+      });
+
+    } else if (req.method === 'PUT') {
+      // Mettre à jour un code PIN
+      const { newPin, currentPin } = req.body;
+
+      if (!newPin) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Nouveau code PIN requis' 
+        });
+        return;
+      }
+
+      // Vérifier le code PIN actuel si fourni
+      if (currentPin) {
+        const pinData = await sql`
+          SELECT pin_code FROM pin_codes 
+          WHERE profile_id = ${profileId}
+          ORDER BY created_at DESC
+          LIMIT 1
+        `;
+
+        if (pinData[0]) {
+          const isValidCurrentPin = await NativeHashService.verifyPin(currentPin, pinData[0].pin_code);
+          if (!isValidCurrentPin) {
+            res.status(401).json({ 
+              success: false, 
+              message: 'Code PIN actuel incorrect' 
+            });
+            return;
+          }
+        }
+      }
+
+      // Valider le nouveau code PIN
+      if (newPin.length < 4 || newPin.length > 8) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'Le code PIN doit contenir entre 4 et 8 caractères' 
+        });
+        return;
+      }
+
+      // Hacher le nouveau code PIN
+      const hashedPin = await NativeHashService.hashPin(newPin);
+
+      // Vérifier si un code PIN existe déjà
+      const existingPin = await sql`
+        SELECT id FROM pin_codes WHERE profile_id = ${profileId}
+      `;
+
+      let result;
+      if (existingPin[0]) {
+        // Mettre à jour le code PIN existant
+        result = await sql`
+          UPDATE pin_codes 
+          SET 
+            pin_code = ${hashedPin},
+            updated_at = CURRENT_TIMESTAMP
+          WHERE profile_id = ${profileId}
+          RETURNING *
+        `;
+      } else {
+        // Créer un nouveau code PIN
+        result = await sql`
+          INSERT INTO pin_codes (profile_id, pin_code)
+          VALUES (${profileId}, ${hashedPin})
+          RETURNING *
+        `;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Code PIN mis à jour avec succès',
+        data: { pin: result[0] }
+      });
+
+    } else {
+      res.status(405).json({ 
+        success: false, 
+        message: 'Méthode non autorisée' 
+      });
+    }
+
+  } catch (error) {
+    const errorResponse = handleError(error, 'Erreur lors de la gestion du code PIN');
     res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
   }
 }
