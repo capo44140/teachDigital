@@ -193,7 +193,7 @@ export class ProfileService {
     }
   }
   
-  // Récupérer les statistiques des profils
+  // Récupérer les statistiques globales des profils
   static async getProfileStats() {
     try {
       const stats = await apiService.getProfileStats();

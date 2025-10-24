@@ -81,7 +81,16 @@ export const useProfileStore = defineStore('profile', {
     // Charger les statistiques
     async loadStats() {
       try {
-        this.stats = await ProfileService.getProfileStats();
+        const statsData = await ProfileService.getProfileStats();
+        if (statsData) {
+          this.stats = {
+            total: statsData.total || 0,
+            active: statsData.active || 0,
+            children: statsData.children || 0,
+            teens: statsData.teens || 0,
+            admins: statsData.admins || 0
+          };
+        }
       } catch (error) {
         console.error('❌ Erreur lors du chargement des statistiques:', error);
       }

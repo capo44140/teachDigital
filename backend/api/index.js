@@ -55,6 +55,16 @@ module.exports = async function handler(req, res) {
       return await handleNotification(req, res);
     }
 
+    // Routes des statistiques des profils
+    if (pathname === '/api/profiles/stats') {
+      return await handleProfileStats(req, res);
+    }
+
+    // Routes des codes PIN
+    if (pathname.startsWith('/api/profiles/') && pathname.includes('/pin')) {
+      return await handlePin(req, res);
+    }
+
     // Routes des activités
     if (pathname === '/api/activities') {
       return await handleActivities(req, res);
@@ -63,11 +73,6 @@ module.exports = async function handler(req, res) {
     // Routes des vidéos YouTube
     if (pathname === '/api/youtube-videos') {
       return await handleYoutubeVideos(req, res);
-    }
-
-    // Routes des codes PIN
-    if (pathname.startsWith('/api/profiles/') && pathname.includes('/pin')) {
-      return await handlePin(req, res);
     }
 
     // Route d'initialisation des pins
@@ -1356,6 +1361,52 @@ async function handlePin(req, res) {
 
   } catch (error) {
     const errorResponse = handleError(error, 'Erreur lors de la gestion du code PIN');
+    res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+  }
+}
+
+// Handler des statistiques des profils
+async function handleProfileStats(req, res) {
+  try {
+    if (req.method !== 'GET') {
+      res.status(405).json({ error: 'Méthode non autorisée' });
+      return;
+    }
+
+    const totalProfiles = await sql`
+      SELECT COUNT(*) as count FROM profiles
+    `;
+
+    const activeProfiles = await sql`
+      SELECT COUNT(*) as count FROM profiles WHERE is_active = true
+    `;
+
+    const childProfiles = await sql`
+      SELECT COUNT(*) as count FROM profiles WHERE is_child = true
+    `;
+
+    const teenProfiles = await sql`
+      SELECT COUNT(*) as count FROM profiles WHERE is_teen = true
+    `;
+
+    const adminProfiles = await sql`
+      SELECT COUNT(*) as count FROM profiles WHERE is_admin = true
+    `;
+
+    res.status(200).json({
+      success: true,
+      message: 'Statistiques des profils récupérées avec succès',
+      data: {
+        total: totalProfiles[0].count,
+        active: activeProfiles[0].count,
+        children: childProfiles[0].count,
+        teens: teenProfiles[0].count,
+        admins: adminProfiles[0].count
+      }
+    });
+
+  } catch (error) {
+    const errorResponse = handleError(error, 'Erreur lors de la récupération des statistiques des profils');
     res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
   }
 }

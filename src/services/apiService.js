@@ -332,11 +332,11 @@ class ApiService {
   }
 
   /**
-   * Récupérer les statistiques détaillées d'un profil
+   * Récupérer les statistiques globales des profils
    */
-  async getProfileStats(profileId) {
-    const response = await this.request(`/api/profiles/${profileId}/stats`);
-    return response.success ? response.data.stats : null;
+  async getProfileStats() {
+    const response = await this.request('/api/profiles/stats');
+    return response.success ? response.data : null;
   }
 }
 
