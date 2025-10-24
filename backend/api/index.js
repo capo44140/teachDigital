@@ -35,6 +35,18 @@ module.exports = async function handler(req, res) {
     if (pathname === '/api/profiles' && !pathname.includes('/api/profiles/')) {
       return await handleProfiles(req, res);
     }
+    
+    // Routes des statistiques des profils (AVANT la route générique /api/profiles/:id)
+    if (pathname === '/api/profiles/stats') {
+      return await handleProfileStats(req, res);
+    }
+    
+    // Routes des codes PIN (AVANT la route générique /api/profiles/:id)
+    if (pathname.startsWith('/api/profiles/') && pathname.includes('/pin')) {
+      return await handlePin(req, res);
+    }
+    
+    // Route générique pour un profil spécifique
     if (pathname.startsWith('/api/profiles/')) {
       return await handleProfile(req, res);
     }
@@ -53,16 +65,6 @@ module.exports = async function handler(req, res) {
     }
     if (pathname.startsWith('/api/notifications/')) {
       return await handleNotification(req, res);
-    }
-
-    // Routes des statistiques des profils
-    if (pathname === '/api/profiles/stats') {
-      return await handleProfileStats(req, res);
-    }
-
-    // Routes des codes PIN
-    if (pathname.startsWith('/api/profiles/') && pathname.includes('/pin')) {
-      return await handlePin(req, res);
     }
 
     // Routes des activités
