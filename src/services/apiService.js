@@ -109,7 +109,7 @@ class ApiService {
     try {
       const response = await this.request('/api/auth/verify');
       return response.success ? response.data.user : null;
-    } catch (error) {
+    } catch (_error) {
       this.logout();
       return null;
     }
@@ -171,6 +171,17 @@ class ApiService {
   }
 
   /**
+   * Vérifier un code PIN
+   */
+  async verifyPin(profileId, pin) {
+    const response = await this.request(`/api/profiles/${profileId}/pin`, {
+      method: 'POST',
+      body: JSON.stringify({ pin })
+    });
+    return response.success ? response.data.isValid : false;
+  }
+
+  /**
    * Mettre à jour le code PIN
    */
   async updatePin(profileId, newPin, currentPin = null) {
@@ -179,6 +190,16 @@ class ApiService {
       body: JSON.stringify({ newPin, currentPin })
     });
     return response.success;
+  }
+
+  /**
+   * Récupérer les informations du code PIN
+   */
+  async getPinInfo(profileId) {
+    const response = await this.request(`/api/profiles/${profileId}/pin`, {
+      method: 'GET'
+    });
+    return response.success ? response.data : null;
   }
 
   /**
