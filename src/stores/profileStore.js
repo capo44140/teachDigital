@@ -58,7 +58,7 @@ export const useProfileStore = defineStore('profile', {
         // Utiliser le service de cache offline pour charger les profils
         this.profiles = await offlineDataService.getCriticalData(
           'profiles',
-          () => ProfileService.findAllProfiles(),
+          () => ProfileService.getAllProfiles(),
           { 
             maxAge: 30 * 60 * 1000, // 30 minutes
             ttl: 30 * 60 * 1000,
@@ -105,7 +105,7 @@ export const useProfileStore = defineStore('profile', {
         // Utiliser le cache pour charger un profil spécifique
         this.currentProfile = await offlineDataService.getCriticalData(
           `profile_${id}`,
-          () => ProfileService.findProfileById(id),
+          () => ProfileService.getProfileById(id),
           { 
             maxAge: 15 * 60 * 1000, // 15 minutes
             ttl: 15 * 60 * 1000,
