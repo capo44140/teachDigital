@@ -1,29 +1,44 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-green-50 to-blue-100">
+  <!--
+    LIQUID GLASS DESIGN - Générateur de Quiz
+
+    ✨ Backdrop blur translucide
+    🌈 Gradients animés en arrière-plan
+    💎 Cartes glass semi-transparentes
+    ✨ Animations fluides
+  -->
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900 overflow-hidden">
+    <!-- Background animated elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 w-80 h-80 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    </div>
+
     <!-- Header -->
-    <header class="bg-white shadow-lg">
+    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
       <nav class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
               @click="goBack"
-              class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              class="p-3 text-white/80 hover:text-white backdrop-blur-xl bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-500/10 relative group"
             >
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
               </svg>
             </button>
             <div>
-              <h1 class="text-2xl font-bold text-gray-800">{{ quiz?.title || 'Quiz' }}</h1>
-              <p class="text-sm text-gray-600">Pour {{ selectedChild?.name || 'l\'enfant' }}</p>
+              <h1 class="text-2xl font-bold text-white">{{ quiz?.title || 'Quiz' }}</h1>
+              <p class="text-sm text-white/60">Pour {{ selectedChild?.name || 'l\'enfant' }}</p>
             </div>
           </div>
           <div class="flex items-center space-x-4">
             <div class="text-right">
-              <p class="text-sm text-gray-500">Question {{ currentQuestionIndex + 1 }} sur {{ quiz?.questions?.length || 0 }}</p>
-              <div class="w-32 bg-gray-200 rounded-full h-2 mt-1">
+              <p class="text-sm text-white/60">Question {{ currentQuestionIndex + 1 }} sur {{ quiz?.questions?.length || 0 }}</p>
+              <div class="w-32 bg-white/10 backdrop-blur-xl rounded-full h-2 mt-1">
                 <div 
-                  class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  class="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-300"
                   :style="{ width: progressPercentage + '%' }"
                 ></div>
               </div>
@@ -34,56 +49,56 @@
     </header>
 
     <!-- Contenu principal -->
-    <main class="container mx-auto px-6 py-8">
+    <main class="relative z-10 container mx-auto px-6 py-8">
       <!-- État de chargement -->
-      <div v-if="!quiz" class="bg-white rounded-xl shadow-lg p-8 text-center">
-        <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg class="w-10 h-10 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div v-if="!quiz" class="glass-card-dashboard text-center py-16">
+        <div class="w-20 h-20 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl flex items-center justify-center mx-auto mb-6">
+          <svg class="w-10 h-10 text-green-400 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
         </div>
-        <h2 class="text-3xl font-bold text-gray-800 mb-4">Chargement du quiz...</h2>
-        <p class="text-lg text-gray-600">Veuillez patienter pendant que nous préparons votre quiz.</p>
+        <h2 class="text-3xl font-bold text-white mb-4">Chargement du quiz...</h2>
+        <p class="text-lg text-white/60">Veuillez patienter pendant que nous préparons votre quiz.</p>
       </div>
       
       <!-- Description du quiz -->
-      <div v-else-if="!quizStarted" class="bg-white rounded-xl shadow-lg p-8 text-center">
-        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div v-else-if="!quizStarted" class="glass-card-dashboard text-center py-16">
+        <div class="w-20 h-20 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl flex items-center justify-center mx-auto mb-6">
+          <svg class="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
         </div>
-        <h2 class="text-3xl font-bold text-gray-800 mb-4">{{ quiz?.title || 'Quiz' }}</h2>
-        <p class="text-lg text-gray-600 mb-6">{{ quiz?.description || 'Description du quiz' }}</p>
+        <h2 class="text-3xl font-bold text-white mb-4">{{ quiz?.title || 'Quiz' }}</h2>
+        <p class="text-lg text-white/60 mb-6">{{ quiz?.description || 'Description du quiz' }}</p>
         <div class="grid md:grid-cols-3 gap-6 mb-8">
-          <div class="bg-blue-50 rounded-lg p-4">
-            <div class="text-2xl font-bold text-blue-600">{{ quiz?.questions?.length || 0 }}</div>
-            <div class="text-sm text-blue-800">Questions</div>
+          <div class="glass-stat-card">
+            <div class="text-2xl font-bold text-green-400">{{ quiz?.questions?.length || 0 }}</div>
+            <div class="text-sm text-white/60">Questions</div>
           </div>
-          <div class="bg-green-50 rounded-lg p-4">
-            <div class="text-2xl font-bold text-green-600">{{ quiz?.level || 'N/A' }}</div>
-            <div class="text-sm text-green-800">Niveau</div>
+          <div class="glass-stat-card">
+            <div class="text-2xl font-bold text-blue-400">{{ quiz?.level || 'N/A' }}</div>
+            <div class="text-sm text-white/60">Niveau</div>
           </div>
-          <div class="bg-purple-50 rounded-lg p-4">
-            <div class="text-2xl font-bold text-purple-600">{{ quiz?.subject || 'N/A' }}</div>
-            <div class="text-sm text-purple-800">Matière</div>
+          <div class="glass-stat-card">
+            <div class="text-2xl font-bold text-purple-400">{{ quiz?.subject || 'N/A' }}</div>
+            <div class="text-sm text-white/60">Matière</div>
           </div>
         </div>
         <button 
           @click="startQuiz"
-          class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-lg font-medium"
+          class="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:shadow-lg hover:shadow-green-500/50 transition-all duration-300 text-lg font-medium backdrop-blur-xl border border-white/20"
         >
           Commencer le quiz
         </button>
       </div>
 
       <!-- Quiz en cours -->
-      <div v-else-if="!quizCompleted" class="bg-white rounded-xl shadow-lg p-8">
+      <div v-else-if="!quizCompleted" class="glass-card-dashboard py-8">
         <div class="mb-6">
-          <h3 class="text-xl font-semibold text-gray-800 mb-2">
+          <h3 class="text-xl font-semibold text-white mb-2">
             Question {{ currentQuestionIndex + 1 }} sur {{ quiz?.questions?.length || 0 }}
           </h3>
-          <p class="text-lg text-gray-700">{{ currentQuestion.question }}</p>
+          <p class="text-lg text-white/80">{{ currentQuestion.question }}</p>
         </div>
 
         <div class="space-y-3 mb-8">
@@ -92,17 +107,17 @@
             :key="index"
             @click="selectAnswer(index)"
             :class="[
-              'w-full p-4 text-left rounded-lg border-2 transition-all',
+              'w-full p-4 text-left rounded-xl border-2 transition-all duration-300 backdrop-blur-xl',
               selectedAnswer === index
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                ? 'border-green-400 bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-100'
+                : 'border-white/20 bg-white/5 hover:border-green-300 hover:bg-white/10 text-white'
             ]"
           >
             <div class="flex items-center space-x-3">
-              <span class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center font-medium">
+              <span class="w-8 h-8 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center font-medium text-white">
                 {{ String.fromCharCode(65 + index) }}
               </span>
-              <span class="text-gray-800">{{ option }}</span>
+              <span>{{ option }}</span>
             </div>
           </button>
         </div>
@@ -112,10 +127,10 @@
             @click="previousQuestion"
             :disabled="currentQuestionIndex === 0"
             :class="[
-              'px-6 py-2 rounded-lg transition-colors',
+              'px-6 py-2 rounded-xl transition-all duration-300 backdrop-blur-xl',
               currentQuestionIndex === 0
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-gray-600 text-white hover:bg-gray-700'
+                ? 'bg-white/5 text-white/40 cursor-not-allowed border border-white/10'
+                : 'bg-gradient-to-r from-gray-500 to-gray-600 text-white hover:shadow-lg hover:shadow-gray-500/50 border border-white/20'
             ]"
           >
             Précédent
@@ -124,10 +139,10 @@
             @click="nextQuestion"
             :disabled="selectedAnswer === null"
             :class="[
-              'px-6 py-2 rounded-lg transition-colors',
+              'px-6 py-2 rounded-xl transition-all duration-300 backdrop-blur-xl',
               selectedAnswer === null
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-white/5 text-white/40 cursor-not-allowed border border-white/10'
+                : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg hover:shadow-green-500/50 border border-white/20'
             ]"
           >
             {{ currentQuestionIndex === (quiz?.questions?.length || 0) - 1 ? 'Terminer' : 'Suivant' }}
@@ -136,11 +151,11 @@
       </div>
 
       <!-- Résultats -->
-      <div v-else class="bg-white rounded-xl shadow-lg p-8">
+      <div v-else class="glass-card-dashboard py-8">
         <div class="text-center mb-8">
-          <div class="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" 
-               :class="scorePercentage >= 70 ? 'bg-green-100' : 'bg-red-100'">
-            <svg class="w-10 h-10" :class="scorePercentage >= 70 ? 'text-green-600' : 'text-red-600'" 
+          <div class="w-20 h-20 rounded-xl flex items-center justify-center mx-auto mb-4" 
+               :class="scorePercentage >= 70 ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20' : 'bg-gradient-to-br from-red-500/20 to-pink-500/20'">
+            <svg class="w-10 h-10" :class="scorePercentage >= 70 ? 'text-green-400' : 'text-red-400'" 
                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path v-if="scorePercentage >= 70" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -148,41 +163,41 @@
                     d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
           </div>
-          <h2 class="text-3xl font-bold text-gray-800 mb-2">
+          <h2 class="text-3xl font-bold text-white mb-2">
             {{ scorePercentage >= 70 ? 'Excellent !' : 'Bien joué !' }}
           </h2>
-          <p class="text-lg text-gray-600 mb-4">
+          <p class="text-lg text-white/60 mb-4">
             Vous avez obtenu {{ correctAnswers }} bonnes réponses sur {{ quiz?.questions?.length || 0 }}
           </p>
-          <div class="text-4xl font-bold mb-6" :class="scorePercentage >= 70 ? 'text-green-600' : 'text-blue-600'">
+          <div class="text-4xl font-bold mb-6" :class="scorePercentage >= 70 ? 'text-green-400' : 'text-blue-400'">
             {{ formatPercentage(scorePercentage) }}%
           </div>
         </div>
 
         <!-- Détail des réponses -->
         <div class="space-y-4 mb-8">
-          <h3 class="text-xl font-semibold text-gray-800 mb-4">Détail des réponses</h3>
+          <h3 class="text-xl font-semibold text-white mb-4">Détail des réponses</h3>
           <div v-for="(question, index) in (quiz?.questions || [])" :key="index" 
-               class="border border-gray-200 rounded-lg p-4">
+               class="glass-quiz-item">
             <div class="flex items-start justify-between mb-2">
-              <h4 class="font-medium text-gray-800">Question {{ index + 1 }}</h4>
-              <span class="px-3 py-1 rounded-full text-sm font-medium"
+              <h4 class="font-medium text-white">Question {{ index + 1 }}</h4>
+              <span class="px-3 py-1 rounded-lg text-sm font-medium backdrop-blur-xl"
                     :class="userAnswers[index] === question.correctAnswer 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'">
+                      ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 border border-green-400/30' 
+                      : 'bg-gradient-to-r from-red-500/20 to-pink-500/20 text-red-300 border border-red-400/30'">
                 {{ userAnswers[index] === question.correctAnswer ? 'Correct' : 'Incorrect' }}
               </span>
             </div>
-            <p class="text-gray-700 mb-3">{{ question.question }}</p>
+            <p class="text-white/80 mb-3">{{ question.question }}</p>
             <div class="space-y-2">
               <div v-for="(option, optionIndex) in question.options" :key="optionIndex"
                    :class="[
-                     'p-2 rounded-lg text-sm',
+                     'p-2 rounded-lg text-sm backdrop-blur-xl',
                      optionIndex === question.correctAnswer 
-                       ? 'bg-green-100 text-green-800 font-medium'
+                       ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 font-medium border border-green-400/30'
                        : optionIndex === userAnswers[index] && userAnswers[index] !== question.correctAnswer
-                         ? 'bg-red-100 text-red-800'
-                         : 'bg-gray-100 text-gray-600'
+                         ? 'bg-gradient-to-r from-red-500/20 to-pink-500/20 text-red-300 border border-red-400/30'
+                         : 'bg-white/5 text-white/60 border border-white/10'
                    ]">
                 <span class="font-medium">{{ String.fromCharCode(65 + optionIndex) }}.</span>
                 {{ option }}
@@ -190,8 +205,8 @@
                 <span v-else-if="optionIndex === userAnswers[index] && userAnswers[index] !== question.correctAnswer" class="ml-2">✗</span>
               </div>
             </div>
-            <div v-if="question.explanation" class="mt-3 p-3 bg-blue-50 rounded-lg">
-              <p class="text-sm text-blue-800">
+            <div v-if="question.explanation" class="mt-3 p-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-lg backdrop-blur-xl border border-blue-400/30">
+              <p class="text-sm text-blue-300">
                 <strong>Explication :</strong> {{ question.explanation }}
               </p>
             </div>
@@ -202,13 +217,13 @@
         <div class="flex justify-center space-x-4">
           <button 
             @click="restartQuiz"
-            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            class="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/50 transition-all duration-300 backdrop-blur-xl border border-white/20"
           >
             Recommencer
           </button>
           <button 
             @click="goBack"
-            class="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            class="px-6 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl hover:shadow-lg hover:shadow-gray-500/50 transition-all duration-300 backdrop-blur-xl border border-white/20"
           >
             Retour au scanner
           </button>
@@ -537,3 +552,250 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* Liquid Glass Design Styles */
+.glass-card-dashboard {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  padding: 2rem;
+}
+
+.glass-card-dashboard:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+}
+
+.glass-stat-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.glass-stat-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.glass-quiz-item {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  padding: 1.5rem;
+}
+
+.glass-quiz-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Background blob animations */
+@keyframes blob {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1); 
+  }
+  33% { 
+    transform: translate(30px, -50px) scale(1.1); 
+  }
+  66% { 
+    transform: translate(-20px, 20px) scale(0.9); 
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Button styles */
+button {
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:disabled {
+  transform: none;
+}
+
+/* Animation pour les éléments */
+.glass-card-dashboard > div:last-child > div {
+  animation: fadeInUp 0.3s ease-out;
+  animation-fill-mode: both;
+}
+
+.glass-card-dashboard > div:last-child > div:nth-child(1) { animation-delay: 0.1s; }
+.glass-card-dashboard > div:last-child > div:nth-child(2) { animation-delay: 0.2s; }
+.glass-card-dashboard > div:last-child > div:nth-child(3) { animation-delay: 0.3s; }
+.glass-card-dashboard > div:last-child > div:nth-child(4) { animation-delay: 0.4s; }
+.glass-card-dashboard > div:last-child > div:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .glass-card-dashboard,
+  .glass-stat-card,
+  .glass-quiz-item {
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+  }
+  
+  .max-w-6xl {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+
+  .grid-cols-1 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .glass-card-dashboard,
+  .glass-stat-card,
+  .glass-quiz-item {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Quiz specific styles */
+.space-y-3 > button {
+  transition: all 0.3s ease;
+}
+
+.space-y-3 > button:hover {
+  transform: translateY(-1px);
+}
+
+/* Progress bar styling */
+.w-32 {
+  transition: all 0.3s ease;
+}
+
+/* Answer option styling */
+.w-8.h-8 {
+  transition: all 0.3s ease;
+}
+
+.w-8.h-8:hover {
+  transform: scale(1.05);
+}
+
+/* Grid responsive adjustments */
+@media (max-width: 1024px) {
+  .md\:grid-cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .md\:grid-cols-3 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
+
+/* Icon styling */
+.w-20.h-20 {
+  transition: all 0.3s ease;
+}
+
+.w-20.h-20:hover {
+  transform: scale(1.05);
+}
+
+/* Score display styling */
+.text-4xl {
+  transition: all 0.3s ease;
+}
+
+/* Action buttons styling */
+.flex.justify-center.space-x-4 > button {
+  transition: all 0.3s ease;
+}
+
+.flex.justify-center.space-x-4 > button:hover {
+  transform: translateY(-2px);
+}
+
+/* Navigation buttons styling */
+.flex.justify-between > button {
+  transition: all 0.3s ease;
+}
+
+.flex.justify-between > button:hover {
+  transform: translateY(-1px);
+}
+
+/* Question styling */
+.text-lg {
+  transition: all 0.3s ease;
+}
+
+/* Explanation styling */
+.bg-gradient-to-r.from-blue-500\/20.to-cyan-500\/20 {
+  transition: all 0.3s ease;
+}
+
+.bg-gradient-to-r.from-blue-500\/20.to-cyan-500\/20:hover {
+  background: rgba(59, 130, 246, 0.25);
+}
+</style>
