@@ -1,73 +1,135 @@
 <template>
-  <div class="badge-manager">
-    <!-- En-tête avec statistiques -->
-    <div class="stats-header">
-      <div class="stat-card">
-        <div class="stat-icon">🏆</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ badgeStats.unlocked }} / {{ badgeStats.total }}</div>
-          <div class="stat-label">Badges débloqués</div>
+  <!--
+    LIQUID GLASS DESIGN - Gestionnaire de Badges
+
+    ✨ Backdrop blur translucide
+    🌈 Gradients animés en arrière-plan
+    💎 Cartes glass semi-transparentes
+    ✨ Animations fluides
+  -->
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
+    <!-- Background animated elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    </div>
+
+    <!-- Header avec bouton retour -->
+    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+      <nav class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <button 
+              @click="goBack"
+              class="p-3 text-white/80 hover:text-white backdrop-blur-xl bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10 relative group"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </button>
+            <div>
+              <h1 class="text-2xl font-bold text-white">Retour au dashboard</h1>
+              <p class="text-sm text-white/60">Découvre et gère tes badges</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-xl flex items-center justify-center bg-gradient-to-r from-purple-400 to-pink-400 backdrop-blur-xl border border-white/20">
+              <span class="text-white text-sm font-semibold">🏆</span>
+            </div>
+            <span class="text-white font-medium">{{ profileId ? `Profil ${profileId}` : 'Utilisateur' }}</span>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <!-- Contenu principal -->
+    <div class="relative z-10 w-full max-w-6xl mx-auto px-6 py-8">
+      <!-- En-tête avec statistiques -->
+      <div class="glass-stats-grid mb-8">
+        <div class="glass-stat-card">
+          <div class="w-12 h-12 bg-gradient-to-br from-purple-500/30 to-pink-500/30 rounded-xl flex items-center justify-center">
+            <span class="text-2xl">🏆</span>
+          </div>
+          <div class="flex-1">
+            <div class="text-2xl font-bold text-white">{{ badgeStats.unlocked }} / {{ badgeStats.total }}</div>
+            <div class="text-sm text-white/60">Badges débloqués</div>
         </div>
       </div>
       
-      <div class="stat-card">
-        <div class="stat-icon">⭐</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ badgeStats.points }}</div>
-          <div class="stat-label">Points gagnés</div>
+        <div class="glass-stat-card">
+          <div class="w-12 h-12 bg-gradient-to-br from-yellow-500/30 to-orange-500/30 rounded-xl flex items-center justify-center">
+            <span class="text-2xl">⭐</span>
+          </div>
+          <div class="flex-1">
+            <div class="text-2xl font-bold text-white">{{ badgeStats.points }}</div>
+            <div class="text-sm text-white/60">Points gagnés</div>
+          </div>
         </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-icon">📊</div>
-        <div class="stat-content">
-          <div class="stat-value">{{ badgeStats.percentage }}%</div>
-          <div class="stat-label">Progression</div>
+        
+        <div class="glass-stat-card">
+          <div class="w-12 h-12 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-xl flex items-center justify-center">
+            <span class="text-2xl">📊</span>
+          </div>
+          <div class="flex-1">
+            <div class="text-2xl font-bold text-white">{{ badgeStats.percentage }}%</div>
+            <div class="text-sm text-white/60">Progression</div>
         </div>
       </div>
     </div>
 
     <!-- Barre de progression globale -->
-    <div class="progress-section">
-      <div class="progress-bar-container">
-        <div class="progress-bar-fill" :style="{ width: badgeStats.percentage + '%' }"></div>
+      <div class="glass-card-dashboard mb-8">
+        <div class="w-full h-4 bg-white/10 backdrop-blur-xl rounded-full overflow-hidden mb-4">
+          <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-500" :style="{ width: badgeStats.percentage + '%' }"></div>
       </div>
-      <p class="progress-text">
+        <p class="text-center text-white/60 text-sm">
         Continue comme ça ! Tu as débloqué {{ badgeStats.unlocked }} badges sur {{ badgeStats.total }}
       </p>
     </div>
 
     <!-- Onglets de filtrage -->
-    <div class="tabs">
+      <div class="glass-card-dashboard mb-8">
+        <div class="flex gap-2 flex-wrap">
       <button 
         v-for="tab in tabs" 
         :key="tab.id"
         @click="activeTab = tab.id"
-        :class="['tab-button', { active: activeTab === tab.id }]"
-      >
-        <span class="tab-icon">{{ tab.icon }}</span>
-        <span class="tab-label">{{ tab.label }}</span>
+            :class="[
+              'flex-1 min-w-32 px-4 py-3 rounded-xl transition-all duration-300 backdrop-blur-xl border text-center',
+              activeTab === tab.id
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-400 shadow-lg shadow-purple-500/50'
+                : 'bg-white/10 text-white/80 border-white/20 hover:bg-white/20 hover:border-white/40'
+            ]"
+          >
+            <span class="text-lg mr-2">{{ tab.icon }}</span>
+            <span class="font-medium">{{ tab.label }}</span>
       </button>
+        </div>
     </div>
 
     <!-- Contenu des onglets -->
-    <div class="tab-content">
+      <div class="glass-card-dashboard">
       <!-- Tous les badges -->
-      <div v-if="activeTab === 'all'" class="badges-grid">
-        <div v-if="loading" class="loading-state">
-          <div class="spinner"></div>
-          <p>Chargement des badges...</p>
+        <div v-if="activeTab === 'all'">
+          <div v-if="loading" class="text-center py-16">
+            <div class="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <div class="w-8 h-8 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <p class="text-white/60">Chargement des badges...</p>
         </div>
         
-        <div v-else-if="profileBadges.length === 0" class="empty-state">
-          <div class="empty-icon">🏆</div>
-          <p>Aucun badge disponible pour le moment</p>
+          <div v-else-if="profileBadges.length === 0" class="text-center py-16">
+            <div class="w-20 h-20 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center mx-auto mb-6">
+              <span class="text-4xl">🏆</span>
+            </div>
+            <p class="text-white text-lg">Aucun badge disponible pour le moment</p>
         </div>
         
         <div v-else>
-          <div v-for="category in categories" :key="category" class="category-section">
-            <h3 class="category-title">{{ getCategoryLabel(category) }}</h3>
-            <div class="badges-grid">
+            <div v-for="category in categories" :key="category" class="mb-8">
+              <h3 class="text-xl font-bold text-white mb-4 pb-2 border-b border-white/20">{{ getCategoryLabel(category) }}</h3>
+              <div class="glass-badges-grid">
               <BadgeCard 
                 v-for="badge in getBadgesByCategory(category)" 
                 :key="badge.id"
@@ -80,90 +142,103 @@
       </div>
 
       <!-- Badges débloqués -->
-      <div v-if="activeTab === 'unlocked'" class="badges-grid">
-        <div v-if="unlockedBadges.length === 0" class="empty-state">
-          <div class="empty-icon">🔒</div>
-          <p>Tu n'as pas encore débloqué de badges</p>
-          <p class="empty-subtitle">Continue à apprendre pour débloquer tes premiers badges !</p>
+        <div v-if="activeTab === 'unlocked'">
+          <div v-if="unlockedBadges.length === 0" class="text-center py-16">
+            <div class="w-20 h-20 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center mx-auto mb-6">
+              <span class="text-4xl">🔒</span>
+            </div>
+            <p class="text-white text-lg mb-2">Tu n'as pas encore débloqué de badges</p>
+            <p class="text-white/60">Continue à apprendre pour débloquer tes premiers badges !</p>
         </div>
         
+          <div v-else class="glass-badges-grid">
         <BadgeCard 
           v-for="badge in sortedUnlockedBadges" 
           :key="badge.id"
           :badge="badge"
           @click="showBadgeDetails(badge)"
         />
+          </div>
       </div>
 
       <!-- Badges en cours -->
-      <div v-if="activeTab === 'progress'" class="badges-grid">
-        <div v-if="inProgressBadges.length === 0" class="empty-state">
-          <div class="empty-icon">⏳</div>
-          <p>Aucun badge en cours de progression</p>
-          <p class="empty-subtitle">Commence à compléter des quiz pour débloquer des badges !</p>
+        <div v-if="activeTab === 'progress'">
+          <div v-if="inProgressBadges.length === 0" class="text-center py-16">
+            <div class="w-20 h-20 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center mx-auto mb-6">
+              <span class="text-4xl">⏳</span>
+            </div>
+            <p class="text-white text-lg mb-2">Aucun badge en cours de progression</p>
+            <p class="text-white/60">Commence à compléter des quiz pour débloquer des badges !</p>
         </div>
         
+          <div v-else class="glass-badges-grid">
         <BadgeCard 
           v-for="badge in inProgressBadges" 
           :key="badge.id"
           :badge="badge"
           @click="showBadgeDetails(badge)"
         />
+          </div>
       </div>
 
       <!-- Badges verrouillés -->
-      <div v-if="activeTab === 'locked'" class="badges-grid">
+        <div v-if="activeTab === 'locked'" class="glass-badges-grid">
         <BadgeCard 
           v-for="badge in lockedBadges" 
           :key="badge.id"
           :badge="badge"
           @click="showBadgeDetails(badge)"
         />
+        </div>
       </div>
     </div>
 
     <!-- Modal de détails du badge -->
     <transition name="modal">
-      <div v-if="selectedBadge" class="modal-overlay" @click="selectedBadge = null">
-        <div class="modal-content" @click.stop>
-          <button class="modal-close" @click="selectedBadge = null">
+      <div v-if="selectedBadge" class="fixed inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-50 p-4" @click="selectedBadge = null">
+        <div class="glass-modal-content max-w-md w-full" @click.stop>
+          <button class="absolute top-4 right-4 p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-300" @click="selectedBadge = null">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
           
-          <div class="modal-badge-icon" :class="{ unlocked: selectedBadge.is_unlocked }">
-            {{ selectedBadge.icon }}
+          <div class="text-center mb-6">
+            <div class="w-20 h-20 mx-auto mb-4 rounded-xl flex items-center justify-center" :class="selectedBadge.is_unlocked ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20' : 'bg-gradient-to-br from-gray-500/20 to-gray-600/20'">
+              <span class="text-4xl" :class="selectedBadge.is_unlocked ? '' : 'grayscale opacity-50'">{{ selectedBadge.icon }}</span>
+            </div>
+            
+            <h3 class="text-2xl font-bold text-white mb-2">{{ selectedBadge.name }}</h3>
+            <p class="text-white/60 mb-4">{{ selectedBadge.description }}</p>
           </div>
           
-          <h3 class="modal-title">{{ selectedBadge.name }}</h3>
-          <p class="modal-description">{{ selectedBadge.description }}</p>
-          
-          <div class="modal-info">
-            <div class="info-item">
-              <span class="info-label">Catégorie:</span>
-              <span class="info-value">{{ getCategoryLabel(selectedBadge.category) }}</span>
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="glass-info-item">
+              <span class="text-xs text-white/60 mb-1 block">Catégorie</span>
+              <span class="text-sm font-semibold text-white">{{ getCategoryLabel(selectedBadge.category) }}</span>
             </div>
-            <div class="info-item">
-              <span class="info-label">Points:</span>
-              <span class="info-value">{{ selectedBadge.points }} pts</span>
+            <div class="glass-info-item">
+              <span class="text-xs text-white/60 mb-1 block">Points</span>
+              <span class="text-sm font-semibold text-white">{{ selectedBadge.points }} pts</span>
             </div>
           </div>
           
-          <div v-if="!selectedBadge.is_unlocked" class="modal-progress">
-            <div class="progress-label">
+          <div v-if="!selectedBadge.is_unlocked" class="mb-6">
+            <div class="flex justify-between text-sm text-white/60 mb-2">
               <span>Progression</span>
               <span>{{ selectedBadge.progress }}%</span>
             </div>
-            <div class="progress-bar-container">
-              <div class="progress-bar-fill" :style="{ width: selectedBadge.progress + '%' }"></div>
+            <div class="w-full h-3 bg-white/10 backdrop-blur-xl rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-500" :style="{ width: selectedBadge.progress + '%' }"></div>
             </div>
           </div>
           
-          <div v-else class="modal-unlocked">
-            <div class="unlocked-badge">✅</div>
-            <p class="unlocked-text">Badge débloqué !</p>
-            <p class="unlocked-date">{{ formatDate(selectedBadge.unlocked_at) }}</p>
+          <div v-else class="text-center">
+            <div class="w-16 h-16 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <span class="text-3xl">✅</span>
+            </div>
+            <p class="text-lg font-semibold text-green-400 mb-2">Badge débloqué !</p>
+            <p class="text-sm text-white/60">{{ formatDate(selectedBadge.unlocked_at) }}</p>
           </div>
         </div>
       </div>
@@ -269,323 +344,243 @@ export default {
         month: 'long',
         year: 'numeric'
       })
+    },
+    
+    goBack() {
+      // Retourner vers le dashboard utilisateur
+      this.$router.push({ 
+        path: '/user-dashboard', 
+        query: { profile: this.profileId } 
+      })
     }
   }
 }
 </script>
 
 <style scoped>
-.badge-manager {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem;
+/* Liquid Glass Design Styles */
+
+/* Header styles */
+header {
+  transition: all 0.3s ease;
 }
 
-/* Statistiques */
-.stats-header {
+header nav {
+  transition: all 0.3s ease;
+}
+
+header button {
+  transition: all 0.3s ease;
+}
+
+header button:hover {
+  transform: translateY(-1px);
+}
+
+header button:active {
+  transform: translateY(0);
+}
+
+.glass-card-dashboard {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  padding: 2rem;
+}
+
+.glass-card-dashboard:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+}
+
+.glass-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
 }
 
-.stat-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 1rem;
+.glass-stat-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
   padding: 1.5rem;
   display: flex;
   align-items: center;
   gap: 1rem;
-  color: white;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.stat-icon {
-  font-size: 2.5rem;
+.glass-stat-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
 }
 
-.stat-content {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 1.75rem;
-  font-weight: bold;
-  margin-bottom: 0.25rem;
-}
-
-.stat-label {
-  font-size: 0.875rem;
-  opacity: 0.9;
-}
-
-/* Barre de progression */
-.progress-section {
-  margin-bottom: 2rem;
-}
-
-.progress-bar-container {
-  width: 100%;
-  height: 1rem;
-  background-color: #e5e7eb;
-  border-radius: 9999px;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
-}
-
-.progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-  transition: width 0.3s ease;
-}
-
-.progress-text {
-  text-align: center;
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-
-/* Onglets */
-.tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-}
-
-.tab-button {
-  flex: 1;
-  min-width: 120px;
-  padding: 0.75rem 1rem;
-  background: white;
-  border: 2px solid #e5e7eb;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.tab-button:hover {
-  border-color: #667eea;
-  background-color: #f9fafb;
-}
-
-.tab-button.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
-  color: white;
-}
-
-.tab-icon {
-  font-size: 1.25rem;
-}
-
-.tab-label {
-  font-weight: 500;
-}
-
-/* Grille de badges */
-.badges-grid {
+.glass-badges-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1.5rem;
 }
 
-.category-section {
-  margin-bottom: 2rem;
-}
-
-.category-title {
-  font-size: 1.25rem;
-  font-weight: bold;
-  color: #374151;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid #e5e7eb;
-}
-
-/* États vides */
-.empty-state {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 3rem 1rem;
-}
-
-.empty-icon {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-}
-
-.empty-state p {
-  font-size: 1.125rem;
-  color: #6b7280;
-  margin-bottom: 0.5rem;
-}
-
-.empty-subtitle {
-  font-size: 0.875rem;
-  color: #9ca3af;
-}
-
-/* Chargement */
-.loading-state {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 3rem 1rem;
-}
-
-.spinner {
-  width: 3rem;
-  height: 3rem;
-  border: 4px solid #e5e7eb;
-  border-top-color: #667eea;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 1rem;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 1rem;
+.glass-modal-content {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
   padding: 2rem;
-  max-width: 500px;
-  width: 100%;
   position: relative;
-  max-height: 90vh;
-  overflow-y: auto;
 }
 
-.modal-close {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #6b7280;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
-}
-
-.modal-close:hover {
-  background-color: #f3f4f6;
-  color: #374151;
-}
-
-.modal-badge-icon {
-  font-size: 5rem;
-  text-align: center;
-  margin-bottom: 1rem;
-  filter: grayscale(100%);
-  opacity: 0.5;
-}
-
-.modal-badge-icon.unlocked {
-  filter: none;
-  opacity: 1;
-}
-
-.modal-title {
-  font-size: 1.5rem;
-  font-weight: bold;
-  text-align: center;
-  color: #374151;
-  margin-bottom: 0.5rem;
-}
-
-.modal-description {
-  text-align: center;
-  color: #6b7280;
-  margin-bottom: 1.5rem;
-}
-
-.modal-info {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.info-item {
-  flex: 1;
-  background-color: #f9fafb;
-  padding: 0.75rem;
-  border-radius: 0.5rem;
+.glass-info-item {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  padding: 1rem;
   text-align: center;
 }
 
-.info-label {
-  display: block;
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-bottom: 0.25rem;
+/* Background blob animations */
+@keyframes blob {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1); 
+  }
+  33% { 
+    transform: translate(30px, -50px) scale(1.1); 
+  }
+  66% { 
+    transform: translate(-20px, 20px) scale(0.9); 
+  }
 }
 
-.info-value {
-  display: block;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #374151;
+.animate-blob {
+  animation: blob 7s infinite;
 }
 
-.modal-progress {
-  margin-top: 1.5rem;
+.animation-delay-2000 {
+  animation-delay: 2s;
 }
 
-.progress-label {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
-  color: #6b7280;
+.animation-delay-4000 {
+  animation-delay: 4s;
 }
 
-.modal-unlocked {
-  text-align: center;
-  margin-top: 1.5rem;
+/* Button styles */
+button {
+  transition: all 0.3s ease;
 }
 
-.unlocked-badge {
-  font-size: 3rem;
-  margin-bottom: 0.5rem;
+button:hover {
+  transform: translateY(-2px);
 }
 
-.unlocked-text {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #10b981;
-  margin-bottom: 0.25rem;
+button:active {
+  transform: translateY(0);
 }
 
-.unlocked-date {
-  font-size: 0.875rem;
-  color: #6b7280;
+/* Animation pour les éléments */
+.glass-card-dashboard > div:last-child > div {
+  animation: fadeInUp 0.3s ease-out;
+  animation-fill-mode: both;
 }
 
-/* Transitions */
+.glass-card-dashboard > div:last-child > div:nth-child(1) { animation-delay: 0.1s; }
+.glass-card-dashboard > div:last-child > div:nth-child(2) { animation-delay: 0.2s; }
+.glass-card-dashboard > div:last-child > div:nth-child(3) { animation-delay: 0.3s; }
+.glass-card-dashboard > div:last-child > div:nth-child(4) { animation-delay: 0.4s; }
+.glass-card-dashboard > div:last-child > div:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .glass-card-dashboard,
+  .glass-stat-card,
+  .glass-modal-content {
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+  }
+  
+  .glass-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .glass-badges-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .glass-card-dashboard,
+  .glass-stat-card,
+  .glass-modal-content {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Tab button styles */
+.flex.gap-2.flex-wrap > button {
+  transition: all 0.3s ease;
+}
+
+.flex.gap-2.flex-wrap > button:hover {
+  transform: translateY(-1px);
+}
+
+/* Progress bar styling */
+.w-full.h-4 {
+  transition: all 0.3s ease;
+}
+
+/* Icon styling */
+.w-12.h-12 {
+  transition: all 0.3s ease;
+}
+
+.w-12.h-12:hover {
+  transform: scale(1.05);
+}
+
+/* Modal transitions */
 .modal-enter-active, .modal-leave-active {
   transition: opacity 0.3s ease;
 }
@@ -594,34 +589,108 @@ export default {
   opacity: 0;
 }
 
-.modal-content {
+.glass-modal-content {
   transition: transform 0.3s ease;
 }
 
-.modal-enter-from .modal-content,
-.modal-leave-to .modal-content {
+.modal-enter-from .glass-modal-content,
+.modal-leave-to .glass-modal-content {
   transform: scale(0.9);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .badges-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 1rem;
+/* Category title styling */
+.text-xl.font-bold.text-white {
+  transition: all 0.3s ease;
+}
+
+/* Empty state styling */
+.text-center.py-16 {
+  transition: all 0.3s ease;
+}
+
+/* Loading spinner styling */
+.animate-spin {
+  transition: all 0.3s ease;
+}
+
+/* Badge grid responsive adjustments */
+@media (max-width: 1024px) {
+  .glass-badges-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   }
-  
-  .stats-header {
+}
+
+@media (max-width: 640px) {
+  .glass-badges-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+}
+
+/* Stats grid responsive adjustments */
+@media (max-width: 1024px) {
+  .glass-stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .glass-stats-grid {
     grid-template-columns: 1fr;
   }
-  
-  .tabs {
+}
+
+/* Modal responsive adjustments */
+@media (max-width: 640px) {
+  .glass-modal-content {
+    margin: 1rem;
+    max-width: calc(100vw - 2rem);
+  }
+}
+
+/* Tab responsive adjustments */
+@media (max-width: 640px) {
+  .flex.gap-2.flex-wrap {
     overflow-x: auto;
     flex-wrap: nowrap;
   }
   
-  .tab-button {
+  .flex.gap-2.flex-wrap > button {
     flex-shrink: 0;
+    min-width: 120px;
   }
+}
+
+/* Info item styling */
+.glass-info-item {
+  transition: all 0.3s ease;
+}
+
+.glass-info-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Progress bar in modal */
+.w-full.h-3 {
+  transition: all 0.3s ease;
+}
+
+/* Badge icon styling */
+.text-4xl {
+  transition: all 0.3s ease;
+}
+
+.text-4xl:hover {
+  transform: scale(1.1);
+}
+
+/* Close button styling */
+.absolute.top-4.right-4 {
+  transition: all 0.3s ease;
+}
+
+.absolute.top-4.right-4:hover {
+  transform: scale(1.05);
 }
 </style>
 
