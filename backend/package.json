@@ -9,6 +9,7 @@
     "deploy": "node scripts/deploy.js production",
     "deploy:preview": "node scripts/deploy.js preview",
     "setup:env": "node scripts/setup-env.js",
+    "init-badges": "node scripts/init-badges.js",
     "test": "echo 'Tests à implémenter'"
   },
   "dependencies": {

@@ -4,7 +4,7 @@
 class BadgeApiService {
   constructor() {
     // URL du backend - adapter selon l'environnement
-    const isDevelopment = import.meta.env.DEV;
+    const isDevelopment = process.env.NODE_ENV !== 'production';
     this.baseURL = isDevelopment 
       ? 'http://localhost:3000' 
       : 'https://teachdigital-backend.vercel.app';

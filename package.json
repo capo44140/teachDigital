@@ -12,6 +12,7 @@
     "validate-manifest": "node scripts/validate-manifest.js",
     "test-profile-cache": "node scripts/test-profile-cache.js",
     "init-db": "node scripts/init-db.js",
+    "init-badges": "node scripts/init-badges.js",
     "db:init": "node scripts/init-db.js",
     "db:test": "node -e \"import('./src/config/database.js').then(db => db.testConnection())\"",
     "migrate-pins": "node scripts/migrate-pins.js migrate",
