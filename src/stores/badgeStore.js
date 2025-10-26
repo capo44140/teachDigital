@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import badgeService from '../services/badgeService.js'
+import badgeApiService from '../services/badgeApiService.js'
 
 /**
  * Store pour la gestion des badges
@@ -116,7 +116,7 @@ export const useBadgeStore = defineStore('badge', {
       this.error = null
       
       try {
-        this.allBadges = await badgeService.getAllBadges()
+        this.allBadges = await badgeApiService.getAllBadges()
       } catch (error) {
         console.error('Erreur lors du chargement des badges:', error)
         this.error = error.message

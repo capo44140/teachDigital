@@ -3,6 +3,7 @@ const { NativeHashService } = require('../lib/nativeHash.js');
 const sql = require('../lib/database.js').default;
 const { generateToken, createSession, authenticateToken, deleteSession } = require('../lib/auth.js');
 const { handleError } = require('../lib/response.js');
+const handleBadges = require('./badges.js');
 
 module.exports = async function handler(req, res) {
   // Configuration CORS complète
@@ -75,6 +76,11 @@ module.exports = async function handler(req, res) {
     // Routes des vidéos YouTube
     if (pathname === '/api/youtube-videos') {
       return await handleYoutubeVideos(req, res);
+    }
+
+    // Routes des badges
+    if (pathname.startsWith('/api/badges')) {
+      return await handleBadges(req, res);
     }
 
     // Route d'initialisation des pins

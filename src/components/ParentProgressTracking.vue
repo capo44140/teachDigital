@@ -1,284 +1,255 @@
 <template>
-  <div class="parent-progress-tracking">
-    <!-- Bouton de retour -->
-    <div class="back-button-container">
-      <button @click="goBack" class="back-button">
-        <i class="fas fa-arrow-left"></i>
-        Retour au dashboard
-      </button>
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
+    <!-- Background animated elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
     </div>
 
-    <!-- En-tête -->
-    <div class="header">
-      <div class="header-content">
-        <div class="header-info">
-          <h1>Suivi des Progrès</h1>
-          <p>Consultez les progrès d'apprentissage de vos enfants</p>
-        </div>
-        <div class="header-actions">
-          <button @click="refreshData" :disabled="isLoading" class="refresh-btn">
-            <i class="fas fa-sync-alt" :class="{ 'fa-spin': isLoading }"></i>
-            Actualiser
+    <!-- Header avec navigation -->
+    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+      <nav class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <button 
+              @click="goBack"
+              class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
+              title="Retour au dashboard"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </button>
+            <div>
+              <h1 class="text-2xl font-bold text-white">Suivi des Progrès</h1>
+              <p class="text-sm text-white/60 hidden sm:block">Consultez les progrès d'apprentissage de vos enfants</p>
+            </div>
+          </div>
+          <button 
+            @click="refreshData"
+            :disabled="isLoading"
+            class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
+            title="Actualiser les données"
+          >
+            <svg class="w-5 h-5" :class="{ 'animate-spin': isLoading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
           </button>
         </div>
-      </div>
-    </div>
+      </nav>
+    </header>
 
-    <!-- Statistiques globales -->
-    <div class="stats-overview">
-      <div class="stat-card">
-        <div class="stat-icon">👥</div>
-        <div class="stat-content">
-          <h3>{{ childrenStats.length }}</h3>
-          <p>Enfants actifs</p>
+    <!-- Contenu principal -->
+    <main class="relative z-10 container mx-auto px-6 py-12">
+      <!-- Statistiques globales -->
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div class="glass-card-stat group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-white/60 text-sm">Enfants actifs</p>
+            <p class="text-3xl font-bold text-white">{{ childrenStats.length }}</p>
+          </div>
         </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">📚</div>
-        <div class="stat-content">
-          <h3>{{ totalQuizzesCompleted }}</h3>
-          <p>Quiz terminés</p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">⭐</div>
-        <div class="stat-content">
-          <h3>{{ formatPercentage(averageScore) }}%</h3>
-          <p>Score moyen</p>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">🏆</div>
-        <div class="stat-content">
-          <h3>{{ totalLessonsCompleted }}</h3>
-          <p>Leçons terminées</p>
-        </div>
-      </div>
-    </div>
 
-    <!-- Navigation des onglets -->
-    <div class="tabs-navigation">
-      <button 
-        v-for="tab in tabs" 
-        :key="tab.id"
-        :class="['tab-button', { active: activeTab === tab.id }]"
-        @click="activeTab = tab.id"
-      >
-        <i :class="tab.icon"></i>
-        {{ tab.label }}
-      </button>
-    </div>
+        <div class="glass-card-stat group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-white/60 text-sm">Quiz terminés</p>
+            <p class="text-3xl font-bold text-white">{{ totalQuizzesCompleted }}</p>
+          </div>
+        </div>
 
-    <!-- Contenu des onglets -->
-    <div class="tab-content">
-      <!-- Onglet Vue d'ensemble -->
-      <div v-if="activeTab === 'overview'" class="tab-panel">
-        <div class="children-grid">
-          <div v-for="child in childrenStats" :key="child.id" class="child-card">
-            <div class="child-header">
-              <div class="child-avatar">
-                <img v-if="child.avatar" :src="child.avatar" :alt="child.name" />
-                <div v-else class="default-avatar">
-                  {{ child.name?.charAt(0)?.toUpperCase() }}
+        <div class="glass-card-stat group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-white/60 text-sm">Score moyen</p>
+            <p class="text-3xl font-bold text-white">{{ formatPercentage(averageScore) }}%</p>
+          </div>
+        </div>
+
+        <div class="glass-card-stat group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-white/60 text-sm">Leçons terminées</p>
+            <p class="text-3xl font-bold text-white">{{ totalLessonsCompleted }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Onglets -->
+      <div class="glass-card-dashboard mb-8">
+        <div class="flex flex-wrap gap-2 border-b border-white/10 pb-4 mb-8">
+          <button 
+            v-for="tab in tabs" 
+            :key="tab.id"
+            :class="[
+              'px-4 py-2 rounded-xl transition-all font-medium text-sm flex items-center space-x-2',
+              activeTab === tab.id
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/50'
+                : 'text-white/80 hover:text-white border border-white/20 hover:bg-white/10'
+            ]"
+            @click="activeTab = tab.id"
+          >
+            <span>{{ tab.icon }}</span>
+            <span>{{ tab.label }}</span>
+          </button>
+        </div>
+
+        <!-- Contenu des onglets -->
+        <!-- Onglet Vue d'ensemble -->
+        <div v-if="activeTab === 'overview'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div 
+            v-for="child in childrenStats" 
+            :key="child.id" 
+            class="border border-white/20 rounded-xl p-6 hover:bg-white/10 transition-all"
+          >
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex items-center space-x-3">
+                <div v-if="child.avatar" class="w-12 h-12 rounded-lg overflow-hidden">
+                  <img :src="child.avatar" :alt="child.name" class="w-full h-full object-cover">
+                </div>
+                <div v-else class="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-lg flex items-center justify-center">
+                  <span class="text-white font-bold text-lg">{{ child.name?.charAt(0)?.toUpperCase() }}</span>
+                </div>
+                <div>
+                  <h3 class="font-bold text-white">{{ child.name }}</h3>
+                  <p class="text-white/60 text-sm">{{ getChildTypeLabel(child.type) }}</p>
                 </div>
               </div>
-              <div class="child-info">
-                <h3>{{ child.name }}</h3>
-                <p class="child-type">{{ getChildTypeLabel(child.type) }}</p>
-              </div>
-              <div class="child-score">
-                <div class="score-circle" :class="getScoreClass(child.averageScore)">
-                  {{ formatPercentage(child.averageScore) }}%
-                </div>
-              </div>
-            </div>
-            
-            <div class="child-stats">
-              <div class="stat-item">
-                <span class="stat-number">{{ child.totalQuizzes }}</span>
-                <span class="stat-label">Quiz</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-number">{{ child.completedLessons }}</span>
-                <span class="stat-label">Leçons</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-number">{{ child.totalTime }}</span>
-                <span class="stat-label">Temps</span>
+              <div :class="[
+                'w-12 h-12 rounded-lg flex items-center justify-center font-bold text-sm',
+                getScoreClass(child.averageScore)
+              ]">
+                {{ formatPercentage(child.averageScore) }}%
               </div>
             </div>
 
-            <div class="child-progress">
-              <div class="progress-bar">
+            <div class="grid grid-cols-3 gap-3 mb-4">
+              <div class="bg-white/10 rounded-lg p-3 text-center">
+                <p class="text-2xl font-bold text-white">{{ child.totalQuizzes }}</p>
+                <p class="text-white/60 text-xs">Quiz</p>
+              </div>
+              <div class="bg-white/10 rounded-lg p-3 text-center">
+                <p class="text-2xl font-bold text-white">{{ child.completedLessons }}</p>
+                <p class="text-white/60 text-xs">Leçons</p>
+              </div>
+              <div class="bg-white/10 rounded-lg p-3 text-center">
+                <p class="text-2xl font-bold text-white">{{ child.totalTime }}</p>
+                <p class="text-white/60 text-xs">Temps</p>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
                 <div 
-                  class="progress-fill" 
+                  class="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full transition-all"
                   :style="{ width: formatPercentage(child.averageScore) + '%' }"
                 ></div>
               </div>
-              <span class="progress-text">Progrès: {{ formatPercentage(child.averageScore) }}%</span>
+              <p class="text-white/60 text-xs mt-2">Progrès: {{ formatPercentage(child.averageScore) }}%</p>
             </div>
 
-            <div class="child-actions">
-              <button @click="viewChildProgress(child)" class="view-progress-btn">
-                Voir le détail
-              </button>
-            </div>
+            <button 
+              @click="viewChildProgress(child)"
+              class="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/50 transition-all text-sm"
+            >
+              Voir le détail
+            </button>
           </div>
         </div>
-      </div>
 
-      <!-- Onglet Historique global -->
-      <div v-if="activeTab === 'history'" class="tab-panel">
-        <div class="section-header">
-          <h3>Historique des Quiz</h3>
-          <div class="filters">
-            <select v-model="selectedPeriod" @change="filterQuizHistory">
-              <option value="all">Tous les quiz</option>
-              <option value="week">Cette semaine</option>
-              <option value="month">Ce mois</option>
-              <option value="year">Cette année</option>
+        <!-- Onglet Historique -->
+        <div v-if="activeTab === 'history'" class="space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+            <h3 class="text-lg font-bold text-white mb-3 sm:mb-0">Historique des Quiz</h3>
+            <select
+              v-model="selectedPeriod"
+              @change="filterQuizHistory"
+              class="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all w-full sm:w-auto"
+            >
+              <option value="all" class="bg-slate-900">Tous les quiz</option>
+              <option value="week" class="bg-slate-900">Cette semaine</option>
+              <option value="month" class="bg-slate-900">Ce mois</option>
+              <option value="year" class="bg-slate-900">Cette année</option>
             </select>
           </div>
-        </div>
 
-        <div v-if="filteredQuizHistory.length === 0" class="empty-state">
-          <div class="empty-icon">📚</div>
-          <h4>Aucun quiz trouvé</h4>
-          <p>Vos enfants n'ont pas encore complété de quiz.</p>
-        </div>
+          <div v-if="filteredQuizHistory.length === 0" class="text-center py-12">
+            <p class="text-white/60 text-lg">Aucun quiz trouvé</p>
+          </div>
 
-        <div v-else class="quiz-history">
-          <div 
-            v-for="quiz in filteredQuizHistory" 
-            :key="quiz.id"
-            class="quiz-item"
-          >
-            <div class="quiz-header">
-              <div class="quiz-child">
-                <div class="child-avatar-small">
-                  {{ quiz.childName?.charAt(0)?.toUpperCase() }}
+          <div v-else class="space-y-3">
+            <div
+              v-for="quiz in filteredQuizHistory"
+              :key="quiz.id"
+              class="border border-white/20 rounded-xl p-4 hover:bg-white/10 transition-all"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <h4 class="font-bold text-white">{{ quiz.title }}</h4>
+                  <p class="text-white/60 text-sm">{{ quiz.childName }} • {{ formatDate(quiz.completedAt) }}</p>
                 </div>
-                <span class="child-name">{{ quiz.childName }}</span>
-              </div>
-              <div class="quiz-score" :class="getScoreClass(quiz.percentage)">
-                {{ formatPercentage(quiz.percentage) }}%
-              </div>
-            </div>
-            <div class="quiz-content">
-              <h4>{{ quiz.lessonTitle || 'Quiz' }}</h4>
-              <p class="quiz-date">{{ formatDate(quiz.completedAt) }}</p>
-              <div class="quiz-details">
-                <span>{{ quiz.score }}/{{ quiz.totalQuestions }} questions</span>
-                <span class="quiz-duration">{{ formatDuration(quiz.duration) }}</span>
+                <div class="text-right">
+                  <p class="text-2xl font-bold text-white">{{ quiz.score }}%</p>
+                  <p class="text-white/60 text-xs">{{ quiz.questionsCorrect }}/{{ quiz.questionsTotal }} réponses</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Onglet Comparaison -->
-      <div v-if="activeTab === 'comparison'" class="tab-panel">
-        <div class="comparison-chart">
-          <h3>Comparaison des Performances</h3>
-          <div class="chart-container">
-            <div v-for="child in childrenStats" :key="child.id" class="chart-item">
-              <div class="chart-bar">
+        <!-- Onglet Statistiques -->
+        <div v-if="activeTab === 'statistics'" class="space-y-6">
+          <h3 class="text-lg font-bold text-white">Statistiques Détaillées</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="border border-white/20 rounded-xl p-6">
+              <h4 class="font-bold text-white mb-4">Meilleurs scores</h4>
+              <div class="space-y-3">
                 <div 
-                  class="bar-fill" 
-                  :style="{ height: formatPercentage(child.averageScore) + '%' }"
-                ></div>
-              </div>
-              <div class="chart-label">
-                <span class="child-name">{{ child.name }}</span>
-                <span class="child-score">{{ formatPercentage(child.averageScore) }}%</span>
+                  v-for="(item, index) in getTopScores()"
+                  :key="index"
+                  class="flex items-center justify-between"
+                >
+                  <span class="text-white/80">{{ item.name }}</span>
+                  <span class="font-bold text-white">{{ item.score }}%</span>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div class="comparison-table">
-          <h3>Tableau de Comparaison</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Enfant</th>
-                <th>Quiz terminés</th>
-                <th>Score moyen</th>
-                <th>Leçons terminées</th>
-                <th>Temps d'apprentissage</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="child in childrenStats" :key="child.id">
-                <td>
-                  <div class="child-cell">
-                    <div class="child-avatar-small">
-                      {{ child.name?.charAt(0)?.toUpperCase() }}
-                    </div>
-                    {{ child.name }}
-                  </div>
-                </td>
-                <td>{{ child.totalQuizzes }}</td>
-                <td>
-                  <span class="score-badge" :class="getScoreClass(child.averageScore)">
-                    {{ formatPercentage(child.averageScore) }}%
-                  </span>
-                </td>
-                <td>{{ child.completedLessons }}</td>
-                <td>{{ child.totalTime }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Onglet Recommandations -->
-      <div v-if="activeTab === 'recommendations'" class="tab-panel">
-        <div class="recommendations">
-          <h3>Recommandations pour vos enfants</h3>
-          
-          <div v-for="child in childrenStats" :key="child.id" class="child-recommendations">
-            <div class="recommendation-header">
-              <div class="child-info">
-                <div class="child-avatar-small">
-                  {{ child.name?.charAt(0)?.toUpperCase() }}
-                </div>
-                <h4>{{ child.name }}</h4>
-              </div>
-            </div>
-            
-            <div class="recommendation-content">
-              <div v-if="child.averageScore < 70" class="recommendation-item warning">
-                <div class="recommendation-icon">⚠️</div>
-                <div class="recommendation-text">
-                  <h5>Attention aux difficultés</h5>
-                  <p>Le score moyen de {{ child.name }} est de {{ formatPercentage(child.averageScore) }}%. Il serait bénéfique de revoir certains concepts.</p>
-                </div>
-              </div>
-              
-              <div v-if="child.totalQuizzes < 5" class="recommendation-item info">
-                <div class="recommendation-icon">💡</div>
-                <div class="recommendation-text">
-                  <h5>Encouragez la pratique</h5>
-                  <p>{{ child.name }} a complété {{ child.totalQuizzes }} quiz. Encouragez-le à faire plus d'exercices.</p>
-                </div>
-              </div>
-              
-              <div v-if="child.averageScore >= 90" class="recommendation-item success">
-                <div class="recommendation-icon">🎉</div>
-                <div class="recommendation-text">
-                  <h5>Excellent travail !</h5>
-                  <p>{{ child.name }} obtient d'excellents résultats avec {{ formatPercentage(child.averageScore) }}% de moyenne. Continuez ainsi !</p>
+            <div class="border border-white/20 rounded-xl p-6">
+              <h4 class="font-bold text-white mb-4">Activité récente</h4>
+              <div class="space-y-3">
+                <div 
+                  v-for="(item, index) in getRecentActivity()"
+                  :key="index"
+                  class="flex items-center justify-between"
+                >
+                  <span class="text-white/80">{{ item.name }}</span>
+                  <span class="text-white/60 text-sm">{{ item.date }}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-    
-    <!-- Affichage de la version -->
-    <VersionInfo position="bottom-right" />
+    </main>
   </div>
 </template>
 
@@ -303,8 +274,7 @@ export default {
       tabs: [
         { id: 'overview', label: 'Vue d\'ensemble', icon: 'fas fa-th-large' },
         { id: 'history', label: 'Historique', icon: 'fas fa-history' },
-        { id: 'comparison', label: 'Comparaison', icon: 'fas fa-chart-bar' },
-        { id: 'recommendations', label: 'Recommandations', icon: 'fas fa-lightbulb' }
+        { id: 'statistics', label: 'Statistiques', icon: 'fas fa-chart-bar' }
       ]
     }
   },
@@ -521,1052 +491,101 @@ export default {
           unlocked: 'true'
         }
       })
+    },
+
+    getTopScores() {
+      const topScores = this.childrenStats
+        .filter(child => child.averageScore > 0)
+        .sort((a, b) => b.averageScore - a.averageScore)
+        .slice(0, 5);
+
+      return topScores.map(child => ({
+        name: child.name,
+        score: this.formatPercentage(child.averageScore)
+      }));
+    },
+
+    getRecentActivity() {
+      const recentActivity = this.quizHistory
+        .slice(0, 5)
+        .map(quiz => ({
+          name: quiz.childName,
+          date: this.formatDate(quiz.completedAt)
+        }));
+
+      return recentActivity;
     }
   }
 }
 </script>
 
 <style scoped>
-.parent-progress-tracking {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 20px;
-  background: #f8f9fa;
-  min-height: 100vh;
+/* Animations */
+@keyframes blob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
 }
 
-.back-button-container {
-  margin-bottom: 20px;
+.animate-blob {
+  animation: blob 7s infinite;
 }
 
-.back-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: white;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  color: #6c757d;
-  text-decoration: none;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.animation-delay-2000 {
+  animation-delay: 2s;
 }
 
-.back-button:hover {
-  background: #f8f9fa;
-  border-color: #667eea;
-  color: #667eea;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+.animation-delay-4000 {
+  animation-delay: 4s;
 }
 
-.back-button i {
-  font-size: 14px;
-}
-
-.header {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-info h1 {
-  margin: 0 0 8px 0;
-  color: #2c3e50;
-  font-size: 28px;
-}
-
-.header-info p {
-  margin: 0;
-  color: #7f8c8d;
-  font-size: 16px;
-}
-
-.refresh-btn {
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.3s ease;
+/* Glass Cards */
+.glass-card-stat {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.refresh-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.refresh-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.stats-overview {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 24px;
-}
-
-.stat-card {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.stat-icon {
-  font-size: 32px;
-}
-
-.stat-content h3 {
-  margin: 0 0 4px 0;
-  color: #2c3e50;
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.stat-content p {
-  margin: 0;
-  color: #7f8c8d;
-  font-size: 14px;
-}
-
-.tabs-navigation {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-  background: white;
-  border-radius: 12px;
-  padding: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.tab-button {
-  flex: 1;
-  padding: 12px 16px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-weight: 500;
-  color: #7f8c8d;
-}
-
-.tab-button:hover {
-  background: #f8f9fa;
-  color: #2c3e50;
-}
-
-.tab-button.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.tab-content {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.children-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 24px;
-}
-
-.child-card {
-  border: 1px solid #e9ecef;
-  border-radius: 12px;
-  padding: 20px;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
 
-.child-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+.glass-card-stat:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
 }
 
-.child-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.child-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.child-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.child-info h3 {
-  margin: 0 0 4px 0;
-  color: #2c3e50;
-  font-size: 18px;
-}
-
-.child-type {
-  color: #7f8c8d;
-  font-size: 14px;
-  margin: 0;
-}
-
-.child-score {
-  margin-left: auto;
-}
-
-.score-circle {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 16px;
-  color: white;
-}
-
-.score-circle.excellent {
-  background: #28a745;
-}
-
-.score-circle.good {
-  background: #17a2b8;
-}
-
-.score-circle.average {
-  background: #ffc107;
-  color: #212529;
-}
-
-.score-circle.needs-improvement {
-  background: #dc3545;
-}
-
-.child-stats {
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 16px;
-  padding: 12px 0;
-  border-top: 1px solid #e9ecef;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.stat-item {
-  text-align: center;
-}
-
-.stat-number {
-  display: block;
-  font-size: 18px;
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #7f8c8d;
-}
-
-.child-progress {
-  margin-bottom: 16px;
-}
-
-.progress-bar {
-  height: 8px;
-  background: #e9ecef;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 8px;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  transition: width 0.3s ease;
-}
-
-.progress-text {
-  font-size: 12px;
-  color: #7f8c8d;
-}
-
-.child-actions {
-  text-align: center;
-}
-
-.view-progress-btn {
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
+.glass-card-dashboard {
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
 
-.view-progress-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+.glass-card-dashboard:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
 }
 
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.section-header h3 {
-  margin: 0;
-  color: #2c3e50;
-}
-
-.filters select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: white;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 48px 24px;
-  color: #7f8c8d;
-}
-
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.quiz-history {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.quiz-item {
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 20px;
-  transition: all 0.3s ease;
-}
-
-.quiz-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-.quiz-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.quiz-child {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.child-avatar-small {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 14px;
-  font-weight: bold;
-}
-
-.child-name {
-  font-weight: 500;
-  color: #2c3e50;
-}
-
-.quiz-score {
-  padding: 6px 12px;
-  border-radius: 16px;
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.quiz-score.excellent {
-  background: #d4edda;
-  color: #155724;
-}
-
-.quiz-score.good {
-  background: #d1ecf1;
-  color: #0c5460;
-}
-
-.quiz-score.average {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.quiz-score.needs-improvement {
-  background: #f8d7da;
-  color: #721c24;
-}
-
-.quiz-content h4 {
-  margin: 0 0 4px 0;
-  color: #2c3e50;
-  font-size: 16px;
-}
-
-.quiz-date {
-  color: #7f8c8d;
-  font-size: 14px;
-  margin-bottom: 8px;
-}
-
-.quiz-details {
-  display: flex;
-  gap: 16px;
-  color: #7f8c8d;
-  font-size: 14px;
-}
-
-.comparison-chart {
-  margin-bottom: 32px;
-}
-
-.comparison-chart h3 {
-  margin: 0 0 24px 0;
-  color: #2c3e50;
-}
-
-.chart-container {
-  display: flex;
-  align-items: end;
-  gap: 20px;
-  height: 200px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.chart-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.chart-bar {
-  width: 40px;
-  height: 150px;
-  background: #e9ecef;
-  border-radius: 4px;
-  position: relative;
-  overflow: hidden;
-}
-
-.bar-fill {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  transition: height 0.3s ease;
-}
-
-.chart-label {
-  text-align: center;
-}
-
-.child-name {
-  display: block;
-  font-weight: 500;
-  color: #2c3e50;
-  margin-bottom: 4px;
-}
-
-.child-score {
-  font-size: 14px;
-  color: #7f8c8d;
-}
-
-.comparison-table {
-  margin-top: 32px;
-}
-
-.comparison-table h3 {
-  margin: 0 0 16px 0;
-  color: #2c3e50;
-}
-
-.comparison-table table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.comparison-table th,
-.comparison-table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.comparison-table th {
-  background: #f8f9fa;
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.child-cell {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.score-badge {
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-.score-badge.excellent {
-  background: #d4edda;
-  color: #155724;
-}
-
-.score-badge.good {
-  background: #d1ecf1;
-  color: #0c5460;
-}
-
-.score-badge.average {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.score-badge.needs-improvement {
-  background: #f8d7da;
-  color: #721c24;
-}
-
-.recommendations h3 {
-  margin: 0 0 24px 0;
-  color: #2c3e50;
-}
-
-.child-recommendations {
-  margin-bottom: 24px;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.recommendation-header {
-  background: #f8f9fa;
-  padding: 16px;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.child-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.child-info h4 {
-  margin: 0;
-  color: #2c3e50;
-}
-
-.recommendation-content {
-  padding: 16px;
-}
-
-.recommendation-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 6px;
-  margin-bottom: 12px;
-}
-
-.recommendation-item:last-child {
-  margin-bottom: 0;
-}
-
-.recommendation-item.warning {
-  background: #fff3cd;
-  border: 1px solid #ffeaa7;
-}
-
-.recommendation-item.info {
-  background: #d1ecf1;
-  border: 1px solid #bee5eb;
-}
-
-.recommendation-item.success {
-  background: #d4edda;
-  border: 1px solid #c3e6cb;
-}
-
-.recommendation-icon {
-  font-size: 20px;
-}
-
-.recommendation-text h5 {
-  margin: 0 0 4px 0;
-  color: #2c3e50;
-  font-size: 14px;
-}
-
-.recommendation-text p {
-  margin: 0;
-  color: #6c757d;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-@media (max-width: 768px) {
-  .parent-progress-tracking {
-    padding: 12px;
-  }
-  
-  .back-button-container {
-    margin-bottom: 16px;
-  }
-  
-  .back-button {
-    padding: 8px 12px;
-    font-size: 14px;
-  }
-  
-  .header {
-    padding: 16px;
-    margin-bottom: 16px;
-  }
-  
-  .header-content {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
-  }
-  
-  .header-info h1 {
-    font-size: 24px;
-  }
-  
-  .header-info p {
-    font-size: 14px;
-  }
-  
-  .refresh-btn {
-    padding: 6px 12px;
-    font-size: 14px;
-  }
-  
-  .stats-overview {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  
-  .stat-card {
-    padding: 16px;
-    flex-direction: column;
-    text-align: center;
-    gap: 8px;
-  }
-  
-  .stat-icon {
-    font-size: 24px;
-  }
-  
-  .stat-content h3 {
-    font-size: 20px;
-  }
-  
-  .stat-content p {
-    font-size: 12px;
-  }
-  
-  .tabs-navigation {
-    flex-direction: column;
-    gap: 4px;
-    padding: 6px;
-    margin-bottom: 16px;
-  }
-  
-  .tab-button {
-    padding: 10px 12px;
-    font-size: 14px;
-  }
-  
-  .tab-content {
-    padding: 16px;
-  }
-  
-  .children-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-  
-  .child-card {
-    padding: 16px;
-  }
-  
-  .child-header {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 12px;
-  }
-  
-  .child-avatar {
-    width: 50px;
-    height: 50px;
-    font-size: 20px;
-  }
-  
-  .child-info h3 {
-    font-size: 16px;
-  }
-  
-  .child-type {
-    font-size: 12px;
-  }
-  
-  .child-score {
-    margin-left: 0;
-  }
-  
-  .score-circle {
-    width: 40px;
-    height: 40px;
-    font-size: 14px;
-  }
-  
-  .child-stats {
-    flex-direction: column;
-    gap: 8px;
-    padding: 8px 0;
-  }
-  
-  .stat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 4px 0;
-  }
-  
-  .stat-number {
-    font-size: 16px;
-  }
-  
-  .stat-label {
-    font-size: 11px;
-  }
-  
-  .child-progress {
-    margin-bottom: 12px;
-  }
-  
-  .progress-text {
-    font-size: 11px;
-  }
-  
-  .view-progress-btn {
-    padding: 6px 12px;
-    font-size: 14px;
-  }
-  
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  
-  .section-header h3 {
-    font-size: 18px;
-  }
-  
-  .filters select {
-    padding: 6px 10px;
-    font-size: 14px;
-  }
-  
-  .empty-state {
-    padding: 32px 16px;
-  }
-  
-  .empty-icon {
-    font-size: 36px;
-  }
-  
-  .empty-state h4 {
-    font-size: 18px;
-  }
-  
-  .empty-state p {
-    font-size: 14px;
-  }
-  
-  .quiz-history {
-    gap: 12px;
-  }
-  
-  .quiz-item {
-    padding: 16px;
-  }
-  
-  .quiz-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .quiz-child {
-    gap: 8px;
-  }
-  
-  .child-avatar-small {
-    width: 28px;
-    height: 28px;
-    font-size: 12px;
-  }
-  
-  .child-name {
-    font-size: 14px;
-  }
-  
-  .quiz-score {
-    padding: 4px 8px;
-    font-size: 12px;
-  }
-  
-  .quiz-content h4 {
-    font-size: 14px;
-  }
-  
-  .quiz-date {
-    font-size: 12px;
-  }
-  
-  .quiz-details {
-    flex-direction: column;
-    gap: 4px;
-    font-size: 12px;
-  }
-  
-  .comparison-chart {
-    margin-bottom: 24px;
-  }
-  
-  .comparison-chart h3 {
-    font-size: 18px;
-    margin-bottom: 16px;
-  }
-  
-  .chart-container {
-    flex-direction: column;
-    height: auto;
-    align-items: center;
-    gap: 16px;
-    padding: 16px;
-  }
-  
-  .chart-item {
-    width: 100%;
-    max-width: 200px;
-  }
-  
-  .chart-bar {
-    width: 100%;
-    height: 80px;
-  }
-  
-  .chart-label {
-    margin-top: 8px;
-  }
-  
-  .child-name {
-    font-size: 14px;
-  }
-  
-  .child-score {
-    font-size: 12px;
-  }
-  
-  .comparison-table {
-    margin-top: 24px;
-  }
-  
-  .comparison-table h3 {
-    font-size: 18px;
-    margin-bottom: 12px;
-  }
-  
-  .comparison-table table {
-    font-size: 12px;
-  }
-  
-  .comparison-table th,
-  .comparison-table td {
-    padding: 8px 6px;
-  }
-  
-  .child-cell {
-    gap: 6px;
-  }
-  
-  .child-avatar-small {
-    width: 24px;
-    height: 24px;
-    font-size: 10px;
-  }
-  
-  .score-badge {
-    padding: 2px 6px;
-    font-size: 10px;
-  }
-  
-  .recommendations h3 {
-    font-size: 18px;
-    margin-bottom: 16px;
-  }
-  
-  .child-recommendations {
-    margin-bottom: 16px;
-  }
-  
-  .recommendation-header {
-    padding: 12px;
-  }
-  
-  .child-info {
-    gap: 8px;
-  }
-  
-  .child-info h4 {
-    font-size: 14px;
-  }
-  
-  .recommendation-content {
-    padding: 12px;
-  }
-  
-  .recommendation-item {
-    padding: 8px;
-    margin-bottom: 8px;
-  }
-  
-  .recommendation-icon {
-    font-size: 16px;
-  }
-  
-  .recommendation-text h5 {
-    font-size: 13px;
-  }
-  
-  .recommendation-text p {
-    font-size: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .parent-progress-tracking {
-    padding: 8px;
-  }
-  
-  .stats-overview {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-  
-  .stat-card {
-    padding: 12px;
-  }
-  
-  .header {
-    padding: 12px;
-  }
-  
-  .header-info h1 {
-    font-size: 20px;
-  }
-  
-  .tab-content {
-    padding: 12px;
-  }
-  
-  .child-card {
-    padding: 12px;
-  }
-  
-  .quiz-item {
-    padding: 12px;
-  }
-  
-  .comparison-table {
-    overflow-x: auto;
-  }
-  
-  .comparison-table table {
-    min-width: 400px;
+@media (max-width: 640px) {
+  .glass-card-stat,
+  .glass-card-dashboard {
+    padding: 1rem;
+    border-radius: 1rem;
   }
 }
 </style>

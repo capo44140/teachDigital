@@ -1,222 +1,270 @@
 <template>
-  <div class="min-h-screen bg-gray-900 p-6">
-    <!-- Header avec navigation -->
-    <div class="max-w-6xl mx-auto">
-      <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center space-x-4">
-          <button 
-            @click="goBack"
-            class="p-2 text-white hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-            </svg>
-          </button>
-          <h1 class="text-3xl font-bold text-white">Gestion des profils</h1>
-        </div>
-        <div class="flex space-x-3">
-          <button 
-            @click="openPinSettings"
-            class="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center space-x-2"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-            </svg>
-            <span>Code PIN</span>
-          </button>
-          <button 
-            @click="addNewProfile"
-            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-            </svg>
-            <span>Nouveau profil</span>
-          </button>
-        </div>
-      </div>
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
+    <!-- Background animated elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    </div>
 
+    <!-- Header -->
+    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+      <nav class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <!-- Bouton retour et titre -->
+          <div class="flex items-center space-x-4">
+            <button 
+              @click="goBack"
+              class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
+              title="Retour au dashboard"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </button>
+            <h1 class="text-2xl font-bold text-white">Gestion des profils</h1>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center space-x-3">
+            <button 
+              @click="openPinSettings"
+              class="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 hover:border-white/30 transition-all flex items-center space-x-2 text-sm"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+              <span>Code PIN</span>
+            </button>
+            <button 
+              @click="addNewProfile"
+              class="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/50 transition-all flex items-center space-x-2 text-sm"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+              </svg>
+              <span>Nouveau profil</span>
+            </button>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <!-- Contenu principal -->
+    <main class="relative z-10 container mx-auto px-6 py-12">
       <!-- Statistiques -->
-      <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-        <div class="bg-gray-800 p-6 rounded-lg">
-          <div class="text-2xl font-bold text-white">{{ profiles.length }}</div>
-          <div class="text-gray-400">Total profils</div>
+      <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-6 mb-12">
+        <div class="glass-card-stat group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-white/60 text-sm">Total profils</p>
+            <p class="text-3xl font-bold text-white">{{ profiles.length }}</p>
+          </div>
         </div>
-        <div class="bg-gray-800 p-6 rounded-lg">
-          <div class="text-2xl font-bold text-green-400">{{ activeProfiles }}</div>
-          <div class="text-gray-400">Profils actifs</div>
+
+        <div class="glass-card-stat group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-white/60 text-sm">Profils actifs</p>
+            <p class="text-3xl font-bold text-white">{{ activeProfiles }}</p>
+          </div>
         </div>
-        <div class="bg-gray-800 p-6 rounded-lg">
-          <div class="text-2xl font-bold text-yellow-400">{{ childProfiles }}</div>
-          <div class="text-gray-400">Profils enfants</div>
+
+        <div class="glass-card-stat group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-400 to-rose-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-white/60 text-sm">Profils enfants</p>
+            <p class="text-3xl font-bold text-white">{{ childProfiles }}</p>
+          </div>
         </div>
-        <div class="bg-gray-800 p-6 rounded-lg">
-          <div class="text-2xl font-bold text-orange-400">{{ teenProfiles }}</div>
-          <div class="text-gray-400">Profils adolescents</div>
+
+        <div class="glass-card-stat group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-white/60 text-sm">Profils adolescents</p>
+            <p class="text-3xl font-bold text-white">{{ teenProfiles }}</p>
+          </div>
         </div>
-        <div class="bg-gray-800 p-6 rounded-lg">
-          <div class="text-2xl font-bold text-blue-400">{{ adminProfiles }}</div>
-          <div class="text-gray-400">Profils admin</div>
+
+        <div class="glass-card-stat group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 12a3 3 0 11-6 0 3 3 0 016 0zm6 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-white/60 text-sm">Profils admin</p>
+            <p class="text-3xl font-bold text-white">{{ adminProfiles }}</p>
+          </div>
         </div>
       </div>
 
       <!-- Messages d'erreur -->
-      <div v-if="error" class="mb-6 bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg">
-        <div class="flex items-center">
-          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-          </svg>
-          {{ error }}
-        </div>
+      <div v-if="error" class="mb-6 bg-red-500/20 border border-red-500/30 backdrop-blur-xl text-red-200 px-6 py-4 rounded-xl flex items-center space-x-3">
+        <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+        </svg>
+        <span>{{ error }}</span>
+      </div>
+
+      <!-- Indicateur de chargement -->
+      <div v-if="isLoading" class="text-center py-16">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-white/20 border-t-white/80 mb-4"></div>
+        <p class="text-white/60 text-lg">Chargement des profils...</p>
       </div>
 
       <!-- Liste des profils -->
-      <div class="bg-gray-800 rounded-lg overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-700">
-          <h2 class="text-xl font-semibold text-white">Liste des profils</h2>
-        </div>
-        
-        <!-- Indicateur de chargement -->
-        <div v-if="isLoading" class="p-8 text-center">
-          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-          <p class="mt-2 text-gray-400">Chargement des profils...</p>
-        </div>
-
-        <!-- Liste des profils -->
-        <div v-else class="divide-y divide-gray-700">
-          <div 
-            v-for="profile in profiles" 
-            :key="profile.id"
-            class="p-6 hover:bg-gray-750 transition-colors"
+      <div v-else class="space-y-4">
+        <div v-if="profiles.length === 0" class="glass-card-dashboard text-center py-16">
+          <p class="text-white/60 text-lg mb-4">Aucun profil trouvé</p>
+          <button 
+            @click="addNewProfile"
+            class="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/50 transition-all"
           >
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-4">
-                <!-- Avatar du profil -->
-                <div class="relative">
-                  <!-- Image réelle si disponible -->
-                  <div v-if="profile.image_data" class="w-16 h-16 rounded-lg overflow-hidden">
-                    <img 
-                      :src="profile.image_data" 
-                      :alt="profile.name"
-                      class="w-full h-full object-cover"
-                    >
-                  </div>
-                  <!-- Avatar par défaut sinon -->
-                  <div 
-                    v-else
-                    :class="profile.avatar_class"
-                    class="w-16 h-16 rounded-lg flex items-center justify-center"
-                  >
-                    <div v-html="profile.avatar_content"></div>
-                  </div>
-                  <!-- Badge de statut -->
-                  <div 
-                    v-if="profile.isAdmin"
-                    class="absolute -top-1 -right-1 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center"
-                  >
-                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
-                    </svg>
-                  </div>
-                  <div 
-                    v-if="profile.is_child"
-                    class="absolute -bottom-1 -right-1 bg-red-700 text-white text-xs px-2 py-1 rounded-full font-semibold"
-                  >
-                    jeunesse
-                  </div>
-                  <div 
-                    v-if="profile.is_teen"
-                    class="absolute -bottom-1 -right-1 bg-orange-700 text-white text-xs px-2 py-1 rounded-full font-semibold"
-                  >
-                    adolescent
-                  </div>
-                </div>
+            Créer le premier profil
+          </button>
+        </div>
 
-                <!-- Informations du profil -->
-                <div>
-                  <h3 class="text-lg font-semibold text-white">{{ profile.name }}</h3>
-                  <p class="text-gray-400">{{ profile.description }}</p>
-                  <div class="flex items-center space-x-4 mt-2">
-                    <span 
-                      :class="profile.is_active ? 'text-green-400' : 'text-red-400'"
-                      class="text-sm font-medium"
-                    >
-                      {{ profile.is_active ? 'Actif' : 'Inactif' }}
-                    </span>
-                    <span v-if="profile.level" class="text-blue-400 text-sm font-medium">
-                      {{ profile.level }}
-                    </span>
-                    <span class="text-gray-500 text-sm">
-                      Créé le {{ formatDate(profile.created_at) }}
-                    </span>
-                  </div>
+        <div 
+          v-for="profile in profiles" 
+          :key="profile.id"
+          class="glass-card-profile group"
+        >
+          <div class="flex items-start space-x-4">
+            <!-- Avatar du profil -->
+            <div class="relative flex-shrink-0">
+              <div v-if="profile.image_data" class="w-16 h-16 rounded-xl overflow-hidden shadow-lg">
+                <img 
+                  :src="profile.image_data" 
+                  :alt="profile.name"
+                  class="w-full h-full object-cover"
+                >
+              </div>
+              <div 
+                v-else
+                :class="profile.avatar_class"
+                class="w-16 h-16 rounded-xl flex items-center justify-center shadow-lg"
+              >
+                <div v-html="profile.avatar_content" class="w-full h-full flex items-center justify-center"></div>
+              </div>
+              
+              <!-- Badges de statut -->
+              <div 
+                v-if="profile.isAdmin"
+                class="absolute -top-2 -right-2 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center border-2 border-slate-900"
+              >
+                <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Informations du profil -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center space-x-3 mb-1">
+                <h3 class="text-lg font-bold text-white truncate">{{ profile.name }}</h3>
+                <div v-if="profile.is_child" class="px-2 py-1 bg-red-500/30 text-red-200 text-xs rounded-full font-medium">
+                  Enfant
+                </div>
+                <div v-if="profile.is_teen" class="px-2 py-1 bg-orange-500/30 text-orange-200 text-xs rounded-full font-medium">
+                  Adolescent
                 </div>
               </div>
-
-              <!-- Actions -->
-              <div class="flex items-center space-x-2">
-                <button 
-                  @click="manageImage(profile)"
-                  class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
-                  title="Gérer l'image"
+              <p class="text-white/60 text-sm mb-2 line-clamp-2">{{ profile.description || 'Aucune description' }}</p>
+              <div class="flex items-center space-x-4 text-sm">
+                <span 
+                  :class="profile.is_active ? 'text-green-400' : 'text-red-400'"
+                  class="font-medium flex items-center space-x-1"
                 >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <circle cx="10" cy="10" r="8"/>
                   </svg>
-                </button>
-                <button 
-                  @click="editProfile(profile)"
-                  class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
-                  title="Modifier"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                  </svg>
-                </button>
-                <button 
-                  @click="toggleProfileStatus(profile)"
-                  :class="profile.is_active ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'"
-                  class="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-                  :title="profile.is_active ? 'Désactiver' : 'Activer'"
-                >
-                  <svg v-if="profile.is_active" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/>
-                  </svg>
-                  <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                  </svg>
-                </button>
-                <button 
-                  @click="deleteProfile(profile)"
-                  class="p-2 text-red-400 hover:text-red-300 hover:bg-gray-700 rounded-lg transition-colors"
-                  title="Supprimer"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                  </svg>
-                </button>
+                  <span>{{ profile.is_active ? 'Actif' : 'Inactif' }}</span>
+                </span>
+                <span v-if="profile.level" class="text-blue-400 font-medium">{{ profile.level }}</span>
+                <span class="text-white/40">{{ formatDate(profile.created_at) }}</span>
               </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center space-x-2 flex-shrink-0">
+              <button 
+                @click="manageImage(profile)"
+                class="p-2 text-white/60 hover:text-white border border-white/20 hover:border-white/40 rounded-lg backdrop-blur-xl hover:bg-white/10 transition-all"
+                title="Gérer l'image"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+              </button>
+              <button 
+                @click="editProfile(profile)"
+                class="p-2 text-white/60 hover:text-white border border-white/20 hover:border-white/40 rounded-lg backdrop-blur-xl hover:bg-white/10 transition-all"
+                title="Modifier"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </button>
+              <button 
+                @click="toggleProfileStatus(profile)"
+                :class="profile.is_active ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'"
+                class="p-2 border border-white/20 hover:border-white/40 rounded-lg backdrop-blur-xl hover:bg-white/10 transition-all"
+                :title="profile.is_active ? 'Désactiver' : 'Activer'"
+              >
+                <svg v-if="profile.is_active" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/>
+                </svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+              </button>
+              <button 
+                @click="deleteProfile(profile)"
+                class="p-2 text-red-400/60 hover:text-red-300 border border-red-400/20 hover:border-red-400/40 rounded-lg backdrop-blur-xl hover:bg-red-400/10 transition-all"
+                title="Supprimer"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </main>
 
     <!-- Modal de gestion d'image -->
     <div 
       v-if="showImageModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
       @click="closeImageModal"
     >
       <div 
-        class="bg-gray-800 rounded-lg max-w-md w-full p-6"
+        class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-2xl max-w-md w-full p-8 border border-white/10"
         @click.stop
       >
-        <h3 class="text-xl font-semibold text-white mb-4">
+        <h3 class="text-xl font-bold text-white mb-6">
           Gérer l'image de {{ selectedProfile?.name }}
         </h3>
         
-        <div class="flex justify-center mb-6">
+        <div class="flex justify-center mb-8">
           <ImageUpload
             :profile-id="selectedProfile?.id"
             :current-image="selectedProfile?.image_data"
@@ -228,10 +276,10 @@
           />
         </div>
 
-        <div class="flex justify-end space-x-3">
+        <div class="flex justify-end">
           <button 
             @click="closeImageModal"
-            class="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+            class="px-6 py-2 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 hover:border-white/30 transition-all"
           >
             Fermer
           </button>
@@ -242,100 +290,98 @@
     <!-- Modal d'ajout/modification de profil -->
     <div 
       v-if="showModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
       @click="closeModal"
     >
       <div 
-        class="bg-gray-800 rounded-lg max-w-md w-full p-6"
+        class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-2xl max-w-md w-full p-8 border border-white/10 max-h-[90vh] overflow-y-auto"
         @click.stop
       >
-        <h3 class="text-xl font-semibold text-white mb-4">
+        <h3 class="text-xl font-bold text-white mb-6">
           {{ editingProfile ? 'Modifier le profil' : 'Nouveau profil' }}
         </h3>
         
-        <form @submit.prevent="saveProfile">
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">Nom</label>
-              <input 
-                v-model="form.name"
-                type="text"
-                required
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Nom du profil"
-              >
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">Description</label>
-              <textarea 
-                v-model="form.description"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows="3"
-                placeholder="Description du profil"
-              ></textarea>
-            </div>
+        <form @submit.prevent="saveProfile" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-white/80 mb-2">Nom</label>
+            <input 
+              v-model="form.name"
+              type="text"
+              required
+              class="w-full px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+              placeholder="Nom du profil"
+            >
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-white/80 mb-2">Description</label>
+            <textarea 
+              v-model="form.description"
+              class="w-full px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all resize-none"
+              rows="3"
+              placeholder="Description du profil"
+            ></textarea>
+          </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">Type de profil</label>
-              <select 
-                v-model="form.type"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="child">Enfant</option>
-                <option value="teen">Adolescent</option>
-                <option value="admin">Parent/Admin</option>
-              </select>
-            </div>
+          <div>
+            <label class="block text-sm font-medium text-white/80 mb-2">Type de profil</label>
+            <select 
+              v-model="form.type"
+              class="w-full px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+            >
+              <option value="child" class="bg-slate-900">Enfant</option>
+              <option value="teen" class="bg-slate-900">Adolescent</option>
+              <option value="admin" class="bg-slate-900">Parent/Admin</option>
+            </select>
+          </div>
 
-            <div v-if="form.type !== 'admin'">
-              <label class="block text-sm font-medium text-gray-300 mb-2">Niveau</label>
-              <select 
-                v-model="form.level"
-                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Sélectionner un niveau</option>
-                <option value="CP">CP (6 ans)</option>
-                <option value="CE1">CE1 (7 ans)</option>
-                <option value="CE2">CE2 (8 ans)</option>
-                <option value="CM1">CM1 (9 ans)</option>
-                <option value="CM2">CM2 (10 ans)</option>
-                <option value="6ème">6ème (11 ans)</option>
-                <option value="5ème">5ème (12 ans)</option>
-                <option value="4ème">4ème (13 ans)</option>
-                <option value="3ème">3ème (14 ans)</option>
-              </select>
-            </div>
+          <div v-if="form.type !== 'admin'">
+            <label class="block text-sm font-medium text-white/80 mb-2">Niveau</label>
+            <select 
+              v-model="form.level"
+              class="w-full px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+            >
+              <option value="" class="bg-slate-900">Sélectionner un niveau</option>
+              <option value="CP" class="bg-slate-900">CP (6 ans)</option>
+              <option value="CE1" class="bg-slate-900">CE1 (7 ans)</option>
+              <option value="CE2" class="bg-slate-900">CE2 (8 ans)</option>
+              <option value="CM1" class="bg-slate-900">CM1 (9 ans)</option>
+              <option value="CM2" class="bg-slate-900">CM2 (10 ans)</option>
+              <option value="6ème" class="bg-slate-900">6ème (11 ans)</option>
+              <option value="5ème" class="bg-slate-900">5ème (12 ans)</option>
+              <option value="4ème" class="bg-slate-900">4ème (13 ans)</option>
+              <option value="3ème" class="bg-slate-900">3ème (14 ans)</option>
+            </select>
+          </div>
 
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">Couleur du profil</label>
-              <div class="grid grid-cols-4 gap-2">
-                <button 
-                  v-for="color in profileColors"
-                  :key="color.name"
-                  @click="form.color = color.name"
-                  :class="[
-                    'w-12 h-12 rounded-lg border-2 transition-all',
-                    color.class,
-                    form.color === color.name ? 'border-white ring-2 ring-white' : 'border-gray-600'
-                  ]"
-                  type="button"
-                ></button>
-              </div>
+          <div>
+            <label class="block text-sm font-medium text-white/80 mb-3">Couleur du profil</label>
+            <div class="grid grid-cols-4 gap-2">
+              <button 
+                v-for="color in profileColors"
+                :key="color.name"
+                @click="form.color = color.name"
+                :class="[
+                  'w-12 h-12 rounded-lg border-2 transition-all',
+                  color.class,
+                  form.color === color.name ? 'border-white ring-2 ring-white' : 'border-white/30'
+                ]"
+                type="button"
+              ></button>
             </div>
           </div>
 
-          <div class="flex justify-end space-x-3 mt-6">
+          <div class="flex justify-end space-x-3 pt-4">
             <button 
               type="button"
               @click="closeModal"
-              class="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+              class="px-6 py-2 text-white/80 hover:text-white transition-colors"
             >
               Annuler
             </button>
             <button 
               type="submit"
-              class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              class="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/50 transition-all"
             >
               {{ editingProfile ? 'Modifier' : 'Créer' }}
             </button>
@@ -585,7 +631,116 @@ export default {
 </script>
 
 <style scoped>
-.hover\:bg-gray-750:hover {
-  background-color: rgb(55 65 81);
+/* Animations */
+@keyframes blob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Glass Cards */
+.glass-card-dashboard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.glass-card-dashboard:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+}
+
+.glass-card-stat {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.glass-card-stat:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+}
+
+.glass-card-profile {
+  display: flex;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.glass-card-profile:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .glass-card-profile {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .glass-card-profile {
+    padding: 1.25rem;
+    border-radius: 1.25rem;
+  }
 }
 </style>

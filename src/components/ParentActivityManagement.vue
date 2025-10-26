@@ -1,39 +1,47 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
+    <!-- Background animated elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    </div>
+
     <!-- Header -->
-    <header class="bg-white shadow-lg">
+    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
       <nav class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
               @click="goBack"
-              class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
+              title="Retour au dashboard"
             >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
               </svg>
             </button>
             <div>
-              <h1 class="text-2xl font-bold text-gray-800">Gestion des Activités</h1>
-              <p class="text-sm text-gray-600">Organisez et suivez les activités de vos enfants</p>
+              <h1 class="text-2xl font-bold text-white">Gestion des Activités</h1>
+              <p class="text-sm text-white/60 hidden sm:block">Organisez et suivez les activités de vos enfants</p>
             </div>
           </div>
           <div class="flex items-center space-x-3">
             <button 
               @click="refreshData"
               :disabled="isLoading"
-              class="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
+              title="Actualiser"
             >
               <svg class="w-5 h-5" :class="{ 'animate-spin': isLoading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
               </svg>
-              <span>{{ isLoading ? 'Actualisation...' : 'Actualiser' }}</span>
             </button>
             <button 
               @click="showCreateActivityModal = true"
-              class="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:shadow-lg hover:shadow-green-500/50 transition-all text-sm flex items-center space-x-2"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
               </svg>
               <span>Nouvelle activité</span>
@@ -44,107 +52,99 @@
     </header>
 
     <!-- Contenu principal -->
-    <main class="container mx-auto px-6 py-8">
+    <main class="relative z-10 container mx-auto px-6 py-12">
       <!-- Statistiques globales -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-gray-600">Total des activités</p>
-              <p class="text-2xl font-bold text-blue-600">{{ globalStats.totalActivities || 0 }}</p>
-            </div>
-            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-              </svg>
-            </div>
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div class="glass-card-stat group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-white/60 text-sm">Total des activités</p>
+            <p class="text-3xl font-bold text-white">{{ globalStats.totalActivities || 0 }}</p>
           </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-gray-600">Activités actives</p>
-              <p class="text-2xl font-bold text-green-600">{{ globalStats.activeActivities || 0 }}</p>
-            </div>
-            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-            </div>
+        <div class="glass-card-stat group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-white/60 text-sm">Activités actives</p>
+            <p class="text-3xl font-bold text-white">{{ globalStats.activeActivities || 0 }}</p>
           </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-gray-600">Enfants impliqués</p>
-              <p class="text-2xl font-bold text-purple-600">{{ childrenStats.length }}</p>
-            </div>
-            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
-              </svg>
-            </div>
+        <div class="glass-card-stat group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-white/60 text-sm">Enfants impliqués</p>
+            <p class="text-3xl font-bold text-white">{{ childrenStats.length }}</p>
           </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-lg p-6">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-gray-600">Complétion moyenne</p>
-              <p class="text-2xl font-bold text-orange-600">{{ formatPercentage(globalStats.completionRate) }}%</p>
-            </div>
-            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-              </svg>
-            </div>
+        <div class="glass-card-stat group">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-white/60 text-sm">Complétion moyenne</p>
+            <p class="text-3xl font-bold text-white">{{ formatPercentage(globalStats.completionRate) }}%</p>
           </div>
         </div>
       </div>
 
       <!-- Filtres et recherche -->
-      <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+      <div class="glass-card-dashboard mb-12">
         <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div class="flex flex-col md:flex-row gap-4 flex-1">
+          <div class="flex flex-col md:flex-row gap-4 flex-1 w-full">
             <div class="relative flex-1">
               <input 
                 v-model="searchQuery"
                 type="text" 
                 placeholder="Rechercher une activité..."
-                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full pl-10 pr-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
               >
-              <svg class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="absolute left-3 top-2.5 w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
               </svg>
             </div>
             <select 
               v-model="selectedChild"
-              class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
             >
-              <option value="">Tous les enfants</option>
-              <option v-for="child in childrenStats" :key="child.id" :value="child.id">
+              <option value="" class="bg-slate-900">Tous les enfants</option>
+              <option v-for="child in childrenStats" :key="child.id" :value="child.id" class="bg-slate-900">
                 {{ child.name }}
               </option>
             </select>
             <select 
               v-model="selectedStatus"
-              class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
             >
-              <option value="">Tous les statuts</option>
-              <option value="active">Actives</option>
-              <option value="completed">Terminées</option>
-              <option value="paused">En pause</option>
-              <option value="cancelled">Annulées</option>
+              <option value="" class="bg-slate-900">Tous les statuts</option>
+              <option value="active" class="bg-slate-900">Actives</option>
+              <option value="completed" class="bg-slate-900">Terminées</option>
+              <option value="paused" class="bg-slate-900">En pause</option>
+              <option value="cancelled" class="bg-slate-900">Annulées</option>
             </select>
           </div>
           <div class="flex gap-2">
             <button 
               @click="viewMode = 'grid'"
               :class="[
-                'p-2 rounded-lg transition-colors',
-                viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                'p-2 rounded-xl transition-all',
+                viewMode === 'grid' ? 'bg-purple-500 text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'
               ]"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,12 +154,12 @@
             <button 
               @click="viewMode = 'list'"
               :class="[
-                'p-2 rounded-lg transition-colors',
-                viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                'p-2 rounded-xl transition-all',
+                viewMode === 'list' ? 'bg-purple-500 text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'
               ]"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
               </svg>
             </button>
           </div>
@@ -788,29 +788,75 @@ export default {
 </script>
 
 <style scoped>
-/* Animations et transitions */
-.transition-all {
-  transition: all 0.2s ease;
+/* Animations */
+@keyframes blob {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
 }
 
-/* Hover effects */
-.hover\:shadow-md:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+.animate-blob {
+  animation: blob 7s infinite;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .flex-col {
-    flex-direction: column;
-  }
-  
-  .space-x-4 > * + * {
-    margin-left: 0;
-    margin-top: 1rem;
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Glass Cards */
+.glass-card-dashboard {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.glass-card-dashboard:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+}
+
+.glass-card-stat {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.glass-card-stat:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+}
+
+@media (max-width: 640px) {
+  .glass-card-dashboard {
+    padding: 1rem;
+    border-radius: 1rem;
   }
 }
 </style>
