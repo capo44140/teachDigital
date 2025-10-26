@@ -1,179 +1,329 @@
 <template>
-  <div class="progress-tracking">
-    <!-- Bouton de retour -->
-    <div class="back-button-container">
-      <button @click="goBack" class="back-button">
-        <i class="fas fa-arrow-left"></i>
-        Retour
-      </button>
+  <!--
+    LIQUID GLASS DESIGN - Suivi des Progrès
+
+    ✨ Backdrop blur translucide
+    🌈 Gradients animés en arrière-plan
+    💎 Cartes glass semi-transparentes
+    ✨ Animations fluides
+  -->
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 overflow-hidden">
+    <!-- Background animated elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
     </div>
 
-    <!-- En-tête avec informations de l'enfant -->
-    <div class="child-header">
-      <div class="child-info">
-        <div class="child-avatar">
-          <img v-if="selectedChild?.avatar" :src="selectedChild.avatar" :alt="selectedChild.name" />
-          <div v-else class="default-avatar">
-            {{ selectedChild?.name?.charAt(0)?.toUpperCase() }}
-          </div>
-        </div>
-        <div class="child-details">
-          <h2>{{ selectedChild?.name }}</h2>
-          <p class="child-type">{{ getChildTypeLabel(selectedChild?.type) }}</p>
-          <div class="progress-summary">
-            <div class="stat-item">
-              <span class="stat-number">{{ totalQuizzesCompleted }}</span>
-              <span class="stat-label">Quiz terminés</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-number">{{ formatPercentage(averageScore) }}%</span>
-              <span class="stat-label">Score moyen</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-number">{{ totalLessonsCompleted }}</span>
-              <span class="stat-label">Leçons terminées</span>
+    <!-- Header avec navigation -->
+    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+      <nav class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <button
+              @click="goBack"
+              class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
+              title="Retour au tableau de bord"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </button>
+            <div>
+              <h1 class="text-2xl font-bold text-white flex items-center">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-xl mr-3 flex items-center justify-center">
+                  <span class="text-lg">📊</span>
+                </div>
+                Suivi des Progrès
+              </h1>
+              <p class="text-sm text-white/60 hidden sm:block">Progrès d'apprentissage détaillés</p>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </nav>
+    </header>
 
-    <!-- Navigation des onglets -->
-    <div class="tabs-navigation">
-      <button 
-        v-for="tab in tabs" 
-        :key="tab.id"
-        :class="['tab-button', { active: activeTab === tab.id }]"
-        @click="activeTab = tab.id"
-      >
-        <i :class="tab.icon"></i>
-        {{ tab.label }}
-      </button>
-    </div>
+    <!-- Contenu principal -->
+    <main class="relative z-10 container mx-auto px-6 py-12">
+      <div class="max-w-6xl mx-auto space-y-8">
 
-    <!-- Contenu des onglets -->
-    <div class="tab-content">
-      <!-- Onglet Historique des Quiz -->
-      <div v-if="activeTab === 'history'" class="tab-panel">
-        <div class="section-header">
-          <h3>Historique des Quiz</h3>
-          <div class="filters">
-            <select v-model="selectedPeriod" @change="filterQuizHistory">
-              <option value="all">Tous les quiz</option>
-              <option value="week">Cette semaine</option>
-              <option value="month">Ce mois</option>
-              <option value="year">Cette année</option>
-            </select>
+        <!-- En-tête avec informations de l'enfant -->
+        <div class="glass-card-dashboard">
+          <div class="flex items-center space-x-6">
+            <div class="child-avatar">
+              <img v-if="selectedChild?.avatar" :src="selectedChild.avatar" :alt="selectedChild.name" class="w-full h-full object-cover rounded-xl" />
+              <div v-else class="w-20 h-20 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-xl flex items-center justify-center">
+                <span class="text-white font-bold text-2xl">{{ selectedChild?.name?.charAt(0)?.toUpperCase() }}</span>
+              </div>
+            </div>
+            <div class="flex-1">
+              <h2 class="text-3xl font-bold text-white mb-2">{{ selectedChild?.name }}</h2>
+              <p class="text-white/60 text-lg mb-6">{{ getChildTypeLabel(selectedChild?.type) }}</p>
+              <div class="grid grid-cols-3 gap-6">
+                <div class="text-center">
+                  <div class="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <span class="text-2xl font-bold text-blue-300">{{ totalQuizzesCompleted }}</span>
+                  </div>
+                  <p class="text-white/60 text-sm">Quiz terminés</p>
+                </div>
+                <div class="text-center">
+                  <div class="w-16 h-16 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <span class="text-2xl font-bold text-green-300">{{ formatPercentage(averageScore) }}%</span>
+                  </div>
+                  <p class="text-white/60 text-sm">Score moyen</p>
+                </div>
+                <div class="text-center">
+                  <div class="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <span class="text-2xl font-bold text-purple-300">{{ totalLessonsCompleted }}</span>
+                  </div>
+                  <p class="text-white/60 text-sm">Leçons terminées</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div v-if="filteredQuizHistory.length === 0" class="empty-state">
-          <div class="empty-icon">📚</div>
-          <h4>Aucun quiz trouvé</h4>
-          <p>Commencez par faire des quiz pour voir votre historique ici.</p>
-        </div>
+        <!-- Navigation des onglets -->
+        <div class="glass-card-dashboard">
+          <div class="flex flex-wrap gap-3 border-b border-white/10 pb-6 mb-8">
+            <button 
+              v-for="tab in tabs" 
+              :key="tab.id"
+              :class="[
+                'px-6 py-3 rounded-xl transition-all font-medium flex items-center space-x-3',
+                activeTab === tab.id
+                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/50'
+                  : 'text-white/80 hover:text-white border border-white/20 hover:bg-white/10 backdrop-blur-xl'
+              ]"
+              @click="activeTab = tab.id"
+            >
+              <i :class="tab.icon"></i>
+              <span>{{ tab.label }}</span>
+            </button>
+          </div>
 
-        <div v-else class="quiz-history">
-          <div 
-            v-for="quiz in filteredQuizHistory" 
-            :key="quiz.id"
-            class="quiz-item"
-          >
-            <div class="quiz-header">
-              <div class="quiz-title">
-                <h4>{{ quiz.lessonTitle || 'Quiz' }}</h4>
-                <span class="quiz-date">{{ formatDate(quiz.completedAt) }}</span>
-              </div>
-              <div class="quiz-score" :class="getScoreClass(quiz.percentage)">
-                {{ formatPercentage(quiz.percentage) }}%
-              </div>
+          <!-- Contenu des onglets -->
+          <!-- Onglet Historique des Quiz -->
+          <div v-if="activeTab === 'history'" class="space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+              <h3 class="text-xl font-bold text-white mb-3 sm:mb-0">Historique des Quiz</h3>
+              <select 
+                v-model="selectedPeriod" 
+                @change="filterQuizHistory"
+                class="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full sm:w-auto"
+              >
+                <option value="all" class="bg-slate-900">Tous les quiz</option>
+                <option value="week" class="bg-slate-900">Cette semaine</option>
+                <option value="month" class="bg-slate-900">Ce mois</option>
+                <option value="year" class="bg-slate-900">Cette année</option>
+              </select>
             </div>
-            <div class="quiz-details">
-              <div class="quiz-stats">
-                <span>{{ quiz.score }}/{{ quiz.totalQuestions }} questions</span>
-                <span class="quiz-duration">{{ formatDuration(quiz.duration) }}</span>
+
+            <div v-if="filteredQuizHistory.length === 0" class="text-center py-12">
+              <div class="w-20 h-20 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <span class="text-4xl">📚</span>
               </div>
-              <div class="quiz-progress">
-                <div class="progress-bar">
+              <h4 class="text-xl font-bold text-white mb-2">Aucun quiz trouvé</h4>
+              <p class="text-white/60">Commencez par faire des quiz pour voir votre historique ici.</p>
+            </div>
+
+            <div v-else class="space-y-4">
+              <div 
+                v-for="quiz in filteredQuizHistory" 
+                :key="quiz.id"
+                class="glass-quiz-item"
+              >
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex-1">
+                    <h4 class="text-lg font-bold text-white mb-1">{{ quiz.lessonTitle || 'Quiz' }}</h4>
+                    <p class="text-white/60 text-sm">{{ formatDate(quiz.completedAt) }}</p>
+                  </div>
+                  <div class="text-right">
+                    <div :class="[
+                      'px-4 py-2 rounded-xl font-bold text-lg',
+                      getScoreClass(quiz.percentage)
+                    ]">
+                      {{ formatPercentage(quiz.percentage) }}%
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex space-x-4 text-white/60 text-sm">
+                    <span>{{ quiz.score }}/{{ quiz.totalQuestions }} questions</span>
+                    <span>{{ formatDuration(quiz.duration) }}</span>
+                  </div>
+                </div>
+                <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
                   <div 
-                    class="progress-fill" 
+                    class="bg-gradient-to-r from-blue-500 to-cyan-500 h-full rounded-full transition-all duration-500"
                     :style="{ width: formatPercentage(quiz.percentage) + '%' }"
                   ></div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Onglet Statistiques -->
-      <div v-if="activeTab === 'stats'" class="tab-panel">
-        <div class="stats-grid">
-          <!-- Score moyen par type de quiz -->
-          <div class="stat-card">
-            <h4>Score moyen par type</h4>
-            <div class="score-breakdown">
-              <div v-for="type in scoreByType" :key="type.type" class="score-item">
-                <span class="score-type">{{ type.type }}</span>
-                <div class="score-bar">
-                  <div 
-                    class="score-fill" 
-                    :style="{ width: type.averageScore + '%' }"
-                  ></div>
-                  <span class="score-value">{{ type.averageScore }}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Progrès mensuel -->
-          <div class="stat-card">
-            <h4>Progrès mensuel</h4>
-            <div class="monthly-progress">
-              <div v-for="month in monthlyProgress" :key="month.month" class="month-item">
-                <span class="month-name">{{ month.month }}</span>
-                <div class="month-stats">
-                  <span class="month-quizzes">{{ month.quizCount }} quiz</span>
-                  <span class="month-score">{{ month.averageScore }}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Temps d'apprentissage -->
-          <div class="stat-card">
-            <h4>Temps d'apprentissage</h4>
-            <div class="learning-time">
-              <div class="time-stat">
-                <span class="time-value">{{ totalLearningTime }}</span>
-                <span class="time-label">Total</span>
-              </div>
-              <div class="time-stat">
-                <span class="time-value">{{ averageSessionTime }}</span>
-                <span class="time-label">Par session</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Objectifs et récompenses -->
-          <div class="stat-card">
-            <h4>Objectifs et récompenses</h4>
-            <div class="achievements">
-              <div v-for="achievement in achievements" :key="achievement.id" class="achievement-item">
-                <div class="achievement-icon" :class="{ unlocked: achievement.unlocked }">
-                  {{ achievement.icon }}
-                </div>
-                <div class="achievement-details">
-                  <h5>{{ achievement.title }}</h5>
-                  <p>{{ achievement.description }}</p>
-                  <div v-if="!achievement.unlocked" class="achievement-progress">
-                    <div class="progress-bar">
+          <!-- Onglet Statistiques -->
+          <div v-if="activeTab === 'stats'" class="space-y-6">
+            <h3 class="text-xl font-bold text-white mb-6">Statistiques Détaillées</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Score moyen par type de quiz -->
+              <div class="glass-stat-card">
+                <h4 class="text-lg font-bold text-white mb-4 flex items-center">
+                  <div class="w-8 h-8 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-lg flex items-center justify-center mr-3">
+                    <span class="text-blue-300">📊</span>
+                  </div>
+                  Score moyen par type
+                </h4>
+                <div class="space-y-4">
+                  <div v-for="type in scoreByType" :key="type.type" class="space-y-2">
+                    <div class="flex justify-between items-center">
+                      <span class="text-white/80 font-medium">{{ type.type }}</span>
+                      <span class="text-white font-bold">{{ type.averageScore }}%</span>
+                    </div>
+                    <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
                       <div 
-                        class="progress-fill" 
-                        :style="{ width: achievement.progress + '%' }"
+                        class="bg-gradient-to-r from-blue-500 to-cyan-500 h-full rounded-full transition-all duration-500"
+                        :style="{ width: type.averageScore + '%' }"
                       ></div>
                     </div>
-                    <span class="progress-text">{{ achievement.progress }}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Progrès mensuel -->
+              <div class="glass-stat-card">
+                <h4 class="text-lg font-bold text-white mb-4 flex items-center">
+                  <div class="w-8 h-8 bg-gradient-to-br from-green-500/30 to-emerald-500/30 rounded-lg flex items-center justify-center mr-3">
+                    <span class="text-green-300">📅</span>
+                  </div>
+                  Progrès mensuel
+                </h4>
+                <div class="space-y-3">
+                  <div v-for="month in monthlyProgress" :key="month.month" class="flex justify-between items-center p-3 bg-white/5 rounded-xl">
+                    <div>
+                      <span class="text-white font-medium">{{ month.month }}</span>
+                      <p class="text-white/60 text-sm">{{ month.quizCount }} quiz</p>
+                    </div>
+                    <div class="text-right">
+                      <span class="text-white font-bold">{{ month.averageScore }}%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Temps d'apprentissage -->
+              <div class="glass-stat-card">
+                <h4 class="text-lg font-bold text-white mb-4 flex items-center">
+                  <div class="w-8 h-8 bg-gradient-to-br from-purple-500/30 to-pink-500/30 rounded-lg flex items-center justify-center mr-3">
+                    <span class="text-purple-300">⏱️</span>
+                  </div>
+                  Temps d'apprentissage
+                </h4>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="text-center p-4 bg-white/5 rounded-xl">
+                    <div class="text-2xl font-bold text-white mb-1">{{ totalLearningTime }}</div>
+                    <div class="text-white/60 text-sm">Total</div>
+                  </div>
+                  <div class="text-center p-4 bg-white/5 rounded-xl">
+                    <div class="text-2xl font-bold text-white mb-1">{{ averageSessionTime }}</div>
+                    <div class="text-white/60 text-sm">Par session</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Objectifs et récompenses -->
+              <div class="glass-stat-card">
+                <h4 class="text-lg font-bold text-white mb-4 flex items-center">
+                  <div class="w-8 h-8 bg-gradient-to-br from-yellow-500/30 to-orange-500/30 rounded-lg flex items-center justify-center mr-3">
+                    <span class="text-yellow-300">🏆</span>
+                  </div>
+                  Objectifs et récompenses
+                </h4>
+                <div class="space-y-4">
+                  <div v-for="achievement in achievements" :key="achievement.id" class="flex items-center space-x-4 p-4 bg-white/5 rounded-xl">
+                    <div :class="[
+                      'w-12 h-12 rounded-xl flex items-center justify-center text-2xl',
+                      achievement.unlocked 
+                        ? 'bg-gradient-to-br from-yellow-500/30 to-orange-500/30' 
+                        : 'bg-white/10'
+                    ]">
+                      {{ achievement.icon }}
+                    </div>
+                    <div class="flex-1">
+                      <h5 class="text-white font-bold">{{ achievement.title }}</h5>
+                      <p class="text-white/60 text-sm">{{ achievement.description }}</p>
+                      <div v-if="!achievement.unlocked" class="mt-2">
+                        <div class="w-full bg-white/10 rounded-full h-1 overflow-hidden">
+                          <div 
+                            class="bg-gradient-to-r from-yellow-500 to-orange-500 h-full rounded-full transition-all duration-500"
+                            :style="{ width: achievement.progress + '%' }"
+                          ></div>
+                        </div>
+                        <span class="text-white/60 text-xs mt-1">{{ achievement.progress }}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Onglet Recommandations -->
+          <div v-if="activeTab === 'recommendations'" class="space-y-6">
+            <h3 class="text-xl font-bold text-white mb-6">Recommandations d'apprentissage</h3>
+            
+            <div class="space-y-8">
+              <!-- Quiz recommandés -->
+              <div class="glass-stat-card">
+                <h4 class="text-lg font-bold text-white mb-4 flex items-center">
+                  <div class="w-8 h-8 bg-gradient-to-br from-green-500/30 to-emerald-500/30 rounded-lg flex items-center justify-center mr-3">
+                    <span class="text-green-300">💡</span>
+                  </div>
+                  Quiz recommandés
+                </h4>
+                <div class="space-y-4">
+                  <div v-for="quiz in recommendedQuizzes" :key="quiz.id" class="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
+                    <div class="flex-1">
+                      <h5 class="text-white font-bold mb-1">{{ quiz.title }}</h5>
+                      <p class="text-white/60 text-sm mb-2">{{ quiz.description }}</p>
+                      <div class="flex space-x-4 text-white/60 text-xs">
+                        <span class="px-2 py-1 bg-white/10 rounded-lg">{{ quiz.difficulty }}</span>
+                        <span class="px-2 py-1 bg-white/10 rounded-lg">{{ quiz.estimatedTime }} min</span>
+                      </div>
+                    </div>
+                    <button 
+                      @click="startRecommendedQuiz(quiz)"
+                      class="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:shadow-lg hover:shadow-green-500/50 transition-all font-medium"
+                    >
+                      Commencer
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Points d'amélioration -->
+              <div class="glass-stat-card">
+                <h4 class="text-lg font-bold text-white mb-4 flex items-center">
+                  <div class="w-8 h-8 bg-gradient-to-br from-orange-500/30 to-red-500/30 rounded-lg flex items-center justify-center mr-3">
+                    <span class="text-orange-300">🎯</span>
+                  </div>
+                  Points d'amélioration
+                </h4>
+                <div class="space-y-4">
+                  <div v-for="area in improvementAreas" :key="area.id" class="flex items-start space-x-4 p-4 bg-white/5 rounded-xl">
+                    <div class="w-12 h-12 bg-gradient-to-br from-orange-500/30 to-red-500/30 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
+                      {{ area.icon }}
+                    </div>
+                    <div class="flex-1">
+                      <h5 class="text-white font-bold mb-1">{{ area.title }}</h5>
+                      <p class="text-white/60 text-sm mb-3">{{ area.description }}</p>
+                      <div class="flex flex-wrap gap-2">
+                        <span v-for="suggestion in area.suggestions" :key="suggestion" class="px-3 py-1 bg-white/10 text-white/80 text-xs rounded-lg">
+                          {{ suggestion }}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -181,51 +331,7 @@
           </div>
         </div>
       </div>
-
-      <!-- Onglet Recommandations -->
-      <div v-if="activeTab === 'recommendations'" class="tab-panel">
-        <div class="recommendations">
-          <h3>Recommandations d'apprentissage</h3>
-          
-          <div class="recommendation-section">
-            <h4>Quiz recommandés</h4>
-            <div class="recommended-quizzes">
-              <div v-for="quiz in recommendedQuizzes" :key="quiz.id" class="recommended-quiz">
-                <div class="quiz-info">
-                  <h5>{{ quiz.title }}</h5>
-                  <p>{{ quiz.description }}</p>
-                  <div class="quiz-meta">
-                    <span class="quiz-difficulty">{{ quiz.difficulty }}</span>
-                    <span class="quiz-duration">{{ quiz.estimatedTime }} min</span>
-                  </div>
-                </div>
-                <button class="start-quiz-btn" @click="startRecommendedQuiz(quiz)">
-                  Commencer
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="recommendation-section">
-            <h4>Points d'amélioration</h4>
-            <div class="improvement-areas">
-              <div v-for="area in improvementAreas" :key="area.id" class="improvement-item">
-                <div class="improvement-icon">{{ area.icon }}</div>
-                <div class="improvement-details">
-                  <h5>{{ area.title }}</h5>
-                  <p>{{ area.description }}</p>
-                  <div class="improvement-suggestions">
-                    <span v-for="suggestion in area.suggestions" :key="suggestion" class="suggestion">
-                      {{ suggestion }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -469,10 +575,10 @@ export default {
     },
 
     getScoreClass(percentage) {
-      if (percentage >= 90) return 'excellent'
-      if (percentage >= 80) return 'good'
-      if (percentage >= 70) return 'average'
-      return 'needs-improvement'
+      if (percentage >= 90) return 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 border border-green-400/30'
+      if (percentage >= 80) return 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 border border-blue-400/30'
+      if (percentage >= 70) return 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-300 border border-yellow-400/30'
+      return 'bg-gradient-to-r from-red-500/20 to-pink-500/20 text-red-300 border border-red-400/30'
     },
 
     formatDate(dateString) {
@@ -518,72 +624,108 @@ export default {
 </script>
 
 <style scoped>
-.progress-tracking {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-  background: #f8f9fa;
-  min-height: 100vh;
-}
-
-.back-button-container {
-  margin-bottom: 20px;
-}
-
-.back-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: white;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  color: #6c757d;
-  text-decoration: none;
-  font-weight: 500;
-  cursor: pointer;
+/* Liquid Glass Design Styles */
+.glass-card-dashboard {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
 }
 
-.back-button:hover {
-  background: #f8f9fa;
-  border-color: #667eea;
-  color: #667eea;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+.glass-card-dashboard:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
 }
 
-.back-button i {
-  font-size: 14px;
+.glass-stat-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  padding: 1.5rem;
 }
 
-.child-header {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.glass-stat-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
 }
 
-.child-info {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+.glass-quiz-item {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  padding: 1.5rem;
 }
 
+.glass-quiz-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Background blob animations */
+@keyframes blob {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1); 
+  }
+  33% { 
+    transform: translate(30px, -50px) scale(1.1); 
+  }
+  66% { 
+    transform: translate(-20px, 20px) scale(0.9); 
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Button styles */
+button {
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Child avatar styling */
 .child-avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
+  width: 5rem;
+  height: 5rem;
+  border-radius: 1rem;
   overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 32px;
+  font-size: 2rem;
   font-weight: bold;
+  flex-shrink: 0;
 }
 
 .child-avatar img {
@@ -592,876 +734,114 @@ export default {
   object-fit: cover;
 }
 
-.child-details h2 {
-  margin: 0 0 8px 0;
-  color: #2c3e50;
-  font-size: 28px;
-}
-
-.child-type {
-  color: #7f8c8d;
-  margin: 0 0 16px 0;
-  font-size: 16px;
-}
-
-.progress-summary {
-  display: flex;
-  gap: 32px;
-}
-
-.stat-item {
-  text-align: center;
-}
-
-.stat-number {
-  display: block;
-  font-size: 24px;
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #7f8c8d;
-}
-
-.tabs-navigation {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-  background: white;
-  border-radius: 12px;
-  padding: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.tab-button {
-  flex: 1;
-  padding: 12px 16px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-weight: 500;
-  color: #7f8c8d;
-}
-
-.tab-button:hover {
-  background: #f8f9fa;
-  color: #2c3e50;
-}
-
-.tab-button.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.tab-content {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.section-header h3 {
-  margin: 0;
-  color: #2c3e50;
-}
-
-.filters select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: white;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 48px 24px;
-  color: #7f8c8d;
-}
-
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.quiz-history {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.quiz-item {
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 20px;
-  transition: all 0.3s ease;
-}
-
-.quiz-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-.quiz-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
-}
-
-.quiz-title h4 {
-  margin: 0 0 4px 0;
-  color: #2c3e50;
-  font-size: 18px;
-}
-
-.quiz-date {
-  color: #7f8c8d;
-  font-size: 14px;
-}
-
-.quiz-score {
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-weight: bold;
-  font-size: 16px;
-}
-
-.quiz-score.excellent {
-  background: #d4edda;
-  color: #155724;
-}
-
-.quiz-score.good {
-  background: #d1ecf1;
-  color: #0c5460;
-}
-
-.quiz-score.average {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.quiz-score.needs-improvement {
-  background: #f8d7da;
-  color: #721c24;
-}
-
-.quiz-details {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.quiz-stats {
-  display: flex;
-  gap: 16px;
-  color: #7f8c8d;
-  font-size: 14px;
-}
-
-.quiz-progress {
-  flex: 1;
-  max-width: 200px;
-}
-
-.progress-bar {
-  height: 8px;
-  background: #e9ecef;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  transition: width 0.3s ease;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-}
-
-.stat-card {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 20px;
-  border: 1px solid #e9ecef;
-}
-
-.stat-card h4 {
-  margin: 0 0 16px 0;
-  color: #2c3e50;
-}
-
-.score-breakdown {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.score-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.score-type {
-  min-width: 120px;
-  font-weight: 500;
-  color: #2c3e50;
-}
-
-.score-bar {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.score-fill {
-  height: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-.score-value {
-  font-weight: bold;
-  color: #2c3e50;
-  min-width: 40px;
-}
-
-.monthly-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.month-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.month-item:last-child {
-  border-bottom: none;
-}
-
-.month-name {
-  font-weight: 500;
-  color: #2c3e50;
-}
-
-.month-stats {
-  display: flex;
-  gap: 16px;
-  font-size: 14px;
-  color: #7f8c8d;
-}
-
-.learning-time {
-  display: flex;
-  gap: 24px;
-}
-
-.time-stat {
-  text-align: center;
-}
-
-.time-value {
-  display: block;
-  font-size: 20px;
-  font-weight: bold;
-  color: #2c3e50;
-}
-
-.time-label {
-  font-size: 14px;
-  color: #7f8c8d;
-}
-
-.achievements {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.achievement-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
-.achievement-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #e9ecef;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  opacity: 0.5;
-}
-
-.achievement-icon.unlocked {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  opacity: 1;
-}
-
-.achievement-details h5 {
-  margin: 0 0 4px 0;
-  color: #2c3e50;
-}
-
-.achievement-details p {
-  margin: 0 0 8px 0;
-  color: #7f8c8d;
-  font-size: 14px;
-}
-
-.achievement-progress {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.progress-text {
-  font-size: 12px;
-  color: #7f8c8d;
-  min-width: 30px;
-}
-
-.recommendations h3 {
-  margin: 0 0 24px 0;
-  color: #2c3e50;
-}
-
-.recommendation-section {
-  margin-bottom: 32px;
-}
-
-.recommendation-section h4 {
-  margin: 0 0 16px 0;
-  color: #2c3e50;
-}
-
-.recommended-quizzes {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.recommended-quiz {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
-.quiz-info h5 {
-  margin: 0 0 4px 0;
-  color: #2c3e50;
-}
-
-.quiz-info p {
-  margin: 0 0 8px 0;
-  color: #7f8c8d;
-  font-size: 14px;
-}
-
-.quiz-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: #7f8c8d;
-}
-
-.start-quiz-btn {
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.start-quiz-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.improvement-areas {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.improvement-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
-.improvement-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: white;
-}
-
-.improvement-details h5 {
-  margin: 0 0 4px 0;
-  color: #2c3e50;
-}
-
-.improvement-details p {
-  margin: 0 0 8px 0;
-  color: #7f8c8d;
-  font-size: 14px;
-}
-
-.improvement-suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.suggestion {
-  background: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  color: #2c3e50;
-  border: 1px solid #e9ecef;
-}
-
+/* Animation pour les éléments */
+.glass-card-dashboard > div:last-child > div {
+  animation: fadeInUp 0.3s ease-out;
+  animation-fill-mode: both;
+}
+
+.glass-card-dashboard > div:last-child > div:nth-child(1) { animation-delay: 0.1s; }
+.glass-card-dashboard > div:last-child > div:nth-child(2) { animation-delay: 0.2s; }
+.glass-card-dashboard > div:last-child > div:nth-child(3) { animation-delay: 0.3s; }
+.glass-card-dashboard > div:last-child > div:nth-child(4) { animation-delay: 0.4s; }
+.glass-card-dashboard > div:last-child > div:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive design */
 @media (max-width: 768px) {
-  .progress-tracking {
-    padding: 12px;
+  .glass-card-dashboard,
+  .glass-stat-card,
+  .glass-quiz-item {
+    padding: 1.5rem;
+    border-radius: 1.5rem;
   }
   
-  .back-button-container {
-    margin-bottom: 16px;
-  }
-  
-  .back-button {
-    padding: 8px 12px;
-    font-size: 14px;
-  }
-  
-  .child-header {
-    padding: 16px;
-    margin-bottom: 16px;
-  }
-  
-  .child-info {
-    flex-direction: column;
-    text-align: center;
-    gap: 16px;
-  }
-  
-  .child-avatar {
-    width: 60px;
-    height: 60px;
-    font-size: 24px;
-  }
-  
-  .child-details h2 {
-    font-size: 24px;
-  }
-  
-  .child-type {
-    font-size: 14px;
-  }
-  
-  .progress-summary {
-    flex-direction: column;
-    gap: 16px;
-    align-items: center;
-  }
-  
-  .stat-item {
-    min-width: 120px;
-  }
-  
-  .stat-number {
-    font-size: 20px;
-  }
-  
-  .stat-label {
-    font-size: 12px;
-  }
-  
-  .tabs-navigation {
-    flex-direction: column;
-    gap: 4px;
-    padding: 6px;
-    margin-bottom: 16px;
-  }
-  
-  .tab-button {
-    padding: 10px 12px;
-    font-size: 14px;
-  }
-  
-  .tab-content {
-    padding: 16px;
-  }
-  
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  
-  .section-header h3 {
-    font-size: 18px;
-  }
-  
-  .filters select {
-    padding: 6px 10px;
-    font-size: 14px;
-  }
-  
-  .empty-state {
-    padding: 32px 16px;
-  }
-  
-  .empty-icon {
-    font-size: 36px;
-  }
-  
-  .empty-state h4 {
-    font-size: 18px;
-  }
-  
-  .empty-state p {
-    font-size: 14px;
-  }
-  
-  .quiz-history {
-    gap: 12px;
-  }
-  
-  .quiz-item {
-    padding: 16px;
-  }
-  
-  .quiz-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .quiz-title h4 {
-    font-size: 16px;
-  }
-  
-  .quiz-date {
-    font-size: 12px;
-  }
-  
-  .quiz-score {
-    padding: 6px 12px;
-    font-size: 14px;
-  }
-  
-  .quiz-details {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .quiz-stats {
-    flex-direction: column;
-    gap: 4px;
-    font-size: 12px;
-  }
-  
-  .quiz-progress {
+  .max-w-6xl {
     max-width: 100%;
+    padding: 0 1rem;
   }
-  
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
+
+  .child-avatar {
+    width: 4rem;
+    height: 4rem;
+    font-size: 1.5rem;
   }
-  
-  .stat-card {
-    padding: 16px;
-  }
-  
-  .stat-card h4 {
-    font-size: 16px;
-    margin-bottom: 12px;
-  }
-  
-  .score-breakdown {
-    gap: 8px;
-  }
-  
-  .score-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .score-type {
-    min-width: auto;
-    font-size: 14px;
-  }
-  
-  .score-bar {
-    width: 100%;
-  }
-  
-  .score-fill {
-    height: 6px;
-  }
-  
-  .score-value {
-    font-size: 12px;
-  }
-  
-  .monthly-progress {
-    gap: 8px;
-  }
-  
-  .month-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-    padding: 6px 0;
-  }
-  
-  .month-name {
-    font-size: 14px;
-  }
-  
-  .month-stats {
-    flex-direction: column;
-    gap: 4px;
-    font-size: 12px;
-  }
-  
-  .learning-time {
-    flex-direction: column;
-    gap: 16px;
-  }
-  
-  .time-value {
-    font-size: 18px;
-  }
-  
-  .time-label {
-    font-size: 12px;
-  }
-  
-  .achievements {
-    gap: 12px;
-  }
-  
-  .achievement-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px;
-  }
-  
-  .achievement-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
-  }
-  
-  .achievement-details h5 {
-    font-size: 14px;
-  }
-  
-  .achievement-details p {
-    font-size: 12px;
-  }
-  
-  .achievement-progress {
-    width: 100%;
-  }
-  
-  .progress-text {
-    font-size: 11px;
-  }
-  
-  .recommendations h3 {
-    font-size: 18px;
-    margin-bottom: 16px;
-  }
-  
-  .recommendation-section {
-    margin-bottom: 24px;
-  }
-  
-  .recommendation-section h4 {
-    font-size: 16px;
-    margin-bottom: 12px;
-  }
-  
-  .recommended-quizzes {
-    gap: 12px;
-  }
-  
-  .recommended-quiz {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
-  }
-  
-  .quiz-info h5 {
-    font-size: 14px;
-  }
-  
-  .quiz-info p {
-    font-size: 12px;
-  }
-  
-  .quiz-meta {
-    flex-direction: column;
-    gap: 4px;
-    font-size: 11px;
-  }
-  
-  .start-quiz-btn {
-    padding: 6px 12px;
-    font-size: 14px;
-    width: 100%;
-  }
-  
-  .improvement-areas {
-    gap: 12px;
-  }
-  
-  .improvement-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
-  }
-  
-  .improvement-icon {
-    width: 40px;
-    height: 40px;
-    font-size: 20px;
-  }
-  
-  .improvement-details h5 {
-    font-size: 14px;
-  }
-  
-  .improvement-details p {
-    font-size: 12px;
-  }
-  
-  .improvement-suggestions {
-    gap: 6px;
-  }
-  
-  .suggestion {
-    padding: 3px 6px;
-    font-size: 11px;
+
+  .grid-cols-3 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1rem;
   }
 }
 
 @media (max-width: 480px) {
-  .progress-tracking {
-    padding: 8px;
+  .glass-card-dashboard,
+  .glass-stat-card,
+  .glass-quiz-item {
+    padding: 1rem;
+    border-radius: 1rem;
   }
-  
-  .child-header {
-    padding: 12px;
-  }
-  
+
   .child-avatar {
-    width: 50px;
-    height: 50px;
-    font-size: 20px;
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.25rem;
   }
-  
-  .child-details h2 {
-    font-size: 20px;
-  }
-  
-  .progress-summary {
-    gap: 12px;
-  }
-  
-  .stat-item {
-    min-width: 100px;
-  }
-  
-  .stat-number {
-    font-size: 18px;
-  }
-  
-  .tab-content {
-    padding: 12px;
-  }
-  
-  .quiz-item {
-    padding: 12px;
-  }
-  
-  .stat-card {
-    padding: 12px;
-  }
-  
-  .achievement-item {
-    padding: 8px;
-  }
-  
-  .recommended-quiz {
-    padding: 12px;
-  }
-  
-  .improvement-item {
-    padding: 12px;
-  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Focus styles */
+select:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: rgba(59, 130, 246, 0.5);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Input styles */
+select {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.75rem;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+select:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+select option {
+  background: #1e293b;
+  color: white;
 }
 </style>
