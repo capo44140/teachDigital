@@ -1,125 +1,171 @@
 <template>
-  <div class="youtube-kids-viewer">
+  <!--
+    LIQUID GLASS DESIGN - Visualiseur YouTube Kids
+
+    ✨ Backdrop blur translucide
+    🌈 Gradients animés en arrière-plan
+    💎 Cartes glass semi-transparentes
+    ✨ Animations fluides
+  -->
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 overflow-hidden">
+    <!-- Background animated elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-red-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-orange-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    </div>
+
+    <!-- Contenu principal -->
+    <div class="relative z-10 container mx-auto px-6 py-12">
+      <div class="max-w-6xl mx-auto">
     <!-- En-tête avec informations du profil -->
-    <div class="header-section">
-      <div class="profile-info">
-        <div class="avatar" :class="currentProfile?.avatar_class">
+        <div class="glass-card-dashboard mb-8">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-6">
+              <div class="w-16 h-16 bg-gradient-to-br from-red-400 to-orange-400 rounded-xl flex items-center justify-center text-2xl font-bold text-white backdrop-blur-xl border border-white/20" :class="currentProfile?.avatar_class">
           <span v-if="currentProfile?.avatar_content">{{ currentProfile.avatar_content }}</span>
+                <span v-else>👶</span>
         </div>
-        <div class="profile-details">
-          <h2 class="profile-name">{{ currentProfile?.name }}</h2>
-          <p class="profile-level">{{ currentProfile?.level }} - {{ getAgeFromLevel(currentProfile?.level) }} ans</p>
+              <div>
+                <h2 class="text-2xl font-bold text-white">{{ currentProfile?.name || 'Enfant' }}</h2>
+                <p class="text-white/60">{{ currentProfile?.level }} - {{ getAgeFromLevel(currentProfile?.level) }} ans</p>
         </div>
       </div>
-      <div class="video-count">
-        <span class="count-number">{{ filteredVideos.length }}</span>
-        <span class="count-label">vidéos disponibles</span>
+            <div class="text-center">
+              <div class="text-4xl font-bold text-red-300">{{ filteredVideos.length }}</div>
+              <div class="text-sm text-white/60">vidéos disponibles</div>
+            </div>
       </div>
     </div>
 
     <!-- Filtres -->
-    <div class="filters-section">
-      <div class="filter-group">
-        <label class="filter-label">Catégorie :</label>
-        <select v-model="selectedCategory" class="filter-select">
-          <option value="">Toutes les catégories</option>
-          <option v-for="category in availableCategories" :key="category" :value="category">
+        <div class="glass-card-dashboard mb-8">
+          <div class="flex items-center space-x-6">
+            <div class="flex items-center space-x-4">
+              <div class="w-10 h-10 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z"/>
+                </svg>
+              </div>
+              <h3 class="text-lg font-bold text-white">Filtres</h3>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+              <div class="flex items-center space-x-2">
+                <label class="text-white/80 font-medium">Catégorie :</label>
+                <select v-model="selectedCategory" class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all">
+                  <option value="" class="bg-slate-900">Toutes les catégories</option>
+                  <option v-for="category in availableCategories" :key="category" :value="category" class="bg-slate-900">
             {{ category }}
           </option>
         </select>
       </div>
-      <div class="filter-group">
-        <label class="filter-label">Rechercher :</label>
+              <div class="flex items-center space-x-2">
+                <label class="text-white/80 font-medium">Rechercher :</label>
         <input 
           v-model="searchQuery" 
           type="text" 
           placeholder="Titre de la vidéo..."
-          class="filter-input"
+                  class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white px-4 py-2 placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
         />
+              </div>
+            </div>
       </div>
     </div>
 
     <!-- Message si aucune vidéo -->
-    <div v-if="filteredVideos.length === 0" class="no-videos">
-      <div class="no-videos-icon">📺</div>
-      <h3>Aucune vidéo disponible</h3>
-      <p v-if="searchQuery || selectedCategory">
+        <div v-if="filteredVideos.length === 0" class="glass-card-dashboard text-center py-16">
+          <div class="w-20 h-20 bg-gradient-to-br from-red-500/20 to-orange-500/20 rounded-xl flex items-center justify-center mx-auto mb-6">
+            <span class="text-4xl">📺</span>
+          </div>
+          <h3 class="text-2xl font-bold text-white mb-4">Aucune vidéo disponible</h3>
+          <p v-if="searchQuery || selectedCategory" class="text-white/60">
         Aucune vidéo ne correspond à vos critères de recherche.
       </p>
-      <p v-else>
+          <p v-else class="text-white/60">
         Aucune vidéo n'est disponible pour votre âge pour le moment.
       </p>
     </div>
 
     <!-- Grille des vidéos -->
-    <div v-else class="videos-grid">
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
       <div 
         v-for="video in paginatedVideos" 
         :key="video.id" 
-        class="video-card"
+            class="glass-video-card group cursor-pointer"
         @click="playVideo(video)"
       >
-        <div class="video-thumbnail">
+            <div class="relative overflow-hidden rounded-xl">
           <img 
             :src="getThumbnailUrl(video.video_id)" 
             :alt="video.title"
-            class="thumbnail-image"
-          />
-          <div class="play-overlay">
-            <div class="play-button">▶️</div>
+                class="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+              <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                <div class="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center">
+                  <span class="text-2xl">▶️</span>
+                </div>
           </div>
         </div>
-        <div class="video-info">
-          <h3 class="video-title">{{ video.title }}</h3>
-          <p class="video-description">{{ truncateText(video.description, 100) }}</p>
-          <div class="video-meta">
-            <span class="video-category">{{ video.category }}</span>
-            <span class="video-age">{{ video.age_group }}</span>
+            <div class="p-4">
+              <h3 class="text-lg font-bold text-white mb-2 line-clamp-2">{{ video.title }}</h3>
+              <p class="text-white/60 text-sm mb-3 line-clamp-2">{{ truncateText(video.description, 100) }}</p>
+              <div class="flex items-center space-x-2">
+                <span class="px-3 py-1 bg-gradient-to-r from-red-500/20 to-orange-500/20 text-red-300 text-xs rounded-lg border border-red-400/30">{{ video.category }}</span>
+                <span class="px-3 py-1 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 text-xs rounded-lg border border-blue-400/30">{{ video.age_group }}</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="pagination">
+        <div v-if="totalPages > 1" class="glass-card-dashboard">
+          <div class="flex items-center justify-center space-x-4">
       <button 
         @click="currentPage = Math.max(1, currentPage - 1)"
         :disabled="currentPage === 1"
-        class="pagination-btn"
+              class="px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
       >
         ← Précédent
       </button>
-      <span class="pagination-info">
+            <span class="text-white font-medium">
         Page {{ currentPage }} sur {{ totalPages }}
       </span>
       <button 
         @click="currentPage = Math.min(totalPages, currentPage + 1)"
         :disabled="currentPage === totalPages"
-        class="pagination-btn"
+              class="px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
       >
         Suivant →
       </button>
+          </div>
     </div>
 
     <!-- Modal de lecture vidéo -->
-    <div v-if="selectedVideo" class="video-modal" @click="closeVideo">
-      <div class="modal-content" @click.stop>
-        <button class="close-button" @click="closeVideo">✕</button>
-        <div class="video-container">
+        <div v-if="selectedVideo" class="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-50 p-4" @click="closeVideo">
+          <div class="glass-modal-content max-w-4xl w-full max-h-[90vh] overflow-hidden" @click.stop>
+            <button class="absolute top-4 right-4 w-10 h-10 bg-black/50 backdrop-blur-xl border border-white/20 text-white rounded-full flex items-center justify-center hover:bg-black/70 transition-all z-10" @click="closeVideo">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+            <div class="relative w-full h-0 pb-[56.25%]">
           <iframe
             :src="getEmbedUrl(selectedVideo.video_id)"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen
-            class="video-iframe"
+                class="absolute top-0 left-0 w-full h-full rounded-t-xl"
           ></iframe>
         </div>
-        <div class="video-details">
-          <h3>{{ selectedVideo.title }}</h3>
-          <p>{{ selectedVideo.description }}</p>
-          <div class="video-tags">
-            <span class="tag">{{ selectedVideo.category }}</span>
-            <span class="tag">{{ selectedVideo.age_group }}</span>
+            <div class="glass-card-dashboard rounded-t-none">
+              <h3 class="text-xl font-bold text-white mb-3">{{ selectedVideo.title }}</h3>
+              <p class="text-white/60 mb-4">{{ selectedVideo.description }}</p>
+              <div class="flex items-center space-x-3">
+                <span class="px-3 py-1 bg-gradient-to-r from-red-500/20 to-orange-500/20 text-red-300 text-sm rounded-lg border border-red-400/30">{{ selectedVideo.category }}</span>
+                <span class="px-3 py-1 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 text-sm rounded-lg border border-blue-400/30">{{ selectedVideo.age_group }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -310,383 +356,253 @@ export default {
 </script>
 
 <style scoped>
-.youtube-kids-viewer {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  color: white;
-}
-
-.header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  backdrop-filter: blur(10px);
-}
-
-.profile-info {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: bold;
-  background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-}
-
-.profile-details h2 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.profile-level {
-  margin: 5px 0 0 0;
-  opacity: 0.8;
-  font-size: 16px;
-}
-
-.video-count {
-  text-align: center;
-}
-
-.count-number {
-  display: block;
-  font-size: 32px;
-  font-weight: bold;
-  color: #4ecdc4;
-}
-
-.count-label {
-  font-size: 14px;
-  opacity: 0.8;
-}
-
-.filters-section {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 30px;
-  flex-wrap: wrap;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.filter-label {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.filter-select,
-.filter-input {
-  padding: 12px 16px;
-  border: none;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #333;
-  font-size: 14px;
-  min-width: 200px;
-}
-
-.filter-select:focus,
-.filter-input:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.3);
-}
-
-.no-videos {
-  text-align: center;
-  padding: 60px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  backdrop-filter: blur(10px);
-}
-
-.no-videos-icon {
-  font-size: 64px;
-  margin-bottom: 20px;
-}
-
-.no-videos h3 {
-  margin: 0 0 10px 0;
-  font-size: 24px;
-}
-
-.no-videos p {
-  margin: 0;
-  opacity: 0.8;
-  font-size: 16px;
-}
-
-.videos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.video-card {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  overflow: hidden;
-  cursor: pointer;
+/* Liquid Glass Design Styles */
+.glass-card-dashboard {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 2rem;
 }
 
-.video-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  background: rgba(255, 255, 255, 0.15);
+.glass-card-dashboard:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
 }
 
-.video-thumbnail {
-  position: relative;
-  width: 100%;
-  height: 180px;
+.glass-video-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
   overflow: hidden;
 }
 
-.thumbnail-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
+.glass-video-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
 }
 
-.video-card:hover .thumbnail-image {
-  transform: scale(1.05);
+.glass-modal-content {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
-.play-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s ease;
+/* Background blob animations */
+@keyframes blob {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1); 
+  }
+  33% { 
+    transform: translate(30px, -50px) scale(1.1); 
+  }
+  66% { 
+    transform: translate(-20px, 20px) scale(0.9); 
+  }
 }
 
-.video-card:hover .play-overlay {
-  opacity: 1;
+.animate-blob {
+  animation: blob 7s infinite;
 }
 
-.play-button {
-  font-size: 48px;
-  color: white;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+.animation-delay-2000 {
+  animation-delay: 2s;
 }
 
-.video-info {
-  padding: 20px;
+.animation-delay-4000 {
+  animation-delay: 4s;
 }
 
-.video-title {
-  margin: 0 0 10px 0;
-  font-size: 18px;
-  font-weight: bold;
-  line-height: 1.3;
+/* Button styles */
+button {
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.video-description {
-  margin: 0 0 15px 0;
-  opacity: 0.8;
-  font-size: 14px;
-  line-height: 1.4;
+/* Animation pour les éléments */
+.glass-card-dashboard > div:last-child > div {
+  animation: fadeInUp 0.3s ease-out;
+  animation-fill-mode: both;
 }
 
-.video-meta {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+.glass-card-dashboard > div:last-child > div:nth-child(1) { animation-delay: 0.1s; }
+.glass-card-dashboard > div:last-child > div:nth-child(2) { animation-delay: 0.2s; }
+.glass-card-dashboard > div:last-child > div:nth-child(3) { animation-delay: 0.3s; }
+.glass-card-dashboard > div:last-child > div:nth-child(4) { animation-delay: 0.4s; }
+.glass-card-dashboard > div:last-child > div:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.video-category,
-.video-age {
-  background: rgba(78, 205, 196, 0.2);
-  color: #4ecdc4;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
+/* Responsive design */
+@media (max-width: 768px) {
+  .glass-card-dashboard,
+  .glass-video-card {
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+  }
+  
+  .max-w-6xl {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+
+  .grid-cols-1 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
 }
 
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-  margin-top: 30px;
+@media (max-width: 480px) {
+  .glass-card-dashboard,
+  .glass-video-card {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
 }
 
-.pagination-btn {
-  padding: 12px 24px;
-  background: rgba(255, 255, 255, 0.2);
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Focus styles */
+select:focus,
+input:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: rgba(239, 68, 68, 0.5);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* Input styles */
+select,
+input {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.75rem;
   color: white;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
   transition: all 0.3s ease;
 }
 
-.pagination-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
+select:hover,
+input:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
-.pagination-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.pagination-info {
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.video-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
-.modal-content {
-  background: white;
-  border-radius: 15px;
-  max-width: 900px;
-  width: 100%;
-  max-height: 90vh;
-  overflow: hidden;
-  position: relative;
-}
-
-.close-button {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background: rgba(0, 0, 0, 0.5);
+select option {
+  background: #1e293b;
   color: white;
-  border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
-  font-size: 18px;
-  z-index: 1001;
 }
 
-.video-container {
-  position: relative;
-  width: 100%;
-  height: 0;
-  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+/* Video card hover effects */
+.glass-video-card img {
+  transition: transform 0.3s ease;
 }
 
-.video-iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+.glass-video-card:hover img {
+  transform: scale(1.05);
 }
 
-.video-details {
-  padding: 20px;
-  color: #333;
+/* Modal animations */
+.glass-modal-content {
+  animation: modalSlideIn 0.3s ease-out;
 }
 
-.video-details h3 {
-  margin: 0 0 10px 0;
-  font-size: 20px;
-  font-weight: bold;
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
-.video-details p {
-  margin: 0 0 15px 0;
-  color: #666;
-  line-height: 1.5;
+/* Tag styles */
+.px-3.py-1 {
+  transition: all 0.3s ease;
 }
 
-.video-tags {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+.px-3.py-1:hover {
+  transform: scale(1.05);
 }
 
-.tag {
-  background: #4ecdc4;
-  color: white;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
+/* Avatar styling */
+.w-16.h-16 {
+  transition: all 0.3s ease;
 }
 
-/* Responsive */
+.w-16.h-16:hover {
+  transform: scale(1.05);
+}
+
+/* Grid responsive adjustments */
+@media (max-width: 1024px) {
+  .xl\:grid-cols-4 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
-  .youtube-kids-viewer {
-    padding: 15px;
+  .lg\:grid-cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  
-  .header-section {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
-  }
-  
-  .filters-section {
-    flex-direction: column;
-  }
-  
-  .filter-select,
-  .filter-input {
-    min-width: 100%;
-  }
-  
-  .videos-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .pagination {
-    flex-direction: column;
-    gap: 15px;
+}
+
+@media (max-width: 640px) {
+  .md\:grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 }
 </style>
