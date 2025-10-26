@@ -124,215 +124,247 @@
           </div>
         </div>
 
-      <!-- Tests manuels -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <!-- Création de notification -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <h3 class="text-lg font-semibold text-gray-800 mb-4">Créer une Notification</h3>
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-              <select
-                v-model="newNotification.type"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <!-- Tests manuels - Liquid Glass Style -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Création de notification -->
+          <div class="glass-card-dashboard">
+            <h3 class="text-lg font-bold text-white mb-6 flex items-center">
+              <svg class="w-6 h-6 text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+              </svg>
+              Créer une Notification
+            </h3>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-white/80 mb-2">Type</label>
+                <select
+                  v-model="newNotification.type"
+                  class="w-full px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                >
+                  <option value="test" class="bg-slate-800">Test</option>
+                  <option value="quiz_completed" class="bg-slate-800">Quiz Terminé</option>
+                  <option value="achievement" class="bg-slate-800">Réussite</option>
+                  <option value="reminder" class="bg-slate-800">Rappel</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-white/80 mb-2">Titre</label>
+                <input
+                  v-model="newNotification.title"
+                  type="text"
+                  class="w-full px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                  placeholder="Titre de la notification"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-white/80 mb-2">Message</label>
+                <textarea
+                  v-model="newNotification.message"
+                  rows="3"
+                  class="w-full px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-none"
+                  placeholder="Message de la notification"
+                ></textarea>
+              </div>
+              <button
+                @click="createNotification"
+                :disabled="isCreating"
+                class="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
               >
-                <option value="test">Test</option>
-                <option value="quiz_completed">Quiz Terminé</option>
-                <option value="achievement">Réussite</option>
-                <option value="reminder">Rappel</option>
-              </select>
+                {{ isCreating ? 'Création...' : 'Créer la notification' }}
+              </button>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Titre</label>
-              <input
-                v-model="newNotification.title"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Titre de la notification"
-              />
+          </div>
+
+          <!-- Notification de quiz -->
+          <div class="glass-card-dashboard">
+            <h3 class="text-lg font-bold text-white mb-6 flex items-center">
+              <svg class="w-6 h-6 text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Notification de Quiz
+            </h3>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-white/80 mb-2">Score</label>
+                <input
+                  v-model.number="quizData.score"
+                  type="number"
+                  min="0"
+                  max="100"
+                  class="w-full px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-white/80 mb-2">Total des questions</label>
+                <input
+                  v-model.number="quizData.totalQuestions"
+                  type="number"
+                  min="1"
+                  class="w-full px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-white/80 mb-2">Titre de la leçon</label>
+                <input
+                  v-model="quizData.lessonTitle"
+                  type="text"
+                  class="w-full px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                  placeholder="Nom de la leçon"
+                />
+              </div>
+              <button
+                @click="createQuizNotification"
+                :disabled="isCreatingQuiz"
+                class="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:shadow-lg hover:shadow-green-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
+              >
+                {{ isCreatingQuiz ? 'Création...' : 'Créer notification de quiz' }}
+              </button>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
-              <textarea
-                v-model="newNotification.message"
-                rows="3"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Message de la notification"
-              ></textarea>
-            </div>
+          </div>
+        </div>
+
+        <!-- Actions sur les notifications -->
+        <div class="glass-card-dashboard">
+          <h3 class="text-lg font-bold text-white mb-6 flex items-center">
+            <svg class="w-6 h-6 text-purple-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            Actions sur les Notifications
+          </h3>
+          <div class="flex flex-wrap gap-4">
             <button
-              @click="createNotification"
-              :disabled="isCreating"
-              class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              @click="loadNotifications"
+              :disabled="isLoading"
+              class="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
             >
-              {{ isCreating ? 'Création...' : 'Créer la notification' }}
+              {{ isLoading ? 'Chargement...' : 'Charger les notifications' }}
+            </button>
+            <button
+              @click="markAllAsRead"
+              :disabled="isMarkingAll"
+              class="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl hover:shadow-lg hover:shadow-yellow-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
+            >
+              {{ isMarkingAll ? 'Marquage...' : 'Tout marquer comme lu' }}
+            </button>
+            <button
+              @click="deleteReadNotifications"
+              :disabled="isDeleting"
+              class="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
+            >
+              {{ isDeleting ? 'Suppression...' : 'Supprimer les lues' }}
+            </button>
+            <button
+              @click="getNotificationStats"
+              :disabled="isLoadingStats"
+              class="px-6 py-3 bg-gradient-to-r from-purple-500 to-violet-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
+            >
+              {{ isLoadingStats ? 'Chargement...' : 'Statistiques' }}
             </button>
           </div>
         </div>
 
-        <!-- Notification de quiz -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <h3 class="text-lg font-semibold text-gray-800 mb-4">Notification de Quiz</h3>
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Score</label>
-              <input
-                v-model.number="quizData.score"
-                type="number"
-                min="0"
-                max="100"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+        <!-- Liste des notifications -->
+        <div class="glass-card-dashboard">
+          <h3 class="text-lg font-bold text-white mb-6 flex items-center">
+            <svg class="w-6 h-6 text-cyan-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 0 0-15 0v5h5l-5 5-5-5h5v-5a7.5 7.5 0 0 0 15 0v5z"/>
+            </svg>
+            Notifications Actuelles
+          </h3>
+          <div v-if="notifications.length === 0" class="text-center text-white/60 py-8">
+            <div class="w-16 h-16 mx-auto mb-4 bg-white/10 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/20">
+              <svg class="w-8 h-8 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 0 0-15 0v5h5l-5 5-5-5h5v-5a7.5 7.5 0 0 0 15 0v5z"/>
+              </svg>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Total des questions</label>
-              <input
-                v-model.number="quizData.totalQuestions"
-                type="number"
-                min="1"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Titre de la leçon</label>
-              <input
-                v-model="quizData.lessonTitle"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Nom de la leçon"
-              />
-            </div>
-            <button
-              @click="createQuizNotification"
-              :disabled="isCreatingQuiz"
-              class="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
+            <p class="text-lg font-medium">Aucune notification trouvée</p>
+            <p class="text-sm text-white/40 mt-1">Créez votre première notification !</p>
+          </div>
+          <div v-else class="space-y-3">
+            <div
+              v-for="notification in notifications"
+              :key="notification.id"
+              :class="[
+                'p-4 rounded-xl border-l-4 transition-all duration-300 backdrop-blur-xl',
+                !notification.is_read 
+                  ? 'bg-blue-500/10 border-blue-400' 
+                  : 'bg-white/5 border-white/20'
+              ]"
             >
-              {{ isCreatingQuiz ? 'Création...' : 'Créer notification de quiz' }}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Actions sur les notifications -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Actions sur les Notifications</h3>
-        <div class="flex flex-wrap gap-4">
-          <button
-            @click="loadNotifications"
-            :disabled="isLoading"
-            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {{ isLoading ? 'Chargement...' : 'Charger les notifications' }}
-          </button>
-          <button
-            @click="markAllAsRead"
-            :disabled="isMarkingAll"
-            class="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50 transition-colors"
-          >
-            {{ isMarkingAll ? 'Marquage...' : 'Tout marquer comme lu' }}
-          </button>
-          <button
-            @click="deleteReadNotifications"
-            :disabled="isDeleting"
-            class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors"
-          >
-            {{ isDeleting ? 'Suppression...' : 'Supprimer les lues' }}
-          </button>
-          <button
-            @click="getNotificationStats"
-            :disabled="isLoadingStats"
-            class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 transition-colors"
-          >
-            {{ isLoadingStats ? 'Chargement...' : 'Statistiques' }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Liste des notifications -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Notifications Actuelles</h3>
-        <div v-if="notifications.length === 0" class="text-center text-gray-500 py-8">
-          Aucune notification trouvée
-        </div>
-        <div v-else class="space-y-3">
-          <div
-            v-for="notification in notifications"
-            :key="notification.id"
-            :class="[
-              'p-4 rounded-lg border-l-4 transition-all duration-300',
-              !notification.is_read 
-                ? 'bg-blue-50 border-blue-500' 
-                : 'bg-gray-50 border-gray-300'
-            ]"
-          >
-            <div class="flex items-start justify-between">
-              <div class="flex-1">
-                <div class="flex items-center space-x-2 mb-2">
-                  <span class="text-sm font-medium text-gray-900">{{ notification.title }}</span>
-                  <span class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded-full">
-                    {{ notification.type }}
-                  </span>
-                  <span v-if="!notification.is_read" class="text-xs px-2 py-1 bg-blue-200 text-blue-700 rounded-full">
-                    Non lu
-                  </span>
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center space-x-2 mb-2">
+                    <span class="text-sm font-medium text-white">{{ notification.title }}</span>
+                    <span class="text-xs px-2 py-1 bg-white/10 text-white/70 rounded-lg backdrop-blur-xl border border-white/20">
+                      {{ notification.type }}
+                    </span>
+                    <span v-if="!notification.is_read" class="text-xs px-2 py-1 bg-blue-500/20 text-blue-200 rounded-lg backdrop-blur-xl border border-blue-400/30">
+                      Non lu
+                    </span>
+                  </div>
+                  <p class="text-sm text-white/70 mb-2">{{ notification.message }}</p>
+                  <div class="text-xs text-white/50 bg-white/5 px-2 py-1 rounded-lg backdrop-blur-xl border border-white/10 inline-block">
+                    {{ formatDate(notification.created_at) }}
+                  </div>
+                  <div v-if="notification.data" class="mt-3 text-xs bg-white/5 p-3 rounded-lg backdrop-blur-xl border border-white/10">
+                    <pre class="text-white/70">{{ JSON.stringify(notification.data, null, 2) }}</pre>
+                  </div>
                 </div>
-                <p class="text-sm text-gray-600 mb-2">{{ notification.message }}</p>
-                <div class="text-xs text-gray-500">
-                  {{ formatDate(notification.created_at) }}
+                <div class="flex space-x-2 ml-4">
+                  <button
+                    v-if="!notification.is_read"
+                    @click="markAsRead(notification.id)"
+                    class="px-3 py-1 text-xs bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-lg hover:shadow-green-500/50 transition-all duration-300 font-medium"
+                  >
+                    Marquer lu
+                  </button>
+                  <button
+                    @click="deleteNotification(notification.id)"
+                    class="px-3 py-1 text-xs bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg hover:shadow-lg hover:shadow-red-500/50 transition-all duration-300 font-medium"
+                  >
+                    Supprimer
+                  </button>
                 </div>
-                <div v-if="notification.data" class="mt-2 text-xs bg-white bg-opacity-50 p-2 rounded">
-                  <pre>{{ JSON.stringify(notification.data, null, 2) }}</pre>
-                </div>
-              </div>
-              <div class="flex space-x-2 ml-4">
-                <button
-                  v-if="!notification.is_read"
-                  @click="markAsRead(notification.id)"
-                  class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                >
-                  Marquer lu
-                </button>
-                <button
-                  @click="deleteNotification(notification.id)"
-                  class="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                >
-                  Supprimer
-                </button>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Statistiques -->
-      <div v-if="stats" class="bg-white rounded-lg shadow-md p-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Statistiques</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="text-center p-4 bg-blue-50 rounded-lg">
-            <div class="text-2xl font-bold text-blue-600">{{ stats.total }}</div>
-            <div class="text-sm text-blue-800">Total</div>
-          </div>
-          <div class="text-center p-4 bg-yellow-50 rounded-lg">
-            <div class="text-2xl font-bold text-yellow-600">{{ stats.unread }}</div>
-            <div class="text-sm text-yellow-800">Non lues</div>
-          </div>
-          <div class="text-center p-4 bg-green-50 rounded-lg">
-            <div class="text-2xl font-bold text-green-600">{{ stats.quiz_notifications }}</div>
-            <div class="text-sm text-green-800">Quiz</div>
+        <!-- Statistiques -->
+        <div v-if="stats" class="glass-card-dashboard">
+          <h3 class="text-lg font-bold text-white mb-6 flex items-center">
+            <svg class="w-6 h-6 text-indigo-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            Statistiques
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="text-center p-6 bg-blue-500/10 backdrop-blur-xl rounded-xl border border-blue-400/20">
+              <div class="text-3xl font-bold text-blue-300">{{ stats.total }}</div>
+              <div class="text-sm text-blue-200">Total</div>
+            </div>
+            <div class="text-center p-6 bg-yellow-500/10 backdrop-blur-xl rounded-xl border border-yellow-400/20">
+              <div class="text-3xl font-bold text-yellow-300">{{ stats.unread }}</div>
+              <div class="text-sm text-yellow-200">Non lues</div>
+            </div>
+            <div class="text-center p-6 bg-green-500/10 backdrop-blur-xl rounded-xl border border-green-400/20">
+              <div class="text-3xl font-bold text-green-300">{{ stats.quiz_notifications }}</div>
+              <div class="text-sm text-green-200">Quiz</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Bouton de retour -->
-      <div class="mt-8 text-center">
-        <button
-          @click="goBack"
-          class="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-        >
-          Retour au Dashboard
-        </button>
+        <!-- Bouton de retour -->
+        <div class="text-center">
+          <button
+            @click="goBack"
+            class="px-8 py-3 bg-gradient-to-r from-gray-500 to-slate-500 text-white rounded-xl hover:shadow-lg hover:shadow-gray-500/50 transition-all duration-300 font-medium"
+          >
+            Retour au Dashboard
+          </button>
+        </div>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
