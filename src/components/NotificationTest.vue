@@ -1,82 +1,128 @@
 <template>
-  <div class="notification-test">
-    <div class="max-w-4xl mx-auto p-6">
-      <!-- En-tête -->
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">
-          🧪 Test du Système de Notifications
-        </h1>
-        <p class="text-gray-600">
-          Interface de test pour valider toutes les fonctionnalités du système de notifications
-        </p>
-      </div>
+  <!-- 
+    LIQUID GLASS DESIGN - Test du Système de Notifications
+    
+    ✨ Backdrop blur translucide
+    🌈 Gradients animés en arrière-plan
+    💎 Cartes glass semi-transparentes
+    ✨ Animations fluides
+  -->
+  <div class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-hidden">
+    <!-- Background animated elements -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      <div class="absolute top-1/2 left-1/2 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    </div>
 
-      <!-- Sélection du profil -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Profil de Test</h2>
-        <div class="flex items-center space-x-4">
-          <label class="text-sm font-medium text-gray-700">Profil ID:</label>
-          <input
-            v-model="testProfileId"
-            type="number"
-            min="1"
-            class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="1"
-          />
-          <button
-            @click="loadProfileData"
-            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Charger les données
-          </button>
-        </div>
-      </div>
-
-      <!-- Tests automatiques -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">Tests Automatiques</h2>
-        <div class="flex space-x-4 mb-4">
-          <button
-            @click="runAllTests"
-            :disabled="isRunningTests"
-            class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors"
-          >
-            {{ isRunningTests ? 'Tests en cours...' : 'Lancer tous les tests' }}
-          </button>
-          <button
-            @click="clearTestResults"
-            class="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-          >
-            Effacer les résultats
-          </button>
-        </div>
-
-        <!-- Résultats des tests -->
-        <div v-if="testResults.length > 0" class="space-y-2">
-          <div
-            v-for="(result, index) in testResults"
-            :key="index"
-            :class="[
-              'p-4 rounded-lg border-l-4 transition-all duration-300',
-              result.success 
-                ? 'bg-green-50 border-green-500 text-green-800' 
-                : 'bg-red-50 border-red-500 text-red-800'
-            ]"
-          >
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-2">
-                <span class="text-lg">{{ result.success ? '✅' : '❌' }}</span>
-                <span class="font-medium">{{ result.test }}</span>
-              </div>
-              <span class="text-sm text-gray-500">{{ result.duration }}ms</span>
-            </div>
-            <p v-if="result.message" class="mt-1 text-sm">{{ result.message }}</p>
-            <div v-if="result.details" class="mt-2 text-xs bg-white bg-opacity-50 p-2 rounded">
-              <pre>{{ JSON.stringify(result.details, null, 2) }}</pre>
+    <!-- Header avec navigation -->
+    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+      <nav class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <button 
+              @click="goBack"
+              class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
+              title="Retour au tableau de bord"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </button>
+            <div>
+              <h1 class="text-2xl font-bold text-white flex items-center">
+                <div class="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-xl mr-3 flex items-center justify-center">
+                  <span class="text-lg">🧪</span>
+                </div>
+                Test du Système de Notifications
+              </h1>
+              <p class="text-sm text-white/60 hidden sm:block">Interface de test pour valider toutes les fonctionnalités du système de notifications</p>
             </div>
           </div>
         </div>
-      </div>
+      </nav>
+    </header>
+
+    <!-- Contenu principal -->
+    <main class="relative z-10 container mx-auto px-6 py-12">
+      <div class="max-w-6xl mx-auto space-y-8">
+
+        <!-- Sélection du profil - Liquid Glass Style -->
+        <div class="glass-card-dashboard">
+          <h2 class="text-xl font-bold text-white mb-6 flex items-center">
+            <svg class="w-6 h-6 text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+            </svg>
+            Profil de Test
+          </h2>
+          <div class="flex items-center space-x-4">
+            <label class="text-sm font-medium text-white/80">Profil ID:</label>
+            <input
+              v-model="testProfileId"
+              type="number"
+              min="1"
+              class="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+              placeholder="1"
+            />
+            <button
+              @click="loadProfileData"
+              class="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/50 transition-all duration-300 font-medium"
+            >
+              Charger les données
+            </button>
+          </div>
+        </div>
+
+        <!-- Tests automatiques - Liquid Glass Style -->
+        <div class="glass-card-dashboard">
+          <h2 class="text-xl font-bold text-white mb-6 flex items-center">
+            <svg class="w-6 h-6 text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Tests Automatiques
+          </h2>
+          <div class="flex space-x-4 mb-6">
+            <button
+              @click="runAllTests"
+              :disabled="isRunningTests"
+              class="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:shadow-lg hover:shadow-green-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
+            >
+              {{ isRunningTests ? 'Tests en cours...' : 'Lancer tous les tests' }}
+            </button>
+            <button
+              @click="clearTestResults"
+              class="px-6 py-3 bg-gradient-to-r from-gray-500 to-slate-500 text-white rounded-xl hover:shadow-lg hover:shadow-gray-500/50 transition-all duration-300 font-medium"
+            >
+              Effacer les résultats
+            </button>
+          </div>
+
+          <!-- Résultats des tests - Liquid Glass Style -->
+          <div v-if="testResults.length > 0" class="space-y-3">
+            <div
+              v-for="(result, index) in testResults"
+              :key="index"
+              :class="[
+                'p-4 rounded-xl border-l-4 transition-all duration-300 backdrop-blur-xl',
+                result.success 
+                  ? 'bg-green-500/10 border-green-400 text-green-100' 
+                  : 'bg-red-500/10 border-red-400 text-red-100'
+              ]"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <span class="text-xl">{{ result.success ? '✅' : '❌' }}</span>
+                  <span class="font-medium">{{ result.test }}</span>
+                </div>
+                <span class="text-sm text-white/60 bg-white/10 px-2 py-1 rounded-lg">{{ result.duration }}ms</span>
+              </div>
+              <p v-if="result.message" class="mt-2 text-sm">{{ result.message }}</p>
+              <div v-if="result.details" class="mt-3 text-xs bg-white/5 p-3 rounded-lg backdrop-blur-xl border border-white/10">
+                <pre class="text-white/70">{{ JSON.stringify(result.details, null, 2) }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
 
       <!-- Tests manuels -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -608,12 +654,86 @@ export default {
 </script>
 
 <style scoped>
-.notification-test {
-  min-height: 100vh;
-  background-color: #f8fafc;
+/* Liquid Glass Design Styles */
+.glass-card-dashboard {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  padding: 2rem;
 }
 
-/* Animations pour les résultats de test */
+.glass-card-dashboard:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+}
+
+/* Background blob animations */
+@keyframes blob {
+  0%, 100% { 
+    transform: translate(0, 0) scale(1); 
+  }
+  33% { 
+    transform: translate(30px, -50px) scale(1.1); 
+  }
+  66% { 
+    transform: translate(-20px, 20px) scale(0.9); 
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Input styles */
+input[type="number"], input[type="text"], textarea, select {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+input[type="number"]:focus, input[type="text"]:focus, textarea:focus, select:focus {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Button styles */
+button {
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Notification item animations */
+.notification-item {
+  transition: all 0.3s ease;
+}
+
+.notification-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Test result animations */
 .test-result {
   animation: slideIn 0.3s ease-out;
 }
@@ -629,13 +749,34 @@ export default {
   }
 }
 
-/* Animation pour les notifications */
-.notification-item {
-  transition: all 0.3s ease;
+/* Responsive design */
+@media (max-width: 768px) {
+  .glass-card-dashboard {
+    padding: 1.5rem;
+  }
+  
+  .max-w-6xl {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
 }
 
-.notification-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 </style>
