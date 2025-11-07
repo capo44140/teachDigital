@@ -5,7 +5,8 @@
  * Usage: node scripts/test-youtube-table.js
  */
 
-import postgres from 'postgres'
+import pkg from 'pg'
+const { Pool } = pkg;
 import dotenv from 'dotenv'
 
 // Charger les variables d'environnement

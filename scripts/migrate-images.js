@@ -1,5 +1,7 @@
-import postgres from 'postgres';
+import pkg from 'pg';
 import { config } from 'dotenv';
+
+const { Pool } = pkg;
 
 // Charger les variables d'environnement
 config();

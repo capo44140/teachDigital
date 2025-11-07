@@ -1,0 +1,250 @@
+---
+globs: src/services/*.js,src/repositories/*.js,backend/api/*.js
+description: Patterns et conventions pour l'intégration API et les services
+---
+
+# Intégration API et Services - TeachDigital
+
+## Architecture des Services
+
+### Pattern Repository
+Utiliser le pattern Repository pour l'accès aux données :
+
+```javascript
+// Exemple basé sur src/repositories/baseRepository.js
+export class BaseRepository {
+  constructor(tableName) {
+    this.tableName = tableName
+  }
+  
+  async findById(id) {
+    const result = await sql`SELECT * FROM ${sql(this.tableName)} WHERE id = ${id}`
+    return result[0] || null
+  }
+  
+  async create(data) {
+    const result = await sql`INSERT INTO ${sql(this.tableName)} ${sql(data)} RETURNING *`
+    return result[0]
+  }
+}
+```
+
+### Services Métier
+- **ProfileService** : [src/services/profileService.js](mdc:src/services/profileService.js)
+- **LessonService** : [src/services/lessonService.js](mdc:src/services/lessonService.js)
+- **NotificationService** : [src/services/notificationService.js](mdc:src/services/notificationService.js)
+- **YouTubeService** : [src/services/youtubeVideoService.js](mdc:src/services/youtubeVideoService.js)
+
+## Configuration API
+
+### Service API Principal
+```javascript
+// Basé sur src/services/apiService.js
+export class ApiService {
+  constructor() {
+    this.baseURL = process.env.VITE_API_URL || '/api'
+    this.timeout = 10000
+  }
+  
+  async request(endpoint, options = {}) {
+    const url = `${this.baseURL}${endpoint}`
+    const config = {
+      timeout: this.timeout,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    }
+    
+    return fetch(url, config)
+  }
+}
+```
+
+### Gestion des Erreurs Centralisée
+Utiliser le service d'erreur : [src/services/errorService.js](mdc:src/services/errorService.js)
+
+```javascript
+import { ErrorService } from '@/services/errorService.js'
+
+try {
+  const data = await apiService.get('/profiles')
+} catch (error) {
+  const standardError = ErrorService.createError(
+    'Erreur lors du chargement des profils',
+    ErrorService.errorTypes.NETWORK,
+    ErrorService.severityLevels.MEDIUM,
+    { endpoint: '/profiles' },
+    error
+  )
+  throw standardError
+}
+```
+
+## Backend API (Vercel Functions)
+
+### Structure des Endpoints
+```
+backend/api/
+├── auth/              # Authentification
+│   ├── login.js       # POST /api/auth/login
+│   ├── logout.js       # POST /api/auth/logout
+│   └── verify.js      # GET /api/auth/verify
+├── profiles/          # Gestion des profils
+│   ├── index.js       # GET,POST /api/profiles
+│   ├── [id].js        # GET,PUT,DELETE /api/profiles/:id
+│   └── [id]/pin.js    # GET,PUT /api/profiles/:id/pin
+└── lessons/           # Gestion des leçons
+    ├── index.js       # GET,POST /api/lessons
+    └── [id].js        # GET,PUT,DELETE /api/lessons/:id
+```
+
+### Configuration Backend
+- **Database** : [backend/lib/database.js](mdc:backend/lib/database.js)
+- **Auth** : [backend/lib/auth.js](mdc:backend/lib/auth.js)
+- **CORS** : [backend/lib/cors.js](mdc:backend/lib/cors.js)
+- **Response** : [backend/lib/response.js](mdc:backend/lib/response.js)
+
+### Exemple d'Endpoint
+```javascript
+// backend/api/profiles/index.js
+import { sql } from '@/lib/database.js'
+import { createResponse } from '@/lib/response.js'
+import { verifyAuth } from '@/lib/auth.js'
+
+export default async function handler(req, res) {
+  try {
+    // Vérification de l'authentification
+    const user = await verifyAuth(req)
+    if (!user) {
+      return createResponse(res, 401, 'Non autorisé')
+    }
+    
+    if (req.method === 'GET') {
+      const profiles = await sql`SELECT * FROM profiles WHERE user_id = ${user.id}`
+      return createResponse(res, 200, profiles)
+    }
+    
+    if (req.method === 'POST') {
+      const { name, age, avatar } = req.body
+      const profile = await sql`
+        INSERT INTO profiles (name, age, avatar, user_id) 
+        VALUES (${name}, ${age}, ${avatar}, ${user.id}) 
+        RETURNING *
+      `
+      return createResponse(res, 201, profile[0])
+    }
+    
+    return createResponse(res, 405, 'Méthode non autorisée')
+  } catch (error) {
+    console.error('Erreur API profiles:', error)
+    return createResponse(res, 500, 'Erreur serveur')
+  }
+}
+```
+
+## Services Spécialisés
+
+### Service de Cache
+```javascript
+// src/services/cachedApiService.js
+export class CachedApiService {
+  constructor() {
+    this.cache = new Map()
+    this.cacheTimeout = 5 * 60 * 1000 // 5 minutes
+  }
+  
+  async get(endpoint, useCache = true) {
+    if (useCache && this.cache.has(endpoint)) {
+      const cached = this.cache.get(endpoint)
+      if (Date.now() - cached.timestamp < this.cacheTimeout) {
+        return cached.data
+      }
+    }
+    
+    const data = await this.apiService.get(endpoint)
+    this.cache.set(endpoint, {
+      data,
+      timestamp: Date.now()
+    })
+    
+    return data
+  }
+}
+```
+
+### Service de Reconnaissance Faciale
+- **Face Recognition** : [src/services/faceRecognitionService.js](mdc:src/services/faceRecognitionService.js)
+- Chargement différé des modèles
+- Cache des résultats de reconnaissance
+
+### Service YouTube
+- **YouTube Manager** : [src/services/youtubeVideoService.js](mdc:src/services/youtubeVideoService.js)
+- Gestion des vidéos et métadonnées
+- Optimisation des thumbnails
+
+## Gestion des États avec Pinia
+
+### Stores API
+```javascript
+// src/stores/apiStore.js
+import { defineStore } from 'pinia'
+import { apiService } from '@/services/apiService.js'
+
+export const useApiStore = defineStore('api', () => {
+  const loading = ref(false)
+  const error = ref(null)
+  
+  const fetchProfiles = async () => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const profiles = await apiService.get('/profiles')
+      return profiles
+    } catch (err) {
+      error.value = err.message
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  return { loading, error, fetchProfiles }
+})
+```
+
+## Bonnes Pratiques
+
+### Gestion des Erreurs
+- Toujours utiliser try/catch pour les appels API
+- Logger les erreurs avec contexte
+- Retourner des erreurs utilisateur-friendly
+
+### Performance
+- Utiliser le cache pour éviter les requêtes répétées
+- Implémenter le lazy loading pour les données volumineuses
+- Optimiser les requêtes avec des paramètres appropriés
+
+### Sécurité
+- Valider toutes les entrées côté serveur
+- Utiliser l'authentification JWT
+- Implémenter la limitation de taux (rate limiting)
+
+### Tests
+- Tester les services avec des mocks
+- Vérifier la gestion des erreurs
+- Tester les cas limites et les timeouts
+
+## Scripts Utilitaires
+
+### Tests API
+- `pnpm run test-api` : Test des endpoints API
+- `pnpm run test-cors` : Vérification CORS
+- `pnpm run test-local` : Tests locaux
+
+### Migration et Setup
+- `pnpm run init-db` : Initialisation base de données
+- `pnpm run migrate-db` : Migration des données
+- `pnpm run setup-env` : Configuration environnement

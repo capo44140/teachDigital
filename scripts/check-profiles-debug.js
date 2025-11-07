@@ -2,25 +2,31 @@
  * Script de débogage pour vérifier les profils en base de données
  */
 
-import postgres from 'postgres'
+import pkg from 'pg'
 import dotenv from 'dotenv'
+
+const { Pool } = pkg;
 
 // Charger les variables d'environnement
 dotenv.config()
 
 // Configuration de la base de données PostgreSQL
-const sql = postgres(process.env.DATABASE_URL || process.env.VITE_DATABASE_URL)
+const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL || process.env.VITE_DATABASE_URL
+})
 
 async function checkProfilesDebug() {
+  const client = await pool.connect()
   try {
     console.log('🔍 [DEBUG] Vérification des profils en base de données...')
     
     // Récupérer tous les profils
-    const profiles = await sql`
+    const result = await client.query(`
       SELECT id, name, type, is_admin, is_child, is_teen, is_active, level
       FROM profiles 
       ORDER BY id
-    `
+    `)
+    const profiles = result.rows
     
     console.log(`📊 [DEBUG] ${profiles.length} profils trouvés en base:`)
     
@@ -60,15 +66,19 @@ async function checkProfilesDebug() {
   } catch (error) {
     console.error('❌ [DEBUG] Erreur lors de la vérification des profils:', error)
     return []
+  } finally {
+    client.release()
   }
 }
 
 // Exécuter si le script est appelé directement
 if (import.meta.url === `file://${process.argv[1]}`) {
-  checkProfilesDebug().then(() => {
+  checkProfilesDebug().then(async () => {
+    await pool.end()
     process.exit(0)
-  }).catch(error => {
+  }).catch(async error => {
     console.error('Erreur fatale:', error)
+    await pool.end()
     process.exit(1)
   })
 }

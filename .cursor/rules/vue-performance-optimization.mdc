@@ -1,0 +1,145 @@
+---
+globs: *.vue,src/components/*.vue,src/services/*.js
+description: Optimisations de performance spécifiques à Vue.js pour TeachDigital
+---
+
+# Optimisations de Performance Vue.js - TeachDigital
+
+## Configuration Vite Optimisée
+
+### Configuration de build optimisée
+La configuration Vite dans [vite.config.js](mdc:vite.config.js) inclut des optimisations avancées :
+
+```javascript
+// Optimisations Terser activées
+terserOptions: {
+  compress: {
+    drop_console: true,        // Supprimer console.log en production
+    drop_debugger: true,       // Supprimer debugger en production
+    dead_code: true,           // Supprimer code mort
+    unused: true,              // Supprimer variables inutilisées
+    keep_classnames: true      // Important pour Vue.js
+  }
+}
+```
+
+### Code Splitting Intelligent
+- **Vue Vendor Chunk** : Vue.js et son écosystème séparés
+- **Database Chunk** : @neondatabase isolé
+- **App Chunk** : Tous les composants et services regroupés
+
+## Optimisations Vue.js Spécifiques
+
+### Lazy Loading des Composants
+```javascript
+// Dans src/main.js - Chargement différé des services
+const scheduleIdleTask = window.requestIdleCallback || ((cb) => setTimeout(cb, 1))
+
+// Initialisation asynchrone après le premier rendu
+scheduleIdleTask(() => {
+  initializeServicesAsync()
+})
+```
+
+### Composants Optimisés
+- **PerformanceDashboard** : [src/components/PerformanceDashboard.vue](mdc:src/components/PerformanceDashboard.vue)
+- **YouTubeVideoManager** : Chargement différé des vidéos
+- **ImageOptimizer** : Optimisation automatique des images
+
+### Gestion d'État Efficace
+- Utiliser `shallowRef` pour les objets volumineux
+- Éviter les mutations profondes avec `reactive`
+- Préférer `computed` pour les calculs coûteux
+
+### Services de Performance
+- **Cache Service** : [src/services/cachedApiService.js](mdc:src/services/cachedApiService.js)
+- **Offline Data Service** : [src/services/offlineDataService.js](mdc:src/services/offlineDataService.js)
+- **Mobile Optimization** : [src/services/mobileOptimizationService.js](mdc:src/services/mobileOptimizationService.js)
+
+## Optimisations de Bundle
+
+### Tree Shaking Agressif
+- Configuration ESBuild avec `treeShaking: true`
+- Exclusion des dépendances non utilisées
+- Minification intelligente des noms
+
+### Chunks Optimisés
+```javascript
+// Stratégie de chunks dans vite.config.js
+manualChunks: (id) => {
+  if (id.includes('node_modules')) {
+    if (id.includes('vue') || id.includes('@vue')) {
+      return 'vue-vendor'  // Vue.js isolé
+    }
+    if (id.includes('@neondatabase')) {
+      return 'database'     // Base de données isolée
+    }
+    return 'vendor'         // Autres dépendances
+  }
+  return 'app'             // Code applicatif
+}
+```
+
+## Métriques de Performance
+
+### Scripts de Monitoring
+- `pnpm run build:analyze` : Analyse du bundle
+- `pnpm run lighthouse` : Audit Lighthouse
+- `pnpm run performance:check` : Vérification complète
+
+### Objectifs de Performance
+- **First Contentful Paint** : < 0.5s
+- **Time to Interactive** : < 1.5s
+- **Bundle Size** : < 250KB
+- **Lighthouse Score** : > 90
+
+## Bonnes Pratiques
+
+### Composants Vue
+- Utiliser `v-memo` pour les listes volumineuses
+- Implémenter `v-once` pour le contenu statique
+- Éviter les watchers profonds sur de gros objets
+
+### Services
+- Charger les services critiques en priorité
+- Différer les services non critiques
+- Utiliser le cache pour éviter les requêtes répétées
+
+### Images et Assets
+- Optimisation automatique avec Sharp
+- Lazy loading des images
+- Formats modernes (WebP, AVIF)
+
+## Monitoring en Temps Réel
+
+### Dashboard de Performance
+Le composant [PerformanceDashboard.vue](mdc:src/components/PerformanceDashboard.vue) fournit :
+- Temps de chargement des composants
+- Statistiques de cache
+- Métriques de bundle
+- Tests de performance interactifs
+
+### Logs de Performance
+```javascript
+// Dans src/main.js
+console.log('🚀 Initialisation asynchrone des services...')
+console.log('✅ Profils préchargés')
+console.log('✅ Services PWA initialisés avec succès')
+```
+
+## Optimisations Spécifiques TeachDigital
+
+### Reconnaissance Faciale
+- Chargement différé de Face-API.js (-53% de JavaScript)
+- Initialisation uniquement quand nécessaire
+- Cache des modèles de reconnaissance
+
+### YouTube Integration
+- Chargement différé des vidéos
+- Optimisation des thumbnails
+- Cache des métadonnées vidéo
+
+### PWA Features
+- Service Worker optimisé
+- Cache intelligent avec revalidation
+- Mise à jour transparente des ressources

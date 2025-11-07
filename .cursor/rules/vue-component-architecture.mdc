@@ -1,0 +1,463 @@
+---
+globs: src/components/*.vue,src/stores/*.js
+description: Architecture et patterns pour les composants Vue.js et la gestion d'état
+---
+
+# Architecture des Composants Vue.js - TeachDigital
+
+## Structure des Composants
+
+### Template Standard Vue 3
+```vue
+<template>
+  <!-- Structure HTML avec classes TailwindCSS -->
+  <div class="component-container">
+    <!-- Contenu du composant -->
+  </div>
+</template>
+
+<script>
+import { ref, computed, onMounted, watch } from 'vue'
+import { useStore } from '@/stores/storeName'
+import { Icon } from '@iconify/vue'
+
+export default {
+  name: 'ComponentName',
+  components: {
+    Icon
+  },
+  props: {
+    // Props avec validation
+    title: {
+      type: String,
+      required: true
+    },
+    data: {
+      type: Object,
+      default: () => ({})
+    }
+  },
+  emits: ['update', 'delete'],
+  setup(props, { emit }) {
+    // Composition API setup
+    const store = useStore()
+    
+    // Variables réactives
+    const loading = ref(false)
+    const error = ref(null)
+    
+    // Computed properties
+    const computedValue = computed(() => {
+      return props.data.value * 2
+    })
+    
+    // Méthodes
+    const handleAction = () => {
+      emit('update', newValue)
+    }
+    
+    // Lifecycle hooks
+    onMounted(() => {
+      // Initialisation
+    })
+    
+    // Watchers
+    watch(() => props.data, (newData) => {
+      // Réaction aux changements
+    }, { deep: true })
+    
+    return {
+      loading,
+      error,
+      computedValue,
+      handleAction
+    }
+  }
+}
+</script>
+
+<style scoped>
+/* Styles spécifiques au composant */
+.component-container {
+  @apply p-4 bg-white rounded-lg shadow-md;
+}
+</style>
+```
+
+## Composants Spécialisés
+
+### Composants de Dashboard
+- **PerformanceDashboard** : [src/components/PerformanceDashboard.vue](mdc:src/components/PerformanceDashboard.vue)
+- **CacheStats** : Composant de statistiques de cache
+- **ImageOptimizer** : Optimisation d'images
+
+### Composants de Gestion
+- **YouTubeVideoManager** : [src/components/YouTubeVideoManager.vue](mdc:src/components/YouTubeVideoManager.vue)
+- **YouTubeKidsViewer** : [src/components/YouTubeKidsViewer.vue](mdc:src/components/YouTubeKidsViewer.vue)
+- **LessonScanner** : Scanner de leçons
+
+### Composants de Configuration
+- **PinSettings** : [src/components/PinSettings.vue](mdc:src/components/PinSettings.vue)
+- **ChildSettings** : Configuration des profils enfants
+- **BadgeManager** : Gestion des badges
+
+### Composants de Notification
+- **UpdateNotification** : [src/components/UpdateNotification.vue](mdc:src/components/UpdateNotification.vue)
+- **NotificationCenter** : Centre de notifications
+- **ProgressTracking** : Suivi des progrès
+
+## Gestion d'État avec Pinia
+
+### Structure des Stores
+```javascript
+// src/stores/profileStore.js
+import { defineStore } from 'pinia'
+import { profileService } from '@/services/profileService.js'
+
+export const useProfileStore = defineStore('profile', () => {
+  // État
+  const profiles = ref([])
+  const currentProfile = ref(null)
+  const loading = ref(false)
+  const error = ref(null)
+  
+  // Getters
+  const activeProfiles = computed(() => 
+    profiles.value.filter(profile => profile.isActive)
+  )
+  
+  const profileCount = computed(() => profiles.value.length)
+  
+  // Actions
+  const fetchProfiles = async () => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      profiles.value = await profileService.getAllProfiles()
+    } catch (err) {
+      error.value = err.message
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  const createProfile = async (profileData) => {
+    try {
+      const newProfile = await profileService.createProfile(profileData)
+      profiles.value.push(newProfile)
+      return newProfile
+    } catch (err) {
+      error.value = err.message
+      throw err
+    }
+  }
+  
+  const updateProfile = async (id, updates) => {
+    try {
+      const updatedProfile = await profileService.updateProfile(id, updates)
+      const index = profiles.value.findIndex(p => p.id === id)
+      if (index !== -1) {
+        profiles.value[index] = updatedProfile
+      }
+      return updatedProfile
+    } catch (err) {
+      error.value = err.message
+      throw err
+    }
+  }
+  
+  const deleteProfile = async (id) => {
+    try {
+      await profileService.deleteProfile(id)
+      profiles.value = profiles.value.filter(p => p.id !== id)
+    } catch (err) {
+      error.value = err.message
+      throw err
+    }
+  }
+  
+  const setCurrentProfile = (profile) => {
+    currentProfile.value = profile
+  }
+  
+  return {
+    // État
+    profiles,
+    currentProfile,
+    loading,
+    error,
+    
+    // Getters
+    activeProfiles,
+    profileCount,
+    
+    // Actions
+    fetchProfiles,
+    createProfile,
+    updateProfile,
+    deleteProfile,
+    setCurrentProfile
+  }
+})
+```
+
+### Stores Spécialisés
+- **AuthStore** : [src/stores/authStore.js](mdc:src/stores/authStore.js)
+- **LessonStore** : [src/stores/lessonStore.js](mdc:src/stores/lessonStore.js)
+- **ApiStore** : [src/stores/apiStore.js](mdc:src/stores/apiStore.js)
+
+## Patterns de Composants
+
+### Composant avec Formulaires
+```vue
+<script>
+export default {
+  setup() {
+    const form = ref({
+      name: '',
+      email: '',
+      age: null
+    })
+    
+    const errors = ref({})
+    const isSubmitting = ref(false)
+    
+    const validateForm = () => {
+      errors.value = {}
+      
+      if (!form.value.name) {
+        errors.value.name = 'Le nom est requis'
+      }
+      
+      if (!form.value.email) {
+        errors.value.email = 'L\'email est requis'
+      } else if (!isValidEmail(form.value.email)) {
+        errors.value.email = 'Format d\'email invalide'
+      }
+      
+      return Object.keys(errors.value).length === 0
+    }
+    
+    const handleSubmit = async () => {
+      if (!validateForm()) return
+      
+      isSubmitting.value = true
+      try {
+        await submitForm(form.value)
+        // Succès
+      } catch (error) {
+        // Gestion d'erreur
+      } finally {
+        isSubmitting.value = false
+      }
+    }
+    
+    return {
+      form,
+      errors,
+      isSubmitting,
+      handleSubmit
+    }
+  }
+}
+</script>
+```
+
+### Composant avec Liste et Filtres
+```vue
+<script>
+export default {
+  setup() {
+    const items = ref([])
+    const filteredItems = computed(() => {
+      let filtered = items.value
+      
+      if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase()
+        filtered = filtered.filter(item => 
+          item.title.toLowerCase().includes(query) ||
+          item.description.toLowerCase().includes(query)
+        )
+      }
+      
+      if (selectedCategory.value) {
+        filtered = filtered.filter(item => item.category === selectedCategory.value)
+      }
+      
+      return filtered.sort((a, b) => {
+        switch (sortBy.value) {
+          case 'title': return a.title.localeCompare(b.title)
+          case 'date': return new Date(b.createdAt) - new Date(a.createdAt)
+          default: return 0
+        }
+      })
+    })
+    
+    const searchQuery = ref('')
+    const selectedCategory = ref('')
+    const sortBy = ref('title')
+    
+    return {
+      items,
+      filteredItems,
+      searchQuery,
+      selectedCategory,
+      sortBy
+    }
+  }
+}
+</script>
+```
+
+### Composant avec Modal
+```vue
+<template>
+  <div v-if="isOpen" class="modal-overlay" @click="closeModal">
+    <div class="modal-content" @click.stop>
+      <div class="modal-header">
+        <h3>{{ title }}</h3>
+        <button @click="closeModal" class="close-button">
+          <Icon name="mdi:close" />
+        </button>
+      </div>
+      <div class="modal-body">
+        <slot />
+      </div>
+      <div class="modal-footer">
+        <slot name="footer">
+          <button @click="closeModal" class="btn-secondary">
+            Annuler
+          </button>
+          <button @click="confirm" class="btn-primary">
+            Confirmer
+          </button>
+        </slot>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  props: {
+    isOpen: Boolean,
+    title: String
+  },
+  emits: ['close', 'confirm'],
+  setup(props, { emit }) {
+    const closeModal = () => emit('close')
+    const confirm = () => emit('confirm')
+    
+    return {
+      closeModal,
+      confirm
+    }
+  }
+}
+</script>
+```
+
+## Bonnes Pratiques
+
+### Nommage et Organisation
+- **Composants** : PascalCase (ex: `UserProfile.vue`)
+- **Props** : camelCase avec validation
+- **Events** : kebab-case (ex: `@user-updated`)
+- **Slots** : kebab-case (ex: `<template #modal-footer>`)
+
+### Performance
+- Utiliser `v-memo` pour les listes volumineuses
+- Implémenter `v-once` pour le contenu statique
+- Éviter les watchers profonds sur de gros objets
+- Utiliser `shallowRef` pour les objets volumineux
+
+### Accessibilité
+- Utiliser les attributs ARIA appropriés
+- Implémenter la navigation au clavier
+- Fournir des labels descriptifs
+- Assurer un contraste suffisant
+
+### Tests
+- Tester les interactions utilisateur
+- Vérifier le rendu conditionnel
+- Tester la gestion des erreurs
+- Valider les props et events
+
+## Communication entre Composants
+
+### Props Down, Events Up
+```vue
+<!-- Parent -->
+<ChildComponent 
+  :data="parentData" 
+  @update="handleUpdate"
+  @delete="handleDelete"
+/>
+
+<!-- Child -->
+<script>
+export default {
+  props: ['data'],
+  emits: ['update', 'delete'],
+  setup(props, { emit }) {
+    const handleAction = () => {
+      emit('update', newValue)
+    }
+    
+    return { handleAction }
+  }
+}
+</script>
+```
+
+### Provide/Inject pour les données profondes
+```vue
+<!-- Ancestor -->
+<script>
+import { provide } from 'vue'
+
+export default {
+  setup() {
+    const theme = ref('dark')
+    provide('theme', theme)
+    
+    return { theme }
+  }
+}
+</script>
+
+<!-- Descendant -->
+<script>
+import { inject } from 'vue'
+
+export default {
+  setup() {
+    const theme = inject('theme')
+    
+    return { theme }
+  }
+}
+</script>
+```
+
+### Store Global pour l'état partagé
+```vue
+<script>
+import { useProfileStore } from '@/stores/profileStore.js'
+
+export default {
+  setup() {
+    const profileStore = useProfileStore()
+    
+    // Accès direct à l'état et aux actions
+    return {
+      profiles: profileStore.profiles,
+      loading: profileStore.loading,
+      fetchProfiles: profileStore.fetchProfiles
+    }
+  }
+}
+</script>
+```

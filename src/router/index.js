@@ -45,6 +45,7 @@ const ChildHelp = () => import(/* webpackChunkName: "help-components" */ '../com
 const ProfileTest = () => import(/* webpackChunkName: "dev-components" */ '../components/ProfileTest.vue')
 const NotificationTest = () => import(/* webpackChunkName: "dev-components" */ '../components/NotificationTest.vue')
 const PerformanceDashboard = () => import(/* webpackChunkName: "dev-components" */ '../components/PerformanceDashboard.vue')
+const LiquidGlassTest = () => import(/* webpackChunkName: "dev-components" */ '../components/LiquidGlassTest.vue')
 
 // Composants API (chunk: api-components)
 const ApiLoginForm = () => import(/* webpackChunkName: "api-components" */ '../components/ApiLoginForm.vue')
@@ -228,6 +229,11 @@ const routes = [
     name: 'ApiDashboard',
     component: ApiDashboard,
     meta: { requiresApiAuth: true }
+  },
+  {
+    path: '/liquid-glass-test',
+    name: 'LiquidGlassTest',
+    component: LiquidGlassTest
   },
 ]
 

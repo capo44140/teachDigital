@@ -13,7 +13,7 @@
     "test": "echo 'Tests à implémenter'"
   },
   "dependencies": {
-    "postgres": "^3.4.3",
+    "pg": "^8.11.3",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2"
   },

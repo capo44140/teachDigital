@@ -1,0 +1,581 @@
+---
+globs: src/services/*Security*.js,src/services/*Auth*.js,src/services/*Hash*.js,backend/lib/auth.js
+description: Bonnes pratiques de sécurité avancées pour TeachDigital
+---
+
+# Bonnes Pratiques de Sécurité Avancées - TeachDigital
+
+## Sécurité des Données et Chiffrement
+
+### Service de Chiffrement Centralisé
+```javascript
+// src/services/encryptionService.js
+export class EncryptionService {
+  static async encryptData(data, key) {
+    const encoder = new TextEncoder()
+    const dataBuffer = encoder.encode(JSON.stringify(data))
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(key),
+      { name: 'AES-GCM' },
+      false,
+      ['encrypt']
+    )
+    
+    const iv = crypto.getRandomValues(new Uint8Array(12))
+    const encrypted = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      cryptoKey,
+      dataBuffer
+    )
+    
+    return {
+      encrypted: Array.from(new Uint8Array(encrypted)),
+      iv: Array.from(iv)
+    }
+  }
+  
+  static async decryptData(encryptedData, key) {
+    const encoder = new TextEncoder()
+    const decoder = new TextDecoder()
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(key),
+      { name: 'AES-GCM' },
+      false,
+      ['decrypt']
+    )
+    
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: new Uint8Array(encryptedData.iv) },
+      cryptoKey,
+      new Uint8Array(encryptedData.encrypted)
+    )
+    
+    return JSON.parse(decoder.decode(decrypted))
+  }
+}
+```
+
+### Service de Hachage Sécurisé
+- **Hash Service** : [src/services/hashService.js](mdc:src/services/hashService.js)
+- **Native Hash Service** : [src/services/nativeHashService.js](mdc:src/services/nativeHashService.js)
+
+```javascript
+// Utilisation du service de hachage
+import { HashService } from '@/services/hashService.js'
+
+const hashPIN = async (pin) => {
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const hash = await HashService.hashWithSalt(pin, salt)
+  return { hash, salt }
+}
+
+const verifyPIN = async (pin, storedHash, salt) => {
+  const computedHash = await HashService.hashWithSalt(pin, salt)
+  return computedHash === storedHash
+}
+```
+
+## Authentification et Sessions
+
+### Service d'Authentification JWT
+```javascript
+// backend/lib/auth.js
+import jwt from 'jsonwebtoken'
+import { sql } from './database.js'
+
+export const generateToken = (user) => {
+  return jwt.sign(
+    { 
+      userId: user.id, 
+      email: user.email,
+      role: user.role 
+    },
+    process.env.JWT_SECRET,
+    { 
+      expiresIn: '24h',
+      issuer: 'teachdigital',
+      audience: 'teachdigital-app'
+    }
+  )
+}
+
+export const verifyToken = async (token) => {
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+      issuer: 'teachdigital',
+      audience: 'teachdigital-app'
+    })
+    
+    // Vérifier que l'utilisateur existe toujours
+    const user = await sql`
+      SELECT id, email, role, is_active 
+      FROM users 
+      WHERE id = ${decoded.userId} AND is_active = true
+    `
+    
+    if (!user.length) {
+      throw new Error('Utilisateur non trouvé ou inactif')
+    }
+    
+    return user[0]
+  } catch (error) {
+    throw new Error('Token invalide')
+  }
+}
+```
+
+### Gestion des Sessions Sécurisée
+- **Session Service** : [src/services/sessionService.js](mdc:src/services/sessionService.js)
+- **Auth Store** : [src/stores/authStore.js](mdc:src/stores/authStore.js)
+
+```javascript
+// Gestion sécurisée des sessions
+export class SessionService {
+  static createSession(userId, deviceInfo) {
+    const sessionId = crypto.randomUUID()
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24h
+    
+    return {
+      sessionId,
+      userId,
+      deviceInfo,
+      expiresAt,
+      createdAt: new Date()
+    }
+  }
+  
+  static async validateSession(sessionId) {
+    const session = await this.getSession(sessionId)
+    
+    if (!session) {
+      throw new Error('Session non trouvée')
+    }
+    
+    if (new Date() > session.expiresAt) {
+      await this.deleteSession(sessionId)
+      throw new Error('Session expirée')
+    }
+    
+    return session
+  }
+}
+```
+
+## Validation et Sanitisation
+
+### Service de Validation d'Images
+- **Image Validation** : [src/services/imageValidationService.js](mdc:src/services/imageValidationService.js)
+
+```javascript
+export class ImageValidationService {
+  static async validateImage(file) {
+    // Vérifier le type MIME
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Type de fichier non autorisé')
+    }
+    
+    // Vérifier la taille
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxSize) {
+      throw new Error('Fichier trop volumineux')
+    }
+    
+    // Vérifier le contenu réel du fichier
+    const buffer = await file.arrayBuffer()
+    const isValidImage = await this.validateImageContent(buffer)
+    
+    if (!isValidImage) {
+      throw new Error('Contenu d\'image invalide')
+    }
+    
+    return true
+  }
+  
+  static async validateImageContent(buffer) {
+    // Vérification des signatures de fichier
+    const signatures = {
+      'image/jpeg': [0xFF, 0xD8, 0xFF],
+      'image/png': [0x89, 0x50, 0x4E, 0x47],
+      'image/webp': [0x52, 0x49, 0x46, 0x46]
+    }
+    
+    const uint8Array = new Uint8Array(buffer)
+    
+    for (const [type, signature] of Object.entries(signatures)) {
+      if (this.matchesSignature(uint8Array, signature)) {
+        return true
+      }
+    }
+    
+    return false
+  }
+}
+```
+
+### Validation des Entrées Utilisateur
+```javascript
+export class InputValidationService {
+  static validatePIN(pin) {
+    // Règles de sécurité pour les PINs
+    const rules = {
+      minLength: 4,
+      maxLength: 6,
+      allowRepeating: false,
+      allowSequential: false,
+      allowCommon: false
+    }
+    
+    if (pin.length < rules.minLength || pin.length > rules.maxLength) {
+      throw new Error('PIN doit contenir entre 4 et 6 chiffres')
+    }
+    
+    if (!/^\d+$/.test(pin)) {
+      throw new Error('PIN doit contenir uniquement des chiffres')
+    }
+    
+    // Vérifier les séquences répétitives
+    if (this.hasRepeatingDigits(pin)) {
+      throw new Error('PIN ne peut pas contenir de chiffres répétés')
+    }
+    
+    // Vérifier les séquences séquentielles
+    if (this.hasSequentialDigits(pin)) {
+      throw new Error('PIN ne peut pas contenir de séquences')
+    }
+    
+    // Vérifier les PINs communs
+    if (this.isCommonPIN(pin)) {
+      throw new Error('PIN trop commun, choisissez un autre')
+    }
+    
+    return true
+  }
+  
+  static sanitizeInput(input) {
+    if (typeof input !== 'string') {
+      return input
+    }
+    
+    // Supprimer les caractères potentiellement dangereux
+    return input
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+\s*=/gi, '')
+      .trim()
+  }
+}
+```
+
+## Sécurité des PINs
+
+### Configuration de Sécurité des PINs
+- **PIN Config** : [src/config/pinConfig.js](mdc:src/config/pinConfig.js)
+- **PIN Service** : [src/services/pinService.js](mdc:src/services/pinService.js)
+
+```javascript
+// Configuration sécurisée des PINs
+export const PIN_SECURITY_CONFIG = {
+  // Règles de validation
+  validation: {
+    minLength: 4,
+    maxLength: 6,
+    allowRepeating: false,
+    allowSequential: false,
+    maxAttempts: 3,
+    lockoutDuration: 15 * 60 * 1000 // 15 minutes
+  },
+  
+  // Chiffrement
+  encryption: {
+    algorithm: 'AES-GCM',
+    keyLength: 256,
+    saltLength: 16
+  },
+  
+  // Audit
+  audit: {
+    logAttempts: true,
+    logSuccess: true,
+    logFailures: true
+  }
+}
+
+// Test de sécurité des PINs
+export const testPinSecurity = async () => {
+  const testCases = [
+    '1234',    // PIN séquentiel - doit échouer
+    '1111',    // PIN répétitif - doit échouer
+    '0000',    // PIN commun - doit échouer
+    '12345',   // PIN trop long - doit échouer
+    '123',     // PIN trop court - doit échouer
+    '1357',    // PIN valide - doit réussir
+    '2468'     // PIN valide - doit réussir
+  ]
+  
+  for (const pin of testCases) {
+    try {
+      await validatePIN(pin)
+      console.log(`✅ PIN ${pin} - Valide`)
+    } catch (error) {
+      console.log(`❌ PIN ${pin} - ${error.message}`)
+    }
+  }
+}
+```
+
+## CORS et Headers de Sécurité
+
+### Configuration CORS Sécurisée
+- **CORS Config** : [backend/lib/cors.js](mdc:backend/lib/cors.js)
+
+```javascript
+export const corsOptions = {
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      'https://teachdigital.vercel.app',
+      'https://www.teachdigital.com',
+      'http://localhost:3000' // Développement uniquement
+    ]
+    
+    // Autoriser les requêtes sans origine (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true)
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Non autorisé par CORS'))
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Origin',
+    'X-Requested-With',
+    'Content-Type',
+    'Accept',
+    'Authorization',
+    'Cache-Control'
+  ],
+  exposedHeaders: ['X-Total-Count'],
+  maxAge: 86400 // 24 heures
+}
+```
+
+### Headers de Sécurité
+```javascript
+export const securityHeaders = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Content-Security-Policy': `
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: https:;
+    connect-src 'self' https://api.teachdigital.com;
+    font-src 'self';
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+  `.replace(/\s+/g, ' ').trim(),
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
+}
+```
+
+## Limitation de Taux (Rate Limiting)
+
+### Service de Rate Limiting
+- **Rate Limit Service** : [src/services/rateLimitService.js](mdc:src/services/rateLimitService.js)
+
+```javascript
+export class RateLimitService {
+  constructor() {
+    this.attempts = new Map()
+    this.limits = {
+      login: { max: 5, window: 15 * 60 * 1000 }, // 5 tentatives par 15 min
+      api: { max: 100, window: 60 * 1000 },     // 100 requêtes par minute
+      upload: { max: 10, window: 60 * 1000 }    // 10 uploads par minute
+    }
+  }
+  
+  checkLimit(key, type) {
+    const now = Date.now()
+    const limit = this.limits[type]
+    
+    if (!this.attempts.has(key)) {
+      this.attempts.set(key, [])
+    }
+    
+    const userAttempts = this.attempts.get(key)
+    
+    // Nettoyer les anciennes tentatives
+    const validAttempts = userAttempts.filter(
+      attempt => now - attempt < limit.window
+    )
+    
+    if (validAttempts.length >= limit.max) {
+      throw new Error('Limite de taux dépassée')
+    }
+    
+    validAttempts.push(now)
+    this.attempts.set(key, validAttempts)
+    
+    return true
+  }
+}
+```
+
+## Audit et Logging
+
+### Service d'Audit Sécurisé
+- **Audit Log Service** : [src/services/auditLogService.js](mdc:src/services/auditLogService.js)
+
+```javascript
+export class AuditLogService {
+  static async logSecurityEvent(event) {
+    const auditEntry = {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      event: event.type,
+      userId: event.userId,
+      ipAddress: event.ipAddress,
+      userAgent: event.userAgent,
+      details: event.details,
+      severity: event.severity || 'medium',
+      success: event.success || false
+    }
+    
+    // Logger localement
+    console.log('🔒 Audit Security Event:', auditEntry)
+    
+    // Envoyer au service d'audit (si configuré)
+    if (process.env.AUDIT_SERVICE_URL) {
+      await this.sendToAuditService(auditEntry)
+    }
+    
+    return auditEntry
+  }
+  
+  static async logAuthenticationAttempt(userId, success, details) {
+    return this.logSecurityEvent({
+      type: 'authentication_attempt',
+      userId,
+      success,
+      details,
+      severity: success ? 'low' : 'high'
+    })
+  }
+  
+  static async logDataAccess(userId, resource, action) {
+    return this.logSecurityEvent({
+      type: 'data_access',
+      userId,
+      details: { resource, action },
+      severity: 'medium'
+    })
+  }
+}
+```
+
+## Reconnaissance Faciale Sécurisée
+
+### Service de Reconnaissance Faciale
+- **Face Recognition** : [src/services/faceRecognitionService.js](mdc:src/services/faceRecognitionService.js)
+
+```javascript
+export class SecureFaceRecognitionService {
+  constructor() {
+    this.isInitialized = false
+    this.models = null
+  }
+  
+  async initialize() {
+    if (this.isInitialized) return
+    
+    // Charger les modèles de manière sécurisée
+    this.models = await this.loadModels()
+    this.isInitialized = true
+  }
+  
+  async recognizeFace(imageData) {
+    if (!this.isInitialized) {
+      await this.initialize()
+    }
+    
+    // Traitement local uniquement - pas d'envoi vers des serveurs externes
+    const faceDescriptor = await this.extractFaceDescriptor(imageData)
+    
+    // Comparaison locale avec les descripteurs stockés
+    const match = await this.compareWithStoredFaces(faceDescriptor)
+    
+    return {
+      success: match.found,
+      confidence: match.confidence,
+      faceId: match.faceId
+    }
+  }
+  
+  // Les données faciales ne sont jamais stockées en clair
+  async storeFaceDescriptor(userId, faceDescriptor) {
+    const encryptedDescriptor = await EncryptionService.encryptData(
+      faceDescriptor,
+      this.getFaceEncryptionKey(userId)
+    )
+    
+    // Stocker uniquement le descripteur chiffré
+    await this.saveEncryptedDescriptor(userId, encryptedDescriptor)
+  }
+}
+```
+
+## Bonnes Pratiques de Sécurité
+
+### Variables d'Environnement
+- Ne jamais commiter les secrets dans le code
+- Utiliser [env.example](mdc:env.example) comme template
+- Rotation régulière des clés API et JWT secrets
+
+### Validation Côté Client et Serveur
+- Toujours valider les données côté serveur
+- Utiliser la validation côté client pour l'UX
+- Sanitizer toutes les entrées utilisateur
+
+### Gestion des Erreurs Sécurisée
+- Ne pas exposer d'informations sensibles dans les erreurs
+- Logger les erreurs avec contexte approprié
+- Retourner des messages d'erreur génériques aux utilisateurs
+
+### Tests de Sécurité
+```bash
+# Scripts de test de sécurité disponibles
+pnpm run test-pin-security     # Test sécurité des PINs
+pnpm run security:check        # Vérification complète
+pnpm run audit                 # Audit des dépendances
+pnpm run lint:check           # Vérification du code
+```
+
+### Monitoring et Alertes
+- Surveiller les tentatives d'accès non autorisées
+- Alerter en cas de patterns suspects
+- Maintenir des logs d'audit complets
+
+## Conformité et Standards
+
+### RGPD et Protection des Données
+- Consentement explicite pour la reconnaissance faciale
+- Droit à l'effacement des données
+- Chiffrement des données personnelles
+- Minimisation des données collectées
+
+### Standards de Sécurité
+- OWASP Top 10 compliance
+- Validation des entrées selon les standards
+- Gestion sécurisée des sessions
+- Protection contre les attaques courantes

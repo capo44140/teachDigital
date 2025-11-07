@@ -5,9 +5,11 @@
  * Ce script doit être exécuté une seule fois après la mise à jour de la sécurité
  */
 
-import postgres from 'postgres';
+import pkg from 'pg';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+
+const { Pool } = pkg;
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -19,18 +21,17 @@ const config = {
   database: process.env.DB_DATABASE || process.env.NEON_DATABASE,
   username: process.env.DB_USERNAME || process.env.NEON_USERNAME,
   password: process.env.DB_PASSWORD || process.env.NEON_PASSWORD,
-  port: process.env.DB_PORT || process.env.NEON_PORT || 5432,
-  ssl: process.env.DB_SSL !== 'false'
+  port: process.env.DB_PORT || process.env.NEON_PORT || 5432
 };
 
 // Créer l'instance de connexion PostgreSQL
-let sql;
+let pool;
 try {
   if (config.connectionString) {
-    sql = postgres(config.connectionString);
+    pool = new Pool({ connectionString: config.connectionString });
   } else if (config.host && config.username && config.password && config.database) {
-    const connectionString = `postgresql://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}${config.ssl ? '?sslmode=require' : ''}`;
-    sql = postgres(connectionString);
+    const connectionString = `postgresql://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}`;
+    pool = new Pool({ connectionString });
   } else {
     throw new Error('Configuration de base de données manquante. Vérifiez vos variables d\'environnement.');
   }
@@ -52,15 +53,17 @@ function isHashed(pin) {
  * Migre les codes PIN en clair vers des codes PIN hachés
  */
 async function migratePins() {
+  const client = await pool.connect();
   try {
     console.log('🚀 Début de la migration des codes PIN...');
     
     // Récupérer tous les codes PIN
-    const pins = await sql`
+    const result = await client.query(`
       SELECT id, profile_id, pin_code, created_at, updated_at
       FROM pin_codes
       ORDER BY profile_id
-    `;
+    `);
+    const pins = result.rows;
     
     if (pins.length === 0) {
       console.log('ℹ️ Aucun code PIN trouvé dans la base de données');
@@ -94,11 +97,12 @@ async function migratePins() {
         const hashedPin = await bcrypt.hash(pin_code, 12);
         
         // Mettre à jour dans la base de données
-        await sql`
-          UPDATE pin_codes 
-          SET pin_code = ${hashedPin}, updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${id}
-        `;
+        await client.query(
+          `UPDATE pin_codes 
+           SET pin_code = $1, updated_at = CURRENT_TIMESTAMP
+           WHERE id = $2`,
+          [hashedPin, id]
+        );
         
         console.log(`✅ Code PIN du profil ${profile_id} migré avec succès`);
         migratedCount++;
@@ -116,6 +120,8 @@ async function migratePins() {
   } catch (error) {
     console.error('❌ Erreur lors de la migration:', error);
     process.exit(1);
+  } finally {
+    client.release();
   }
 }
 
@@ -123,10 +129,11 @@ async function migratePins() {
  * Vérifie l'état de la migration
  */
 async function checkMigrationStatus() {
+  const client = await pool.connect();
   try {
     console.log('🔍 Vérification de l\'état de la migration...');
     
-    const pins = await sql`
+    const result = await client.query(`
       SELECT profile_id, pin_code, 
              CASE 
                WHEN pin_code ~ '^\\$2[ab]\\$' THEN 'hashed'
@@ -134,7 +141,8 @@ async function checkMigrationStatus() {
              END as status
       FROM pin_codes
       ORDER BY profile_id
-    `;
+    `);
+    const pins = result.rows;
     
     const hashedCount = pins.filter(p => p.status === 'hashed').length;
     const plainCount = pins.filter(p => p.status === 'plain').length;
@@ -151,6 +159,8 @@ async function checkMigrationStatus() {
     
   } catch (error) {
     console.error('❌ Erreur lors de la vérification:', error);
+  } finally {
+    client.release();
   }
 }
 
@@ -158,18 +168,22 @@ async function checkMigrationStatus() {
 async function main() {
   const command = process.argv[2];
   
-  switch (command) {
-    case 'migrate':
-      await migratePins();
-      break;
-    case 'check':
-      await checkMigrationStatus();
-      break;
-    default:
-      console.log('Usage: node migrate-pins.js [migrate|check]');
-      console.log('  migrate - Migre les codes PIN en clair vers des codes PIN hachés');
-      console.log('  check   - Vérifie l\'état de la migration');
-      process.exit(1);
+  try {
+    switch (command) {
+      case 'migrate':
+        await migratePins();
+        break;
+      case 'check':
+        await checkMigrationStatus();
+        break;
+      default:
+        console.log('Usage: node migrate-pins.js [migrate|check]');
+        console.log('  migrate - Migre les codes PIN en clair vers des codes PIN hachés');
+        console.log('  check   - Vérifie l\'état de la migration');
+        process.exit(1);
+    }
+  } finally {
+    await pool.end();
   }
   
   process.exit(0);

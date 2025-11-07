@@ -1,5 +1,7 @@
-import postgres from 'postgres'
+import pkg from 'pg'
 import dotenv from 'dotenv'
+
+const { Pool } = pkg;
 
 // Charger les variables d'environnement
 dotenv.config()
@@ -11,20 +13,19 @@ const config = {
   database: process.env.DB_DATABASE || process.env.NEON_DATABASE || process.env.VITE_NEON_DATABASE,
   username: process.env.DB_USERNAME || process.env.NEON_USERNAME || process.env.VITE_NEON_USERNAME,
   password: process.env.DB_PASSWORD || process.env.NEON_PASSWORD || process.env.VITE_NEON_PASSWORD,
-  port: process.env.DB_PORT || process.env.NEON_PORT || process.env.VITE_NEON_PORT || 5432,
-  ssl: process.env.DB_SSL !== 'false'
+  port: process.env.DB_PORT || process.env.NEON_PORT || process.env.VITE_NEON_PORT || 5432
 };
 
-let sql;
+let pool;
 
 try {
   if (config.connectionString) {
     console.log('🔗 Utilisation de la connection string complète');
-    sql = postgres(config.connectionString);
+    pool = new Pool({ connectionString: config.connectionString });
   } else if (config.host && config.username && config.password && config.database) {
-    const connectionString = `postgresql://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}${config.ssl ? '?sslmode=require' : ''}`;
+    const connectionString = `postgresql://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}`;
     console.log('🔗 Construction de la connection string à partir des variables individuelles');
-    sql = postgres(connectionString);
+    pool = new Pool({ connectionString });
   } else {
     throw new Error('Aucune configuration de base de données valide trouvée. Vérifiez vos variables d\'environnement.');
   }
@@ -35,4 +36,4 @@ try {
   process.exit(1);
 }
 
-export default sql;
+export default pool;
