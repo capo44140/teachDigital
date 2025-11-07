@@ -11,6 +11,7 @@ module.exports = async function handler(req, res) {
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:5173',
+    'https://teach-digital.vercel.app',
     'https://teachdigital.vercel.app'
   ];
   
@@ -18,9 +19,9 @@ module.exports = async function handler(req, res) {
   // Si credentials sont utilisés, on ne peut pas utiliser '*'
   // En développement, accepter localhost avec n'importe quel port
   const isLocalhost = origin && origin.startsWith('http://localhost');
-  const allowedOrigin = (origin && allowedOrigins.includes(origin)) || isLocalhost
-    ? origin || allowedOrigins[0]
-    : allowedOrigins[0]; // Fallback sur localhost:3000 par défaut
+  const allowedOrigin = (origin && (allowedOrigins.includes(origin) || isLocalhost))
+    ? origin
+    : allowedOrigins[2]; // Fallback sur https://teach-digital.vercel.app
   
   res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
