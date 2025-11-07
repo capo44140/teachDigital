@@ -12,8 +12,7 @@ dotenv.config()
 
 // Configuration de la base de données PostgreSQL
 const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL || process.env.VITE_DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  connectionString: process.env.DATABASE_URL || process.env.VITE_DATABASE_URL
 })
 
 async function checkProfilesDebug() {

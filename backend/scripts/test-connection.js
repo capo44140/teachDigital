@@ -57,7 +57,6 @@ console.log('🔗 Test de connexion:\n');
     // Configuration de test
     const pool = new Pool({
       connectionString,
-      ssl: { rejectUnauthorized: false },
       max: 1,
       connectionTimeoutMillis: 60000,
       idleTimeoutMillis: 60000

@@ -21,18 +21,17 @@ const config = {
   database: process.env.DB_DATABASE || process.env.NEON_DATABASE,
   username: process.env.DB_USERNAME || process.env.NEON_USERNAME,
   password: process.env.DB_PASSWORD || process.env.NEON_PASSWORD,
-  port: process.env.DB_PORT || process.env.NEON_PORT || 5432,
-  ssl: process.env.DB_SSL !== 'false'
+  port: process.env.DB_PORT || process.env.NEON_PORT || 5432
 };
 
 // Créer l'instance de connexion PostgreSQL
 let pool;
 try {
   if (config.connectionString) {
-    pool = new Pool({ connectionString: config.connectionString, ssl: { rejectUnauthorized: false } });
+    pool = new Pool({ connectionString: config.connectionString });
   } else if (config.host && config.username && config.password && config.database) {
-    const connectionString = `postgresql://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}${config.ssl ? '?sslmode=require' : ''}`;
-    pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
+    const connectionString = `postgresql://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}`;
+    pool = new Pool({ connectionString });
   } else {
     throw new Error('Configuration de base de données manquante. Vérifiez vos variables d\'environnement.');
   }

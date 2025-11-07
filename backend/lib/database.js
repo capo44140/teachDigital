@@ -27,10 +27,9 @@ try {
   // Configuration OPTIMISÉE pour Neon/Vercel serverless avec pg
   pool = new Pool({
     connectionString,
-    ssl: { rejectUnauthorized: false }, // Nécessaire pour Neon
     max: 1, // Limiter les connexions pour Vercel serverless
     idleTimeoutMillis: 60000, // 60 secondes (augmenté)
-    connectionTimeoutMillis: 60000, // 60 secondes pour le TLS handshake (CRITICAL - augmenté)
+    connectionTimeoutMillis: 60000, // 60 secondes pour la connexion (CRITICAL - augmenté)
   });
   
   // Listeners pour gérer les erreurs de connexion
