@@ -7,19 +7,31 @@ const handleBadges = require('./badges.js');
 
 module.exports = async function handler(req, res) {
   // Configuration CORS complète - DOIT être définie en premier
-  const origin = req.headers.origin || '*';
-  res.setHeader('Access-Control-Allow-Origin', origin);
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://teachdigital.vercel.app'
+  ];
+  
+  // Vérifier si l'origine est autorisée
+  // Si credentials sont utilisés, on ne peut pas utiliser '*'
+  // En développement, accepter localhost avec n'importe quel port
+  const isLocalhost = origin && origin.startsWith('http://localhost');
+  const allowedOrigin = (origin && allowedOrigins.includes(origin)) || isLocalhost
+    ? origin || allowedOrigins[0]
+    : allowedOrigins[0]; // Fallback sur localhost:3000 par défaut
+  
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Max-Age', '86400');
   res.setHeader('Vary', 'Origin');
 
   // Gérer les requêtes OPTIONS (preflight) - DOIT être géré avant tout autre traitement
   if (req.method === 'OPTIONS') {
-    res.statusCode = 200;
-    res.end();
-    return;
+    return res.status(200).end();
   }
 
   // Router simple basé sur l'URL
