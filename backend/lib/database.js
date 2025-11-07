@@ -151,14 +151,16 @@ function buildQuery(strings, values) {
     if (i < values.length) {
       const value = values[i];
       
-      // Log de débogage
-      if (i === 0 && value && typeof value === 'object') {
-        console.log('🔍 Valeur détectée:', {
-          hasText: !!value.text,
-          hasParams: !!value.params,
+      // Log de débogage pour toutes les valeurs
+      if (value && typeof value === 'object') {
+        console.log(`🔍 [${i}] Valeur détectée:`, {
+          type: typeof value,
+          hasText: 'text' in value,
+          hasParams: 'params' in value,
+          textValue: value.text ? value.text.substring(0, 50) : 'undefined',
+          paramsValue: value.params,
           isArray: Array.isArray(value.params),
-          textPreview: value.text ? value.text.substring(0, 100) : 'undefined',
-          paramsLength: value.params ? value.params.length : 'undefined'
+          keys: Object.keys(value).slice(0, 10)
         });
       }
       
@@ -223,46 +225,55 @@ function sql(strings, ...values) {
   const queryText = query.text;
   const queryParams = query.params;
   
-  const queryObj = {
-    text: queryText,
-    params: queryParams,
-    toString: () => queryText,
-    then: function(resolve, reject) {
-      // Exécuter la requête seulement quand on await
-      const promise = (async () => {
-        const client = await pool.connect();
-        try {
-          // Log temporaire pour déboguer
-          if (queryText.includes('ORDER') || queryText.includes('AND')) {
-            console.log('🔍 SQL généré:', queryText.substring(0, 300));
-            console.log('🔍 Params:', queryParams);
-          }
-          const result = await client.query(queryText, queryParams);
-          return result.rows;
-        } finally {
-          client.release();
-        }
-      })();
-      return promise.then(resolve, reject);
-    },
-    catch: function(reject) {
-      const promise = (async () => {
-        const client = await pool.connect();
-        try {
-          const result = await client.query(queryText, queryParams);
-          return result.rows;
-        } finally {
-          client.release();
-        }
-      })();
-      return promise.catch(reject);
+  // Créer une Promise qui sera exécutée seulement quand on await
+  const executeQuery = async () => {
+    const client = await pool.connect();
+    try {
+      // Log temporaire pour déboguer
+      if (queryText.includes('ORDER') || queryText.includes('AND')) {
+        console.log('🔍 SQL généré:', queryText.substring(0, 300));
+        console.log('🔍 Params:', queryParams);
+      }
+      const result = await client.query(queryText, queryParams);
+      return result.rows;
+    } finally {
+      client.release();
     }
   };
   
-  // Rendre l'objet awaitable en héritant de Promise
-  Object.setPrototypeOf(queryObj, Promise.prototype);
+  // Créer la Promise mais ne pas l'exécuter immédiatement
+  let promiseResolve, promiseReject;
+  const promise = new Promise((resolve, reject) => {
+    promiseResolve = resolve;
+    promiseReject = reject;
+  });
   
-  return queryObj;
+  // Ajouter les propriétés text et params directement sur la Promise
+  // Utiliser Object.defineProperty pour s'assurer qu'elles sont accessibles
+  Object.defineProperty(promise, 'text', {
+    value: queryText,
+    writable: false,
+    enumerable: true,
+    configurable: false
+  });
+  
+  Object.defineProperty(promise, 'params', {
+    value: queryParams,
+    writable: false,
+    enumerable: true,
+    configurable: false
+  });
+  
+  // Surcharger then pour exécuter la requête
+  promise.then = function(resolve, reject) {
+    return executeQuery().then(resolve, reject);
+  };
+  
+  promise.catch = function(reject) {
+    return executeQuery().catch(reject);
+  };
+  
+  return promise;
 }
 
 // Ajouter une méthode sql(identifier) pour créer des identifiants
