@@ -135,8 +135,24 @@ async function executeWithRetry(queryFn, maxRetries = 5, delayMs = 1000) {
   throw lastError;
 }
 
+// Créer une fonction sql compatible avec l'API postgres
+async function sql(text, params) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(text, params);
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+// Stocker le pool sur la fonction pour accès direct
+sql.pool = pool;
+
 module.exports = {
+  default: sql,
   pool,
+  sql,
   testConnection,
   executeWithRetry,
   query: (text, params) => pool.query(text, params)
