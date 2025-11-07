@@ -151,15 +151,28 @@ function buildQuery(strings, values) {
     if (i < values.length) {
       const value = values[i];
       
+      // Log de débogage
+      if (i === 0 && value && typeof value === 'object') {
+        console.log('🔍 Valeur détectée:', {
+          hasText: !!value.text,
+          hasParams: !!value.params,
+          isArray: Array.isArray(value.params),
+          textPreview: value.text ? value.text.substring(0, 100) : 'undefined',
+          paramsLength: value.params ? value.params.length : 'undefined'
+        });
+      }
+      
       if (value instanceof SqlIdentifier) {
         // Les identifiants sont intégrés directement (pas de paramètre)
         result += value.value;
-      } else if (value && (value.text && Array.isArray(value.params))) {
+      } else if (value && typeof value === 'object' && 'text' in value && 'params' in value && Array.isArray(value.params)) {
         // Si c'est une requête SQL précédente, on l'intègre avec ses paramètres
         // On doit réindexer les paramètres
-        const subParams = value.params;
+        const subText = String(value.text || '');
+        const subParams = value.params || [];
+        
         if (subParams.length > 0) {
-          const subText = value.text.replace(/\$(\d+)/g, (match, num) => {
+          const reindexedText = subText.replace(/\$(\d+)/g, (match, num) => {
             const oldIndex = parseInt(num);
             if (oldIndex > 0 && oldIndex <= subParams.length) {
               params_array.push(subParams[oldIndex - 1]);
@@ -168,10 +181,10 @@ function buildQuery(strings, values) {
             }
             return match; // Garder le placeholder original si index invalide
           });
-          result += subText;
+          result += reindexedText;
         } else {
           // Pas de paramètres, juste ajouter le texte
-          result += value.text;
+          result += subText;
         }
       } else if (value === undefined || value === null) {
         // Les valeurs NULL deviennent le texte "NULL"
