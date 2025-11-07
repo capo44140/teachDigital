@@ -60,14 +60,38 @@ try {
 // Fonction pour tester la connexion
 async function testConnection() {
   try {
+    console.log('🔍 Test de connexion à la base de données...');
     const result = await sql`SELECT 1 as test`;
     console.log('✅ Connexion à la base de données testée avec succès');
+    console.log('📊 Paramètres de connexion:');
+    console.log('   - SSL: required');
+    console.log('   - Connect Timeout: 30 secondes');
+    console.log('   - Statement Timeout: 30 secondes');
+    console.log('   - Max connexions: 1 (Vercel Serverless)');
     return true;
   } catch (error) {
     console.error('❌ Erreur de connexion à la base de données:', error);
+    console.error('💡 Vérifications à faire:');
+    console.error('   - DATABASE_URL est-elle correctement configurée?');
+    console.error('   - Le cluster Neon est-il disponible?');
+    console.error('   - Les pare-feu/IP whitelist permettent la connexion?');
     return false;
   }
 }
+
+// Logger l'état de la connexion au démarrage
+console.log('═══════════════════════════════════════════════════════════');
+console.log('🚀 Initialisation du Backend TeachDigital');
+console.log('═══════════════════════════════════════════════════════════');
+console.log('📡 Configuration PostgreSQL/Neon:');
+console.log(`   - DATABASE_URL: ${connectionString.replace(/:[^:@]+@/, ':****@')}`);
+console.log('   - SSL Mode: require');
+console.log('   - Connect Timeout: 30s');
+console.log('   - Statement Timeout: 30s');
+console.log('   - Idle Timeout: 30s');
+console.log('   - Max Connections: 1');
+console.log('   - Retry automatique: enabled (3x avec backoff)');
+console.log('═══════════════════════════════════════════════════════════');
 
 // Fonction wrapper pour exécuter des requêtes avec retry automatique
 async function executeWithRetry(queryFn, maxRetries = 3, delayMs = 500) {

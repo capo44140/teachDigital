@@ -1,11 +1,25 @@
 // Import des dépendances
 const { NativeHashService } = require('../lib/nativeHash.js');
-const { default: sql, executeWithRetry } = require('../lib/database.js');
+const { default: sql, executeWithRetry, testConnection } = require('../lib/database.js');
 const { generateToken, createSession, authenticateToken, deleteSession } = require('../lib/auth.js');
 const { handleError } = require('../lib/response.js');
 const handleBadges = require('./badges.js');
 
+// Variable pour tracker si la connexion a été testée au démarrage
+let connectionTestedAtStartup = false;
+
 module.exports = async function handler(req, res) {
+  // Test de connexion une fois au démarrage (cold start)
+  if (!connectionTestedAtStartup) {
+    connectionTestedAtStartup = true;
+    console.log('\n🔄 Premier appel détecté - Test de connexion à la base de données...');
+    try {
+      await testConnection();
+    } catch (error) {
+      console.error('⚠️ Avertissement: Impossible de tester la connexion au démarrage');
+    }
+  }
+
   // Configuration CORS complète - DOIT être définie en premier
   const origin = req.headers.origin;
   const allowedOrigins = [
