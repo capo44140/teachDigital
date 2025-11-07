@@ -134,10 +134,26 @@ async function executeWithRetry(queryFn, maxRetries = 5, delayMs = 1000) {
   throw lastError;
 }
 
-// Créer une fonction sql compatible avec l'API postgres
-async function sql(text, params) {
+// Créer une fonction sql compatible avec l'API postgres et template literals
+async function sql(strings, ...values) {
   const client = await pool.connect();
   try {
+    // Gérer les deux cas d'appel:
+    // 1. Template literal: sql`SELECT ...` 
+    // 2. Appel normal: sql(text, params)
+    
+    let text, params;
+    
+    if (Array.isArray(strings)) {
+      // Template literal: sql`SELECT * FROM users WHERE id = ${123}`
+      text = strings.join('');
+      params = values;
+    } else {
+      // Appel normal: sql("SELECT * FROM users WHERE id = $1", [123])
+      text = strings;
+      params = values[0] || [];
+    }
+    
     const result = await client.query(text, params);
     return result.rows;
   } finally {
