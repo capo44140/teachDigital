@@ -140,13 +140,6 @@ function SqlIdentifier(value) {
   this.value = String(value);
 }
 
-// Objet pour représenter une requête SQL qui peut être réutilisée
-function SqlQuery(text, params) {
-  this.text = text;
-  this.params = params;
-  this.toString = () => this.text;
-}
-
 // Fonction helper pour construire une requête SQL à partir d'un template literal
 function buildQuery(strings, values) {
   const params_array = [];
@@ -161,15 +154,14 @@ function buildQuery(strings, values) {
       if (value instanceof SqlIdentifier) {
         // Les identifiants sont intégrés directement (pas de paramètre)
         result += value.value;
-      } else if (value instanceof SqlQuery || (value && typeof value.then === 'function' && value.text && value.params)) {
-        // Si c'est une SqlQuery ou une promesse avec text/params, on l'intègre avec ses paramètres
+      } else if (value && (value.text && value.params)) {
+        // Si c'est une requête SQL précédente, on l'intègre avec ses paramètres
         // On doit réindexer les paramètres
         const subParams = value.params;
         const subText = value.text.replace(/\$(\d+)/g, (match, num) => {
           const oldIndex = parseInt(num);
-          const newIndex = paramCounter;
           params_array.push(subParams[oldIndex - 1]);
-          paramCounter++;
+          const newIndex = paramCounter++;
           return '$' + newIndex;
         });
         result += subText;
@@ -179,15 +171,14 @@ function buildQuery(strings, values) {
       } else {
         // Les valeurs normales deviennent des paramètres
         params_array.push(value);
-        result += '$' + paramCounter;
-        paramCounter++;
+        result += '$' + paramCounter++;
       }
     }
     
     return result;
   });
   
-  return new SqlQuery(text, params_array);
+  return { text, params: params_array };
 }
 
 // Créer une fonction sql compatible avec l'API postgres et template literals
@@ -203,10 +194,10 @@ function sql(strings, ...values) {
     query = buildQuery(strings, values);
   } else {
     // Appel normal: sql("SELECT * FROM users WHERE id = $1", [123])
-    query = new SqlQuery(strings, values[0] || []);
+    query = { text: strings, params: values[0] || [] };
   }
   
-  // Créer une promesse qui exécute la requête
+  // Créer une vraie Promise qui expose aussi text et params pour la réutilisation
   const promise = (async () => {
     const client = await pool.connect();
     try {
@@ -217,12 +208,10 @@ function sql(strings, ...values) {
     }
   })();
   
-  // Ajouter les propriétés de SqlQuery pour permettre la réutilisation dans d'autres templates
-  Object.assign(promise, {
-    text: query.text,
-    params: query.params,
-    toString: () => query.text
-  });
+  // Ajouter les propriétés pour permettre la réutilisation dans d'autres templates
+  promise.text = query.text;
+  promise.params = query.params;
+  promise.toString = () => query.text;
   
   return promise;
 }
