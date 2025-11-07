@@ -134,6 +134,12 @@ async function executeWithRetry(queryFn, maxRetries = 5, delayMs = 1000) {
   throw lastError;
 }
 
+// Objet spécial pour les identifiants SQL
+function SqlIdentifier(value) {
+  this.isIdentifier = true;
+  this.value = String(value);
+}
+
 // Créer une fonction sql compatible avec l'API postgres et template literals
 async function sql(strings, ...values) {
   const client = await pool.connect();
@@ -147,13 +153,30 @@ async function sql(strings, ...values) {
     if (Array.isArray(strings)) {
       // Template literal: sql`SELECT * FROM users WHERE id = ${123}`
       // Reconstruire la requête avec les placeholders $1, $2, etc.
+      const params_array = [];
+      let paramCounter = 1;
+      
       text = strings.reduce((acc, str, i) => {
-        if (i > 0 && values[i - 1] !== undefined) {
-          return acc + '$' + i + str;
+        let result = acc + str;
+        
+        if (i < values.length) {
+          const value = values[i];
+          
+          if (value instanceof SqlIdentifier) {
+            // Les identifiants sont intégrés directement (pas de paramètre)
+            result += value.value;
+          } else if (value !== undefined && value !== null) {
+            // Les valeurs normales deviennent des paramètres
+            params_array.push(value);
+            result += '$' + paramCounter;
+            paramCounter++;
+          }
         }
-        return acc + str;
+        
+        return result;
       });
-      params = values.filter(v => v !== undefined);
+      
+      params = params_array;
     } else {
       // Appel normal: sql("SELECT * FROM users WHERE id = $1", [123])
       text = strings;
@@ -166,6 +189,11 @@ async function sql(strings, ...values) {
     client.release();
   }
 }
+
+// Ajouter une méthode sql(identifier) pour créer des identifiants
+sql.identifier = function(value) {
+  return new SqlIdentifier(value);
+};
 
 // Stocker le pool sur la fonction pour accès direct
 sql.pool = pool;
