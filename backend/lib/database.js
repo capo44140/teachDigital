@@ -154,17 +154,25 @@ function buildQuery(strings, values) {
       if (value instanceof SqlIdentifier) {
         // Les identifiants sont intégrés directement (pas de paramètre)
         result += value.value;
-      } else if (value && (value.text && value.params)) {
+      } else if (value && (value.text && Array.isArray(value.params))) {
         // Si c'est une requête SQL précédente, on l'intègre avec ses paramètres
         // On doit réindexer les paramètres
         const subParams = value.params;
-        const subText = value.text.replace(/\$(\d+)/g, (match, num) => {
-          const oldIndex = parseInt(num);
-          params_array.push(subParams[oldIndex - 1]);
-          const newIndex = paramCounter++;
-          return '$' + newIndex;
-        });
-        result += subText;
+        if (subParams.length > 0) {
+          const subText = value.text.replace(/\$(\d+)/g, (match, num) => {
+            const oldIndex = parseInt(num);
+            if (oldIndex > 0 && oldIndex <= subParams.length) {
+              params_array.push(subParams[oldIndex - 1]);
+              const newIndex = paramCounter++;
+              return '$' + newIndex;
+            }
+            return match; // Garder le placeholder original si index invalide
+          });
+          result += subText;
+        } else {
+          // Pas de paramètres, juste ajouter le texte
+          result += value.text;
+        }
       } else if (value === undefined || value === null) {
         // Les valeurs NULL deviennent le texte "NULL"
         result += 'NULL';
@@ -197,23 +205,51 @@ function sql(strings, ...values) {
     query = { text: strings, params: values[0] || [] };
   }
   
-  // Créer une vraie Promise qui expose aussi text et params pour la réutilisation
-  const promise = (async () => {
-    const client = await pool.connect();
-    try {
-      const result = await client.query(query.text, query.params);
-      return result.rows;
-    } finally {
-      client.release();
+  // Créer un objet qui peut être utilisé dans d'autres templates ET awaité
+  // Ne PAS exécuter immédiatement - seulement quand on await
+  const queryText = query.text;
+  const queryParams = query.params;
+  
+  const queryObj = {
+    text: queryText,
+    params: queryParams,
+    toString: () => queryText,
+    then: function(resolve, reject) {
+      // Exécuter la requête seulement quand on await
+      const promise = (async () => {
+        const client = await pool.connect();
+        try {
+          // Log temporaire pour déboguer
+          if (queryText.includes('ORDER') || queryText.includes('AND')) {
+            console.log('🔍 SQL généré:', queryText.substring(0, 300));
+            console.log('🔍 Params:', queryParams);
+          }
+          const result = await client.query(queryText, queryParams);
+          return result.rows;
+        } finally {
+          client.release();
+        }
+      })();
+      return promise.then(resolve, reject);
+    },
+    catch: function(reject) {
+      const promise = (async () => {
+        const client = await pool.connect();
+        try {
+          const result = await client.query(queryText, queryParams);
+          return result.rows;
+        } finally {
+          client.release();
+        }
+      })();
+      return promise.catch(reject);
     }
-  })();
+  };
   
-  // Ajouter les propriétés pour permettre la réutilisation dans d'autres templates
-  promise.text = query.text;
-  promise.params = query.params;
-  promise.toString = () => query.text;
+  // Rendre l'objet awaitable en héritant de Promise
+  Object.setPrototypeOf(queryObj, Promise.prototype);
   
-  return promise;
+  return queryObj;
 }
 
 // Ajouter une méthode sql(identifier) pour créer des identifiants
