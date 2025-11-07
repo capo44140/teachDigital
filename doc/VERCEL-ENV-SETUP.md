@@ -1,7 +1,12 @@
 # Configuration des Variables d'Environnement sur Vercel
 
-## Problème identifié
-L'erreur `POST https://undefined/sql` indique que l'URL de votre base de données Neon n'est pas définie correctement sur Vercel.
+## Problèmes identifiés
+
+### Erreur `ECONNREFUSED 127.0.0.1:5432`
+Cette erreur indique que l'application essaie de se connecter à une base de données locale (`127.0.0.1:5432`) au lieu d'utiliser votre base de données Neon. Cela signifie que la variable `DATABASE_URL` n'est pas définie ou est vide sur Vercel.
+
+### Erreur `POST https://undefined/sql`
+Cette erreur indique également que l'URL de votre base de données Neon n'est pas définie correctement sur Vercel.
 
 ## Solution : Configuration des Variables d'Environnement
 
@@ -63,9 +68,12 @@ Après avoir ajouté les variables :
 ### 5. Vérifier les Logs
 
 1. Allez dans **Functions** > **View Function Logs**
-2. Recherchez les messages de debug que nous avons ajoutés :
-   - `🔍 Variables d'environnement détectées:`
-   - `✅ Connexion à Neon DB configurée avec succès`
+2. Recherchez les messages de debug :
+   - `🔗 Connexion à PostgreSQL configurée`
+   - `🔍 DATABASE_URL détectée:` (avec le mot de passe masqué)
+   - `✅ Connexion à la base de données testée avec succès`
+
+Si vous voyez l'erreur `DATABASE_URL non définie ou vide`, cela confirme que la variable n'est pas correctement configurée.
 
 ## Variables d'Environnement Recommandées
 
@@ -85,8 +93,29 @@ Une fois configuré, vous devriez voir dans les logs :
 
 ## Dépannage
 
+### Erreur `ECONNREFUSED 127.0.0.1:5432`
+
+Cette erreur signifie que `DATABASE_URL` n'est pas définie sur Vercel. Pour résoudre :
+
+1. **Vérifiez que la variable est bien ajoutée** :
+   - Allez dans Vercel Dashboard > Settings > Environment Variables
+   - Vérifiez que `DATABASE_URL` existe et a une valeur
+   - Assurez-vous qu'elle est activée pour **Production**, **Preview** et **Development**
+
+2. **Vérifiez le format de l'URL** :
+   - Doit commencer par `postgresql://` ou `postgres://`
+   - Format complet : `postgresql://username:password@host:port/database?sslmode=require`
+   - Pour Neon, l'URL ressemble à : `postgresql://user:pass@ep-xxx-xxx.region.aws.neon.tech/dbname?sslmode=require`
+
+3. **Redéployez après avoir ajouté la variable** :
+   - Les variables d'environnement ne sont disponibles qu'après un redéploiement
+   - Allez dans Deployments > Cliquez sur les trois points > Redeploy
+
+### Autres problèmes
+
 Si le problème persiste :
 1. Vérifiez que l'URL de connexion Neon est correcte
-2. Vérifiez que votre base de données Neon est active
+2. Vérifiez que votre base de données Neon est active (pas suspendue)
 3. Vérifiez les logs Vercel pour plus de détails
 4. Testez la connexion localement avec les mêmes variables
+5. Vérifiez que votre base de données Neon accepte les connexions depuis Vercel (pas de restrictions IP)

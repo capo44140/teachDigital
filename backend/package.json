@@ -4,7 +4,7 @@
   "description": "Backend API pour TeachDigital - Vercel Functions",
   "scripts": {
     "dev": "node scripts/test-local.js",
-    "dev:vercel": "vercel dev",
+    "dev:vercel": "vercel dev --listen 3001",
     "build": "echo 'No build step required for Vercel Functions'",
     "deploy": "node scripts/deploy.js production",
     "deploy:preview": "node scripts/deploy.js preview",

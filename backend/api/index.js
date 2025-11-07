@@ -6,16 +6,19 @@ const { handleError } = require('../lib/response.js');
 const handleBadges = require('./badges.js');
 
 module.exports = async function handler(req, res) {
-  // Configuration CORS complète
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Configuration CORS complète - DOIT être définie en premier
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Max-Age', '86400');
   res.setHeader('Vary', 'Origin');
 
-  // Gérer les requêtes OPTIONS (preflight)
+  // Gérer les requêtes OPTIONS (preflight) - DOIT être géré avant tout autre traitement
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
+    res.statusCode = 200;
+    res.end();
     return;
   }
 
@@ -584,7 +587,10 @@ async function handleProfilePin(req, res, profileId) {
 async function handleLessons(req, res) {
   try {
     if (req.method === 'GET') {
-      const { profileId, published } = req.query;
+      // Parser les query parameters depuis l'URL
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const profileId = url.searchParams.get('profileId');
+      const published = url.searchParams.get('published');
 
       let lessons;
       
@@ -840,7 +846,11 @@ async function handleLesson(req, res) {
 async function handleNotifications(req, res) {
   try {
     if (req.method === 'GET') {
-      const { profileId, isRead, type } = req.query;
+      // Parser les query parameters depuis l'URL
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const profileId = url.searchParams.get('profileId');
+      const isRead = url.searchParams.get('isRead');
+      const type = url.searchParams.get('type');
 
       let query = sql`
         SELECT 

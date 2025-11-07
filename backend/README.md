@@ -47,8 +47,10 @@ JWT_SECRET=your-super-secret-jwt-key
 ```bash
 cd backend
 pnpm install
-pnpm run dev
+pnpm run dev:vercel
 ```
+
+Le serveur démarre sur **http://localhost:3001** par défaut.
 
 ## 🔐 Authentification
 

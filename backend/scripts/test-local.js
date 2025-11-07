@@ -1,5 +1,5 @@
 // Test local de l'API
-const API_URL = 'http://localhost:3000';
+const API_URL = 'http://localhost:3001';
 
 async function testLocalAPI() {
   console.log('🧪 Test local de l\'API\n');
