@@ -23,12 +23,33 @@ try {
   console.log('🔗 Connexion à PostgreSQL configurée');
   console.log('🔍 DATABASE_URL détectée:', connectionString.replace(/:[^:@]+@/, ':****@')); // Masquer le mot de passe dans les logs
   
-  // Configuration avec options pour Neon/Vercel
+  // Configuration OPTIMISÉE pour Neon/Vercel serverless
   sql = postgres(connectionString, {
     ssl: 'require', // Nécessaire pour Neon
     max: 1, // Limiter les connexions pour Vercel serverless
-    idle_timeout: 20,
-    connect_timeout: 10
+    idle_timeout: 30, // Augmenté de 20 à 30 secondes
+    connect_timeout: 30, // Augmenté de 10 à 30 secondes (CRITICAL)
+    statement_timeout: 30000, // Timeout pour les requêtes: 30 secondes
+    
+    // Options de reconnexion pour Neon
+    backoff: {
+      start: 100,
+      max: 3000,
+      multiplier: 2
+    },
+    
+    // Callbacks pour gérer les erreurs de connexion
+    onconnect: async (connection) => {
+      console.log('✅ Nouvelle connexion PostgreSQL établie');
+    },
+    
+    ondisconnect: async (connection) => {
+      console.log('⚠️ Connexion PostgreSQL fermée');
+    },
+    
+    onerror: (error) => {
+      console.error('❌ Erreur de connexion PostgreSQL:', error.code, error.message);
+    }
   });
 } catch (error) {
   console.error('❌ Erreur de configuration PostgreSQL:', error);
@@ -48,8 +69,43 @@ async function testConnection() {
   }
 }
 
+// Fonction wrapper pour exécuter des requêtes avec retry automatique
+async function executeWithRetry(queryFn, maxRetries = 3, delayMs = 500) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await queryFn();
+    } catch (error) {
+      lastError = error;
+      
+      // Vérifier si c'est une erreur temporaire
+      const isTemporaryError = 
+        error.code === 'ECONNRESET' ||
+        error.code === 'ECONNREFUSED' ||
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'EHOSTUNREACH' ||
+        error.message?.includes('socket disconnected') ||
+        error.message?.includes('Connection lost');
+      
+      if (!isTemporaryError || attempt === maxRetries) {
+        // Erreur permanente ou dernier essai
+        throw error;
+      }
+      
+      // Attendre avant de réessayer (avec backoff exponentiel)
+      const delay = delayMs * Math.pow(2, attempt - 1);
+      console.log(`⏳ Retry ${attempt}/${maxRetries} après ${delay}ms - Erreur: ${error.code}`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError;
+}
+
 module.exports = {
   default: sql,
-  testConnection
+  testConnection,
+  executeWithRetry
 };
 

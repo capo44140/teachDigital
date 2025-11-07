@@ -1,6 +1,6 @@
 // Import des dépendances
 const { NativeHashService } = require('../lib/nativeHash.js');
-const sql = require('../lib/database.js').default;
+const { default: sql, executeWithRetry } = require('../lib/database.js');
 const { generateToken, createSession, authenticateToken, deleteSession } = require('../lib/auth.js');
 const { handleError } = require('../lib/response.js');
 const handleBadges = require('./badges.js');
@@ -226,14 +226,14 @@ async function handleProfiles(req, res) {
   try {
     if (req.method === 'GET') {
       // GET est public - récupérer tous les profils
-      const profiles = await sql`
+      const profiles = await executeWithRetry(() => sql`
         SELECT 
           id, name, description, type, is_admin, is_child, is_teen, 
           is_active, is_locked, color, avatar_class, avatar_content, 
           image_url, image_data, image_type, level, created_at, updated_at
         FROM profiles 
         ORDER BY created_at DESC
-      `;
+      `);
 
       res.status(200).json({
         success: true,
@@ -609,7 +609,7 @@ async function handleLessons(req, res) {
       
       if (profileId && published !== undefined) {
         // Les deux paramètres sont fournis
-        lessons = await sql`
+        lessons = await executeWithRetry(() => sql`
           SELECT 
             l.id, l.title, l.description, l.subject, l.level, 
             l.image_filename, l.image_data, l.quiz_data, 
@@ -620,10 +620,10 @@ async function handleLessons(req, res) {
           WHERE l.profile_id = ${parseInt(profileId)} 
             AND l.is_published = ${published === 'true'}
           ORDER BY l.created_at DESC
-        `;
+        `);
       } else if (profileId) {
         // Seulement profileId
-        lessons = await sql`
+        lessons = await executeWithRetry(() => sql`
           SELECT 
             l.id, l.title, l.description, l.subject, l.level, 
             l.image_filename, l.image_data, l.quiz_data, 
@@ -633,10 +633,10 @@ async function handleLessons(req, res) {
           JOIN profiles p ON l.profile_id = p.id
           WHERE l.profile_id = ${parseInt(profileId)}
           ORDER BY l.created_at DESC
-        `;
+        `);
       } else if (published !== undefined) {
         // Seulement published
-        lessons = await sql`
+        lessons = await executeWithRetry(() => sql`
           SELECT 
             l.id, l.title, l.description, l.subject, l.level, 
             l.image_filename, l.image_data, l.quiz_data, 
@@ -646,10 +646,10 @@ async function handleLessons(req, res) {
           JOIN profiles p ON l.profile_id = p.id
           WHERE l.is_published = ${published === 'true'}
           ORDER BY l.created_at DESC
-        `;
+        `);
       } else {
         // Aucun paramètre - toutes les leçons
-        lessons = await sql`
+        lessons = await executeWithRetry(() => sql`
           SELECT 
             l.id, l.title, l.description, l.subject, l.level, 
             l.image_filename, l.image_data, l.quiz_data, 
@@ -658,7 +658,7 @@ async function handleLessons(req, res) {
           FROM lessons l
           JOIN profiles p ON l.profile_id = p.id
           ORDER BY l.created_at DESC
-        `;
+        `);
       }
 
       res.status(200).json({
