@@ -1,0 +1,121 @@
+name: 🚀 Deploy to Synology
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch: # Permet de déclencher manuellement
+
+jobs:
+  deploy:
+    name: 📦 Build & Deploy to Synology
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SYNOLOGY_SSH_KEY }}
+
+      - name: 🔍 Add Synology to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.SYNOLOGY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 📤 Deploy to Synology
+        env:
+          SYNOLOGY_HOST: ${{ secrets.SYNOLOGY_HOST }}
+          SYNOLOGY_USER: ${{ secrets.SYNOLOGY_USER }}
+          SYNOLOGY_PATH: ${{ secrets.SYNOLOGY_DEPLOY_PATH }}
+        run: |
+          echo "🚀 Déploiement sur Synology..."
+          
+          # Créer le répertoire de déploiement s'il n'existe pas
+          ssh ${{ secrets.SYNOLOGY_USER }}@${{ secrets.SYNOLOGY_HOST }} \
+            "mkdir -p ${{ secrets.SYNOLOGY_DEPLOY_PATH }}"
+          
+          # Copier les fichiers nécessaires
+          echo "📋 Copie des fichiers..."
+          rsync -avz --delete \
+            --exclude 'node_modules' \
+            --exclude '.git' \
+            --exclude 'dist' \
+            --exclude '.env' \
+            --exclude '*.log' \
+            -e ssh \
+            ./ ${{ secrets.SYNOLOGY_USER }}@${{ secrets.SYNOLOGY_HOST }}:${{ secrets.SYNOLOGY_DEPLOY_PATH }}/
+          
+          # Exécuter le déploiement sur le Synology
+          echo "🔧 Déploiement des conteneurs Docker..."
+          ssh ${{ secrets.SYNOLOGY_USER }}@${{ secrets.SYNOLOGY_HOST }} << 'ENDSSH'
+            cd ${{ secrets.SYNOLOGY_DEPLOY_PATH }}
+            
+            # Arrêter les conteneurs existants
+            echo "⏸️ Arrêt des conteneurs..."
+            docker-compose down || true
+            
+            # Pull les dernières images (si nécessaire)
+            echo "📥 Pull des images Docker..."
+            docker-compose pull || true
+            
+            # Build les images (si Dockerfile existe)
+            echo "🔨 Build des images..."
+            docker-compose build --no-cache || true
+            
+            # Démarrer les conteneurs
+            echo "▶️ Démarrage des conteneurs..."
+            docker-compose up -d
+            
+            # Attendre que les services soient prêts
+            echo "⏳ Attente du démarrage des services..."
+            sleep 10
+            
+            # Vérifier l'état des conteneurs
+            echo "✅ État des conteneurs:"
+            docker-compose ps
+            
+            # Afficher les logs récents
+            echo "📋 Logs récents:"
+            docker-compose logs --tail=50
+          ENDSSH
+          
+          echo "✅ Déploiement terminé avec succès!"
+
+      - name: 🧪 Health Check
+        env:
+          SYNOLOGY_HOST: ${{ secrets.SYNOLOGY_HOST }}
+          SYNOLOGY_USER: ${{ secrets.SYNOLOGY_USER }}
+        run: |
+          echo "🏥 Vérification de santé des services..."
+          ssh ${{ secrets.SYNOLOGY_USER }}@${{ secrets.SYNOLOGY_HOST }} << 'ENDSSH'
+            cd ${{ secrets.SYNOLOGY_DEPLOY_PATH }}
+            
+            # Vérifier que les conteneurs sont en cours d'exécution
+            if docker-compose ps | grep -q "Up"; then
+              echo "✅ Les conteneurs sont en cours d'exécution"
+            else
+              echo "❌ Certains conteneurs ne sont pas démarrés"
+              docker-compose ps
+              exit 1
+            fi
+            
+            # Test de connexion à la base de données
+            echo "🔍 Test de connexion à la base de données..."
+            docker-compose exec -T db psql -U postgres -c "SELECT 1" || echo "⚠️ Base de données non accessible"
+          ENDSSH
+
+      - name: 📊 Deployment Summary
+        if: always()
+        run: |
+          echo "## 🚀 Résumé du déploiement" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Déploiement terminé sur Synology" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branche:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Auteur:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+
