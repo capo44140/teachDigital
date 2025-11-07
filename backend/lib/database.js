@@ -146,8 +146,14 @@ async function sql(strings, ...values) {
     
     if (Array.isArray(strings)) {
       // Template literal: sql`SELECT * FROM users WHERE id = ${123}`
-      text = strings.join('');
-      params = values;
+      // Reconstruire la requête avec les placeholders $1, $2, etc.
+      text = strings.reduce((acc, str, i) => {
+        if (i > 0 && values[i - 1] !== undefined) {
+          return acc + '$' + i + str;
+        }
+        return acc + str;
+      });
+      params = values.filter(v => v !== undefined);
     } else {
       // Appel normal: sql("SELECT * FROM users WHERE id = $1", [123])
       text = strings;
