@@ -22,25 +22,32 @@ try {
   
   console.log('🔗 Connexion à PostgreSQL configurée');
   console.log('🔍 DATABASE_URL détectée:', connectionString.replace(/:[^:@]+@/, ':****@')); // Masquer le mot de passe dans les logs
+  console.log('📝 Longueur DATABASE_URL:', connectionString.length, 'caractères');
   
   // Configuration OPTIMISÉE pour Neon/Vercel serverless
   sql = postgres(connectionString, {
     ssl: 'require', // Nécessaire pour Neon
     max: 1, // Limiter les connexions pour Vercel serverless
-    idle_timeout: 30, // Augmenté de 20 à 30 secondes
-    connect_timeout: 30, // Augmenté de 10 à 30 secondes (CRITICAL)
-    statement_timeout: 30000, // Timeout pour les requêtes: 30 secondes
+    idle_timeout: 60, // 60 secondes (augmenté)
+    connect_timeout: 60, // 60 secondes pour le TLS handshake (CRITICAL - augmenté)
+    statement_timeout: 60000, // 60 secondes pour les requêtes
     
-    // Options de reconnexion pour Neon
+    // Options de reconnexion pour Neon - TRÈS agressif pour Vercel
     backoff: {
-      start: 100,
-      max: 3000,
+      start: 500,  // Commencer avec 500ms
+      max: 5000,   // Max 5 secondes entre les retries
       multiplier: 2
+    },
+    
+    // Désactiver transform_column_names par défaut (peut causer des problèmes)
+    transform: {
+      undefined: undefined,
+      null: null
     },
     
     // Callbacks pour gérer les erreurs de connexion
     onconnect: async (connection) => {
-      console.log('✅ Nouvelle connexion PostgreSQL établie');
+      console.log('✅ Nouvelle connexion PostgreSQL établie avec succès');
     },
     
     ondisconnect: async (connection) => {
@@ -48,7 +55,11 @@ try {
     },
     
     onerror: (error) => {
-      console.error('❌ Erreur de connexion PostgreSQL:', error.code, error.message);
+      console.error('❌ ERREUR CRITIQUE de connexion PostgreSQL:');
+      console.error('   Code:', error.code);
+      console.error('   Message:', error.message);
+      console.error('   Host:', error.host || 'undefined');
+      console.error('   Port:', error.port || 'undefined');
     }
   });
 } catch (error) {
@@ -94,11 +105,12 @@ console.log('   - Retry automatique: enabled (3x avec backoff)');
 console.log('═══════════════════════════════════════════════════════════');
 
 // Fonction wrapper pour exécuter des requêtes avec retry automatique
-async function executeWithRetry(queryFn, maxRetries = 3, delayMs = 500) {
+async function executeWithRetry(queryFn, maxRetries = 5, delayMs = 1000) {
   let lastError;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      console.log(`📤 Tentative ${attempt}/${maxRetries} de connexion à la base de données...`);
       return await queryFn();
     } catch (error) {
       lastError = error;
@@ -109,17 +121,27 @@ async function executeWithRetry(queryFn, maxRetries = 3, delayMs = 500) {
         error.code === 'ECONNREFUSED' ||
         error.code === 'ETIMEDOUT' ||
         error.code === 'EHOSTUNREACH' ||
+        error.code === 'ENOTFOUND' ||
+        error.code === 'ERR_TLS_CERT_HAS_EXPIRED' ||
         error.message?.includes('socket disconnected') ||
-        error.message?.includes('Connection lost');
+        error.message?.includes('Connection lost') ||
+        error.message?.includes('TLS') ||
+        error.message?.includes('timeout');
       
       if (!isTemporaryError || attempt === maxRetries) {
         // Erreur permanente ou dernier essai
+        console.error(`❌ ERREUR FINALE après ${attempt} tentatives:`, {
+          code: error.code,
+          message: error.message,
+          isTemporaryError
+        });
         throw error;
       }
       
       // Attendre avant de réessayer (avec backoff exponentiel)
       const delay = delayMs * Math.pow(2, attempt - 1);
-      console.log(`⏳ Retry ${attempt}/${maxRetries} après ${delay}ms - Erreur: ${error.code}`);
+      console.log(`⏳ Retry ${attempt}/${maxRetries} après ${delay}ms`);
+      console.log(`   Erreur: ${error.code} - ${error.message?.substring(0, 100)}`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
