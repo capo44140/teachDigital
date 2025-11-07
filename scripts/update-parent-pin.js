@@ -5,9 +5,11 @@
  * Usage: node scripts/update-parent-pin.js
  */
 
-import postgres from 'postgres';
+import pkg from 'pg';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+
+const { Pool } = pkg;
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -24,13 +26,13 @@ const config = {
 };
 
 // Créer l'instance de connexion PostgreSQL
-let sql;
+let pool;
 try {
   if (config.connectionString) {
-    sql = postgres(config.connectionString);
+    pool = new Pool({ connectionString: config.connectionString, ssl: { rejectUnauthorized: false } });
   } else if (config.host && config.username && config.password && config.database) {
     const connectionString = `postgresql://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}${config.ssl ? '?sslmode=require' : ''}`;
-    sql = postgres(connectionString);
+    pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
   } else {
     throw new Error('Configuration de base de données manquante. Vérifiez vos variables d\'environnement.');
   }

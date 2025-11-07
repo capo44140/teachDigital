@@ -1,0 +1,656 @@
+---
+globs: src/repositories/*.js,backend/lib/database.js,scripts/migrate-*.js
+description: Patterns avancés pour la base de données Neon et la gestion des données
+---
+
+# Patterns Avancés de Base de Données - TeachDigital
+
+## Architecture de Base de Données
+
+### Configuration Neon Database
+- **Configuration principale** : [src/config/database.js](mdc:src/config/database.js)
+- **Backend Database** : [backend/lib/database.js](mdc:backend/lib/database.js)
+- **Variables d'environnement** : Configuration dans [vite.config.js](mdc:vite.config.js)
+
+```javascript
+// Configuration sécurisée de la base de données
+import { neon } from '@neondatabase/serverless'
+
+const sql = neon(process.env.DATABASE_URL, {
+  arrayMode: false,
+  fullResults: false,
+  fetchConnectionCache: true
+})
+
+export { sql }
+export default sql
+```
+
+### Pattern Repository Avancé
+```javascript
+// src/repositories/baseRepository.js
+export class BaseRepository {
+  constructor(tableName, primaryKey = 'id') {
+    this.tableName = tableName
+    this.primaryKey = primaryKey
+  }
+  
+  // CRUD de base avec gestion d'erreurs
+  async findById(id) {
+    try {
+      const result = await sql`
+        SELECT * FROM ${sql(this.tableName)} 
+        WHERE ${sql(this.primaryKey)} = ${id}
+        LIMIT 1
+      `
+      return result[0] || null
+    } catch (error) {
+      console.error(`Erreur findById pour ${this.tableName}:`, error)
+      throw new Error(`Impossible de récupérer l'enregistrement`)
+    }
+  }
+  
+  async findAll(filters = {}, options = {}) {
+    try {
+      let query = sql`SELECT * FROM ${sql(this.tableName)}`
+      const conditions = []
+      
+      // Appliquer les filtres
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          conditions.push(sql`${sql(key)} = ${value}`)
+        }
+      })
+      
+      if (conditions.length > 0) {
+        query = sql`${query} WHERE ${sql.join(conditions, sql` AND `)}`
+      }
+      
+      // Appliquer les options
+      if (options.orderBy) {
+        query = sql`${query} ORDER BY ${sql(options.orderBy)}`
+      }
+      
+      if (options.limit) {
+        query = sql`${query} LIMIT ${options.limit}`
+      }
+      
+      if (options.offset) {
+        query = sql`${query} OFFSET ${options.offset}`
+      }
+      
+      return await query
+    } catch (error) {
+      console.error(`Erreur findAll pour ${this.tableName}:`, error)
+      throw new Error(`Impossible de récupérer les enregistrements`)
+    }
+  }
+  
+  async create(data) {
+    try {
+      const columns = Object.keys(data)
+      const values = Object.values(data)
+      
+      const result = await sql`
+        INSERT INTO ${sql(this.tableName)} (${sql(columns)})
+        VALUES (${sql(values)})
+        RETURNING *
+      `
+      return result[0]
+    } catch (error) {
+      console.error(`Erreur create pour ${this.tableName}:`, error)
+      throw new Error(`Impossible de créer l'enregistrement`)
+    }
+  }
+  
+  async update(id, data) {
+    try {
+      const columns = Object.keys(data)
+      const values = Object.values(data)
+      
+      const result = await sql`
+        UPDATE ${sql(this.tableName)}
+        SET ${sql.join(
+          columns.map(col => sql`${sql(col)} = ${data[col]}`),
+          sql`, `
+        )}
+        WHERE ${sql(this.primaryKey)} = ${id}
+        RETURNING *
+      `
+      return result[0] || null
+    } catch (error) {
+      console.error(`Erreur update pour ${this.tableName}:`, error)
+      throw new Error(`Impossible de mettre à jour l'enregistrement`)
+    }
+  }
+  
+  async delete(id) {
+    try {
+      const result = await sql`
+        DELETE FROM ${sql(this.tableName)}
+        WHERE ${sql(this.primaryKey)} = ${id}
+        RETURNING *
+      `
+      return result[0] || null
+    } catch (error) {
+      console.error(`Erreur delete pour ${this.tableName}:`, error)
+      throw new Error(`Impossible de supprimer l'enregistrement`)
+    }
+  }
+  
+  // Méthodes utilitaires
+  async count(filters = {}) {
+    try {
+      let query = sql`SELECT COUNT(*) as count FROM ${sql(this.tableName)}`
+      const conditions = []
+      
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          conditions.push(sql`${sql(key)} = ${value}`)
+        }
+      })
+      
+      if (conditions.length > 0) {
+        query = sql`${query} WHERE ${sql.join(conditions, sql` AND `)}`
+      }
+      
+      const result = await query
+      return parseInt(result[0].count)
+    } catch (error) {
+      console.error(`Erreur count pour ${this.tableName}:`, error)
+      throw new Error(`Impossible de compter les enregistrements`)
+    }
+  }
+  
+  async exists(id) {
+    const count = await this.count({ [this.primaryKey]: id })
+    return count > 0
+  }
+}
+```
+
+## Repositories Spécialisés
+
+### Profile Repository
+```javascript
+// src/repositories/profileRepository.js
+import { BaseRepository } from './baseRepository.js'
+
+export class ProfileRepository extends BaseRepository {
+  constructor() {
+    super('profiles')
+  }
+  
+  async findByUserId(userId) {
+    return this.findAll({ user_id: userId })
+  }
+  
+  async findActiveProfiles(userId) {
+    return this.findAll({ 
+      user_id: userId, 
+      is_active: true 
+    })
+  }
+  
+  async createProfile(profileData) {
+    const data = {
+      ...profileData,
+      created_at: new Date(),
+      updated_at: new Date()
+    }
+    return this.create(data)
+  }
+  
+  async updateProfile(id, updates) {
+    const data = {
+      ...updates,
+      updated_at: new Date()
+    }
+    return this.update(id, data)
+  }
+  
+  async getProfileStats(userId) {
+    try {
+      const result = await sql`
+        SELECT 
+          COUNT(*) as total_profiles,
+          COUNT(CASE WHEN is_active = true THEN 1 END) as active_profiles,
+          AVG(age) as average_age,
+          MIN(created_at) as first_profile_date,
+          MAX(created_at) as last_profile_date
+        FROM profiles 
+        WHERE user_id = ${userId}
+      `
+      return result[0]
+    } catch (error) {
+      console.error('Erreur getProfileStats:', error)
+      throw new Error('Impossible de récupérer les statistiques')
+    }
+  }
+}
+```
+
+### Lesson Repository
+```javascript
+// src/repositories/lessonRepository.js
+export class LessonRepository extends BaseRepository {
+  constructor() {
+    super('lessons')
+  }
+  
+  async findByCategory(category) {
+    return this.findAll({ category })
+  }
+  
+  async findActiveLessons() {
+    return this.findAll({ is_active: true })
+  }
+  
+  async getLessonsWithProgress(userId) {
+    try {
+      const result = await sql`
+        SELECT 
+          l.*,
+          lp.progress_percentage,
+          lp.completed_at,
+          lp.last_accessed_at
+        FROM lessons l
+        LEFT JOIN lesson_progress lp ON l.id = lp.lesson_id AND lp.user_id = ${userId}
+        WHERE l.is_active = true
+        ORDER BY l.created_at DESC
+      `
+      return result
+    } catch (error) {
+      console.error('Erreur getLessonsWithProgress:', error)
+      throw new Error('Impossible de récupérer les leçons avec progrès')
+    }
+  }
+  
+  async updateProgress(userId, lessonId, progress) {
+    try {
+      const result = await sql`
+        INSERT INTO lesson_progress (user_id, lesson_id, progress_percentage, updated_at)
+        VALUES (${userId}, ${lessonId}, ${progress}, ${new Date()})
+        ON CONFLICT (user_id, lesson_id)
+        DO UPDATE SET 
+          progress_percentage = ${progress},
+          updated_at = ${new Date()}
+        RETURNING *
+      `
+      return result[0]
+    } catch (error) {
+      console.error('Erreur updateProgress:', error)
+      throw new Error('Impossible de mettre à jour le progrès')
+    }
+  }
+}
+```
+
+### Notification Repository
+```javascript
+// src/repositories/notificationRepository.js
+export class NotificationRepository extends BaseRepository {
+  constructor() {
+    super('notifications')
+  }
+  
+  async findByUserId(userId, options = {}) {
+    const filters = { user_id: userId }
+    
+    if (options.unreadOnly) {
+      filters.is_read = false
+    }
+    
+    return this.findAll(filters, {
+      orderBy: 'created_at DESC',
+      limit: options.limit || 50
+    })
+  }
+  
+  async markAsRead(notificationId, userId) {
+    try {
+      const result = await sql`
+        UPDATE notifications 
+        SET is_read = true, read_at = ${new Date()}
+        WHERE id = ${notificationId} AND user_id = ${userId}
+        RETURNING *
+      `
+      return result[0] || null
+    } catch (error) {
+      console.error('Erreur markAsRead:', error)
+      throw new Error('Impossible de marquer comme lu')
+    }
+  }
+  
+  async markAllAsRead(userId) {
+    try {
+      const result = await sql`
+        UPDATE notifications 
+        SET is_read = true, read_at = ${new Date()}
+        WHERE user_id = ${userId} AND is_read = false
+        RETURNING COUNT(*) as updated_count
+      `
+      return result[0]
+    } catch (error) {
+      console.error('Erreur markAllAsRead:', error)
+      throw new Error('Impossible de marquer toutes comme lues')
+    }
+  }
+  
+  async getUnreadCount(userId) {
+    return this.count({ 
+      user_id: userId, 
+      is_read: false 
+    })
+  }
+}
+```
+
+## Migrations et Schema Management
+
+### Script de Migration
+```javascript
+// scripts/migrate-database.js
+import { sql } from '../backend/lib/database.js'
+
+export const migrations = [
+  {
+    version: '001',
+    description: 'Création des tables de base',
+    up: async () => {
+      await sql`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          password_hash VARCHAR(255) NOT NULL,
+          role VARCHAR(50) DEFAULT 'user',
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `
+      
+      await sql`
+        CREATE TABLE IF NOT EXISTS profiles (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          name VARCHAR(255) NOT NULL,
+          age INTEGER NOT NULL,
+          avatar_url VARCHAR(500),
+          pin_hash VARCHAR(255),
+          pin_salt VARCHAR(255),
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `
+    },
+    down: async () => {
+      await sql`DROP TABLE IF EXISTS profiles`
+      await sql`DROP TABLE IF EXISTS users`
+    }
+  },
+  
+  {
+    version: '002',
+    description: 'Ajout des tables de leçons et progrès',
+    up: async () => {
+      await sql`
+        CREATE TABLE IF NOT EXISTS lessons (
+          id SERIAL PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          description TEXT,
+          content JSONB,
+          category VARCHAR(100),
+          difficulty_level INTEGER DEFAULT 1,
+          estimated_duration INTEGER, -- en minutes
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `
+      
+      await sql`
+        CREATE TABLE IF NOT EXISTS lesson_progress (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
+          progress_percentage INTEGER DEFAULT 0,
+          completed_at TIMESTAMP,
+          last_accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_id, lesson_id)
+        )
+      `
+    },
+    down: async () => {
+      await sql`DROP TABLE IF EXISTS lesson_progress`
+      await sql`DROP TABLE IF EXISTS lessons`
+    }
+  }
+]
+
+export const runMigrations = async () => {
+  try {
+    // Créer la table de migrations si elle n'existe pas
+    await sql`
+      CREATE TABLE IF NOT EXISTS migrations (
+        version VARCHAR(10) PRIMARY KEY,
+        description TEXT,
+        executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `
+    
+    // Récupérer les migrations déjà exécutées
+    const executedMigrations = await sql`
+      SELECT version FROM migrations ORDER BY version
+    `
+    const executedVersions = executedMigrations.map(m => m.version)
+    
+    // Exécuter les migrations non exécutées
+    for (const migration of migrations) {
+      if (!executedVersions.includes(migration.version)) {
+        console.log(`Exécution de la migration ${migration.version}: ${migration.description}`)
+        
+        await migration.up()
+        
+        await sql`
+          INSERT INTO migrations (version, description)
+          VALUES (${migration.version}, ${migration.description})
+        `
+        
+        console.log(`✅ Migration ${migration.version} exécutée avec succès`)
+      }
+    }
+    
+    console.log('✅ Toutes les migrations sont à jour')
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'exécution des migrations:', error)
+    throw error
+  }
+}
+```
+
+## Gestion des Transactions
+
+### Service de Transaction
+```javascript
+// src/services/transactionService.js
+export class TransactionService {
+  static async executeTransaction(operations) {
+    const client = await sql.begin()
+    
+    try {
+      const results = []
+      
+      for (const operation of operations) {
+        const result = await operation(client)
+        results.push(result)
+      }
+      
+      await client.commit()
+      return results
+    } catch (error) {
+      await client.rollback()
+      console.error('Erreur transaction:', error)
+      throw error
+    }
+  }
+  
+  static async createProfileWithProgress(userId, profileData, initialLessons) {
+    return this.executeTransaction(async (client) => {
+      // Créer le profil
+      const profile = await client`
+        INSERT INTO profiles (user_id, name, age, avatar_url, created_at, updated_at)
+        VALUES (${userId}, ${profileData.name}, ${profileData.age}, ${profileData.avatar_url}, ${new Date()}, ${new Date()})
+        RETURNING *
+      `
+      
+      // Créer les progrès initiaux
+      const progressEntries = initialLessons.map(lessonId => ({
+        user_id: userId,
+        lesson_id: lessonId,
+        progress_percentage: 0,
+        created_at: new Date(),
+        updated_at: new Date()
+      }))
+      
+      const progress = await client`
+        INSERT INTO lesson_progress (user_id, lesson_id, progress_percentage, created_at, updated_at)
+        VALUES ${sql(progressEntries.map(p => sql`(${p.user_id}, ${p.lesson_id}, ${p.progress_percentage}, ${p.created_at}, ${p.updated_at})`))}
+        RETURNING *
+      `
+      
+      return { profile: profile[0], progress }
+    })
+  }
+}
+```
+
+## Optimisations de Performance
+
+### Index et Optimisations
+```sql
+-- Index pour les requêtes fréquentes
+CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_active ON profiles(user_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_lesson_progress_user_lesson ON lesson_progress(user_id, lesson_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+
+-- Index partiels pour les requêtes spécifiques
+CREATE INDEX IF NOT EXISTS idx_profiles_active_true ON profiles(user_id) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id) WHERE is_read = false;
+```
+
+### Requêtes Optimisées
+```javascript
+// Pagination efficace
+export class PaginatedRepository extends BaseRepository {
+  async findPaginated(filters = {}, page = 1, limit = 20) {
+    const offset = (page - 1) * limit
+    
+    try {
+      // Requête principale avec pagination
+      const data = await this.findAll(filters, {
+        limit,
+        offset,
+        orderBy: 'created_at DESC'
+      })
+      
+      // Compter le total pour la pagination
+      const total = await this.count(filters)
+      
+      return {
+        data,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasNext: page * limit < total,
+          hasPrev: page > 1
+        }
+      }
+    } catch (error) {
+      console.error('Erreur findPaginated:', error)
+      throw new Error('Impossible de récupérer les données paginées')
+    }
+  }
+}
+```
+
+## Scripts Utilitaires
+
+### Scripts de Migration Disponibles
+```bash
+# Scripts de base de données
+pnpm run init-db              # Initialisation complète
+pnpm run migrate-db           # Exécution des migrations
+pnpm run check-db             # Vérification de l'état
+pnpm run db:test              # Test de connexion
+
+# Scripts de migration spécialisés
+pnpm run migrate-pins         # Migration des PINs
+pnpm run migrate-teens         # Migration des profils adolescents
+pnpm run migrate-lessons       # Migration des leçons
+pnpm run migrate-badges        # Migration des badges
+
+# Scripts de vérification
+pnpm run check-pins           # Vérification des PINs
+pnpm run check-profiles       # Vérification des profils
+```
+
+### Script de Test de Base de Données
+```javascript
+// scripts/test-database.js
+import { sql } from '../backend/lib/database.js'
+
+export const testDatabaseConnection = async () => {
+  try {
+    console.log('🔍 Test de connexion à la base de données...')
+    
+    const result = await sql`SELECT NOW() as current_time, version() as postgres_version`
+    console.log('✅ Connexion réussie')
+    console.log(`📅 Heure actuelle: ${result[0].current_time}`)
+    console.log(`🐘 Version PostgreSQL: ${result[0].postgres_version}`)
+    
+    // Test des tables principales
+    const tables = ['users', 'profiles', 'lessons', 'notifications']
+    for (const table of tables) {
+      try {
+        const count = await sql`SELECT COUNT(*) as count FROM ${sql(table)}`
+        console.log(`📊 Table ${table}: ${count[0].count} enregistrements`)
+      } catch (error) {
+        console.log(`⚠️ Table ${table}: Non trouvée ou erreur`)
+      }
+    }
+    
+    return true
+  } catch (error) {
+    console.error('❌ Erreur de connexion:', error.message)
+    return false
+  }
+}
+```
+
+## Bonnes Pratiques
+
+### Sécurité des Requêtes
+- Toujours utiliser des requêtes paramétrées
+- Valider les entrées avant insertion
+- Utiliser des transactions pour les opérations complexes
+- Implémenter la gestion d'erreurs appropriée
+
+### Performance
+- Créer des index pour les requêtes fréquentes
+- Utiliser la pagination pour les grandes listes
+- Optimiser les requêtes avec EXPLAIN ANALYZE
+- Mettre en cache les requêtes coûteuses
+
+### Maintenance
+- Documenter les migrations
+- Tester les migrations avant déploiement
+- Sauvegarder avant les migrations importantes
+- Surveiller les performances des requêtes

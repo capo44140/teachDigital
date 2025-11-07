@@ -1,0 +1,437 @@
+---
+globs: tests/**/*.js,src/**/*.test.js,playwright.config.js,vitest.config.js
+description: Guidelines complètes pour les tests unitaires, d'intégration et E2E
+---
+
+# Guidelines de Test Complètes - TeachDigital
+
+## Configuration des Tests
+
+### Framework Principal - Vitest
+- **Configuration** : [vitest.config.js](mdc:vitest.config.js)
+- **Setup global** : [tests/setup.js](mdc:tests/setup.js)
+- **Coverage** : V8 coverage provider avec seuil de 80%
+
+### Tests E2E - Playwright
+- **Configuration** : [playwright.config.js](mdc:playwright.config.js)
+- **Configuration manuelle** : [playwright.manual.config.js](mdc:playwright.manual.config.js)
+- **Tests E2E** : [tests/e2e/](mdc:tests/e2e/)
+
+## Scripts de Test Disponibles
+
+### Tests Unitaires et d'Intégration
+```bash
+pnpm run test              # Tests en mode watch
+pnpm run test:run          # Tests une seule fois
+pnpm run test:ui           # Interface utilisateur Vitest
+pnpm run test:coverage     # Tests avec couverture de code
+pnpm run test:watch        # Tests en mode watch
+```
+
+### Tests E2E
+```bash
+pnpm run test:e2e          # Tests E2E complets
+pnpm run test:e2e:manual   # Tests E2E manuels
+pnpm run test:e2e:ui       # Interface Playwright
+pnpm run test:e2e:headed   # Tests avec navigateur visible
+pnpm run test:e2e:debug    # Mode debug
+pnpm run test:e2e:report   # Afficher le rapport
+```
+
+### Tests Spécialisés
+```bash
+pnpm run test:e2e:auth     # Tests d'authentification
+pnpm run test:e2e:dashboard # Tests du dashboard
+pnpm run test:e2e:youtube  # Tests YouTube
+pnpm run test:e2e:pwa     # Tests PWA
+pnpm run test:e2e:profile # Tests de profil
+```
+
+## Tests Unitaires
+
+### Structure des Tests
+```javascript
+// tests/services/profileService.test.js
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { ProfileService } from '@/services/profileService.js'
+
+describe('ProfileService', () => {
+  let profileService
+  let mockApiService
+  
+  beforeEach(() => {
+    // Mock du service API
+    mockApiService = {
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn()
+    }
+    
+    profileService = new ProfileService(mockApiService)
+  })
+  
+  describe('getAllProfiles', () => {
+    it('devrait retourner la liste des profils', async () => {
+      // Arrange
+      const mockProfiles = [
+        { id: 1, name: 'Profil 1', age: 8 },
+        { id: 2, name: 'Profil 2', age: 12 }
+      ]
+      mockApiService.get.mockResolvedValue(mockProfiles)
+      
+      // Act
+      const result = await profileService.getAllProfiles()
+      
+      // Assert
+      expect(result).toEqual(mockProfiles)
+      expect(mockApiService.get).toHaveBeenCalledWith('/profiles')
+    })
+    
+    it('devrait gérer les erreurs API', async () => {
+      // Arrange
+      const error = new Error('Erreur réseau')
+      mockApiService.get.mockRejectedValue(error)
+      
+      // Act & Assert
+      await expect(profileService.getAllProfiles()).rejects.toThrow('Erreur réseau')
+    })
+  })
+  
+  describe('createProfile', () => {
+    it('devrait créer un nouveau profil', async () => {
+      // Arrange
+      const profileData = { name: 'Nouveau Profil', age: 10 }
+      const createdProfile = { id: 3, ...profileData }
+      mockApiService.post.mockResolvedValue(createdProfile)
+      
+      // Act
+      const result = await profileService.createProfile(profileData)
+      
+      // Assert
+      expect(result).toEqual(createdProfile)
+      expect(mockApiService.post).toHaveBeenCalledWith('/profiles', profileData)
+    })
+    
+    it('devrait valider les données requises', async () => {
+      // Arrange
+      const invalidData = { age: 10 } // name manquant
+      
+      // Act & Assert
+      await expect(profileService.createProfile(invalidData))
+        .rejects.toThrow('Le nom est requis')
+    })
+  })
+})
+```
+
+### Tests de Composants Vue
+```javascript
+// tests/components/ProfileCard.test.js
+import { describe, it, expect, beforeEach } from 'vitest'
+import { mount } from '@vue/test-utils'
+import ProfileCard from '@/components/ProfileCard.vue'
+
+describe('ProfileCard', () => {
+  let wrapper
+  
+  beforeEach(() => {
+    wrapper = mount(ProfileCard, {
+      props: {
+        profile: {
+          id: 1,
+          name: 'Test Profile',
+          age: 10,
+          avatar: 'avatar.jpg'
+        }
+      }
+    })
+  })
+  
+  it('devrait afficher les informations du profil', () => {
+    expect(wrapper.text()).toContain('Test Profile')
+    expect(wrapper.text()).toContain('10 ans')
+  })
+  
+  it('devrait émettre un événement lors du clic sur éditer', async () => {
+    const editButton = wrapper.find('[data-testid="edit-button"]')
+    await editButton.trigger('click')
+    
+    expect(wrapper.emitted('edit')).toBeTruthy()
+    expect(wrapper.emitted('edit')[0]).toEqual([1])
+  })
+  
+  it('devrait afficher le bon avatar', () => {
+    const avatar = wrapper.find('[data-testid="profile-avatar"]')
+    expect(avatar.attributes('src')).toBe('avatar.jpg')
+  })
+})
+```
+
+### Tests de Stores Pinia
+```javascript
+// tests/stores/profileStore.test.js
+import { describe, it, expect, beforeEach } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
+import { useProfileStore } from '@/stores/profileStore.js'
+
+describe('ProfileStore', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+  
+  it('devrait initialiser avec un état vide', () => {
+    const store = useProfileStore()
+    
+    expect(store.profiles).toEqual([])
+    expect(store.loading).toBe(false)
+    expect(store.error).toBe(null)
+  })
+  
+  it('devrait charger les profils', async () => {
+    const store = useProfileStore()
+    
+    // Mock du service
+    vi.spyOn(store, 'fetchProfiles').mockResolvedValue([
+      { id: 1, name: 'Profil 1' }
+    ])
+    
+    await store.fetchProfiles()
+    
+    expect(store.profiles).toHaveLength(1)
+    expect(store.loading).toBe(false)
+  })
+})
+```
+
+## Tests E2E avec Playwright
+
+### Configuration de Base
+```javascript
+// playwright.config.js
+import { defineConfig, devices } from '@playwright/test'
+
+export default defineConfig({
+  testDir: './tests/e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'html',
+  use: {
+    baseURL: 'http://localhost:3000',
+    trace: 'on-first-retry',
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+    },
+    {
+      name: 'Mobile Chrome',
+      use: { ...devices['Pixel 5'] },
+    },
+  ],
+  webServer: {
+    command: 'pnpm run dev',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+  },
+})
+```
+
+### Tests E2E d'Authentification
+```javascript
+// tests/e2e/auth/login.spec.js
+import { test, expect } from '@playwright/test'
+
+test.describe('Authentification', () => {
+  test('devrait permettre la connexion avec un PIN valide', async ({ page }) => {
+    await page.goto('/login')
+    
+    // Saisir le PIN
+    await page.fill('[data-testid="pin-input"]', '1234')
+    await page.click('[data-testid="login-button"]')
+    
+    // Vérifier la redirection vers le dashboard
+    await expect(page).toHaveURL('/dashboard')
+    await expect(page.locator('[data-testid="welcome-message"]')).toBeVisible()
+  })
+  
+  test('devrait afficher une erreur avec un PIN invalide', async ({ page }) => {
+    await page.goto('/login')
+    
+    await page.fill('[data-testid="pin-input"]', '0000')
+    await page.click('[data-testid="login-button"]')
+    
+    await expect(page.locator('[data-testid="error-message"]')).toBeVisible()
+    await expect(page.locator('[data-testid="error-message"]')).toContainText('PIN invalide')
+  })
+})
+```
+
+### Tests E2E du Dashboard
+```javascript
+// tests/e2e/dashboard/navigation.spec.js
+import { test, expect } from '@playwright/test'
+
+test.describe('Navigation Dashboard', () => {
+  test.beforeEach(async ({ page }) => {
+    // Connexion préalable
+    await page.goto('/login')
+    await page.fill('[data-testid="pin-input"]', '1234')
+    await page.click('[data-testid="login-button"]')
+    await page.waitForURL('/dashboard')
+  })
+  
+  test('devrait naviguer vers la gestion des profils', async ({ page }) => {
+    await page.click('[data-testid="profiles-nav"]')
+    await expect(page).toHaveURL('/profiles')
+    await expect(page.locator('[data-testid="profiles-list"]')).toBeVisible()
+  })
+  
+  test('devrait naviguer vers YouTube Kids', async ({ page }) => {
+    await page.click('[data-testid="youtube-nav"]')
+    await expect(page).toHaveURL('/youtube-kids')
+    await expect(page.locator('[data-testid="youtube-player"]')).toBeVisible()
+  })
+})
+```
+
+### Tests E2E PWA
+```javascript
+// tests/e2e/pwa/installation.spec.js
+import { test, expect } from '@playwright/test'
+
+test.describe('Installation PWA', () => {
+  test('devrait afficher le bouton d\'installation', async ({ page, context }) => {
+    await page.goto('/')
+    
+    // Simuler l'événement beforeinstallprompt
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('beforeinstallprompt'))
+    })
+    
+    await expect(page.locator('[data-testid="install-button"]')).toBeVisible()
+  })
+  
+  test('devrait installer l\'application', async ({ page, context }) => {
+    await page.goto('/')
+    
+    // Simuler l'installation
+    await page.evaluate(() => {
+      const event = new Event('beforeinstallprompt')
+      event.prompt = () => Promise.resolve({ outcome: 'accepted' })
+      window.dispatchEvent(event)
+    })
+    
+    await page.click('[data-testid="install-button"]')
+    
+    // Vérifier que l'application est installée
+    await expect(page.locator('[data-testid="installed-message"]')).toBeVisible()
+  })
+})
+```
+
+## Tests de Performance
+
+### Tests de Bundle
+```javascript
+// tests/performance/bundle.test.js
+import { describe, it, expect } from 'vitest'
+import { analyzeBundle } from '@/scripts/analyze-bundle.js'
+
+describe('Performance Bundle', () => {
+  it('devrait avoir une taille de bundle acceptable', async () => {
+    const analysis = await analyzeBundle()
+    
+    expect(analysis.totalSize).toBeLessThan(250000) // 250KB
+    expect(analysis.vendorSize).toBeLessThan(150000) // 150KB
+    expect(analysis.appSize).toBeLessThan(100000)    // 100KB
+  })
+  
+  it('devrait avoir un bon score Lighthouse', async () => {
+    const lighthouseScore = await runLighthouseTest()
+    
+    expect(lighthouseScore.performance).toBeGreaterThan(90)
+    expect(lighthouseScore.accessibility).toBeGreaterThan(90)
+    expect(lighthouseScore.bestPractices).toBeGreaterThan(90)
+    expect(lighthouseScore.seo).toBeGreaterThan(90)
+  })
+})
+```
+
+## Tests de Sécurité
+
+### Tests de Validation
+```javascript
+// tests/security/validation.test.js
+import { describe, it, expect } from 'vitest'
+import { validateInput } from '@/services/validationService.js'
+
+describe('Validation de Sécurité', () => {
+  it('devrait rejeter les scripts malveillants', () => {
+    const maliciousInput = '<script>alert("xss")</script>'
+    expect(() => validateInput(maliciousInput)).toThrow('Contenu non autorisé')
+  })
+  
+  it('devrait valider les PINs selon les règles', () => {
+    expect(validateInput('1234')).toBe(true)
+    expect(validateInput('0000')).toBe(false) // PIN trop simple
+    expect(validateInput('12345')).toBe(false) // PIN trop long
+  })
+})
+```
+
+## Bonnes Pratiques de Test
+
+### Organisation des Tests
+- **Tests unitaires** : `tests/services/`, `tests/components/`
+- **Tests d'intégration** : `tests/integration/`
+- **Tests E2E** : `tests/e2e/`
+- **Tests de performance** : `tests/performance/`
+
+### Nommage des Tests
+- Utiliser `describe` pour grouper les tests
+- Utiliser `it` pour les cas de test individuels
+- Nommer les tests de manière descriptive
+
+### Mocking et Stubbing
+- Mocker les dépendances externes
+- Utiliser `vi.fn()` pour les fonctions mock
+- Utiliser `vi.spyOn()` pour espionner les méthodes
+
+### Assertions
+- Utiliser les matchers Vitest appropriés
+- Tester les cas de succès et d'échec
+- Vérifier les effets de bord
+
+### Couverture de Code
+- Viser au moins 80% de couverture
+- Tester les branches conditionnelles
+- Couvrir les cas d'erreur
+
+## Scripts de Test Utilitaires
+
+### Tests de Base de Données
+- `pnpm run db:test` : Test de connexion DB
+- `pnpm run test-pin-security` : Test sécurité PINs
+- `pnpm run test-notifications` : Test notifications
+
+### Tests de Performance
+- `pnpm run lighthouse` : Audit Lighthouse
+- `pnpm run bundle:analyze` : Analyse du bundle
+- `pnpm run performance:check` : Vérification complète
+
+### Tests de Sécurité
+- `pnpm run security:check` : Vérification sécurité
+- `pnpm run audit` : Audit des dépendances
+- `pnpm run lint:check` : Vérification du code

@@ -8,7 +8,9 @@
 import { config } from 'dotenv'
 import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
-import postgres from 'postgres'
+import pkg from 'pg'
+
+const { Pool } = pkg
 
 // Charger les variables d'environnement
 const __filename = fileURLToPath(import.meta.url)
@@ -31,15 +33,19 @@ if (!process.env.DATABASE_URL) {
   process.exit(1)
 }
 
-const sql = postgres(process.env.DATABASE_URL)
+const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+})
 
 async function migrateBadges() {
+  const client = await pool.connect()
   try {
     console.log('🚀 Début de la migration des badges...')
     
     // Créer la table des badges (définitions)
     console.log('🏆 Création de la table badges...')
-    await sql`
+    await client.query(`
       CREATE TABLE IF NOT EXISTS badges (
         id SERIAL PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
@@ -54,12 +60,12 @@ async function migrateBadges() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `
+    `)
     console.log('✅ Table badges créée')
     
     // Créer la table des badges débloqués par profil
     console.log('🎖️ Création de la table profile_badges...')
-    await sql`
+    await client.query(`
       CREATE TABLE IF NOT EXISTS profile_badges (
         id SERIAL PRIMARY KEY,
         profile_id INTEGER REFERENCES profiles(id) ON DELETE CASCADE,
@@ -71,16 +77,16 @@ async function migrateBadges() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(profile_id, badge_id)
       )
-    `
+    `)
     console.log('✅ Table profile_badges créée')
     
     // Créer les index pour améliorer les performances
     console.log('🔍 Création des index...')
-    await sql`CREATE INDEX IF NOT EXISTS idx_badges_category ON badges(category)`
-    await sql`CREATE INDEX IF NOT EXISTS idx_badges_active ON badges(is_active)`
-    await sql`CREATE INDEX IF NOT EXISTS idx_profile_badges_profile ON profile_badges(profile_id)`
-    await sql`CREATE INDEX IF NOT EXISTS idx_profile_badges_badge ON profile_badges(badge_id)`
-    await sql`CREATE INDEX IF NOT EXISTS idx_profile_badges_unlocked ON profile_badges(is_unlocked)`
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_badges_category ON badges(category)`)
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_badges_active ON badges(is_active)`)
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_profile_badges_profile ON profile_badges(profile_id)`)
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_profile_badges_badge ON profile_badges(badge_id)`)
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_profile_badges_unlocked ON profile_badges(is_unlocked)`)
     console.log('✅ Index créés')
     
     // Insérer des badges par défaut
@@ -190,12 +196,13 @@ async function migrateBadges() {
     ]
     
     for (const badge of defaultBadges) {
-      await sql`
-        INSERT INTO badges (name, description, icon, category, condition_type, condition_value, points, color)
-        VALUES (${badge.name}, ${badge.description}, ${badge.icon}, ${badge.category}, 
-                ${badge.condition_type}, ${badge.condition_value}, ${badge.points}, ${badge.color})
-        ON CONFLICT DO NOTHING
-      `
+      await client.query(
+        `INSERT INTO badges (name, description, icon, category, condition_type, condition_value, points, color)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT DO NOTHING`,
+        [badge.name, badge.description, badge.icon, badge.category, 
+         badge.condition_type, badge.condition_value, badge.points, badge.color]
+      )
     }
     
     console.log('✅ Badges par défaut insérés')
@@ -206,17 +213,21 @@ async function migrateBadges() {
   } catch (error) {
     console.error('❌ Erreur lors de la migration:', error)
     throw error
+  } finally {
+    client.release()
   }
 }
 
 // Exécuter la migration
 migrateBadges()
-  .then(() => {
+  .then(async () => {
     console.log('✨ Migration terminée')
+    await pool.end()
     process.exit(0)
   })
-  .catch(error => {
+  .catch(async error => {
     console.error('💥 Échec de la migration:', error)
+    await pool.end()
     process.exit(1)
   })
 

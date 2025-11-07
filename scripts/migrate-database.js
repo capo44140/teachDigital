@@ -5,8 +5,10 @@
  * Modifie la colonne pin_code pour supporter les codes PIN hachés
  */
 
-import postgres from 'postgres';
+import pkg from 'pg';
 import dotenv from 'dotenv';
+
+const { Pool } = pkg;
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -23,13 +25,13 @@ const config = {
 };
 
 // Créer l'instance de connexion PostgreSQL
-let sql;
+let pool;
 try {
   if (config.connectionString) {
-    sql = postgres(config.connectionString);
+    pool = new Pool({ connectionString: config.connectionString, ssl: { rejectUnauthorized: false } });
   } else if (config.host && config.username && config.password && config.database) {
     const connectionString = `postgresql://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}${config.ssl ? '?sslmode=require' : ''}`;
-    sql = postgres(connectionString);
+    pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
   } else {
     throw new Error('Configuration de base de données manquante. Vérifiez vos variables d\'environnement.');
   }
@@ -43,21 +45,22 @@ try {
  * Migre la structure de la base de données
  */
 async function migrateDatabase() {
+  const client = await pool.connect();
   try {
     console.log('🚀 Début de la migration de la base de données...');
     
     // Vérifier si la table pin_codes existe
-    const tableExists = await sql`
+    const tableExists = await client.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
         WHERE table_schema = 'public' 
         AND table_name = 'pin_codes'
       )
-    `;
+    `);
     
-    if (!tableExists[0].exists) {
+    if (!tableExists.rows[0].exists) {
       console.log('ℹ️ Table pin_codes n\'existe pas, création...');
-      await sql`
+      await client.query(`
         CREATE TABLE pin_codes (
           id SERIAL PRIMARY KEY,
           profile_id INTEGER REFERENCES profiles(id) ON DELETE CASCADE,
@@ -65,29 +68,29 @@ async function migrateDatabase() {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-      `;
+      `);
       console.log('✅ Table pin_codes créée');
     } else {
       console.log('ℹ️ Table pin_codes existe, vérification de la structure...');
       
       // Vérifier la taille de la colonne pin_code
-      const columnInfo = await sql`
+      const columnInfo = await client.query(`
         SELECT character_maximum_length 
         FROM information_schema.columns 
         WHERE table_name = 'pin_codes' 
         AND column_name = 'pin_code'
-      `;
+      `);
       
-      if (columnInfo.length > 0) {
-        const maxLength = columnInfo[0].character_maximum_length;
+      if (columnInfo.rows.length > 0) {
+        const maxLength = columnInfo.rows[0].character_maximum_length;
         console.log(`📊 Taille actuelle de pin_code: ${maxLength} caractères`);
         
         if (maxLength < 255) {
           console.log('🔧 Modification de la taille de la colonne pin_code...');
-          await sql`
+          await client.query(`
             ALTER TABLE pin_codes 
             ALTER COLUMN pin_code TYPE VARCHAR(255)
-          `;
+          `);
           console.log('✅ Colonne pin_code modifiée pour supporter 255 caractères');
         } else {
           console.log('✅ Colonne pin_code a déjà la bonne taille');
@@ -100,16 +103,16 @@ async function migrateDatabase() {
     // Vérifier et créer les index si nécessaire
     console.log('🔍 Vérification des index...');
     
-    const indexes = await sql`
+    const indexes = await client.query(`
       SELECT indexname 
       FROM pg_indexes 
       WHERE tablename = 'pin_codes'
-    `;
+    `);
     
-    const hasProfileIndex = indexes.some(idx => idx.indexname.includes('profile_id'));
+    const hasProfileIndex = indexes.rows.some(idx => idx.indexname.includes('profile_id'));
     if (!hasProfileIndex) {
       console.log('🔧 Création de l\'index sur profile_id...');
-      await sql`CREATE INDEX IF NOT EXISTS idx_pin_codes_profile_id ON pin_codes(profile_id)`;
+      await client.query(`CREATE INDEX IF NOT EXISTS idx_pin_codes_profile_id ON pin_codes(profile_id)`);
       console.log('✅ Index sur profile_id créé');
     } else {
       console.log('✅ Index sur profile_id existe déjà');
@@ -120,6 +123,8 @@ async function migrateDatabase() {
   } catch (error) {
     console.error('❌ Erreur lors de la migration:', error);
     process.exit(1);
+  } finally {
+    client.release();
   }
 }
 
@@ -127,33 +132,34 @@ async function migrateDatabase() {
  * Vérifie l'état de la base de données
  */
 async function checkDatabaseStatus() {
+  const client = await pool.connect();
   try {
     console.log('🔍 Vérification de l\'état de la base de données...');
     
     // Vérifier la structure de la table pin_codes
-    const columnInfo = await sql`
+    const columnInfo = await client.query(`
       SELECT column_name, data_type, character_maximum_length
       FROM information_schema.columns 
       WHERE table_name = 'pin_codes'
       ORDER BY ordinal_position
-    `;
+    `);
     
     console.log('\n📊 Structure de la table pin_codes:');
-    columnInfo.forEach(col => {
+    columnInfo.rows.forEach(col => {
       const length = col.character_maximum_length ? `(${col.character_maximum_length})` : '';
       console.log(`   ${col.column_name}: ${col.data_type}${length}`);
     });
     
     // Vérifier les index
-    const indexes = await sql`
+    const indexes = await client.query(`
       SELECT indexname, indexdef
       FROM pg_indexes 
       WHERE tablename = 'pin_codes'
-    `;
+    `);
     
     console.log('\n🔍 Index sur pin_codes:');
-    if (indexes.length > 0) {
-      indexes.forEach(idx => {
+    if (indexes.rows.length > 0) {
+      indexes.rows.forEach(idx => {
         console.log(`   ${idx.indexname}`);
       });
     } else {
@@ -161,11 +167,11 @@ async function checkDatabaseStatus() {
     }
     
     // Vérifier les données existantes
-    const pinCount = await sql`SELECT COUNT(*) as count FROM pin_codes`;
-    console.log(`\n📈 Nombre de codes PIN: ${pinCount[0].count}`);
+    const pinCount = await client.query(`SELECT COUNT(*) as count FROM pin_codes`);
+    console.log(`\n📈 Nombre de codes PIN: ${pinCount.rows[0].count}`);
     
-    if (pinCount[0].count > 0) {
-      const samplePins = await sql`
+    if (pinCount.rows[0].count > 0) {
+      const samplePins = await client.query(`
         SELECT profile_id, 
                CASE 
                  WHEN pin_code ~ '^\\$2[ab]\\$' THEN 'hashed'
@@ -174,16 +180,18 @@ async function checkDatabaseStatus() {
                LENGTH(pin_code) as length
         FROM pin_codes 
         LIMIT 5
-      `;
+      `);
       
       console.log('\n🔍 Échantillon des codes PIN:');
-      samplePins.forEach(pin => {
+      samplePins.rows.forEach(pin => {
         console.log(`   Profil ${pin.profile_id}: ${pin.status} (${pin.length} caractères)`);
       });
     }
     
   } catch (error) {
     console.error('❌ Erreur lors de la vérification:', error);
+  } finally {
+    client.release();
   }
 }
 
@@ -191,18 +199,22 @@ async function checkDatabaseStatus() {
 async function main() {
   const command = process.argv[2];
   
-  switch (command) {
-    case 'migrate':
-      await migrateDatabase();
-      break;
-    case 'check':
-      await checkDatabaseStatus();
-      break;
-    default:
-      console.log('Usage: node migrate-database.js [migrate|check]');
-      console.log('  migrate - Migre la structure de la base de données');
-      console.log('  check   - Vérifie l\'état de la base de données');
-      process.exit(1);
+  try {
+    switch (command) {
+      case 'migrate':
+        await migrateDatabase();
+        break;
+      case 'check':
+        await checkDatabaseStatus();
+        break;
+      default:
+        console.log('Usage: node migrate-database.js [migrate|check]');
+        console.log('  migrate - Migre la structure de la base de données');
+        console.log('  check   - Vérifie l\'état de la base de données');
+        process.exit(1);
+    }
+  } finally {
+    await pool.end();
   }
   
   process.exit(0);

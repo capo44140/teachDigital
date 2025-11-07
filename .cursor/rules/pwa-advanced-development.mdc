@@ -1,0 +1,257 @@
+---
+globs: public/*.js,public/*.json,src/services/*Service.js,src/components/*Notification*.vue
+description: Guidelines avancées pour le développement PWA avec Service Workers
+---
+
+# Développement PWA Avancé - TeachDigital
+
+## Configuration PWA Complète
+
+### Manifest et Métadonnées
+- **Manifest principal** : [public/manifest.json](mdc:public/manifest.json)
+- **Manifest alternatif** : [public/manifest.webmanifest](mdc:public/manifest.webmanifest)
+- **Génération automatique** : [scripts/generate-icons.js](mdc:scripts/generate-icons.js)
+
+### Configuration Vite PWA
+```javascript
+// Dans vite.config.js
+VitePWA({
+  registerType: "autoUpdate",
+  includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],
+  manifest: {
+    name: "TeachDigital",
+    short_name: "TeachDigital",
+    description: "Application d'apprentissage numérique pour enfants et adolescents",
+    theme_color: "#6366f1",
+    background_color: "#ffffff",
+    display: "standalone",
+    orientation: "portrait",
+    start_url: "/",
+    scope: "/"
+  }
+})
+```
+
+## Service Worker Avancé
+
+### Service Worker Principal
+- **Fichier principal** : [public/sw.js](mdc:public/sw.js)
+- **Génération automatique** : [scripts/generate-sw.js](mdc:scripts/generate-sw.js)
+- **Enregistrement optimisé** : Dans [src/main.js](mdc:src/main.js)
+
+### Stratégies de Cache
+```javascript
+// Stratégies implémentées dans le Service Worker
+const CACHE_STRATEGIES = {
+  // Cache First - Pour les assets statiques
+  STATIC_ASSETS: ['css', 'js', 'images', 'fonts'],
+  
+  // Network First - Pour les données API
+  API_DATA: ['/api/profiles', '/api/lessons', '/api/notifications'],
+  
+  // Stale While Revalidate - Pour les ressources critiques
+  CRITICAL_RESOURCES: ['/', '/dashboard', '/profile']
+}
+```
+
+### Gestion des Mises à Jour
+```javascript
+// Dans src/main.js - Enregistrement avec vérification des mises à jour
+navigator.serviceWorker.register('/sw.js', {
+  updateViaCache: 'none' // Forcer la vérification des mises à jour
+}).then((registration) => {
+  // Vérifier les mises à jour toutes les 30 secondes
+  setInterval(() => {
+    registration.update()
+  }, 30000)
+  
+  // Écouter les mises à jour disponibles
+  registration.addEventListener('updatefound', () => {
+    const newWorker = registration.installing
+    newWorker.addEventListener('statechange', () => {
+      if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+        // Utiliser la popup personnalisée
+        updateService.showUpdateNotification('0.0.15', '0.0.16')
+      }
+    })
+  })
+})
+```
+
+## Services PWA Spécialisés
+
+### Service de Mise à Jour
+- **Update Service** : [src/services/updateService.js](mdc:src/services/updateService.js)
+- **Composant de notification** : [src/components/UpdateNotification.vue](mdc:src/components/UpdateNotification.vue)
+
+### Service de Données Hors Ligne
+```javascript
+// src/services/offlineDataService.js
+export default {
+  async preloadProfiles() {
+    // Préchargement des profils critiques
+    const profiles = await apiService.get('/profiles')
+    this.cacheProfiles(profiles)
+  },
+  
+  async preloadLessons() {
+    // Préchargement des leçons en arrière-plan
+    const lessons = await apiService.get('/lessons')
+    this.cacheLessons(lessons)
+  },
+  
+  async preloadNotifications() {
+    // Préchargement des notifications
+    const notifications = await apiService.get('/notifications')
+    this.cacheNotifications(notifications)
+  }
+}
+```
+
+### Service d'Installation
+- **Install Service** : [src/services/installService.js](mdc:src/services/installService.js)
+- Gestion du prompt d'installation
+- Détection des capacités PWA
+
+### Service d'Optimisation Mobile
+- **Mobile Optimization** : [src/services/mobileOptimizationService.js](mdc:src/services/mobileOptimizationService.js)
+- Optimisations spécifiques mobile
+- Gestion des événements tactiles
+
+## Fonctionnalités PWA Avancées
+
+### Installation et Engagement
+```javascript
+// Détection des capacités d'installation
+const installPrompt = ref(null)
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault()
+  installPrompt.value = e
+  showInstallButton.value = true
+})
+
+const installApp = async () => {
+  if (installPrompt.value) {
+    installPrompt.value.prompt()
+    const { outcome } = await installPrompt.value.userChoice
+    console.log(`Installation: ${outcome}`)
+    installPrompt.value = null
+  }
+}
+```
+
+### Synchronisation en Arrière-Plan
+```javascript
+// Service Worker - Background Sync
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'background-sync') {
+    event.waitUntil(doBackgroundSync())
+  }
+})
+
+async function doBackgroundSync() {
+  // Synchroniser les données en arrière-plan
+  await syncOfflineData()
+}
+```
+
+### Notifications Push
+```javascript
+// Gestion des notifications push
+const requestNotificationPermission = async () => {
+  const permission = await Notification.requestPermission()
+  if (permission === 'granted') {
+    const registration = await navigator.serviceWorker.ready
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: 'YOUR_VAPID_PUBLIC_KEY'
+    })
+    return subscription
+  }
+}
+```
+
+## Optimisations PWA
+
+### Chargement Asynchrone
+```javascript
+// Dans src/main.js - Initialisation optimisée
+const scheduleIdleTask = window.requestIdleCallback || ((cb) => setTimeout(cb, 1))
+
+// Initialiser les services de manière asynchrone après le premier rendu
+scheduleIdleTask(() => {
+  initializeServicesAsync()
+})
+
+async function initializeServicesAsync() {
+  // Étape 1 : Initialiser l'apiStore depuis le cache local (rapide)
+  const apiStore = useApiStore()
+  apiStore.initialize()
+  
+  // Étape 2 : Précharger uniquement les profils en priorité
+  await offlineDataService.preloadProfiles()
+  
+  // Étape 3 : Initialiser les autres services en arrière-plan
+  scheduleIdleTask(() => {
+    initializePWAServices()
+  })
+}
+```
+
+### Cache Intelligent
+- Cache des ressources critiques
+- Revalidation transparente
+- Gestion des erreurs réseau
+
+### Performance Mobile
+- Optimisation des événements tactiles
+- Gestion de l'orientation
+- Adaptation aux différentes tailles d'écran
+
+## Tests PWA
+
+### Tests de Fonctionnalités
+- `pnpm run test:e2e:pwa` : Tests E2E PWA
+- Vérification du Service Worker
+- Tests d'installation et de mise à jour
+
+### Scripts de Validation
+- `pnpm run validate-manifest` : Validation du manifest
+- `pnpm run generate-icons` : Génération des icônes
+- `pnpm run generate-sw` : Génération du Service Worker
+
+## Bonnes Pratiques PWA
+
+### Performance
+- Charger les ressources critiques en priorité
+- Utiliser le lazy loading pour les fonctionnalités non critiques
+- Optimiser les images et assets
+
+### Expérience Utilisateur
+- Feedback visuel pendant les mises à jour
+- Gestion gracieuse des erreurs réseau
+- Interface adaptée au mode hors ligne
+
+### Sécurité
+- Validation des données côté client et serveur
+- Gestion sécurisée des tokens
+- Protection contre les attaques XSS
+
+### Accessibilité
+- Support des lecteurs d'écran
+- Navigation au clavier
+- Contraste et lisibilité optimaux
+
+## Monitoring PWA
+
+### Métriques Clés
+- Temps de chargement initial
+- Taux de conversion d'installation
+- Engagement utilisateur
+- Performance hors ligne
+
+### Outils de Monitoring
+- Lighthouse pour l'audit PWA
+- Chrome DevTools pour le debugging
+- Analytics pour le suivi d'usage

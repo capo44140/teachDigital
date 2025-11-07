@@ -1,4 +1,4 @@
-const postgres = require('postgres');
+const { Pool } = require('pg');
 
 // Configuration de la base de données PostgreSQL
 const connectionString = process.env.DATABASE_URL;
@@ -11,8 +11,8 @@ if (!connectionString || connectionString.trim() === '') {
   throw error;
 }
 
-// Créer l'instance de connexion PostgreSQL
-let sql;
+// Créer l'instance de connexion PostgreSQL avec Pool
+let pool;
 
 try {
   // Vérifier que la connection string est valide (commence par postgresql:// ou postgres://)
@@ -24,43 +24,26 @@ try {
   console.log('🔍 DATABASE_URL détectée:', connectionString.replace(/:[^:@]+@/, ':****@')); // Masquer le mot de passe dans les logs
   console.log('📝 Longueur DATABASE_URL:', connectionString.length, 'caractères');
   
-  // Configuration OPTIMISÉE pour Neon/Vercel serverless
-  sql = postgres(connectionString, {
-    ssl: 'require', // Nécessaire pour Neon
+  // Configuration OPTIMISÉE pour Neon/Vercel serverless avec pg
+  pool = new Pool({
+    connectionString,
+    ssl: { rejectUnauthorized: false }, // Nécessaire pour Neon
     max: 1, // Limiter les connexions pour Vercel serverless
-    idle_timeout: 60, // 60 secondes (augmenté)
-    connect_timeout: 60, // 60 secondes pour le TLS handshake (CRITICAL - augmenté)
-    statement_timeout: 60000, // 60 secondes pour les requêtes
-    
-    // Options de reconnexion pour Neon - TRÈS agressif pour Vercel
-    backoff: {
-      start: 500,  // Commencer avec 500ms
-      max: 5000,   // Max 5 secondes entre les retries
-      multiplier: 2
-    },
-    
-    // Désactiver transform_column_names par défaut (peut causer des problèmes)
-    transform: {
-      undefined: undefined,
-      null: null
-    },
-    
-    // Callbacks pour gérer les erreurs de connexion
-    onconnect: async (connection) => {
-      console.log('✅ Nouvelle connexion PostgreSQL établie avec succès');
-    },
-    
-    ondisconnect: async (connection) => {
-      console.log('⚠️ Connexion PostgreSQL fermée');
-    },
-    
-    onerror: (error) => {
-      console.error('❌ ERREUR CRITIQUE de connexion PostgreSQL:');
-      console.error('   Code:', error.code);
-      console.error('   Message:', error.message);
-      console.error('   Host:', error.host || 'undefined');
-      console.error('   Port:', error.port || 'undefined');
-    }
+    idleTimeoutMillis: 60000, // 60 secondes (augmenté)
+    connectionTimeoutMillis: 60000, // 60 secondes pour le TLS handshake (CRITICAL - augmenté)
+  });
+  
+  // Listeners pour gérer les erreurs de connexion
+  pool.on('connect', () => {
+    console.log('✅ Nouvelle connexion PostgreSQL établie avec succès');
+  });
+  
+  pool.on('error', (error) => {
+    console.error('❌ ERREUR CRITIQUE de connexion PostgreSQL:');
+    console.error('   Code:', error.code);
+    console.error('   Message:', error.message);
+    console.error('   Host:', error.host || 'undefined');
+    console.error('   Port:', error.port || 'undefined');
   });
 } catch (error) {
   console.error('❌ Erreur de configuration PostgreSQL:', error);
@@ -70,14 +53,15 @@ try {
 
 // Fonction pour tester la connexion
 async function testConnection() {
+  const client = await pool.connect();
   try {
     console.log('🔍 Test de connexion à la base de données...');
-    const result = await sql`SELECT 1 as test`;
+    const result = await client.query('SELECT 1 as test');
     console.log('✅ Connexion à la base de données testée avec succès');
     console.log('📊 Paramètres de connexion:');
     console.log('   - SSL: required');
-    console.log('   - Connect Timeout: 30 secondes');
-    console.log('   - Statement Timeout: 30 secondes');
+    console.log('   - Connect Timeout: 60 secondes');
+    console.log('   - Statement Timeout: 60 secondes');
     console.log('   - Max connexions: 1 (Vercel Serverless)');
     return true;
   } catch (error) {
@@ -87,6 +71,8 @@ async function testConnection() {
     console.error('   - Le cluster Neon est-il disponible?');
     console.error('   - Les pare-feu/IP whitelist permettent la connexion?');
     return false;
+  } finally {
+    client.release();
   }
 }
 
@@ -150,8 +136,9 @@ async function executeWithRetry(queryFn, maxRetries = 5, delayMs = 1000) {
 }
 
 module.exports = {
-  default: sql,
+  pool,
   testConnection,
-  executeWithRetry
+  executeWithRetry,
+  query: (text, params) => pool.query(text, params)
 };
 

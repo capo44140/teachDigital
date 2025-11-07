@@ -5,7 +5,7 @@
  * Utilisation: node backend/scripts/test-connection.js
  */
 
-const postgres = require('postgres');
+const { Pool } = require('pg');
 require('dotenv').config();
 
 const connectionString = process.env.DATABASE_URL;
@@ -52,36 +52,38 @@ console.log('══════════════════════�
 console.log('🔗 Test de connexion:\n');
 
 (async () => {
+  let start;
   try {
     // Configuration de test
-    const sql = postgres(connectionString, {
-      ssl: 'require',
+    const pool = new Pool({
+      connectionString,
+      ssl: { rejectUnauthorized: false },
       max: 1,
-      connect_timeout: 60,
-      statement_timeout: 60000,
-      idle_timeout: 60
+      connectionTimeoutMillis: 60000,
+      idleTimeoutMillis: 60000
     });
 
     console.log('⏳ Connexion en cours...');
-    const start = Date.now();
+    start = Date.now();
     
-    const result = await sql`SELECT NOW() as current_time, version() as pg_version`;
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW() as current_time, version() as pg_version');
     
     const duration = Date.now() - start;
     
     console.log(`✅ Connexion réussie en ${duration}ms!\n`);
     console.log('📊 Informations de la base:\n');
-    console.log(`  Heure serveur: ${result[0].current_time}`);
-    console.log(`  Version: ${result[0].pg_version.substring(0, 80)}`);
+    console.log(`  Heure serveur: ${result.rows[0].current_time}`);
+    console.log(`  Version: ${result.rows[0].pg_version.substring(0, 80)}`);
     
     // Test de requête simple
     console.log('\n⏳ Test d\'une requête simple...');
-    const testResult = await sql`SELECT 1 as test`;
+    const testResult = await client.query('SELECT 1 as test');
     console.log('✅ Requête simple réussie');
-    console.log(`  Résultat: ${testResult[0].test}`);
+    console.log(`  Résultat: ${testResult.rows[0].test}`);
     
-    // Fermer la connexion
-    await sql.end();
+    client.release();
+    await pool.end();
     
     console.log('\n═══════════════════════════════════════════════════════════');
     console.log('✅ TOUS LES TESTS PASSED!');

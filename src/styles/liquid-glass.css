@@ -1,0 +1,438 @@
+/* ============================================
+   SYSTÈME DE DESIGN LIQUID GLASS CENTRALISÉ
+   ============================================ */
+
+@layer base {
+  /* Variables CSS pour le design Liquid Glass */
+  :root {
+    /* === PALETTE DE COULEURS VIOLETTE === */
+    --lg-primary-purple: #8B5CF6;
+    --lg-secondary-purple: #A78BFA;
+    --lg-accent-purple: #C084FC;
+    --lg-light-purple: #DDD6FE;
+    --lg-dark-purple: #6D28D9;
+    --lg-deep-purple: #4C1D95;
+
+    /* === COULEURS D'ACCENT === */
+    --lg-pink: #EC4899;
+    --lg-rose: #F43F5E;
+    --lg-indigo: #6366F1;
+    --lg-blue: #3B82F6;
+    --lg-cyan: #06B6D4;
+    --lg-emerald: #10B981;
+    --lg-orange: #F97316;
+    --lg-yellow: #EAB308;
+
+    /* === COULEURS DE FOND === */
+    --lg-bg-primary: #0F172A; /* slate-900 */
+    --lg-bg-secondary: #1E293B; /* slate-800 */
+    --lg-bg-tertiary: #334155; /* slate-700 */
+
+    /* === TRANSPARENCES GLASS === */
+    --lg-glass-light: rgba(255, 255, 255, 0.08);
+    --lg-glass-medium: rgba(255, 255, 255, 0.10);
+    --lg-glass-heavy: rgba(255, 255, 255, 0.12);
+    --lg-glass-border: rgba(255, 255, 255, 0.15);
+    --lg-glass-shadow: rgba(0, 0, 0, 0.1);
+
+    /* === GRADIENTS PRÉDÉFINIS === */
+    --lg-gradient-primary: linear-gradient(135deg, var(--lg-primary-purple), var(--lg-pink));
+    --lg-gradient-secondary: linear-gradient(135deg, var(--lg-secondary-purple), var(--lg-indigo));
+    --lg-gradient-accent: linear-gradient(135deg, var(--lg-accent-purple), var(--lg-blue));
+    --lg-gradient-bg: linear-gradient(135deg, var(--lg-bg-primary), var(--lg-deep-purple), var(--lg-bg-primary));
+
+    /* === ANIMATIONS === */
+    --lg-transition-fast: all 0.2s ease;
+    --lg-transition-normal: all 0.3s ease;
+    --lg-transition-slow: all 0.5s ease;
+    --lg-animation-duration: 7s;
+  }
+}
+
+@layer components {
+  /* === CLASSES UTILITAIRES GLASS === */
+
+  /* Fond glass de base */
+  .lg-glass-base {
+    background: var(--lg-glass-light);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--lg-glass-border);
+    border-radius: 2rem;
+    box-shadow: 0 8px 32px var(--lg-glass-shadow);
+    transition: var(--lg-transition-normal);
+  }
+
+  /* Fond glass avec intensité variable */
+  .lg-glass-light {
+    background: var(--lg-glass-light);
+  }
+
+  .lg-glass-medium {
+    background: var(--lg-glass-medium);
+  }
+
+  .lg-glass-heavy {
+    background: var(--lg-glass-heavy);
+  }
+
+  /* Cartes glass avec hover */
+  .lg-glass-card {
+    background: var(--lg-glass-light);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--lg-glass-border);
+    border-radius: 2rem;
+    box-shadow: 0 8px 32px var(--lg-glass-shadow);
+    transition: var(--lg-transition-normal);
+    padding: 1.5rem;
+    will-change: transform, background, box-shadow;
+  }
+
+  .lg-glass-card:hover {
+    background: var(--lg-glass-medium);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    transform: translateY(-4px);
+  }
+
+  /* Boutons glass */
+  .lg-glass-button {
+    background: var(--lg-glass-light);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--lg-glass-border);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px var(--lg-glass-shadow);
+    transition: var(--lg-transition-normal);
+    padding: 0.875rem 1.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    will-change: transform, box-shadow;
+  }
+
+  .lg-glass-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+  }
+
+  .lg-glass-button:active {
+    transform: translateY(0);
+  }
+
+  /* === GRADIENTS COLORÉS === */
+
+  /* Gradients par section */
+  .lg-gradient-profiles {
+    background: linear-gradient(135deg, var(--lg-blue), var(--lg-cyan));
+  }
+
+  .lg-gradient-learning {
+    background: linear-gradient(135deg, var(--lg-emerald), var(--lg-green));
+  }
+
+  .lg-gradient-quiz {
+    background: linear-gradient(135deg, var(--lg-primary-purple), var(--lg-pink));
+  }
+
+  .lg-gradient-activities {
+    background: linear-gradient(135deg, var(--lg-orange), var(--lg-rose));
+  }
+
+  .lg-gradient-lessons {
+    background: linear-gradient(135deg, var(--lg-indigo), var(--lg-blue));
+  }
+
+  .lg-gradient-notifications {
+    background: linear-gradient(135deg, var(--lg-yellow), var(--lg-orange));
+  }
+
+  .lg-gradient-info {
+    background: linear-gradient(135deg, #9CA3AF, #64748B);
+  }
+
+  /* === ARRIÈRE-PLAN ANIMÉ === */
+
+  .lg-animated-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--lg-gradient-bg);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .lg-blob-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 1;
+  }
+
+  .lg-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(40px);
+    mix-blend-mode: multiply;
+    animation: lg-blob-animation var(--lg-animation-duration) infinite ease-in-out;
+    will-change: transform;
+  }
+
+  .lg-blob-1 {
+    width: 300px;
+    height: 300px;
+    background: var(--lg-primary-purple);
+    top: 20%;
+    left: 10%;
+    animation-delay: 0s;
+  }
+
+  .lg-blob-2 {
+    width: 250px;
+    height: 250px;
+    background: var(--lg-pink);
+    top: 60%;
+    right: 15%;
+    animation-delay: 2.3s;
+  }
+
+  .lg-blob-3 {
+    width: 200px;
+    height: 200px;
+    background: var(--lg-indigo);
+    bottom: 20%;
+    left: 50%;
+    animation-delay: 4.6s;
+  }
+
+  /* === LAYOUTS RESPONSIVE === */
+
+  /* Grille de cartes glass */
+  .lg-glass-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+
+  .lg-glass-grid-sm {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+
+  .lg-glass-grid-lg {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+  }
+
+  /* === COMPOSANTS SPÉCIALISÉS === */
+
+  /* Toggle glass */
+  .lg-glass-toggle {
+    background: var(--lg-glass-light);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--lg-glass-border);
+    border-radius: 1.5rem;
+    box-shadow: 0 8px 32px var(--lg-glass-shadow);
+    transition: var(--lg-transition-normal);
+    padding: 0.5rem;
+    width: 3rem;
+    height: 1.5rem;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .lg-glass-toggle.active {
+    background: var(--lg-gradient-primary);
+  }
+
+  .lg-glass-toggle-slider {
+    position: absolute;
+    top: 0.25rem;
+    left: 0.25rem;
+    width: 1rem;
+    height: 1rem;
+    background: white;
+    border-radius: 50%;
+    transition: var(--lg-transition-normal);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .lg-glass-toggle.active .lg-glass-toggle-slider {
+    transform: translateX(1.5rem);
+  }
+
+  /* Badge glass */
+  .lg-glass-badge {
+    background: var(--lg-glass-light);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--lg-glass-border);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px var(--lg-glass-shadow);
+    transition: var(--lg-transition-normal);
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Barre de progression glass */
+  .lg-glass-progress {
+    background: var(--lg-glass-light);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--lg-glass-border);
+    border-radius: 0.5rem;
+    box-shadow: 0 8px 32px var(--lg-glass-shadow);
+    transition: var(--lg-transition-normal);
+    height: 0.75rem;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .lg-glass-progress-bar {
+    height: 100%;
+    background: var(--lg-gradient-primary);
+    border-radius: 0.5rem;
+    transition: width var(--lg-transition-normal);
+    position: relative;
+  }
+
+  .lg-glass-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: lg-progress-shine 2s infinite;
+  }
+
+  /* === UTILITAIRES === */
+
+  /* Z-index système */
+  .lg-z-bg { z-index: 0; }
+  .lg-z-blobs { z-index: 1; }
+  .lg-z-content { z-index: 10; }
+  .lg-z-header { z-index: 20; }
+  .lg-z-modal { z-index: 30; }
+
+  /* Textes avec transparence */
+  .lg-text-primary {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .lg-text-secondary {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .lg-text-muted {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  /* Scrollbars personnalisées */
+  .lg-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .lg-scrollbar::-webkit-scrollbar-track {
+    background: var(--lg-glass-light);
+    border-radius: 4px;
+  }
+
+  .lg-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--lg-primary-purple);
+    border-radius: 4px;
+  }
+
+  .lg-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--lg-secondary-purple);
+  }
+}
+
+@layer utilities {
+  /* === RESPONSIVE DESIGN === */
+
+  @media (max-width: 640px) {
+    .lg-glass-card {
+      padding: 1rem;
+      border-radius: 1.5rem;
+    }
+    
+    .lg-glass-button {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.95rem;
+    }
+    
+    .lg-glass-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    
+    .lg-blob {
+      filter: blur(30px);
+    }
+    
+    .lg-blob-1 {
+      width: 200px;
+      height: 200px;
+    }
+    
+    .lg-blob-2 {
+      width: 150px;
+      height: 150px;
+    }
+    
+    .lg-blob-3 {
+      width: 120px;
+      height: 120px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .lg-glass-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .lg-glass-grid-lg {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+}
+
+@keyframes lg-blob-animation {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+@keyframes lg-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lg-progress-shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}

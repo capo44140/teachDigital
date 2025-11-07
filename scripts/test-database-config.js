@@ -1,5 +1,7 @@
-import postgres from 'postgres'
+import pkg from 'pg'
 import dotenv from 'dotenv'
+
+const { Pool } = pkg;
 
 // Charger les variables d'environnement
 dotenv.config()
@@ -15,16 +17,16 @@ const config = {
   ssl: process.env.DB_SSL !== 'false'
 };
 
-let sql;
+let pool;
 
 try {
   if (config.connectionString) {
     console.log('🔗 Utilisation de la connection string complète');
-    sql = postgres(config.connectionString);
+    pool = new Pool({ connectionString: config.connectionString, ssl: { rejectUnauthorized: false } });
   } else if (config.host && config.username && config.password && config.database) {
     const connectionString = `postgresql://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}${config.ssl ? '?sslmode=require' : ''}`;
     console.log('🔗 Construction de la connection string à partir des variables individuelles');
-    sql = postgres(connectionString);
+    pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } });
   } else {
     throw new Error('Aucune configuration de base de données valide trouvée. Vérifiez vos variables d\'environnement.');
   }
@@ -35,4 +37,4 @@ try {
   process.exit(1);
 }
 
-export default sql;
+export default pool;
