@@ -165,7 +165,10 @@ async function sql(strings, ...values) {
           if (value instanceof SqlIdentifier) {
             // Les identifiants sont intégrés directement (pas de paramètre)
             result += value.value;
-          } else if (value !== undefined && value !== null) {
+          } else if (value === undefined || value === null) {
+            // Les valeurs NULL deviennent le texte "NULL"
+            result += 'NULL';
+          } else {
             // Les valeurs normales deviennent des paramètres
             params_array.push(value);
             result += '$' + paramCounter;
