@@ -173,6 +173,15 @@ export default defineConfig(({ mode }) => {
       },
       fs: {
         strict: false
+      },
+      // Proxy pour contourner CORS en développement
+      proxy: {
+        '/api': {
+          target: 'https://backend-sepia-mu.vercel.app',
+          changeOrigin: true,
+          secure: true,
+          rewrite: (path) => path // Garder le chemin /api tel quel
+        }
       }
     },
     define: {

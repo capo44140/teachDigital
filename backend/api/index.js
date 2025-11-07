@@ -30,19 +30,24 @@ module.exports = async function handler(req, res) {
   ];
   
   // Vérifier si l'origine est autorisée
-  // Si credentials sont utilisés, on ne peut pas utiliser '*'
   // En développement, accepter localhost avec n'importe quel port
   const isLocalhost = origin && origin.startsWith('http://localhost');
-  const allowedOrigin = (origin && (allowedOrigins.includes(origin) || isLocalhost))
-    ? origin
-    : allowedOrigins[2]; // Fallback sur https://teach-digital.vercel.app
+  const isAllowedOrigin = origin && (allowedOrigins.includes(origin) || isLocalhost);
   
-  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  // Définir l'origine CORS : utiliser l'origine si elle est autorisée, sinon '*'
+  const corsOrigin = (origin && isAllowedOrigin) ? origin : '*';
+  
+  // Définir tous les en-têtes CORS
+  res.setHeader('Access-Control-Allow-Origin', corsOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Max-Age', '86400');
   res.setHeader('Vary', 'Origin');
+  
+  // Ne pas utiliser credentials si on utilise '*' (incompatible avec CORS)
+  if (corsOrigin !== '*') {
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
 
   // Gérer les requêtes OPTIONS (preflight) - DOIT être géré avant tout autre traitement
   if (req.method === 'OPTIONS') {
