@@ -1,36 +1,36 @@
-import { neon } from '@neondatabase/serverless';
+import postgres from 'postgres';
 import { config } from 'dotenv';
 
 // Charger les variables d'environnement
 config();
 
-// Configuration de la base de données Neon
+// Configuration de la base de données PostgreSQL
 const dbConfig = {
   connectionString: process.env.DATABASE_URL || process.env.VITE_DATABASE_URL,
-  host: process.env.NEON_HOST,
-  database: process.env.NEON_DATABASE,
-  username: process.env.NEON_USERNAME,
-  password: process.env.NEON_PASSWORD,
-  port: process.env.NEON_PORT || 5432,
-  ssl: true
+  host: process.env.DB_HOST || process.env.NEON_HOST,
+  database: process.env.DB_DATABASE || process.env.NEON_DATABASE,
+  username: process.env.DB_USERNAME || process.env.NEON_USERNAME,
+  password: process.env.DB_PASSWORD || process.env.NEON_PASSWORD,
+  port: process.env.DB_PORT || process.env.NEON_PORT || 5432,
+  ssl: process.env.DB_SSL !== 'false'
 };
 
-// Créer l'instance de connexion Neon
+// Créer l'instance de connexion PostgreSQL
 let sql;
 
 try {
   if (dbConfig.connectionString) {
-    sql = neon(dbConfig.connectionString);
-    console.log('✅ Connexion à Neon DB configurée avec la connection string');
+    sql = postgres(dbConfig.connectionString);
+    console.log('✅ Connexion à PostgreSQL configurée avec la connection string');
   } else if (dbConfig.host && dbConfig.username && dbConfig.password && dbConfig.database) {
-    const connectionString = `postgresql://${dbConfig.username}:${dbConfig.password}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}?sslmode=require`;
-    sql = neon(connectionString);
-    console.log('✅ Connexion à Neon DB configurée avec les variables individuelles');
+    const connectionString = `postgresql://${dbConfig.username}:${dbConfig.password}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}${dbConfig.ssl ? '?sslmode=require' : ''}`;
+    sql = postgres(connectionString);
+    console.log('✅ Connexion à PostgreSQL configurée avec les variables individuelles');
   } else {
     throw new Error('Configuration de base de données manquante. Vérifiez vos variables d\'environnement.');
   }
 } catch (error) {
-  console.error('❌ Erreur de configuration Neon DB:', error);
+  console.error('❌ Erreur de configuration PostgreSQL:', error);
   console.error('💡 Assurez-vous que vos variables d\'environnement sont configurées dans le fichier .env');
   throw error;
 }

@@ -5,36 +5,38 @@
  * Usage: node scripts/update-parent-pin.js
  */
 
-import { neon } from '@neondatabase/serverless';
+import postgres from 'postgres';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 
 // Charger les variables d'environnement
 dotenv.config();
 
-// Configuration de la base de données
+// Configuration de la base de données PostgreSQL
 const config = {
   connectionString: process.env.DATABASE_URL || process.env.VITE_DATABASE_URL,
-  host: process.env.NEON_HOST,
-  database: process.env.NEON_DATABASE,
-  username: process.env.NEON_USERNAME,
-  password: process.env.NEON_PASSWORD,
-  port: process.env.NEON_PORT || 5432,
-  ssl: true
+  host: process.env.DB_HOST || process.env.NEON_HOST,
+  database: process.env.DB_DATABASE || process.env.NEON_DATABASE,
+  username: process.env.DB_USERNAME || process.env.NEON_USERNAME,
+  password: process.env.DB_PASSWORD || process.env.NEON_PASSWORD,
+  port: process.env.DB_PORT || process.env.NEON_PORT || 5432,
+  ssl: process.env.DB_SSL !== 'false'
 };
 
-// Créer l'instance de connexion Neon
+// Créer l'instance de connexion PostgreSQL
 let sql;
 try {
   if (config.connectionString) {
-    sql = neon(config.connectionString);
+    sql = postgres(config.connectionString);
+  } else if (config.host && config.username && config.password && config.database) {
+    const connectionString = `postgresql://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}${config.ssl ? '?sslmode=require' : ''}`;
+    sql = postgres(connectionString);
   } else {
-    const connectionString = `postgresql://${config.username}:${config.password}@${config.host}:${config.port}/${config.database}?sslmode=require`;
-    sql = neon(connectionString);
+    throw new Error('Configuration de base de données manquante. Vérifiez vos variables d\'environnement.');
   }
-  console.log('✅ Connexion à Neon DB établie');
+  console.log('✅ Connexion à PostgreSQL établie');
 } catch (error) {
-  console.error('❌ Erreur de connexion à Neon DB:', error);
+  console.error('❌ Erreur de connexion à PostgreSQL:', error);
   process.exit(1);
 }
 

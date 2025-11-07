@@ -120,7 +120,7 @@ export default defineConfig(({ mode }) => {
               }
               
               // Base de données
-              if (id.includes('@neondatabase')) {
+              if (id.includes('postgres') || id.includes('@neondatabase')) {
                 return 'database'
               }
               
@@ -177,8 +177,18 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       // Exposer les variables d'environnement pour le navigateur
+      // Note: Les variables de base de données ne devraient pas être exposées au frontend
+      // Elles sont conservées ici uniquement pour la compatibilité avec l'ancien code
       'process.env.DATABASE_URL': JSON.stringify(env.DATABASE_URL),
       'process.env.VITE_DATABASE_URL': JSON.stringify(env.VITE_DATABASE_URL),
+      // Variables PostgreSQL (nouvelles)
+      'process.env.DB_HOST': JSON.stringify(env.DB_HOST),
+      'process.env.DB_DATABASE': JSON.stringify(env.DB_DATABASE),
+      'process.env.DB_USERNAME': JSON.stringify(env.DB_USERNAME),
+      'process.env.DB_PASSWORD': JSON.stringify(env.DB_PASSWORD),
+      'process.env.DB_PORT': JSON.stringify(env.DB_PORT),
+      'process.env.DB_SSL': JSON.stringify(env.DB_SSL),
+      // Variables de compatibilité (anciennes variables Neon - toujours supportées)
       'process.env.NEON_HOST': JSON.stringify(env.NEON_HOST),
       'process.env.NEON_DATABASE': JSON.stringify(env.NEON_DATABASE),
       'process.env.NEON_USERNAME': JSON.stringify(env.NEON_USERNAME),

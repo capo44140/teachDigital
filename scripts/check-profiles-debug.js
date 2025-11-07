@@ -2,14 +2,14 @@
  * Script de débogage pour vérifier les profils en base de données
  */
 
-import { neon } from '@neondatabase/serverless'
+import postgres from 'postgres'
 import dotenv from 'dotenv'
 
 // Charger les variables d'environnement
 dotenv.config()
 
-// Configuration de la base de données
-const sql = neon(process.env.DATABASE_URL || process.env.VITE_DATABASE_URL)
+// Configuration de la base de données PostgreSQL
+const sql = postgres(process.env.DATABASE_URL || process.env.VITE_DATABASE_URL)
 
 async function checkProfilesDebug() {
   try {

@@ -2,9 +2,17 @@ import { vi } from 'vitest'
 import { createPinia } from 'pinia'
 
 // Mock des modules externes
-vi.mock('@neondatabase/serverless', () => ({
-  neon: vi.fn(() => vi.fn())
-}))
+vi.mock('postgres', () => {
+  return {
+    default: vi.fn(() => {
+      const mockSql = vi.fn();
+      // Simuler la syntaxe de template literals
+      return new Proxy(mockSql, {
+        get: () => mockSql
+      });
+    })
+  };
+})
 
 vi.mock('bcryptjs', () => ({
   hash: vi.fn(),

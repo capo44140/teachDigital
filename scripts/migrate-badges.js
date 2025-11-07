@@ -8,7 +8,7 @@
 import { config } from 'dotenv'
 import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
-import { neon } from '@neondatabase/serverless'
+import postgres from 'postgres'
 
 // Charger les variables d'environnement
 const __filename = fileURLToPath(import.meta.url)
@@ -27,11 +27,11 @@ console.log('DATABASE_URL présente:', !!process.env.DATABASE_URL)
 // Créer la connexion directement ici
 if (!process.env.DATABASE_URL) {
   console.error('❌ DATABASE_URL n\'est pas définie dans le fichier .env')
-  console.error('Veuillez configurer votre fichier .env avec l\'URL de connexion Neon')
+  console.error('Veuillez configurer votre fichier .env avec l\'URL de connexion PostgreSQL')
   process.exit(1)
 }
 
-const sql = neon(process.env.DATABASE_URL)
+const sql = postgres(process.env.DATABASE_URL)
 
 async function migrateBadges() {
   try {

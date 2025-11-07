@@ -1,23 +1,23 @@
-const { neon } = require('@neondatabase/serverless');
+const postgres = require('postgres');
 
-// Configuration de la base de données Neon
+// Configuration de la base de données PostgreSQL
 const config = {
-  connectionString: process.env.DATABASE_URL,
-  ssl: true
+  connectionString: process.env.DATABASE_URL
 };
 
-// Créer l'instance de connexion Neon
+// Créer l'instance de connexion PostgreSQL
 let sql;
 
 try {
   if (config.connectionString) {
-    console.log('🔗 Connexion à Neon DB configurée');
-    sql = neon(config.connectionString);
+    console.log('🔗 Connexion à PostgreSQL configurée');
+    // postgres accepte directement la connection string
+    sql = postgres(config.connectionString);
   } else {
     throw new Error('DATABASE_URL non définie dans les variables d\'environnement');
   }
 } catch (error) {
-  console.error('❌ Erreur de configuration Neon DB:', error);
+  console.error('❌ Erreur de configuration PostgreSQL:', error);
   throw error;
 }
 
