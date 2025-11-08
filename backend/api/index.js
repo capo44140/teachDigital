@@ -4,6 +4,7 @@ const { default: sql, executeWithRetry, testConnection } = require('../lib/datab
 const { generateToken, createSession, authenticateToken, deleteSession } = require('../lib/auth.js');
 const { handleError } = require('../lib/response.js');
 const handleBadges = require('./badges.js');
+const handleAI = require('./ai.js');
 
 // Variable pour tracker si la connexion a été testée au démarrage
 let connectionTestedAtStartup = false;
@@ -116,6 +117,11 @@ module.exports = async function handler(req, res) {
     // Routes des badges
     if (pathname.startsWith('/api/badges')) {
       return await handleBadges(req, res);
+    }
+
+    // Routes IA
+    if (pathname.startsWith('/api/ai')) {
+      return await handleAI(req, res);
     }
 
     // Route d'initialisation des pins

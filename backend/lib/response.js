@@ -78,6 +78,22 @@ function handleError(error, defaultMessage = 'Erreur interne du serveur') {
   return errorResponse(defaultMessage);
 }
 
+// Fonctions helper pour les réponses (format simplifié)
+function createResponse(message, data) {
+  return {
+    success: true,
+    message,
+    data
+  };
+}
+
+function createErrorResponse(message) {
+  return {
+    success: false,
+    message
+  };
+}
+
 module.exports = {
   successResponse,
   errorResponse,
@@ -85,6 +101,8 @@ module.exports = {
   unauthorizedResponse,
   forbiddenResponse,
   notFoundResponse,
-  handleError
+  handleError,
+  createResponse,
+  createErrorResponse
 };
 

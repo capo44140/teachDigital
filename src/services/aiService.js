@@ -11,13 +11,15 @@ class AIService {
    */
   async generateQuizFromImage(imageFile, childProfile) {
     try {
-      const formData = new FormData()
-      formData.append('image', imageFile)
-      formData.append('childProfile', JSON.stringify(childProfile))
-
+      // Convertir l'image en base64 pour l'envoyer en JSON
+      const base64Image = await this.fileToBase64(imageFile)
+      
       const response = await apiService.request('/api/ai/generate-quiz-from-image', {
         method: 'POST',
-        body: formData
+        body: JSON.stringify({
+          image: base64Image,
+          childProfile: childProfile
+        })
       })
 
       return response.data?.quiz || null
@@ -28,18 +30,41 @@ class AIService {
   }
 
   /**
+   * Convertit un fichier en base64
+   */
+  fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = error => reject(error)
+    })
+  }
+
+  /**
    * Génère un quiz à partir de plusieurs documents (images et PDF) (via backend)
    */
   async generateQuizFromDocuments(files, childProfile, questionCount = 5) {
     try {
-      const formData = new FormData()
-      files.forEach(file => formData.append('documents', file))
-      formData.append('childProfile', JSON.stringify(childProfile))
-      formData.append('questionCount', questionCount.toString())
+      // Convertir tous les fichiers en base64
+      const documents = await Promise.all(
+        files.map(async (file) => {
+          const base64 = await this.fileToBase64(file)
+          return {
+            name: file.name,
+            type: file.type,
+            data: base64.includes('base64,') ? base64.split('base64,')[1] : base64
+          }
+        })
+      )
 
       const response = await apiService.request('/api/ai/generate-quiz-from-documents', {
         method: 'POST',
-        body: formData
+        body: JSON.stringify({
+          documents: documents,
+          childProfile: childProfile,
+          questionCount: questionCount
+        })
       })
 
       return response.data?.quiz || null
