@@ -7,7 +7,7 @@
           Tableau de Bord Performance
         </h1>
         <p class="text-gray-600">
-          Optimisations implémentées : Lazy Loading, Cache Intelligent, Compression d'Images, Bundle Splitting
+          Optimisations implémentées : Lazy Loading, Compression d'Images, Bundle Splitting
         </p>
       </div>
 
@@ -21,18 +21,6 @@
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">Temps de Chargement</p>
               <p class="text-2xl font-semibold text-gray-900">{{ loadingTime }}ms</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="p-2 bg-green-100 rounded-lg">
-              <Icon name="mdi:database-check" class="w-6 h-6 text-green-600" />
-            </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Cache Hit Rate</p>
-              <p class="text-2xl font-semibold text-gray-900">{{ cacheStats.hitRate }}%</p>
             </div>
           </div>
         </div>
@@ -64,19 +52,6 @@
 
       <!-- Sections de test -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Test du Cache -->
-        <div class="bg-white rounded-lg shadow">
-          <div class="p-6 border-b border-gray-200">
-            <h2 class="text-xl font-semibold text-gray-900 flex items-center">
-              <Icon name="mdi:database-sync" class="w-5 h-5 mr-2 text-blue-600" />
-              Test du Cache Intelligent
-            </h2>
-          </div>
-          <div class="p-6">
-            <CacheStats />
-          </div>
-        </div>
-
         <!-- Test d'Optimisation d'Images -->
         <div class="bg-white rounded-lg shadow">
           <div class="p-6 border-b border-gray-200">
@@ -163,16 +138,7 @@
             >
               <Icon name="mdi:download" class="w-6 h-6 mx-auto mb-2" />
               <h3 class="font-medium">Précharger Données</h3>
-              <p class="text-sm opacity-90">Cache intelligent</p>
-            </button>
-
-            <button
-              @click="clearCache"
-              class="p-4 bg-red-600 text-white rounded-lg hover:bg-red-700"
-            >
-              <Icon name="mdi:delete" class="w-6 h-6 mx-auto mb-2" />
-              <h3 class="font-medium">Vider Cache</h3>
-              <p class="text-sm opacity-90">Nettoyage complet</p>
+              <p class="text-sm opacity-90">Préchargement des données</p>
             </button>
 
             <button
@@ -211,21 +177,17 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import CacheStats from './CacheStats.vue'
 import ImageOptimizer from './ImageOptimizer.vue'
-import cachedApiService from '../services/cachedApiService.js'
 
 export default {
   name: 'PerformanceDashboard',
   components: {
     Icon,
-    CacheStats,
     ImageOptimizer
   },
   setup() {
     // État réactif
     const loadingTime = ref(0)
-    const cacheStats = ref({ hitRate: 0 })
     const lazyChunksCount = ref(0)
     const optimizedImagesCount = ref(0)
     const loadingComponents = ref({
@@ -298,11 +260,6 @@ export default {
       }
     }
 
-    const clearCache = () => {
-      cachedApiService.invalidateAll()
-      showMessage('Cache vidé avec succès', 'warning')
-    }
-
     const runPerformanceTest = async () => {
       isRunningTest.value = true
       try {
@@ -320,7 +277,6 @@ export default {
       const report = {
         timestamp: new Date().toISOString(),
         loadingTime: loadingTime.value,
-        cacheStats: cacheStats.value,
         lazyChunksCount: lazyChunksCount.value,
         optimizedImagesCount: optimizedImagesCount.value
       }
@@ -353,7 +309,6 @@ export default {
     const updateStats = () => {
       // Simuler des métriques de performance
       loadingTime.value = Math.round(100 + Math.random() * 200)
-      cacheStats.value = cachedApiService.getCacheStats()
       lazyChunksCount.value = 3 // Nombre de chunks lazy configurés
     }
 
@@ -365,7 +320,6 @@ export default {
 
     return {
       loadingTime,
-      cacheStats,
       lazyChunksCount,
       optimizedImagesCount,
       loadingComponents,
@@ -380,7 +334,6 @@ export default {
       loadComponent,
       unloadComponent,
       preloadCriticalData,
-      clearCache,
       runPerformanceTest,
       exportReport,
       onImagesOptimized

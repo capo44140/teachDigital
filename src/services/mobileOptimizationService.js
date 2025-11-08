@@ -237,7 +237,6 @@ class MobileOptimizationService {
     // Marquer les composants non critiques pour le lazy loading
     const nonCriticalComponents = [
       'PerformanceDashboard',
-      'CacheStats',
       'ImageOptimizer',
       'AdvancedSettings'
     ]

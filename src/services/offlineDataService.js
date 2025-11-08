@@ -1,16 +1,14 @@
 /**
  * Service de gestion des données offline-first
- * Gère le cache et la synchronisation des données critiques
+ * Gère la synchronisation des données critiques sans cache
  */
 
-import cacheService from './cacheService.js'
 import { ProfileService } from './profile/profileService.js'
 import { LessonService } from './lessonService.js'
 import { NotificationService } from './notificationService.js'
 
 class OfflineDataService {
   constructor() {
-    this.cachePrefix = 'offline_'
     this.syncQueue = []
     this.isOnline = navigator.onLine
     this.syncInProgress = false
@@ -41,144 +39,50 @@ class OfflineDataService {
   }
 
   /**
-   * Cache les données critiques pour le mode offline
-   * @param {string} dataType - Type de données (profiles, lessons, notifications)
-   * @param {Array|Object} data - Données à mettre en cache
-   * @param {Object} options - Options de cache
-   */
-  async cacheCriticalData(dataType, data, options = {}) {
-    const {
-      ttl = 24 * 60 * 60 * 1000, // 24 heures par défaut
-      priority = 'high',
-      tags = ['critical', 'offline']
-    } = options
-
-    const cacheKey = `${this.cachePrefix}${dataType}`
-    
-    try {
-      await cacheService.set(cacheKey, data, {
-        ttl,
-        persistent: true,
-        priority,
-        tags
-      })
-
-      // Mettre à jour le timestamp de dernière synchronisation
-      await cacheService.set(`${cacheKey}_last_sync`, Date.now(), {
-        ttl: ttl * 2,
-        persistent: true,
-        priority: 'normal'
-      })
-
-      console.log(`📦 Données critiques mises en cache: ${dataType}`)
-    } catch (error) {
-      console.error(`Erreur lors de la mise en cache de ${dataType}:`, error)
-    }
-  }
-
-  /**
-   * Récupère les données critiques depuis le cache avec stratégie stale-while-revalidate
+   * Récupère les données critiques (sans cache)
    * @param {string} dataType - Type de données
    * @param {Function} fetchFn - Fonction de récupération en ligne
    * @param {Object} options - Options
    */
   async getCriticalData(dataType, fetchFn, options = {}) {
-    const cacheKey = `${this.cachePrefix}${dataType}`
-    const lastSyncKey = `${cacheKey}_last_sync`
-    const { staleWhileRevalidate = true } = options
-    
-    // Essayer de récupérer depuis le cache
-    const cachedData = cacheService.get(cacheKey)
-    const lastSync = cacheService.get(lastSyncKey, 0)
-    const isFresh = cachedData && this.isDataFresh(lastSync, options.maxAge)
-    
-    // Stratégie stale-while-revalidate :
-    // Retourner immédiatement les données en cache et revalider en arrière-plan
-    if (cachedData && staleWhileRevalidate && this.isOnline && fetchFn) {
-      console.log(`📱 Stale-while-revalidate: retour immédiat du cache pour ${dataType}`)
-      
-      // Si les données sont fraîches, les retourner immédiatement
-      if (isFresh) {
-        return cachedData
-      }
-      
-      // Si les données sont périmées, les retourner quand même mais revalider en arrière-plan
-      console.log(`🔄 Revalidation en arrière-plan pour ${dataType}`)
-      this.revalidateInBackground(dataType, fetchFn, options)
-      
-      return cachedData
-    }
-    
-    // Si pas de cache ou stratégie désactivée, comportement classique
-    if (isFresh && cachedData) {
-      console.log(`📱 Données fraîches récupérées depuis le cache: ${dataType}`)
-      return cachedData
-    }
-
-    // Si en ligne, essayer de récupérer les données fraîches
+    // Si en ligne, récupérer directement depuis l'API
     if (this.isOnline && fetchFn) {
       try {
         console.log(`🌐 Récupération des données en ligne: ${dataType}`)
         const freshData = await fetchFn()
-        
-        // Mettre en cache les nouvelles données
-        await this.cacheCriticalData(dataType, freshData, options)
-        
         return freshData
       } catch (error) {
         console.warn(`Erreur lors de la récupération en ligne de ${dataType}:`, error)
-        
-        // Retourner les données en cache si disponibles
-        if (cachedData) {
-          console.log(`📱 Fallback sur les données en cache: ${dataType}`)
-          return cachedData
-        }
-        
         throw error
       }
     }
 
-    // Mode offline ou erreur - retourner les données en cache
-    if (cachedData) {
-      console.log(`📱 Mode offline - données depuis le cache: ${dataType}`)
-      return cachedData
+    // Mode offline - essayer de récupérer depuis localStorage
+    try {
+      const stored = localStorage.getItem(`teachdigital_${dataType}`)
+      if (stored) {
+        console.log(`📱 Mode offline - données depuis localStorage: ${dataType}`)
+        return JSON.parse(stored)
+      }
+    } catch (error) {
+      console.warn(`Erreur lors de la récupération depuis localStorage: ${dataType}`, error)
     }
 
     throw new Error(`Aucune donnée disponible pour ${dataType} en mode offline`)
   }
 
   /**
-   * Revalide les données en arrière-plan sans bloquer
+   * Sauvegarde les données dans localStorage pour le mode offline
    * @param {string} dataType - Type de données
-   * @param {Function} fetchFn - Fonction de récupération
-   * @param {Object} options - Options
+   * @param {Array|Object} data - Données à sauvegarder
    */
-  revalidateInBackground(dataType, fetchFn, options = {}) {
-    // Utiliser setTimeout pour ne pas bloquer le thread principal
-    setTimeout(async () => {
-      try {
-        console.log(`🔄 Début de revalidation pour ${dataType}`)
-        const freshData = await fetchFn()
-        await this.cacheCriticalData(dataType, freshData, options)
-        console.log(`✅ Revalidation terminée pour ${dataType}`)
-        
-        // Émettre un événement pour notifier de la mise à jour
-        window.dispatchEvent(new CustomEvent('data-revalidated', {
-          detail: { dataType, data: freshData }
-        }))
-      } catch (error) {
-        console.warn(`⚠️ Échec de revalidation pour ${dataType}:`, error)
-      }
-    }, 100) // Délai court pour éviter de bloquer
-  }
-
-  /**
-   * Vérifie si les données sont fraîches
-   * @param {number} lastSync - Timestamp de dernière synchronisation
-   * @param {number} maxAge - Âge maximum en millisecondes
-   */
-  isDataFresh(lastSync, maxAge = 60 * 60 * 1000) { // 1 heure par défaut
-    return Date.now() - lastSync < maxAge
+  saveToLocalStorage(dataType, data) {
+    try {
+      localStorage.setItem(`teachdigital_${dataType}`, JSON.stringify(data))
+      console.log(`📦 Données sauvegardées dans localStorage: ${dataType}`)
+    } catch (error) {
+      console.warn(`Erreur lors de la sauvegarde dans localStorage: ${dataType}`, error)
+    }
   }
 
   /**
@@ -221,12 +125,8 @@ class OfflineDataService {
    */
   async preloadProfiles() {
     try {
-      const profiles = await this.getCriticalData(
-        'profiles',
-        () => ProfileService.getAllProfiles(),
-        { maxAge: 30 * 60 * 1000 } // 30 minutes
-      )
-      
+      const profiles = await ProfileService.getAllProfiles()
+      this.saveToLocalStorage('profiles', profiles)
       console.log(`👥 ${profiles.length} profils préchargés`)
       return profiles
     } catch (error) {
@@ -240,12 +140,8 @@ class OfflineDataService {
    */
   async preloadLessons() {
     try {
-      const lessons = await this.getCriticalData(
-        'lessons',
-        () => LessonService.getAllAvailableLessons(),
-        { maxAge: 60 * 60 * 1000 } // 1 heure
-      )
-      
+      const lessons = await LessonService.getAllAvailableLessons()
+      this.saveToLocalStorage('lessons', lessons)
       console.log(`📚 ${lessons.length} leçons préchargées`)
       return lessons
     } catch (error) {
@@ -259,8 +155,9 @@ class OfflineDataService {
    */
   async preloadNotifications() {
     try {
-      // Récupérer les notifications pour tous les profils actifs
-      const profiles = cacheService.get(`${this.cachePrefix}profiles`, [])
+      // Récupérer les profils depuis localStorage
+      const storedProfiles = localStorage.getItem('teachdigital_profiles')
+      const profiles = storedProfiles ? JSON.parse(storedProfiles) : []
       
       if (profiles.length === 0) {
         console.log('🔔 Aucun profil trouvé pour précharger les notifications')
@@ -268,11 +165,7 @@ class OfflineDataService {
       }
       
       const notificationPromises = profiles.map(profile => 
-        this.getCriticalData(
-          `notifications_${profile.id}`,
-          () => NotificationService.getNotifications(profile.id),
-          { maxAge: 5 * 60 * 1000 } // 5 minutes
-        )
+        NotificationService.getNotifications(profile.id)
       )
 
       const notifications = await Promise.allSettled(notificationPromises)
@@ -350,11 +243,6 @@ class OfflineDataService {
     this.syncQueue = failedSyncs
     this.saveSyncQueue()
 
-    // Nettoyer le cache des données synchronisées
-    if (successfulSyncs.length > 0) {
-      await this.invalidateCacheForSyncs(successfulSyncs)
-    }
-
     this.syncInProgress = false
     console.log(`🎯 Synchronisation terminée: ${successfulSyncs.length} réussies, ${failedSyncs.length} en attente`)
   }
@@ -390,35 +278,6 @@ class OfflineDataService {
         break
       default:
         throw new Error(`Action de synchronisation non supportée: ${action}`)
-    }
-  }
-
-  /**
-   * Invalide le cache pour les actions synchronisées
-   * @param {Array} syncs - Actions synchronisées
-   */
-  async invalidateCacheForSyncs(syncs) {
-    const tagsToInvalidate = new Set()
-
-    for (const sync of syncs) {
-      switch (sync.action) {
-        case 'create_profile':
-        case 'update_profile':
-          tagsToInvalidate.add('profiles')
-          break
-        case 'create_lesson':
-        case 'save_quiz_result':
-          tagsToInvalidate.add('lessons')
-          break
-        case 'create_notification':
-          tagsToInvalidate.add('notifications')
-          break
-      }
-    }
-
-    // Invalider les caches concernés
-    for (const tag of tagsToInvalidate) {
-      cacheService.deleteByTags([tag])
     }
   }
 
@@ -470,8 +329,7 @@ class OfflineDataService {
     return {
       isOnline: this.isOnline,
       syncQueueLength: this.syncQueue.length,
-      syncInProgress: this.syncInProgress,
-      cacheStats: cacheService.getStats()
+      syncInProgress: this.syncInProgress
     }
   }
 
@@ -480,9 +338,6 @@ class OfflineDataService {
    */
   async forceSync() {
     console.log('🔄 Synchronisation forcée des données...')
-    
-    // Vider le cache pour forcer le rechargement
-    cacheService.deleteByTags(['critical'])
     
     // Précharger les données fraîches
     await this.preloadCriticalData()

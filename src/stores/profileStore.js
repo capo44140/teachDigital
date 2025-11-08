@@ -55,21 +55,17 @@ export const useProfileStore = defineStore('profile', {
       this.error = null;
       
       try {
-        // Utiliser le service de cache offline pour charger les profils
+        // Charger les profils directement depuis l'API
         this.profiles = await offlineDataService.getCriticalData(
           'profiles',
-          () => ProfileService.getAllProfiles(),
-          { 
-            maxAge: 30 * 60 * 1000, // 30 minutes
-            ttl: 30 * 60 * 1000,
-            persistent: true,
-            priority: 'high',
-            tags: ['profiles']
-          }
+          () => ProfileService.getAllProfiles()
         );
         
+        // Sauvegarder dans localStorage pour le mode offline
+        offlineDataService.saveToLocalStorage('profiles', this.profiles);
+        
         await this.loadStats();
-        console.log('✅ Profils chargés avec succès et mis en cache');
+        console.log('✅ Profils chargés avec succès');
       } catch (error) {
         this.error = error.message;
         console.error('❌ Erreur lors du chargement des profils:', error);
@@ -102,23 +98,13 @@ export const useProfileStore = defineStore('profile', {
       this.error = null;
       
       try {
-        // Utiliser le cache pour charger un profil spécifique
-        this.currentProfile = await offlineDataService.getCriticalData(
-          `profile_${id}`,
-          () => ProfileService.getProfileById(id),
-          { 
-            maxAge: 15 * 60 * 1000, // 15 minutes
-            ttl: 15 * 60 * 1000,
-            persistent: true,
-            priority: 'high',
-            tags: ['profiles', `profile_${id}`]
-          }
-        );
+        // Charger un profil spécifique directement depuis l'API
+        this.currentProfile = await ProfileService.getProfileById(id);
         
         if (!this.currentProfile) {
           throw new Error('Profil non trouvé');
         }
-        console.log('✅ Profil chargé avec succès et mis en cache');
+        console.log('✅ Profil chargé avec succès');
       } catch (error) {
         this.error = error.message;
         console.error('❌ Erreur lors du chargement du profil:', error);
@@ -135,12 +121,12 @@ export const useProfileStore = defineStore('profile', {
       try {
         const newProfile = await ProfileService.createProfile(profileData);
         this.profiles.unshift(newProfile);
+        
+        // Mettre à jour localStorage
+        offlineDataService.saveToLocalStorage('profiles', this.profiles);
+        
         await this.loadStats();
-        
-        // Invalider le cache des profils
-        offlineDataService.cacheService.deleteByTags(['profiles']);
-        
-        console.log('✅ Profil créé avec succès et cache invalidé');
+        console.log('✅ Profil créé avec succès');
         return newProfile;
       } catch (error) {
         this.error = error.message;
@@ -170,8 +156,8 @@ export const useProfileStore = defineStore('profile', {
           this.currentProfile = updatedProfile;
         }
         
-        // Invalider le cache des profils
-        offlineDataService.cacheService.deleteByTags(['profiles', `profile_${id}`]);
+        // Mettre à jour localStorage
+        offlineDataService.saveToLocalStorage('profiles', this.profiles);
         
         await this.loadStats();
         console.log('✅ Profil mis à jour avec succès');
@@ -329,24 +315,21 @@ export const useProfileStore = defineStore('profile', {
       };
     },
 
-    // Forcer le rechargement des profils depuis le cache
-    async refreshProfilesFromCache() {
+    // Forcer le rechargement des profils
+    async refreshProfiles() {
       try {
-        // Vider le cache des profils pour forcer le rechargement
-        offlineDataService.cacheService.deleteByTags(['profiles']);
-        
         // Recharger les profils
         await this.loadProfiles();
         
-        console.log('✅ Profils rechargés depuis le cache');
+        console.log('✅ Profils rechargés');
       } catch (error) {
         console.error('❌ Erreur lors du rechargement des profils:', error);
         throw error;
       }
     },
 
-    // Obtenir les statistiques du cache
-    getCacheStats() {
+    // Obtenir les statistiques du service offline
+    getOfflineStats() {
       return offlineDataService.getStats();
     }
   }
