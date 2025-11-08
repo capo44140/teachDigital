@@ -17,9 +17,7 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-    max: 5,
-    idleTimeoutMillis: 30000, // 30 secondes
-    connectionTimeoutMillis: 10000, // 10 secondes - timeout plus court pour éviter les blocages
+    max: 5
   };
   console.log('🔗 Connexion PostgreSQL configurée avec variables séparées');
   console.log(`📍 Hôte: ${process.env.DB_HOST}:${poolConfig.port}`);
@@ -32,13 +30,6 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
     throw new Error('DATABASE_URL doit commencer par postgresql:// ou postgres://');
   }
   
-  poolConfig = {
-    connectionString,
-    max: 5,
-    idleTimeoutMillis: 30000, // 30 secondes
-    connectionTimeoutMillis: 10000, // 10 secondes - timeout plus court
-    ssl: false,
-  };
   console.log('🔗 Connexion PostgreSQL configurée avec DATABASE_URL');
   console.log('🔍 DATABASE_URL détectée:', connectionString.replace(/:[^:@]+@/, ':****@'));
 } else {
