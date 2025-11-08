@@ -1,28 +1,29 @@
 ---
 globs: src/repositories/*.js,backend/lib/database.js,scripts/migrate-*.js
-description: Patterns avancés pour la base de données Neon et la gestion des données
+description: Patterns avancés pour la base de données PostgreSQL et la gestion des données
 ---
 
 # Patterns Avancés de Base de Données - TeachDigital
 
 ## Architecture de Base de Données
 
-### Configuration Neon Database
+### Configuration PostgreSQL
 - **Configuration principale** : [src/config/database.js](mdc:src/config/database.js)
 - **Backend Database** : [backend/lib/database.js](mdc:backend/lib/database.js)
 - **Variables d'environnement** : Configuration dans [vite.config.js](mdc:vite.config.js)
 
 ```javascript
-// Configuration sécurisée de la base de données
-import { neon } from '@neondatabase/serverless'
+// Configuration sécurisée de la base de données PostgreSQL
+import { Pool } from 'pg'
 
-const sql = neon(process.env.DATABASE_URL, {
-  arrayMode: false,
-  fullResults: false,
-  fetchConnectionCache: true
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 1,
+  idleTimeoutMillis: 60000,
+  connectionTimeoutMillis: 60000
 })
 
-export { sql }
+export { pool, sql }
 export default sql
 ```
 

@@ -1,0 +1,197 @@
+---
+globs: **/*
+description: Vue d'ensemble de l'architecture TeachDigital - Frontend/Backend séparés
+alwaysApply: true
+---
+
+# Architecture TeachDigital - Vue d'Ensemble
+
+## 🏗️ Architecture Générale
+
+### Principe Fondamental
+**Le frontend ne fait QUE des appels API au backend. Aucune logique métier dans le frontend.**
+
+```
+Frontend (Vue.js 3)
+    ↓ Appels HTTP uniquement (via apiService)
+Backend API (Vercel Functions)
+    ↓ Logique métier + Base de données
+PostgreSQL Database
+```
+
+## 📁 Structure du Projet
+
+### Frontend (`src/`)
+- **Composants** : `src/components/` - Composants Vue.js uniquement UI
+- **Services** : `src/services/` - Uniquement des appels API, pas de logique métier
+- **Stores** : `src/stores/` - Gestion d'état Pinia (données depuis API)
+- **Router** : `src/router/` - Navigation Vue Router
+
+### Backend (`backend/`)
+- **API** : `backend/api/` - Endpoints Vercel Functions
+- **Lib** : `backend/lib/` - Utilitaires (database, auth, cors, etc.)
+- **Logique métier** : Toute la logique métier est dans le backend
+
+## 🔌 Communication Frontend/Backend
+
+### Service API Principal
+Tous les appels backend passent par `src/services/apiService.js` :
+
+```javascript
+import { apiService } from './apiService.js'
+
+// Exemple d'utilisation
+const profiles = await apiService.getProfiles()
+const profile = await apiService.getProfile(id)
+await apiService.createProfile(profileData)
+```
+
+### Format des Réponses Backend
+Le backend retourne toujours ce format :
+```javascript
+{
+  success: true|false,
+  message: "Message descriptif",
+  data: { /* données */ }
+}
+```
+
+## 🗄️ Base de Données
+
+### Configuration
+- **Type** : PostgreSQL (pas Neon)
+- **Variable** : `DATABASE_URL` (format PostgreSQL standard)
+- **Pool** : Utilise `pg` (Pool PostgreSQL natif)
+- **Backend uniquement** : Le frontend n'accède JAMAIS à la base de données
+
+### Accès Base de Données
+```javascript
+// ✅ BON - Backend uniquement
+const { sql } = require('../lib/database.js')
+const profiles = await sql`SELECT * FROM profiles`
+
+// ❌ MAUVAIS - Frontend
+import sql from '@/config/database.js' // INTERDIT
+```
+
+## 🚫 Règles Strictes
+
+### Frontend - INTERDICTIONS
+1. ❌ **Aucun accès direct à la base de données**
+2. ❌ **Aucune logique métier** (calculs, validations complexes, etc.)
+3. ❌ **Aucune requête SQL** dans le frontend
+4. ❌ **Aucun import de `database.js`** dans le frontend
+
+### Frontend - AUTORISATIONS
+1. ✅ **Appels API uniquement** via `apiService`
+2. ✅ **Validation UI simple** (format, champs requis)
+3. ✅ **Gestion d'état** avec Pinia
+4. ✅ **Formatage d'affichage** (dates, nombres, etc.)
+
+### Backend - RESPONSABILITÉS
+1. ✅ **Toute la logique métier**
+2. ✅ **Validation des données**
+3. ✅ **Accès à la base de données**
+4. ✅ **Authentification et autorisation**
+5. ✅ **Gestion des erreurs**
+
+## 📝 Exemples de Code
+
+### ✅ Frontend - Appel API
+```javascript
+// src/services/badgeService.js
+import { apiService } from './apiService.js'
+
+export class BadgeService {
+  async getAllBadges() {
+    const response = await apiService.request('/api/badges')
+    return response.data || []
+  }
+}
+```
+
+### ✅ Backend - Logique Métier
+```javascript
+// backend/api/badges.js
+const { sql } = require('../lib/database.js')
+
+async function handleGetAllBadges(req, res) {
+  const badges = await sql`
+    SELECT * FROM badges 
+    ORDER BY category, condition_value ASC
+  `
+  return res.status(200).json({
+    success: true,
+    message: 'Badges récupérés avec succès',
+    data: badges
+  })
+}
+```
+
+### ❌ Frontend - À NE JAMAIS FAIRE
+```javascript
+// ❌ INTERDIT - Accès direct DB
+import sql from '@/config/database.js'
+const profiles = await sql`SELECT * FROM profiles`
+
+// ❌ INTERDIT - Logique métier
+function calculateBadgeProgress(badge) {
+  // Calculs complexes...
+}
+
+// ❌ INTERDIT - Validation serveur
+function validateProfile(profile) {
+  // Validation complexe...
+}
+```
+
+## 🔐 Authentification
+
+### Frontend
+```javascript
+// Token stocké dans localStorage
+const token = localStorage.getItem('auth_token')
+
+// Ajouté automatiquement par apiService
+apiService.request('/api/profiles', {
+  headers: { 'Authorization': `Bearer ${token}` }
+})
+```
+
+### Backend
+```javascript
+// backend/lib/auth.js
+const { authenticateToken } = require('../lib/auth.js')
+
+const user = authenticateToken(req)
+if (!user.isAdmin) {
+  return res.status(403).json({ success: false, message: 'Accès refusé' })
+}
+```
+
+## 🎯 Bonnes Pratiques
+
+### Services Frontend
+- **Uniquement des appels API**
+- **Pas de logique métier**
+- **Gestion d'erreurs simple** (catch et throw)
+- **Formatage des données pour l'affichage uniquement**
+
+### Services Backend
+- **Toute la logique métier**
+- **Validation complète des données**
+- **Gestion d'erreurs robuste**
+- **Logs d'audit pour les actions sensibles**
+
+### Composants Vue
+- **Appelent les services frontend**
+- **Gèrent l'état UI uniquement**
+- **Pas de logique métier**
+- **Validation UI simple** (champs requis, format)
+
+## 📚 Références
+
+- **API Service** : [src/services/apiService.js](mdc:src/services/apiService.js)
+- **Database Backend** : [backend/lib/database.js](mdc:backend/lib/database.js)
+- **Exemple API** : [backend/api/badges.js](mdc:backend/api/badges.js)
+- **Exemple Service Frontend** : [src/services/badgeService.js](mdc:src/services/badgeService.js)

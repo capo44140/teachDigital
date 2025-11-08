@@ -1,16 +1,16 @@
 ---
 globs: src/repositories/*.js,src/services/*.js,backend/**/*.js
-description: Patterns et conventions pour la base de données Neon
+description: Patterns et conventions pour la base de données PostgreSQL
 ---
 
-# Patterns de Base de Données - Neon Database
+# Patterns de Base de Données - PostgreSQL
 
 ## Configuration de la Base de Données
 
 ### Configuration principale
 - **Configuration** : [src/config/database.js](mdc:src/config/database.js)
 - **Backend API** : [backend/api/index.js](mdc:src/backend/api/index.js)
-- **Variables d'environnement** : Utiliser les variables Neon définies dans [vite.config.js](mdc:vite.config.js)
+- **Variables d'environnement** : Utiliser les variables PostgreSQL définies dans [vite.config.js](mdc:vite.config.js)
 
 ### Pattern Repository
 Utiliser le pattern Repository pour l'accès aux données :
@@ -40,7 +40,7 @@ export class BaseRepository {
 - **Index** : `idx_` + nom de la table + colonnes (ex: `idx_profiles_user_id`)
 
 ### Gestion des connexions
-- Utiliser le pool de connexions Neon
+- Utiliser le pool de connexions PostgreSQL
 - Fermer les connexions après utilisation
 - Gérer les erreurs de connexion gracieusement
 

@@ -14,7 +14,7 @@ Une application Vue.js moderne avec Tailwind CSS 4, optimisée pour le déploiem
 - **Tailwind CSS 4** - Framework CSS utilitaire
 - **PostCSS** - Processeur CSS
 - **Pinia** - Gestion d'état Vue.js
-- **Neon Database** - Base de données PostgreSQL serverless
+- **PostgreSQL** - Base de données PostgreSQL
 - **Vercel** - Plateforme de déploiement optimisée
 
 ## ⚡ Optimisations de Performance

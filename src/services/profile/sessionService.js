@@ -1,4 +1,9 @@
-import sql from '../../config/database.js';
+/**
+ * Service pour la gestion des sessions - Délégation au backend
+ * Toute la logique de session est gérée par le backend
+ */
+
+import { apiService } from '../apiService.js'
 
 /**
  * Service pour la gestion des sessions
@@ -6,64 +11,65 @@ import sql from '../../config/database.js';
  */
 export class SessionService {
   
-  // Créer une session
+  /**
+   * Créer une session (via backend)
+   */
   static async createSession(profileId, sessionToken, expiresAt) {
     try {
-      const result = await sql`
-        INSERT INTO sessions (profile_id, session_token, expires_at)
-        VALUES (${profileId}, ${sessionToken}, ${expiresAt})
-        RETURNING *
-      `;
-      return result[0];
+      const response = await apiService.request('/api/sessions', {
+        method: 'POST',
+        body: JSON.stringify({ profileId, sessionToken, expiresAt })
+      })
+      return response.data?.session || null
     } catch (error) {
-      console.error('Erreur lors de la création de la session:', error);
-      throw error;
+      console.error('Erreur lors de la création de la session:', error)
+      throw error
     }
   }
   
-  // Vérifier une session
+  /**
+   * Vérifier une session (via backend)
+   */
   static async verifySession(sessionToken) {
     try {
-      const sessions = await sql`
-        SELECT s.*, p.name, p.type, p.is_admin, p.is_child, p.is_teen
-        FROM sessions s
-        JOIN profiles p ON s.profile_id = p.id
-        WHERE s.session_token = ${sessionToken}
-        AND s.expires_at > CURRENT_TIMESTAMP
-      `;
-      return sessions[0] || null;
+      const response = await apiService.request(`/api/sessions/verify`, {
+        method: 'POST',
+        body: JSON.stringify({ sessionToken })
+      })
+      return response.data?.session || null
     } catch (error) {
-      console.error('Erreur lors de la vérification de la session:', error);
-      throw error;
+      console.error('Erreur lors de la vérification de la session:', error)
+      throw error
     }
   }
   
-  // Supprimer une session
+  /**
+   * Supprimer une session (via backend)
+   */
   static async deleteSession(sessionToken) {
     try {
-      const result = await sql`
-        DELETE FROM sessions 
-        WHERE session_token = ${sessionToken}
-        RETURNING *
-      `;
-      return result[0];
+      const response = await apiService.request(`/api/sessions/${sessionToken}`, {
+        method: 'DELETE'
+      })
+      return response.success
     } catch (error) {
-      console.error('Erreur lors de la suppression de la session:', error);
-      throw error;
+      console.error('Erreur lors de la suppression de la session:', error)
+      throw error
     }
   }
   
-  // Nettoyer les sessions expirées
+  /**
+   * Nettoyer les sessions expirées (via backend)
+   */
   static async cleanExpiredSessions() {
     try {
-      const result = await sql`
-        DELETE FROM sessions 
-        WHERE expires_at < CURRENT_TIMESTAMP
-      `;
-      return result;
+      const response = await apiService.request('/api/sessions/clean', {
+        method: 'POST'
+      })
+      return response.data?.cleaned || 0
     } catch (error) {
-      console.error('Erreur lors du nettoyage des sessions:', error);
-      throw error;
+      console.error('Erreur lors du nettoyage des sessions:', error)
+      throw error
     }
   }
 }

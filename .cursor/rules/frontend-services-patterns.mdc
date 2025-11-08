@@ -1,0 +1,260 @@
+---
+globs: src/services/*.js
+description: Patterns pour les services frontend - Appels API uniquement
+alwaysApply: true
+---
+
+# Patterns Services Frontend - Appels API Uniquement
+
+## ⚠️ Règle Fondamentale
+
+**Les services frontend ne font QUE des appels API au backend. Aucune logique métier.**
+
+## 📋 Structure Standard d'un Service Frontend
+
+```javascript
+/**
+ * Service pour [description] - Délégation au backend
+ * Toute la logique métier est gérée par le backend
+ */
+
+import { apiService } from './apiService.js'
+
+export class MonService {
+  /**
+   * Description de la méthode
+   * @param {type} param - Description
+   * @returns {Promise<type>} Description
+   */
+  async maMethode(param) {
+    try {
+      const response = await apiService.request('/api/endpoint', {
+        method: 'POST',
+        body: JSON.stringify({ param })
+      })
+      return response.data || null
+    } catch (error) {
+      console.error('Erreur dans maMethode:', error)
+      throw error
+    }
+  }
+}
+
+export default new MonService()
+```
+
+## ✅ Ce qui est AUTORISÉ dans les Services Frontend
+
+### 1. Appels API
+```javascript
+// ✅ BON - Appel API simple
+async getAllItems() {
+  const response = await apiService.request('/api/items')
+  return response.data || []
+}
+```
+
+### 2. Formatage pour l'affichage
+```javascript
+// ✅ BON - Formatage UI uniquement
+formatDate(dateString) {
+  return new Date(dateString).toLocaleDateString('fr-FR')
+}
+
+formatCurrency(amount) {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR'
+  }).format(amount)
+}
+```
+
+### 3. Gestion d'erreurs simple
+```javascript
+// ✅ BON - Catch et throw simple
+async getItem(id) {
+  try {
+    const response = await apiService.request(`/api/items/${id}`)
+    return response.data
+  } catch (error) {
+    console.error('Erreur:', error)
+    throw error
+  }
+}
+```
+
+### 4. Transformation de données pour l'UI
+```javascript
+// ✅ BON - Transformation simple pour l'affichage
+async getItemsForSelect() {
+  const items = await this.getAllItems()
+  return items.map(item => ({
+    label: item.name,
+    value: item.id
+  }))
+}
+```
+
+## ❌ Ce qui est INTERDIT dans les Services Frontend
+
+### 1. Accès à la base de données
+```javascript
+// ❌ INTERDIT - Accès direct DB
+import sql from '@/config/database.js'
+const items = await sql`SELECT * FROM items`
+```
+
+### 2. Logique métier complexe
+```javascript
+// ❌ INTERDIT - Calculs métier
+calculateBadgeProgress(badge) {
+  // Logique complexe de calcul...
+}
+
+// ❌ INTERDIT - Validation serveur
+validateProfile(profile) {
+  // Validation complexe...
+}
+```
+
+### 3. Requêtes SQL
+```javascript
+// ❌ INTERDIT - SQL dans le frontend
+async getProfileBadges(profileId) {
+  const result = await sql`
+    SELECT * FROM badges WHERE profile_id = ${profileId}
+  `
+}
+```
+
+### 4. Cache complexe avec logique
+```javascript
+// ❌ INTERDIT - Cache avec logique métier
+class CacheService {
+  cleanup() {
+    // Logique de nettoyage complexe...
+  }
+  
+  evictLeastUsed() {
+    // Algorithme LRU...
+  }
+}
+```
+
+## 📝 Exemples Concrets
+
+### ✅ Service Badge (Correct)
+```javascript
+// src/services/badgeService.js
+import { apiService } from './apiService.js'
+
+export class BadgeService {
+  async getAllBadges() {
+    const response = await apiService.request('/api/badges')
+    return response.data || []
+  }
+
+  async getProfileBadges(profileId) {
+    const response = await apiService.request(`/api/badges/profile/${profileId}`)
+    return response.data || []
+  }
+}
+```
+
+### ✅ Service Cache (Correct - Appels API)
+```javascript
+// src/services/cacheService.js
+import { apiService } from './apiService.js'
+
+class CacheService {
+  async get(key, defaultValue = null) {
+    try {
+      const response = await apiService.request(`/api/cache/${encodeURIComponent(key)}`)
+      return response.data?.value ?? defaultValue
+    } catch (error) {
+      return defaultValue
+    }
+  }
+
+  async set(key, value, options = {}) {
+    await apiService.request('/api/cache', {
+      method: 'POST',
+      body: JSON.stringify({ key, value, options })
+    })
+  }
+}
+```
+
+### ✅ Service AI (Correct - Appels API)
+```javascript
+// src/services/aiService.js
+import { apiService } from './apiService.js'
+
+class AIService {
+  async generateQuizFromImage(imageFile, childProfile) {
+    const formData = new FormData()
+    formData.append('image', imageFile)
+    formData.append('childProfile', JSON.stringify(childProfile))
+
+    const response = await apiService.request('/api/ai/generate-quiz-from-image', {
+      method: 'POST',
+      body: formData
+    })
+    return response.data?.quiz || null
+  }
+}
+```
+
+## 🔄 Flux de Données
+
+### Pattern Standard
+```
+Composant Vue
+    ↓
+Service Frontend (appel API)
+    ↓
+apiService.request()
+    ↓
+Backend API (logique métier)
+    ↓
+Base de données PostgreSQL
+```
+
+### Exemple Complet
+```javascript
+// 1. Composant Vue
+// src/components/BadgeList.vue
+import badgeService from '@/services/badgeService.js'
+
+const badges = await badgeService.getAllBadges()
+
+// 2. Service Frontend
+// src/services/badgeService.js
+async getAllBadges() {
+  return await apiService.request('/api/badges')
+}
+
+// 3. Backend API
+// backend/api/badges.js
+const badges = await sql`SELECT * FROM badges`
+return res.json({ success: true, data: badges })
+```
+
+## 🎯 Checklist pour Nouveau Service
+
+Avant de créer un nouveau service frontend, vérifier :
+
+- [ ] Le service ne contient QUE des appels API
+- [ ] Aucun import de `database.js` ou `sql`
+- [ ] Aucune logique métier complexe
+- [ ] Aucune requête SQL
+- [ ] Utilise `apiService` pour tous les appels
+- [ ] Gestion d'erreurs simple (catch/throw)
+- [ ] Formatage UI uniquement si nécessaire
+
+## 📚 Références
+
+- **Service API Principal** : [src/services/apiService.js](mdc:src/services/apiService.js)
+- **Exemple Service Badge** : [src/services/badgeService.js](mdc:src/services/badgeService.js)
+- **Exemple Service Cache** : [src/services/cacheService.js](mdc:src/services/cacheService.js)
+- **Architecture** : [.cursor/rules/architecture-overview.mdc](mdc:.cursor/rules/architecture-overview.mdc)

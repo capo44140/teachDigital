@@ -24,7 +24,7 @@ try {
   console.log('🔍 DATABASE_URL détectée:', connectionString.replace(/:[^:@]+@/, ':****@')); // Masquer le mot de passe dans les logs
   console.log('📝 Longueur DATABASE_URL:', connectionString.length, 'caractères');
   
-  // Configuration OPTIMISÉE pour Neon/Vercel serverless avec pg
+  // Configuration OPTIMISÉE pour PostgreSQL/Vercel serverless avec pg
   pool = new Pool({
     connectionString,
     max: 1, // Limiter les connexions pour Vercel serverless
@@ -67,7 +67,7 @@ async function testConnection() {
     console.error('❌ Erreur de connexion à la base de données:', error);
     console.error('💡 Vérifications à faire:');
     console.error('   - DATABASE_URL est-elle correctement configurée?');
-    console.error('   - Le cluster Neon est-il disponible?');
+    console.error('   - Le serveur PostgreSQL est-il disponible?');
     console.error('   - Les pare-feu/IP whitelist permettent la connexion?');
     return false;
   } finally {
@@ -79,7 +79,7 @@ async function testConnection() {
 console.log('═══════════════════════════════════════════════════════════');
 console.log('🚀 Initialisation du Backend TeachDigital');
 console.log('═══════════════════════════════════════════════════════════');
-console.log('📡 Configuration PostgreSQL/Neon:');
+console.log('📡 Configuration PostgreSQL:');
 console.log(`   - DATABASE_URL: ${connectionString.replace(/:[^:@]+@/, ':****@')}`);
 console.log('   - SSL Mode: require');
 console.log('   - Connect Timeout: 30s');
