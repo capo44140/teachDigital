@@ -17,7 +17,14 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-    max: 5
+    max: parseInt(process.env.DB_MAX_CONNECTIONS) || 10, // Augmenter le pool pour plus de performance
+    min: 2, // Maintenir au moins 2 connexions actives
+    idleTimeoutMillis: 30000, // 30 secondes avant de fermer une connexion inactive
+    connectionTimeoutMillis: 5000, // 5 secondes max pour établir une connexion
+    statement_timeout: 0, // Pas de timeout sur les statements (désactivé)
+    query_timeout: 0, // Pas de timeout sur les queries (désactivé)
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000
   };
   console.log('🔗 Connexion PostgreSQL configurée avec variables séparées');
   console.log(`📍 Hôte: ${process.env.DB_HOST}:${poolConfig.port}`);
@@ -29,6 +36,19 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
   if (!connectionString.startsWith('postgresql://') && !connectionString.startsWith('postgres://')) {
     throw new Error('DATABASE_URL doit commencer par postgresql:// ou postgres://');
   }
+  
+  // Ajouter les options de performance à la connection string si elles ne sont pas déjà présentes
+  poolConfig = {
+    connectionString,
+    max: parseInt(process.env.DB_MAX_CONNECTIONS) || 10,
+    min: 2,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+    statement_timeout: 0,
+    query_timeout: 0,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000
+  };
   
   console.log('🔗 Connexion PostgreSQL configurée avec DATABASE_URL');
   console.log('🔍 DATABASE_URL détectée:', connectionString.replace(/:[^:@]+@/, ':****@'));
@@ -96,10 +116,13 @@ if (process.env.DB_HOST) {
   console.log(`   - DATABASE_URL: ${process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@') || 'non définie'}`);
   console.log('   - SSL Mode: disabled');
 }
-console.log('   - Connect Timeout: 10s');
+console.log('   - Connect Timeout: 5s');
 console.log('   - Idle Timeout: 30s');
-console.log('   - Statement Timeout: 10s');
-console.log('   - Max Connections: 5');
+console.log('   - Statement Timeout: DISABLED (0)');
+console.log('   - Query Timeout: DISABLED (0)');
+console.log('   - Max Connections: ' + (parseInt(process.env.DB_MAX_CONNECTIONS) || 10));
+console.log('   - Min Connections: 2');
+console.log('   - Keep-Alive: enabled');
 console.log('   - Retry automatique: enabled (5x avec backoff)');
 console.log('═══════════════════════════════════════════════════════════');
 
@@ -165,17 +188,12 @@ function buildQuery(strings, values) {
     if (i < values.length) {
       const value = values[i];
       
-      // Log de débogage pour toutes les valeurs
-      if (value && typeof value === 'object') {
-        console.log(`🔍 [${i}] Valeur détectée:`, {
-          type: typeof value,
-          hasText: 'text' in value,
-          hasParams: 'params' in value,
-          textValue: value.text ? value.text.substring(0, 50) : 'undefined',
-          paramsValue: value.params,
-          isArray: Array.isArray(value.params),
-          keys: Object.keys(value).slice(0, 10)
-        });
+      // Log de débogage uniquement en mode développement
+      if (process.env.NODE_ENV === 'development' && value && typeof value === 'object' && !(value instanceof SqlIdentifier)) {
+        // Log minimal pour le debugging
+        if ('text' in value && 'params' in value) {
+          console.log(`🔍 [SQL Builder] Requête imbriquée détectée à l'index ${i}`);
+        }
       }
       
       if (value instanceof SqlIdentifier) {
@@ -241,47 +259,22 @@ function sql(strings, ...values) {
   
   // Créer une Promise qui sera exécutée seulement quand on await
   const executeQuery = async () => {
-    const connectStartTime = Date.now();
-    console.log(`🔍 [SQL] Tentative de connexion au pool pour: ${queryText.substring(0, 100)}...`);
-    
-    let client;
+    // Exécution directe sans timeout - performance maximale
     try {
-      // Utiliser pool.query() directement au lieu de pool.connect() + client.query()
-      // C'est plus efficace et gère automatiquement la libération du client
-      const queryStartTime = Date.now();
-      console.log(`🔍 [SQL] Exécution de la requête...`);
+      // Utiliser pool.query() directement - c'est la méthode la plus rapide
+      // Le pool gère automatiquement la libération du client
+      const result = await pool.query(queryText, queryParams);
       
-      // Créer un timeout de 8 secondes pour la requête
-      const queryTimeout = 8000;
-      const timeoutId = setTimeout(() => {
-        console.error(`⏱️ [SQL] Timeout après ${queryTimeout}ms - annulation de la requête`);
-      }, queryTimeout);
-      
-      try {
-        // Utiliser pool.query() qui est plus optimisé
-        const result = await Promise.race([
-          pool.query(queryText, queryParams),
-          new Promise((_, reject) => {
-            setTimeout(() => {
-              clearTimeout(timeoutId);
-              reject(new Error('Query timeout: requête SQL dépassée 8 secondes'));
-            }, queryTimeout);
-          })
-        ]);
-        
-        clearTimeout(timeoutId);
-        
-        const queryDuration = Date.now() - queryStartTime;
-        console.log(`✅ [SQL] Requête exécutée en ${queryDuration}ms, ${result.rows.length} lignes`);
-        
-        return result.rows;
-      } catch (error) {
-        clearTimeout(timeoutId);
-        throw error;
+      // Log minimal uniquement en mode développement (optionnel)
+      if (process.env.NODE_ENV === 'development') {
+        const queryPreview = queryText.length > 80 ? queryText.substring(0, 80) + '...' : queryText;
+        console.log(`✅ [SQL] ${result.rows.length} lignes - ${queryPreview}`);
       }
+      
+      return result.rows;
     } catch (error) {
-      const totalDuration = Date.now() - connectStartTime;
-      console.error(`❌ [SQL] Erreur après ${totalDuration}ms:`, error.message);
+      // Log d'erreur uniquement (important pour le debugging)
+      console.error(`❌ [SQL] Erreur:`, error.message);
       if (error.code) {
         console.error(`   Code: ${error.code}`);
       }
