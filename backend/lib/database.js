@@ -21,8 +21,8 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
     min: 2, // Maintenir au moins 2 connexions actives
     idleTimeoutMillis: 30000, // 30 secondes avant de fermer une connexion inactive
     connectionTimeoutMillis: 5000, // 5 secondes max pour établir une connexion
-    statement_timeout: 0, // Pas de timeout sur les statements (désactivé)
-    query_timeout: 0, // Pas de timeout sur les queries (désactivé)
+    statement_timeout: 20000, // 20 secondes max pour éviter timeout Vercel (60s)
+    query_timeout: 20000, // 20 secondes max pour éviter timeout Vercel (60s)
     keepAlive: true,
     keepAliveInitialDelayMillis: 10000
   };
@@ -44,8 +44,8 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
     min: 2,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
-    statement_timeout: 0,
-    query_timeout: 0,
+    statement_timeout: 20000, // 20 secondes max pour éviter timeout Vercel (60s)
+    query_timeout: 20000, // 20 secondes max pour éviter timeout Vercel (60s)
     keepAlive: true,
     keepAliveInitialDelayMillis: 10000
   };
@@ -118,16 +118,17 @@ if (process.env.DB_HOST) {
 }
 console.log('   - Connect Timeout: 5s');
 console.log('   - Idle Timeout: 30s');
-console.log('   - Statement Timeout: DISABLED (0)');
-console.log('   - Query Timeout: DISABLED (0)');
+console.log('   - Statement Timeout: 20s (pour éviter timeout Vercel)');
+console.log('   - Query Timeout: 20s (pour éviter timeout Vercel)');
 console.log('   - Max Connections: ' + (parseInt(process.env.DB_MAX_CONNECTIONS) || 10));
 console.log('   - Min Connections: 2');
 console.log('   - Keep-Alive: enabled');
-console.log('   - Retry automatique: enabled (5x avec backoff)');
+console.log('   - Retry automatique: enabled (2x max, délai 500ms)');
 console.log('═══════════════════════════════════════════════════════════');
 
 // Fonction wrapper pour exécuter des requêtes avec retry automatique
-async function executeWithRetry(queryFn, maxRetries = 5, delayMs = 1000) {
+// OPTIMISÉ: Réduit de 5 à 2 retries max pour éviter les timeouts Vercel (60s)
+async function executeWithRetry(queryFn, maxRetries = 2, delayMs = 500) {
   let lastError;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -160,8 +161,8 @@ async function executeWithRetry(queryFn, maxRetries = 5, delayMs = 1000) {
         throw error;
       }
       
-      // Attendre avant de réessayer (avec backoff exponentiel)
-      const delay = delayMs * Math.pow(2, attempt - 1);
+      // Attendre avant de réessayer (délai fixe plus court pour éviter timeout)
+      const delay = delayMs; // Délai fixe au lieu de backoff exponentiel
       console.log(`⏳ Retry ${attempt}/${maxRetries} après ${delay}ms`);
       console.log(`   Erreur: ${error.code} - ${error.message?.substring(0, 100)}`);
       await new Promise(resolve => setTimeout(resolve, delay));

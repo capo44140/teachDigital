@@ -8,6 +8,33 @@ const OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 
+// Timeout pour les appels API externes (30s max pour éviter timeout Vercel 60s)
+const API_TIMEOUT_MS = 30000;
+
+/**
+ * Fonction helper pour fetch avec timeout
+ * Évite les timeouts Vercel en limitant la durée des appels API externes
+ */
+async function fetchWithTimeout(url, options = {}, timeoutMs = API_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error(`Timeout API après ${timeoutMs}ms`);
+    }
+    throw error;
+  }
+}
+
 /**
  * Gestionnaire pour les fonctionnalités IA
  */
@@ -237,7 +264,7 @@ async function analyzeImage(base64Image) {
 async function analyzeImageWithOpenAI(base64Image) {
   const openaiApiKey = process.env.OPENAI_API_KEY;
   
-  const response = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+  const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${openaiApiKey}`,
@@ -291,10 +318,10 @@ async function analyzeImageWithOpenAI(base64Image) {
  */
 async function analyzeImageWithGemini(base64Image, retryCount = 0) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
-  const maxRetries = 2;
+  const maxRetries = 1; // Réduit de 2 à 1 pour éviter timeout
   
   try {
-    const response = await fetch(`${GEMINI_BASE_URL}/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+    const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -358,14 +385,14 @@ async function analyzeImageWithGemini(base64Image, retryCount = 0) {
       return parsed;
     } catch (parseError) {
       if (retryCount < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
         return analyzeImageWithGemini(base64Image, retryCount + 1);
       }
       throw new Error('Impossible de parser la réponse de Gemini');
     }
   } catch (error) {
     if (retryCount < maxRetries && error.message.includes('tronquée')) {
-      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+      await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
       return analyzeImageWithGemini(base64Image, retryCount + 1);
     }
     throw error;
@@ -378,7 +405,7 @@ async function analyzeImageWithGemini(base64Image, retryCount = 0) {
 async function analyzeImageWithGroq(base64Image) {
   const groqApiKey = process.env.GROQ_API_KEY;
   
-  const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+  const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${groqApiKey}`,
@@ -482,7 +509,7 @@ async function generateQuizFromAnalysis(analysis, childProfile) {
 async function generateQuizWithOpenAI(analysis, childProfile) {
   const openaiApiKey = process.env.OPENAI_API_KEY;
   
-  const response = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+  const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${openaiApiKey}`,
@@ -527,10 +554,10 @@ async function generateQuizWithOpenAI(analysis, childProfile) {
  */
 async function generateQuizWithGemini(analysis, childProfile, retryCount = 0) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
-  const maxRetries = 2;
+  const maxRetries = 1; // Réduit de 2 à 1 pour éviter timeout
   
   try {
-    const response = await fetch(`${GEMINI_BASE_URL}/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+    const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -605,7 +632,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
       }
       
       if (validQuestions.length < 3 && retryCount < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
         return generateQuizWithGemini(analysis, childProfile, retryCount + 1);
       }
       
@@ -616,7 +643,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
       
     } catch (parseError) {
       if (retryCount < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
         return generateQuizWithGemini(analysis, childProfile, retryCount + 1);
       }
       
@@ -624,7 +651,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
     }
   } catch (error) {
     if (retryCount < maxRetries) {
-      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+      await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
       return generateQuizWithGemini(analysis, childProfile, retryCount + 1);
     }
     
@@ -638,7 +665,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
 async function generateQuizWithGroq(analysis, childProfile) {
   const groqApiKey = process.env.GROQ_API_KEY;
   
-  const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+  const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${groqApiKey}`,
@@ -735,7 +762,7 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
 async function generateQuizFromMultipleAnalysesWithOpenAI(analyses, childProfile, questionCount) {
   const openaiApiKey = process.env.OPENAI_API_KEY;
   
-  const response = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+  const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${openaiApiKey}`,
@@ -845,7 +872,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
 async function generateQuizFromMultipleAnalysesWithGroq(analyses, childProfile, questionCount) {
   const groqApiKey = process.env.GROQ_API_KEY;
   
-  const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+  const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${groqApiKey}`,
@@ -942,7 +969,7 @@ async function generateQuizFromTextWithAI(inputText, childProfile, options = {})
 async function generateQuizFromTextWithOpenAI(inputText, childProfile, options) {
   const openaiApiKey = process.env.OPENAI_API_KEY;
   
-  const response = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+  const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${openaiApiKey}`,
@@ -987,10 +1014,10 @@ async function generateQuizFromTextWithOpenAI(inputText, childProfile, options) 
  */
 async function generateQuizFromTextWithGemini(inputText, childProfile, options, retryCount = 0) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
-  const maxRetries = 2;
+  const maxRetries = 1; // Réduit de 2 à 1 pour éviter timeout
   
   try {
-    const response = await fetch(`${GEMINI_BASE_URL}/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+    const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -1057,7 +1084,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
       
     } catch (parseError) {
       if (retryCount < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
         return generateQuizFromTextWithGemini(inputText, childProfile, options, retryCount + 1);
       }
       
@@ -1065,7 +1092,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
     }
   } catch (error) {
     if (retryCount < maxRetries) {
-      await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+      await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
       return generateQuizFromTextWithGemini(inputText, childProfile, options, retryCount + 1);
     }
     
@@ -1079,7 +1106,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
 async function generateQuizFromTextWithGroq(inputText, childProfile, options) {
   const groqApiKey = process.env.GROQ_API_KEY;
   
-  const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+  const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${groqApiKey}`,
