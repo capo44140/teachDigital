@@ -30,6 +30,7 @@ try {
     max: 1, // Limiter les connexions pour Vercel serverless
     idleTimeoutMillis: 60000, // 60 secondes (augmenté)
     connectionTimeoutMillis: 60000, // 60 secondes pour la connexion (CRITICAL - augmenté)
+    ssl: false, // SSL désactivé
   });
   
   // Listeners pour gérer les erreurs de connexion
@@ -58,7 +59,7 @@ async function testConnection() {
     const result = await client.query('SELECT 1 as test');
     console.log('✅ Connexion à la base de données testée avec succès');
     console.log('📊 Paramètres de connexion:');
-    console.log('   - SSL: required');
+    console.log('   - SSL: disabled');
     console.log('   - Connect Timeout: 60 secondes');
     console.log('   - Statement Timeout: 60 secondes');
     console.log('   - Max connexions: 1 (Vercel Serverless)');
@@ -81,7 +82,7 @@ console.log('🚀 Initialisation du Backend TeachDigital');
 console.log('═══════════════════════════════════════════════════════════');
 console.log('📡 Configuration PostgreSQL:');
 console.log(`   - DATABASE_URL: ${connectionString.replace(/:[^:@]+@/, ':****@')}`);
-console.log('   - SSL Mode: require');
+console.log('   - SSL Mode: disabled');
 console.log('   - Connect Timeout: 30s');
 console.log('   - Statement Timeout: 30s');
 console.log('   - Idle Timeout: 30s');
