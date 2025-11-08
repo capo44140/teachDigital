@@ -14,6 +14,7 @@ const API_TIMEOUT_MS = 30000;
 /**
  * Fonction helper pour fetch avec timeout
  * Évite les timeouts Vercel en limitant la durée des appels API externes
+ * Suit les bonnes pratiques avec AbortController et finally block
  */
 async function fetchWithTimeout(url, options = {}, timeoutMs = API_TIMEOUT_MS) {
   const controller = new AbortController();
@@ -24,14 +25,17 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = API_TIMEOUT_MS) {
       ...options,
       signal: controller.signal
     });
-    clearTimeout(timeoutId);
     return response;
   } catch (error) {
-    clearTimeout(timeoutId);
+    // Gérer les erreurs d'abort (timeout)
     if (error.name === 'AbortError') {
       throw new Error(`Timeout API après ${timeoutMs}ms`);
     }
+    // Propager les autres erreurs
     throw error;
+  } finally {
+    // Toujours nettoyer le timeout, même en cas d'erreur
+    clearTimeout(timeoutId);
   }
 }
 
@@ -808,7 +812,7 @@ async function generateQuizFromMultipleAnalysesWithOpenAI(analyses, childProfile
 async function generateQuizFromMultipleAnalysesWithGemini(analyses, childProfile, questionCount) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   
-  const response = await fetch(`${GEMINI_BASE_URL}/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+  const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
