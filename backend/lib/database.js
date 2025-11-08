@@ -27,7 +27,7 @@ try {
   // Configuration OPTIMISÉE pour PostgreSQL/Vercel serverless avec pg
   pool = new Pool({
     connectionString,
-    max: 1, // Limiter les connexions pour Vercel serverless
+    max: 5, // Nombre maximum de connexions dans le pool (augmenté pour meilleure performance)
     idleTimeoutMillis: 60000, // 60 secondes (augmenté)
     connectionTimeoutMillis: 60000, // 60 secondes pour la connexion (CRITICAL - augmenté)
     ssl: false, // SSL désactivé
@@ -62,7 +62,7 @@ async function testConnection() {
     console.log('   - SSL: disabled');
     console.log('   - Connect Timeout: 60 secondes');
     console.log('   - Statement Timeout: 60 secondes');
-    console.log('   - Max connexions: 1 (Vercel Serverless)');
+    console.log('   - Max connexions: 5');
     return true;
   } catch (error) {
     console.error('❌ Erreur de connexion à la base de données:', error);
@@ -86,7 +86,7 @@ console.log('   - SSL Mode: disabled');
 console.log('   - Connect Timeout: 30s');
 console.log('   - Statement Timeout: 30s');
 console.log('   - Idle Timeout: 30s');
-console.log('   - Max Connections: 1');
+console.log('   - Max Connections: 5');
 console.log('   - Retry automatique: enabled (3x avec backoff)');
 console.log('═══════════════════════════════════════════════════════════');
 
