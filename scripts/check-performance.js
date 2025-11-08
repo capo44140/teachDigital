@@ -43,24 +43,8 @@ if (fs.existsSync(mainPath)) {
   allChecks = false
 }
 
-// Vérification 3: offlineDataService utilise stale-while-revalidate
-console.log('\n3️⃣ Vérification de stale-while-revalidate...')
-const offlineServicePath = path.join(rootDir, 'src/services/offlineDataService.js')
-if (fs.existsSync(offlineServicePath)) {
-  const offlineContent = fs.readFileSync(offlineServicePath, 'utf8')
-  if (offlineContent.includes('revalidateInBackground') && offlineContent.includes('staleWhileRevalidate')) {
-    console.log('   ✅ Stale-while-revalidate implémenté')
-  } else {
-    console.log('   ❌ Stale-while-revalidate manquant')
-    allChecks = false
-  }
-} else {
-  console.log('   ❌ offlineDataService.js manquant')
-  allChecks = false
-}
-
-// Vérification 4: ProfileSelector utilise ProfileSkeleton
-console.log('\n4️⃣ Vérification de l\'intégration du Skeleton...')
+// Vérification 3: ProfileSelector utilise ProfileSkeleton
+console.log('\n3️⃣ Vérification de l\'intégration du Skeleton...')
 const profileSelectorPath = path.join(rootDir, 'src/components/ProfileSelector.vue')
 if (fs.existsSync(profileSelectorPath)) {
   const selectorContent = fs.readFileSync(profileSelectorPath, 'utf8')
@@ -75,8 +59,8 @@ if (fs.existsSync(profileSelectorPath)) {
   allChecks = false
 }
 
-// Vérification 5: Code splitting dans le router
-console.log('\n5️⃣ Vérification du code splitting...')
+// Vérification 4: Code splitting dans le router
+console.log('\n4️⃣ Vérification du code splitting...')
 const routerPath = path.join(rootDir, 'src/router/index.js')
 if (fs.existsSync(routerPath)) {
   const routerContent = fs.readFileSync(routerPath, 'utf8')
@@ -90,8 +74,8 @@ if (fs.existsSync(routerPath)) {
   allChecks = false
 }
 
-// Vérification 6: Badges accessibilité corrigés
-console.log('\n6️⃣ Vérification des badges accessibilité...')
+// Vérification 5: Badges accessibilité corrigés
+console.log('\n5️⃣ Vérification des badges accessibilité...')
 const componentsToCheck = [
   'src/components/ProfileSelector.vue',
   'src/components/ProfileManagement.vue',
@@ -119,8 +103,8 @@ if (badgesOk) {
   allChecks = false
 }
 
-// Vérification 7: Documentation créée
-console.log('\n7️⃣ Vérification de la documentation...')
+// Vérification 6: Documentation créée
+console.log('\n6️⃣ Vérification de la documentation...')
 const docs = [
   'OPTIMIZATIONS-README.md',
   'PERFORMANCE-OPTIMIZATIONS-2024.md',
@@ -143,8 +127,8 @@ if (!docsOk) {
   allChecks = false
 }
 
-// Vérification 8: Taille du bundle (si dist existe)
-console.log('\n8️⃣ Vérification de la taille du bundle...')
+// Vérification 7: Taille du bundle (si dist existe)
+console.log('\n7️⃣ Vérification de la taille du bundle...')
 const distPath = path.join(rootDir, 'dist')
 if (fs.existsSync(distPath)) {
   const assetsPath = path.join(distPath, 'assets')

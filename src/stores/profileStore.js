@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia';
 import { ProfileService, PinService } from '../services/profile/index.js';
-import offlineDataService from '../services/offlineDataService.js';
 import { ProfileRepository } from '../repositories/profileRepository.js';
 
 export const useProfileStore = defineStore('profile', {
@@ -75,13 +74,7 @@ export const useProfileStore = defineStore('profile', {
       this.loadingPromise = (async () => {
         try {
           // Charger les profils directement depuis l'API
-          this.profiles = await offlineDataService.getCriticalData(
-            'profiles',
-            () => ProfileService.getAllProfiles()
-          );
-          
-          // Sauvegarder dans localStorage pour le mode offline
-          offlineDataService.saveToLocalStorage('profiles', this.profiles);
+          this.profiles = await ProfileService.getAllProfiles();
           
           await this.loadStats();
           this.lastLoadTime = Date.now();
@@ -148,9 +141,6 @@ export const useProfileStore = defineStore('profile', {
         const newProfile = await ProfileService.createProfile(profileData);
         this.profiles.unshift(newProfile);
         
-        // Mettre à jour localStorage
-        offlineDataService.saveToLocalStorage('profiles', this.profiles);
-        
         await this.loadStats();
         console.log('✅ Profil créé avec succès');
         return newProfile;
@@ -181,9 +171,6 @@ export const useProfileStore = defineStore('profile', {
         if (this.currentProfile && this.currentProfile.id === id) {
           this.currentProfile = updatedProfile;
         }
-        
-        // Mettre à jour localStorage
-        offlineDataService.saveToLocalStorage('profiles', this.profiles);
         
         await this.loadStats();
         console.log('✅ Profil mis à jour avec succès');
@@ -357,10 +344,6 @@ export const useProfileStore = defineStore('profile', {
       }
     },
 
-    // Obtenir les statistiques du service offline
-    getOfflineStats() {
-      return offlineDataService.getStats();
-    }
   }
 });
 

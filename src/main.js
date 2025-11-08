@@ -8,7 +8,6 @@ import { updateService } from './services/updateService.js'
 import { useApiStore } from './stores/apiStore.js'
 
 // Services PWA avancés
-import offlineDataService from './services/offlineDataService.js'
 import installService from './services/installService.js'
 import mobileOptimizationService from './services/mobileOptimizationService.js'
 
@@ -58,7 +57,6 @@ if ('serviceWorker' in navigator) {
 
 // Fournir les services globalement
 app.provide('updateService', updateService)
-app.provide('offlineDataService', offlineDataService)
 app.provide('installService', installService)
 app.provide('mobileOptimizationService', mobileOptimizationService)
 
@@ -87,16 +85,7 @@ async function initializeServicesAsync() {
   const apiStore = useApiStore()
   apiStore.initialize()
   
-  // Étape 2 : Précharger uniquement les profils en priorité
-  // Les autres données seront chargées à la demande
-  try {
-    await offlineDataService.preloadProfiles()
-    console.log('✅ Profils préchargés')
-  } catch (error) {
-    console.warn('⚠️ Erreur préchargement profils:', error)
-  }
-  
-  // Étape 3 : Initialiser les autres services en arrière-plan
+  // Étape 2 : Initialiser les autres services en arrière-plan
   // Sans bloquer l'interface utilisateur
   scheduleIdleTask(() => {
     initializePWAServices()
@@ -131,24 +120,5 @@ async function initializePWAServices() {
   } else {
     console.log('✅ Services PWA initialisés avec succès')
   }
-  
-  // Précharger les leçons et notifications en très basse priorité
-  scheduleIdleTask(() => {
-    preloadSecondaryData()
-  })
 }
 
-/**
- * Précharge les données secondaires en arrière-plan
- */
-async function preloadSecondaryData() {
-  try {
-    await Promise.allSettled([
-      offlineDataService.preloadLessons(),
-      offlineDataService.preloadNotifications()
-    ])
-    console.log('✅ Données secondaires préchargées')
-  } catch (error) {
-    console.warn('⚠️ Erreur préchargement données secondaires:', error)
-  }
-}
