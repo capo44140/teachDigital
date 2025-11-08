@@ -65,13 +65,13 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
     password: process.env.DB_PASSWORD,
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     max: parseInt(process.env.DB_MAX_CONNECTIONS) || 10, // Augmenter le pool pour plus de performance
-    min: 2, // Maintenir au moins 2 connexions actives
+    min: 0, // Pas de connexions au démarrage (lazy connection) pour éviter les timeouts
     idleTimeoutMillis: 30000, // 30 secondes avant de fermer une connexion inactive
-    connectionTimeoutMillis: 2000, // 2 secondes max pour établir une connexion (optimisé)
+    connectionTimeoutMillis: 1000, // 1 seconde max pour établir une connexion (optimisé pour Vercel)
     statement_timeout: queryTimeout, // Timeout adaptatif selon plan Vercel
     query_timeout: queryTimeout, // Timeout adaptatif selon plan Vercel
     keepAlive: true,
-    keepAliveInitialDelayMillis: 5000 // Réduit de 10s à 5s pour connexion plus rapide
+    keepAliveInitialDelayMillis: 3000 // Réduit à 3s pour connexion plus rapide
   };
   console.log('🔗 Connexion PostgreSQL configurée avec variables séparées');
   console.log(`📍 Hôte: ${process.env.DB_HOST}:${poolConfig.port}`);
@@ -88,13 +88,13 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
   poolConfig = {
     connectionString,
     max: parseInt(process.env.DB_MAX_CONNECTIONS) || 10,
-    min: 2,
+    min: 0, // Pas de connexions au démarrage (lazy connection) pour éviter les timeouts
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000, // 2 secondes max pour établir une connexion (optimisé)
+    connectionTimeoutMillis: 1000, // 1 seconde max pour établir une connexion (optimisé pour Vercel)
     statement_timeout: queryTimeout, // Timeout adaptatif selon plan Vercel
     query_timeout: queryTimeout, // Timeout adaptatif selon plan Vercel
     keepAlive: true,
-    keepAliveInitialDelayMillis: 5000 // Réduit de 10s à 5s pour connexion plus rapide
+    keepAliveInitialDelayMillis: 3000 // Réduit à 3s pour connexion plus rapide
   };
   
   console.log('🔗 Connexion PostgreSQL configurée avec DATABASE_URL');
@@ -149,13 +149,13 @@ if (process.env.DB_HOST) {
   console.log(`   - DATABASE_URL: ${process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@') || 'non définie'}`);
   console.log('   - SSL Mode: disabled');
 }
-console.log('   - Connect Timeout: 2s (optimisé)');
+console.log('   - Connect Timeout: 1s (optimisé pour Vercel)');
 console.log('   - Idle Timeout: 30s');
 console.log(`   - Statement Timeout: ${queryTimeout}ms (adapté au plan Vercel: ${VERCEL_MAX_DURATION}s max)`);
 console.log(`   - Query Timeout: ${queryTimeout}ms (adapté au plan Vercel: ${VERCEL_MAX_DURATION}s max)`);
 console.log('   - Max Connections: ' + (parseInt(process.env.DB_MAX_CONNECTIONS) || 10));
-console.log('   - Min Connections: 2');
-console.log('   - Keep-Alive: enabled (5s initial delay)');
+console.log('   - Min Connections: 0 (lazy connection - pas de connexions au démarrage)');
+console.log('   - Keep-Alive: enabled (3s initial delay)');
 console.log('   - Retry automatique: enabled (2x max, délai 500ms)');
 console.log(`   - ⚠️  Vercel Timeout: ${VERCEL_MAX_DURATION}s (${VERCEL_MAX_DURATION >= 60 ? 'Plan Pro/Enterprise' : 'Plan Gratuit'})`);
 console.log(`   - 📊 Logs SQL: ${ENABLE_SQL_LOGS ? 'activés' : 'désactivés'} (performance optimisée)`);
@@ -348,13 +348,35 @@ function sql(strings, ...values) {
         }
       }
       
-      // Étape 2: Exécution de la requête (pool.query gère l'attente et l'exécution)
+      // Étape 2: Exécution de la requête avec timeout global pour éviter les blocages
       // On mesure toujours le temps pour détecter les problèmes critiques, même sans logs
       if (ENABLE_SQL_LOGS) {
         console.log(`▶️  [SQL:${queryId}] Exécution de la requête...`);
       }
       const queryStartTime = Date.now(); // Toujours mesurer pour détecter les problèmes
-      const result = await pool.query(queryText, queryParams);
+      
+      // Timeout global pour éviter que la requête bloque indéfiniment
+      // On utilise 90% du timeout configuré pour laisser une marge
+      const globalTimeout = Math.max(queryTimeout * 0.9, 5000); // Minimum 5s
+      
+      const queryPromise = pool.query(queryText, queryParams);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`Query timeout après ${globalTimeout}ms (limite: ${queryTimeout}ms)`));
+        }, globalTimeout);
+      });
+      
+      let result;
+      try {
+        result = await Promise.race([queryPromise, timeoutPromise]);
+      } catch (error) {
+        // Si c'est un timeout, logger et relancer
+        if (error.message.includes('timeout')) {
+          console.error(`⏱️  [SQL${queryId ? ':' + queryId : ''}] Timeout global déclenché après ${globalTimeout}ms`);
+        }
+        throw error;
+      }
+      
       const queryEndTime = Date.now();
       const queryExecutionTime = queryEndTime - queryStartTime;
       

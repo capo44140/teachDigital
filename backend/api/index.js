@@ -242,23 +242,35 @@ async function handleProfiles(req, res) {
       // Exclure image_data pour améliorer les performances
       const startTime = Date.now();
       
-      const profiles = await sql`
-        SELECT 
-          id, name, description, type, is_admin, is_child, is_teen, 
-          is_active, is_locked, color, avatar_class, avatar_content, 
-          image_url, image_type, level, created_at, updated_at
-        FROM profiles 
-        ORDER BY created_at DESC
-      `;
-      
-      const duration = Date.now() - startTime;
-      console.log(`✅ Profils récupérés: ${profiles.length} en ${duration}ms`);
+      try {
+        // Timeout explicite sur la requête pour éviter les blocages
+        const profiles = await Promise.race([
+          sql`
+            SELECT 
+              id, name, description, type, is_admin, is_child, is_teen, 
+              is_active, is_locked, color, avatar_class, avatar_content, 
+              image_url, image_type, level, created_at, updated_at
+            FROM profiles 
+            ORDER BY created_at DESC
+          `,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout requête profiles après 7s')), 7000)
+          )
+        ]);
+        
+        const duration = Date.now() - startTime;
+        console.log(`✅ Profils récupérés: ${profiles.length} en ${duration}ms`);
 
-      res.status(200).json({
-        success: true,
-        message: 'Profils récupérés avec succès',
-        data: { profiles }
-      });
+        res.status(200).json({
+          success: true,
+          message: 'Profils récupérés avec succès',
+          data: { profiles }
+        });
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        console.error(`❌ Erreur récupération profils après ${duration}ms:`, error.message);
+        throw error;
+      }
 
     } else if (req.method === 'POST') {
       // POST requiert l'authentification
