@@ -238,6 +238,9 @@ function buildQuery(strings, values) {
 
 // Créer une fonction sql compatible avec l'API postgres et template literals
 function sql(strings, ...values) {
+  // Mesurer le temps de construction de la requête
+  const buildStartTime = Date.now();
+  
   // Gérer les deux cas d'appel:
   // 1. Template literal: sql`SELECT ...` 
   // 2. Appel normal: sql(text, params)
@@ -252,32 +255,111 @@ function sql(strings, ...values) {
     query = { text: strings, params: values[0] || [] };
   }
   
+  const buildTime = Date.now() - buildStartTime;
+  
   // Créer un objet qui peut être utilisé dans d'autres templates ET awaité
   // Ne PAS exécuter immédiatement - seulement quand on await
   const queryText = query.text;
   const queryParams = query.params;
   
+  // Log si la construction prend du temps
+  if (buildTime > 5) {
+    console.log(`🔧 [SQL Builder] Construction requête: ${buildTime}ms`);
+  }
+  
+  // Stocker buildTime pour l'utiliser dans les logs d'exécution
+  const queryBuildTime = buildTime;
+  
   // Créer une Promise qui sera exécutée seulement quand on await
   const executeQuery = async () => {
-    // Exécution directe sans timeout - performance maximale
+    const totalStartTime = Date.now();
+    const queryId = Math.random().toString(36).substring(2, 9);
+    const queryPreview = queryText.length > 100 ? queryText.substring(0, 100) + '...' : queryText;
+    
+    // Log de début (inclure le temps de construction)
+    console.log(`🚀 [SQL:${queryId}] Début - ${queryPreview}`);
+    if (queryBuildTime > 1) {
+      console.log(`   🔧 Construction: ${queryBuildTime}ms`);
+    }
+    
     try {
-      // Utiliser pool.query() directement - c'est la méthode la plus rapide
-      // Le pool gère automatiquement la libération du client
-      const result = await pool.query(queryText, queryParams);
+      // Étape 1: Vérifier l'état du pool
+      const poolCheckStart = Date.now();
+      const poolStats = {
+        totalCount: pool.totalCount || 0,
+        idleCount: pool.idleCount || 0,
+        waitingCount: pool.waitingCount || 0
+      };
+      const poolCheckTime = Date.now() - poolCheckStart;
       
-      // Log minimal uniquement en mode développement (optionnel)
-      if (process.env.NODE_ENV === 'development') {
-        const queryPreview = queryText.length > 80 ? queryText.substring(0, 80) + '...' : queryText;
-        console.log(`✅ [SQL] ${result.rows.length} lignes - ${queryPreview}`);
+      if (poolCheckTime > 1) {
+        console.log(`⏱️  [SQL:${queryId}] Pool check: ${poolCheckTime}ms`, poolStats);
       }
       
-      return result.rows;
+      if (poolStats.waitingCount > 0) {
+        console.warn(`⚠️  [SQL:${queryId}] ${poolStats.waitingCount} requêtes en attente dans le pool`);
+      }
+      
+      // Étape 2: Exécution de la requête (pool.query gère l'attente et l'exécution)
+      console.log(`▶️  [SQL:${queryId}] Exécution de la requête...`);
+      const queryStartTime = Date.now();
+      const result = await pool.query(queryText, queryParams);
+      const queryEndTime = Date.now();
+      const queryExecutionTime = queryEndTime - queryStartTime;
+      
+      // Note: pool.query() inclut l'attente du pool + l'exécution SQL
+      // On ne peut pas les séparer facilement, donc queryExecutionTime inclut les deux
+      
+      // Étape 4: Traitement des résultats
+      const processStartTime = Date.now();
+      const rows = result.rows;
+      const processTime = Date.now() - processStartTime;
+      
+      const totalTime = Date.now() - totalStartTime;
+      
+      // Log détaillé des performances
+      console.log(`✅ [SQL:${queryId}] Terminé en ${totalTime}ms`);
+      console.log(`   📊 Détails:`);
+      console.log(`      - Construction requête: ${queryBuildTime}ms`);
+      console.log(`      - Pool check: ${poolCheckTime}ms`);
+      console.log(`      - Pool + Exécution SQL: ${queryExecutionTime}ms (inclut attente pool)`);
+      console.log(`      - Traitement résultats: ${processTime}ms`);
+      console.log(`      - Total: ${totalTime}ms`);
+      console.log(`   📈 Résultat: ${rows.length} lignes`);
+      console.log(`   🔍 Pool stats: ${poolStats.totalCount} total, ${poolStats.idleCount} idle, ${poolStats.waitingCount} waiting`);
+      
+      // Avertissement si la requête est lente
+      if (queryExecutionTime > 1000) {
+        console.warn(`⚠️  [SQL:${queryId}] Requête lente (>1s): ${queryExecutionTime}ms`);
+        if (poolStats.waitingCount > 0) {
+          console.warn(`   💡 ${poolStats.waitingCount} requêtes en attente - considérer augmenter DB_MAX_CONNECTIONS`);
+        }
+      }
+      if (queryExecutionTime > 100 && queryExecutionTime <= 1000) {
+        console.warn(`⚠️  [SQL:${queryId}] Requête modérément lente (>100ms): ${queryExecutionTime}ms`);
+      }
+      if (totalTime > 2000) {
+        console.warn(`⚠️  [SQL:${queryId}] Requête très lente (>2s): ${totalTime}ms`);
+      }
+      
+      return rows;
     } catch (error) {
-      // Log d'erreur uniquement (important pour le debugging)
-      console.error(`❌ [SQL] Erreur:`, error.message);
+      const totalTime = Date.now() - totalStartTime;
+      
+      // Log d'erreur détaillé
+      console.error(`❌ [SQL:${queryId}] Erreur après ${totalTime}ms`);
+      console.error(`   Message: ${error.message}`);
       if (error.code) {
         console.error(`   Code: ${error.code}`);
       }
+      if (error.position) {
+        console.error(`   Position: ${error.position}`);
+      }
+      if (error.hint) {
+        console.error(`   Hint: ${error.hint}`);
+      }
+      console.error(`   Requête: ${queryPreview}`);
+      
       throw error;
     }
   };
