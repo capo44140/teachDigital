@@ -122,11 +122,25 @@ class OfflineDataService {
 
   /**
    * Précharge les profils
+   * Utilise le store pour éviter les appels multiples
    */
   async preloadProfiles() {
     try {
-      const profiles = await ProfileService.getAllProfiles()
-      this.saveToLocalStorage('profiles', profiles)
+      // Utiliser le store pour bénéficier de la protection contre les appels multiples
+      const { useProfileStore } = await import('../stores/profileStore.js')
+      const profileStore = useProfileStore()
+      
+      // Si les profils sont déjà chargés récemment, ne pas recharger
+      if (profileStore.profiles.length > 0 && profileStore.lastLoadTime) {
+        const timeSinceLastLoad = Date.now() - profileStore.lastLoadTime
+        if (timeSinceLastLoad < profileStore.loadCacheTimeout) {
+          console.log('✅ Profils déjà chargés, pas besoin de préchargement')
+          return profileStore.profiles
+        }
+      }
+      
+      // Charger via le store (qui gère les appels multiples)
+      const profiles = await profileStore.loadProfiles()
       console.log(`👥 ${profiles.length} profils préchargés`)
       return profiles
     } catch (error) {

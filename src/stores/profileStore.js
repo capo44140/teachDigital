@@ -17,7 +17,11 @@ export const useProfileStore = defineStore('profile', {
       admins: 0
     },
     
-    profileRepository: new ProfileRepository()
+    profileRepository: new ProfileRepository(),
+    // Protection contre les appels multiples simultanés
+    loadingPromise: null,
+    lastLoadTime: null,
+    loadCacheTimeout: 5000 // Cache de 5 secondes
   }),
 
   getters: {
@@ -50,28 +54,50 @@ export const useProfileStore = defineStore('profile', {
 
   actions: {
     // Charger tous les profils
-    async loadProfiles() {
+    async loadProfiles(force = false) {
+      // Si un chargement est déjà en cours, retourner la même promesse
+      if (this.loadingPromise && !force) {
+        console.log('⏳ Chargement déjà en cours, réutilisation de la promesse existante');
+        return this.loadingPromise;
+      }
+      
+      // Vérifier le cache : si les profils ont été chargés récemment, ne pas recharger
+      const now = Date.now();
+      if (!force && this.lastLoadTime && (now - this.lastLoadTime) < this.loadCacheTimeout && this.profiles.length > 0) {
+        console.log('✅ Utilisation du cache des profils (chargés il y a moins de 5 secondes)');
+        return Promise.resolve(this.profiles);
+      }
+      
       this.isLoading = true;
       this.error = null;
       
-      try {
-        // Charger les profils directement depuis l'API
-        this.profiles = await offlineDataService.getCriticalData(
-          'profiles',
-          () => ProfileService.getAllProfiles()
-        );
-        
-        // Sauvegarder dans localStorage pour le mode offline
-        offlineDataService.saveToLocalStorage('profiles', this.profiles);
-        
-        await this.loadStats();
-        console.log('✅ Profils chargés avec succès');
-      } catch (error) {
-        this.error = error.message;
-        console.error('❌ Erreur lors du chargement des profils:', error);
-      } finally {
-        this.isLoading = false;
-      }
+      // Créer une promesse unique pour ce chargement
+      this.loadingPromise = (async () => {
+        try {
+          // Charger les profils directement depuis l'API
+          this.profiles = await offlineDataService.getCriticalData(
+            'profiles',
+            () => ProfileService.getAllProfiles()
+          );
+          
+          // Sauvegarder dans localStorage pour le mode offline
+          offlineDataService.saveToLocalStorage('profiles', this.profiles);
+          
+          await this.loadStats();
+          this.lastLoadTime = Date.now();
+          console.log('✅ Profils chargés avec succès');
+          return this.profiles;
+        } catch (error) {
+          this.error = error.message;
+          console.error('❌ Erreur lors du chargement des profils:', error);
+          throw error;
+        } finally {
+          this.isLoading = false;
+          this.loadingPromise = null;
+        }
+      })();
+      
+      return this.loadingPromise;
     },
 
     // Charger les statistiques
@@ -313,13 +339,16 @@ export const useProfileStore = defineStore('profile', {
         teens: 0,
         admins: 0
       };
+      // Réinitialiser les protections
+      this.loadingPromise = null;
+      this.lastLoadTime = null;
     },
 
     // Forcer le rechargement des profils
     async refreshProfiles() {
       try {
-        // Recharger les profils
-        await this.loadProfiles();
+        // Forcer le rechargement en ignorant le cache
+        await this.loadProfiles(true);
         
         console.log('✅ Profils rechargés');
       } catch (error) {
