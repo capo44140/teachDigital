@@ -18,8 +18,8 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
     password: process.env.DB_PASSWORD,
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     max: 5,
-    idleTimeoutMillis: 60000,
-    connectionTimeoutMillis: 60000,
+    idleTimeoutMillis: 30000, // 30 secondes
+    connectionTimeoutMillis: 10000, // 10 secondes - timeout plus court pour éviter les blocages
   };
   console.log('🔗 Connexion PostgreSQL configurée avec variables séparées');
   console.log(`📍 Hôte: ${process.env.DB_HOST}:${poolConfig.port}`);
@@ -35,8 +35,8 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
   poolConfig = {
     connectionString,
     max: 5,
-    idleTimeoutMillis: 60000,
-    connectionTimeoutMillis: 60000,
+    idleTimeoutMillis: 30000, // 30 secondes
+    connectionTimeoutMillis: 10000, // 10 secondes - timeout plus court
     ssl: false,
   };
   console.log('🔗 Connexion PostgreSQL configurée avec DATABASE_URL');
@@ -105,8 +105,9 @@ if (process.env.DB_HOST) {
   console.log(`   - DATABASE_URL: ${process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@') || 'non définie'}`);
   console.log('   - SSL Mode: disabled');
 }
-console.log('   - Connect Timeout: 60s');
-console.log('   - Idle Timeout: 60s');
+console.log('   - Connect Timeout: 10s');
+console.log('   - Idle Timeout: 30s');
+console.log('   - Statement Timeout: 10s');
 console.log('   - Max Connections: 5');
 console.log('   - Retry automatique: enabled (5x avec backoff)');
 console.log('═══════════════════════════════════════════════════════════');
@@ -249,17 +250,51 @@ function sql(strings, ...values) {
   
   // Créer une Promise qui sera exécutée seulement quand on await
   const executeQuery = async () => {
-    const client = await pool.connect();
+    const connectStartTime = Date.now();
+    console.log(`🔍 [SQL] Tentative de connexion au pool pour: ${queryText.substring(0, 100)}...`);
+    
+    let client;
     try {
-      // Ajouter un timeout de 10 secondes sur la requête (pour éviter les timeouts Vercel)
-      const queryPromise = client.query(queryText, queryParams);
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Query timeout: requête SQL dépassée 10 secondes')), 10000);
-      });
-      const result = await Promise.race([queryPromise, timeoutPromise]);
-      return result.rows;
-    } finally {
-      client.release();
+      // Utiliser pool.query() directement au lieu de pool.connect() + client.query()
+      // C'est plus efficace et gère automatiquement la libération du client
+      const queryStartTime = Date.now();
+      console.log(`🔍 [SQL] Exécution de la requête...`);
+      
+      // Créer un timeout de 8 secondes pour la requête
+      const queryTimeout = 8000;
+      const timeoutId = setTimeout(() => {
+        console.error(`⏱️ [SQL] Timeout après ${queryTimeout}ms - annulation de la requête`);
+      }, queryTimeout);
+      
+      try {
+        // Utiliser pool.query() qui est plus optimisé
+        const result = await Promise.race([
+          pool.query(queryText, queryParams),
+          new Promise((_, reject) => {
+            setTimeout(() => {
+              clearTimeout(timeoutId);
+              reject(new Error('Query timeout: requête SQL dépassée 8 secondes'));
+            }, queryTimeout);
+          })
+        ]);
+        
+        clearTimeout(timeoutId);
+        
+        const queryDuration = Date.now() - queryStartTime;
+        console.log(`✅ [SQL] Requête exécutée en ${queryDuration}ms, ${result.rows.length} lignes`);
+        
+        return result.rows;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+      }
+    } catch (error) {
+      const totalDuration = Date.now() - connectStartTime;
+      console.error(`❌ [SQL] Erreur après ${totalDuration}ms:`, error.message);
+      if (error.code) {
+        console.error(`   Code: ${error.code}`);
+      }
+      throw error;
     }
   };
   
