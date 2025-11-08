@@ -251,14 +251,16 @@ async function handleProfiles(req, res) {
   try {
     if (req.method === 'GET') {
       // GET est public - récupérer tous les profils
+      // Utiliser seulement 2 retries pour éviter les timeouts (au lieu de 5)
+      // Exclure image_data pour améliorer les performances (peut être récupéré séparément si nécessaire)
       const profiles = await executeWithRetry(() => sql`
         SELECT 
           id, name, description, type, is_admin, is_child, is_teen, 
           is_active, is_locked, color, avatar_class, avatar_content, 
-          image_url, image_data, image_type, level, created_at, updated_at
+          image_url, image_type, level, created_at, updated_at
         FROM profiles 
         ORDER BY created_at DESC
-      `);
+      `, 2, 500); // 2 retries max, 500ms de délai initial
 
       res.status(200).json({
         success: true,
@@ -318,6 +320,16 @@ async function handleProfiles(req, res) {
     }
 
   } catch (error) {
+    // Gestion spéciale des timeouts
+    if (error.message?.includes('timeout') || error.message?.includes('Query timeout')) {
+      console.error('⏱️ Timeout lors de la récupération des profils:', error.message);
+      res.status(504).json({
+        success: false,
+        message: 'Timeout: La requête a pris trop de temps. Veuillez réessayer.',
+        error: 'GATEWAY_TIMEOUT'
+      });
+      return;
+    }
     const errorResponse = handleError(error, 'Erreur lors de la gestion des profils');
     res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
   }

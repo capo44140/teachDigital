@@ -235,7 +235,12 @@ function sql(strings, ...values) {
         console.log('🔍 SQL généré:', queryText.substring(0, 300));
         console.log('🔍 Params:', queryParams);
       }
-      const result = await client.query(queryText, queryParams);
+      // Ajouter un timeout de 20 secondes sur la requête (laisse de la marge avant le timeout Vercel de 60s)
+      const queryPromise = client.query(queryText, queryParams);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Query timeout: requête SQL dépassée 20 secondes')), 20000);
+      });
+      const result = await Promise.race([queryPromise, timeoutPromise]);
       return result.rows;
     } finally {
       client.release();
