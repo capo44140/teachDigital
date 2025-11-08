@@ -14,6 +14,10 @@ dotenv.config();
 // On utilise 8s par défaut pour être sûr (plans gratuits)
 // Peut être augmenté via DB_QUERY_TIMEOUT_MS pour plans Pro/Enterprise
 
+// Mode silencieux pour la production (pas de logs détaillés)
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
+const ENABLE_SQL_LOGS = process.env.DB_ENABLE_LOGS === 'true' || IS_DEVELOPMENT;
+
 // Détecter automatiquement le maxDuration depuis vercel.json
 let detectedMaxDuration = 10; // Par défaut: plan gratuit (10s)
 try {
@@ -22,12 +26,16 @@ try {
     const vercelConfig = JSON.parse(fs.readFileSync(vercelConfigPath, 'utf8'));
     if (vercelConfig.functions?.['api/index.js']?.maxDuration) {
       detectedMaxDuration = vercelConfig.functions['api/index.js'].maxDuration;
-      console.log(`📋 Détection automatique depuis vercel.json: maxDuration = ${detectedMaxDuration}s`);
+      if (ENABLE_SQL_LOGS) {
+        console.log(`📋 Détection automatique depuis vercel.json: maxDuration = ${detectedMaxDuration}s`);
+      }
     }
   }
 } catch (error) {
   // Ignorer les erreurs de lecture de vercel.json
-  console.log('ℹ️  Impossible de lire vercel.json, utilisation des valeurs par défaut');
+  if (ENABLE_SQL_LOGS) {
+    console.log('ℹ️  Impossible de lire vercel.json, utilisation des valeurs par défaut');
+  }
 }
 
 const VERCEL_MAX_DURATION = parseInt(process.env.VERCEL_MAX_DURATION) || detectedMaxDuration; // Détection automatique ou variable d'environnement
@@ -59,11 +67,11 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
     max: parseInt(process.env.DB_MAX_CONNECTIONS) || 10, // Augmenter le pool pour plus de performance
     min: 2, // Maintenir au moins 2 connexions actives
     idleTimeoutMillis: 30000, // 30 secondes avant de fermer une connexion inactive
-    connectionTimeoutMillis: 5000, // 5 secondes max pour établir une connexion
+    connectionTimeoutMillis: 2000, // 2 secondes max pour établir une connexion (optimisé)
     statement_timeout: queryTimeout, // Timeout adaptatif selon plan Vercel
     query_timeout: queryTimeout, // Timeout adaptatif selon plan Vercel
     keepAlive: true,
-    keepAliveInitialDelayMillis: 10000
+    keepAliveInitialDelayMillis: 5000 // Réduit de 10s à 5s pour connexion plus rapide
   };
   console.log('🔗 Connexion PostgreSQL configurée avec variables séparées');
   console.log(`📍 Hôte: ${process.env.DB_HOST}:${poolConfig.port}`);
@@ -82,11 +90,11 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
     max: parseInt(process.env.DB_MAX_CONNECTIONS) || 10,
     min: 2,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 2000, // 2 secondes max pour établir une connexion (optimisé)
     statement_timeout: queryTimeout, // Timeout adaptatif selon plan Vercel
     query_timeout: queryTimeout, // Timeout adaptatif selon plan Vercel
     keepAlive: true,
-    keepAliveInitialDelayMillis: 10000
+    keepAliveInitialDelayMillis: 5000 // Réduit de 10s à 5s pour connexion plus rapide
   };
   
   console.log('🔗 Connexion PostgreSQL configurée avec DATABASE_URL');
@@ -104,41 +112,27 @@ let pool;
 try {
   pool = new Pool(poolConfig);
   
-  // Listeners pour gérer les erreurs de connexion
-  pool.on('connect', () => {
-    console.log('✅ Nouvelle connexion PostgreSQL établie avec succès');
-  });
+  // Listeners pour gérer les erreurs de connexion (uniquement en dev ou si logs activés)
+  if (ENABLE_SQL_LOGS) {
+    pool.on('connect', () => {
+      // Log silencieux en production pour performance
+    });
+  }
   
   pool.on('error', (error) => {
+    // Toujours logger les erreurs critiques
     console.error('❌ ERREUR CRITIQUE de connexion PostgreSQL:');
     console.error('   Code:', error.code);
     console.error('   Message:', error.message);
-    console.error('   Host:', error.host || 'undefined');
-    console.error('   Port:', error.port || 'undefined');
+    if (ENABLE_SQL_LOGS) {
+      console.error('   Host:', error.host || 'undefined');
+      console.error('   Port:', error.port || 'undefined');
+    }
   });
 } catch (error) {
   console.error('❌ Erreur de configuration PostgreSQL:', error);
   console.error('💡 Vérifiez que les variables d\'environnement sont correctement configurées');
   throw error;
-}
-
-// Fonction pour tester la connexion (version simplifiée et rapide)
-async function testConnection() {
-  try {
-    console.log('🔄 Test rapide de connexion PostgreSQL...');
-    
-    const client = await pool.connect();
-    
-    // Test minimal : juste vérifier que la connexion fonctionne
-    await client.query('SELECT 1 as test');
-    
-    client.release();
-    console.log('✅ Connexion PostgreSQL OK');
-    return true;
-  } catch (error) {
-    console.error('❌ Erreur de connexion:', error.message);
-    return false;
-  }
 }
 
 // Logger l'état de la connexion au démarrage
@@ -155,15 +149,16 @@ if (process.env.DB_HOST) {
   console.log(`   - DATABASE_URL: ${process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@') || 'non définie'}`);
   console.log('   - SSL Mode: disabled');
 }
-console.log('   - Connect Timeout: 5s');
+console.log('   - Connect Timeout: 2s (optimisé)');
 console.log('   - Idle Timeout: 30s');
 console.log(`   - Statement Timeout: ${queryTimeout}ms (adapté au plan Vercel: ${VERCEL_MAX_DURATION}s max)`);
 console.log(`   - Query Timeout: ${queryTimeout}ms (adapté au plan Vercel: ${VERCEL_MAX_DURATION}s max)`);
 console.log('   - Max Connections: ' + (parseInt(process.env.DB_MAX_CONNECTIONS) || 10));
 console.log('   - Min Connections: 2');
-console.log('   - Keep-Alive: enabled');
+console.log('   - Keep-Alive: enabled (5s initial delay)');
 console.log('   - Retry automatique: enabled (2x max, délai 500ms)');
 console.log(`   - ⚠️  Vercel Timeout: ${VERCEL_MAX_DURATION}s (${VERCEL_MAX_DURATION >= 60 ? 'Plan Pro/Enterprise' : 'Plan Gratuit'})`);
+console.log(`   - 📊 Logs SQL: ${ENABLE_SQL_LOGS ? 'activés' : 'désactivés'} (performance optimisée)`);
 console.log('═══════════════════════════════════════════════════════════');
 
 // Fonction wrapper pour exécuter des requêtes avec retry automatique
@@ -175,7 +170,9 @@ async function executeWithRetry(queryFn, maxRetries = 2, delayMs = 500) {
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`📤 Tentative ${attempt}/${maxRetries} de connexion à la base de données...`);
+      if (ENABLE_SQL_LOGS && attempt > 1) {
+        console.log(`📤 Tentative ${attempt}/${maxRetries} de connexion à la base de données...`);
+      }
       return await queryFn();
     } catch (error) {
       lastError = error;
@@ -194,7 +191,7 @@ async function executeWithRetry(queryFn, maxRetries = 2, delayMs = 500) {
         error.message?.includes('timeout');
       
       if (!isTemporaryError || attempt === maxRetries) {
-        // Erreur permanente ou dernier essai
+        // Erreur permanente ou dernier essai - toujours logger les erreurs
         console.error(`❌ ERREUR FINALE après ${attempt} tentatives:`, {
           code: error.code,
           message: error.message,
@@ -204,10 +201,11 @@ async function executeWithRetry(queryFn, maxRetries = 2, delayMs = 500) {
       }
       
       // Attendre avant de réessayer (délai fixe plus court pour éviter timeout)
-      const delay = delayMs; // Délai fixe au lieu de backoff exponentiel
-      console.log(`⏳ Retry ${attempt}/${maxRetries} après ${delay}ms`);
-      console.log(`   Erreur: ${error.code} - ${error.message?.substring(0, 100)}`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      if (ENABLE_SQL_LOGS) {
+        console.log(`⏳ Retry ${attempt}/${maxRetries} après ${delayMs}ms`);
+        console.log(`   Erreur: ${error.code} - ${error.message?.substring(0, 100)}`);
+      }
+      await new Promise(resolve => setTimeout(resolve, delayMs));
     }
   }
   
@@ -231,8 +229,8 @@ function buildQuery(strings, values) {
     if (i < values.length) {
       const value = values[i];
       
-      // Log de débogage uniquement en mode développement
-      if (process.env.NODE_ENV === 'development' && value && typeof value === 'object' && !(value instanceof SqlIdentifier)) {
+      // Log de débogage uniquement si logs activés
+      if (ENABLE_SQL_LOGS && value && typeof value === 'object' && !(value instanceof SqlIdentifier)) {
         // Log minimal pour le debugging
         if ('text' in value && 'params' in value) {
           console.log(`🔍 [SQL Builder] Requête imbriquée détectée à l'index ${i}`);
@@ -281,8 +279,8 @@ function buildQuery(strings, values) {
 
 // Créer une fonction sql compatible avec l'API postgres et template literals
 function sql(strings, ...values) {
-  // Mesurer le temps de construction de la requête
-  const buildStartTime = Date.now();
+  // Mesurer le temps de construction uniquement si logs activés
+  const buildStartTime = ENABLE_SQL_LOGS ? Date.now() : 0;
   
   // Gérer les deux cas d'appel:
   // 1. Template literal: sql`SELECT ...` 
@@ -298,15 +296,15 @@ function sql(strings, ...values) {
     query = { text: strings, params: values[0] || [] };
   }
   
-  const buildTime = Date.now() - buildStartTime;
+  const buildTime = ENABLE_SQL_LOGS ? Date.now() - buildStartTime : 0;
   
   // Créer un objet qui peut être utilisé dans d'autres templates ET awaité
   // Ne PAS exécuter immédiatement - seulement quand on await
   const queryText = query.text;
   const queryParams = query.params;
   
-  // Log si la construction prend du temps
-  if (buildTime > 5) {
+  // Log si la construction prend du temps (uniquement si logs activés)
+  if (ENABLE_SQL_LOGS && buildTime > 5) {
     console.log(`🔧 [SQL Builder] Construction requête: ${buildTime}ms`);
   }
   
@@ -315,37 +313,47 @@ function sql(strings, ...values) {
   
   // Créer une Promise qui sera exécutée seulement quand on await
   const executeQuery = async () => {
-    const totalStartTime = Date.now();
-    const queryId = Math.random().toString(36).substring(2, 9);
-    const queryPreview = queryText.length > 100 ? queryText.substring(0, 100) + '...' : queryText;
+    // Mesurer le temps uniquement si logs activés ou si on doit vérifier les timeouts
+    const totalStartTime = ENABLE_SQL_LOGS ? Date.now() : 0;
+    const queryId = ENABLE_SQL_LOGS ? Math.random().toString(36).substring(2, 9) : '';
+    const queryPreview = ENABLE_SQL_LOGS ? (queryText.length > 100 ? queryText.substring(0, 100) + '...' : queryText) : '';
     
-    // Log de début (inclure le temps de construction)
-    console.log(`🚀 [SQL:${queryId}] Début - ${queryPreview}`);
-    if (queryBuildTime > 1) {
-      console.log(`   🔧 Construction: ${queryBuildTime}ms`);
+    // Log de début uniquement si logs activés
+    if (ENABLE_SQL_LOGS) {
+      console.log(`🚀 [SQL:${queryId}] Début - ${queryPreview}`);
+      if (queryBuildTime > 1) {
+        console.log(`   🔧 Construction: ${queryBuildTime}ms`);
+      }
     }
     
     try {
-      // Étape 1: Vérifier l'état du pool
-      const poolCheckStart = Date.now();
-      const poolStats = {
-        totalCount: pool.totalCount || 0,
-        idleCount: pool.idleCount || 0,
-        waitingCount: pool.waitingCount || 0
-      };
-      const poolCheckTime = Date.now() - poolCheckStart;
-      
-      if (poolCheckTime > 1) {
-        console.log(`⏱️  [SQL:${queryId}] Pool check: ${poolCheckTime}ms`, poolStats);
-      }
-      
-      if (poolStats.waitingCount > 0) {
-        console.warn(`⚠️  [SQL:${queryId}] ${poolStats.waitingCount} requêtes en attente dans le pool`);
+      // Étape 1: Vérifier l'état du pool uniquement si logs activés ou si nécessaire
+      let poolStats = null;
+      let poolCheckTime = 0;
+      if (ENABLE_SQL_LOGS) {
+        const poolCheckStart = Date.now();
+        poolStats = {
+          totalCount: pool.totalCount || 0,
+          idleCount: pool.idleCount || 0,
+          waitingCount: pool.waitingCount || 0
+        };
+        poolCheckTime = Date.now() - poolCheckStart;
+        
+        if (poolCheckTime > 1) {
+          console.log(`⏱️  [SQL:${queryId}] Pool check: ${poolCheckTime}ms`, poolStats);
+        }
+        
+        if (poolStats.waitingCount > 0) {
+          console.warn(`⚠️  [SQL:${queryId}] ${poolStats.waitingCount} requêtes en attente dans le pool`);
+        }
       }
       
       // Étape 2: Exécution de la requête (pool.query gère l'attente et l'exécution)
-      console.log(`▶️  [SQL:${queryId}] Exécution de la requête...`);
-      const queryStartTime = Date.now();
+      // On mesure toujours le temps pour détecter les problèmes critiques, même sans logs
+      if (ENABLE_SQL_LOGS) {
+        console.log(`▶️  [SQL:${queryId}] Exécution de la requête...`);
+      }
+      const queryStartTime = Date.now(); // Toujours mesurer pour détecter les problèmes
       const result = await pool.query(queryText, queryParams);
       const queryEndTime = Date.now();
       const queryExecutionTime = queryEndTime - queryStartTime;
@@ -353,66 +361,73 @@ function sql(strings, ...values) {
       // Note: pool.query() inclut l'attente du pool + l'exécution SQL
       // On ne peut pas les séparer facilement, donc queryExecutionTime inclut les deux
       
-      // Étape 4: Traitement des résultats
-      const processStartTime = Date.now();
+      // Étape 3: Traitement des résultats (très rapide, pas besoin de mesurer en prod)
       const rows = result.rows;
-      const processTime = Date.now() - processStartTime;
+      const totalTime = ENABLE_SQL_LOGS ? Date.now() - totalStartTime : 0;
       
-      const totalTime = Date.now() - totalStartTime;
+      // Log détaillé des performances uniquement si logs activés
+      if (ENABLE_SQL_LOGS) {
+        console.log(`✅ [SQL:${queryId}] Terminé en ${totalTime}ms`);
+        console.log(`   📊 Détails:`);
+        console.log(`      - Construction requête: ${queryBuildTime}ms`);
+        console.log(`      - Pool check: ${poolCheckTime}ms`);
+        console.log(`      - Pool + Exécution SQL: ${queryExecutionTime}ms (inclut attente pool)`);
+        console.log(`      - Total: ${totalTime}ms`);
+        console.log(`   📈 Résultat: ${rows.length} lignes`);
+        if (poolStats) {
+          console.log(`   🔍 Pool stats: ${poolStats.totalCount} total, ${poolStats.idleCount} idle, ${poolStats.waitingCount} waiting`);
+        }
+      }
       
-      // Log détaillé des performances
-      console.log(`✅ [SQL:${queryId}] Terminé en ${totalTime}ms`);
-      console.log(`   📊 Détails:`);
-      console.log(`      - Construction requête: ${queryBuildTime}ms`);
-      console.log(`      - Pool check: ${poolCheckTime}ms`);
-      console.log(`      - Pool + Exécution SQL: ${queryExecutionTime}ms (inclut attente pool)`);
-      console.log(`      - Traitement résultats: ${processTime}ms`);
-      console.log(`      - Total: ${totalTime}ms`);
-      console.log(`   📈 Résultat: ${rows.length} lignes`);
-      console.log(`   🔍 Pool stats: ${poolStats.totalCount} total, ${poolStats.idleCount} idle, ${poolStats.waitingCount} waiting`);
-      
-      // Avertissement si la requête est lente ou risque de timeout Vercel
+      // Avertissements critiques - toujours vérifier même sans logs détaillés
       const timeoutWarningThreshold = queryTimeout * 0.8; // 80% du timeout configuré
       const criticalThreshold = queryTimeout * 0.9; // 90% du timeout configuré
       
       if (queryExecutionTime > criticalThreshold) {
-        console.error(`🚨 [SQL:${queryId}] REQUÊTE CRITIQUE - Proche du timeout (${queryExecutionTime}ms / ${queryTimeout}ms)`);
+        console.error(`🚨 [SQL${queryId ? ':' + queryId : ''}] REQUÊTE CRITIQUE - Proche du timeout (${queryExecutionTime}ms / ${queryTimeout}ms)`);
         console.error(`   ⚠️  Risque de timeout Vercel (${VERCEL_MAX_DURATION}s max)`);
-        if (poolStats.waitingCount > 0) {
+        if (ENABLE_SQL_LOGS && poolStats && poolStats.waitingCount > 0) {
           console.error(`   💡 ${poolStats.waitingCount} requêtes en attente - considérer augmenter DB_MAX_CONNECTIONS`);
         }
-      } else if (queryExecutionTime > timeoutWarningThreshold) {
-        console.warn(`⚠️  [SQL:${queryId}] Requête lente - Proche du timeout (${queryExecutionTime}ms / ${queryTimeout}ms)`);
-      } else if (queryExecutionTime > 1000) {
-        console.warn(`⚠️  [SQL:${queryId}] Requête lente (>1s): ${queryExecutionTime}ms`);
-        if (poolStats.waitingCount > 0) {
-          console.warn(`   💡 ${poolStats.waitingCount} requêtes en attente - considérer augmenter DB_MAX_CONNECTIONS`);
+      } else if (ENABLE_SQL_LOGS) {
+        // Autres avertissements uniquement si logs activés
+        if (queryExecutionTime > timeoutWarningThreshold) {
+          console.warn(`⚠️  [SQL:${queryId}] Requête lente - Proche du timeout (${queryExecutionTime}ms / ${queryTimeout}ms)`);
+        } else if (queryExecutionTime > 1000) {
+          console.warn(`⚠️  [SQL:${queryId}] Requête lente (>1s): ${queryExecutionTime}ms`);
+          if (poolStats && poolStats.waitingCount > 0) {
+            console.warn(`   💡 ${poolStats.waitingCount} requêtes en attente - considérer augmenter DB_MAX_CONNECTIONS`);
+          }
         }
-      }
-      if (queryExecutionTime > 100 && queryExecutionTime <= 1000) {
-        console.warn(`⚠️  [SQL:${queryId}] Requête modérément lente (>100ms): ${queryExecutionTime}ms`);
-      }
-      if (totalTime > 2000) {
-        console.warn(`⚠️  [SQL:${queryId}] Requête très lente (>2s): ${totalTime}ms`);
+        if (queryExecutionTime > 100 && queryExecutionTime <= 1000) {
+          console.warn(`⚠️  [SQL:${queryId}] Requête modérément lente (>100ms): ${queryExecutionTime}ms`);
+        }
+        if (totalTime > 2000) {
+          console.warn(`⚠️  [SQL:${queryId}] Requête très lente (>2s): ${totalTime}ms`);
+        }
       }
       
       return rows;
     } catch (error) {
-      const totalTime = Date.now() - totalStartTime;
+      // Toujours logger les erreurs, même sans logs détaillés
+      const totalTime = ENABLE_SQL_LOGS ? Date.now() - totalStartTime : 0;
       
-      // Log d'erreur détaillé
-      console.error(`❌ [SQL:${queryId}] Erreur après ${totalTime}ms`);
+      console.error(`❌ [SQL${queryId ? ':' + queryId : ''}] Erreur${totalTime > 0 ? ` après ${totalTime}ms` : ''}`);
       console.error(`   Message: ${error.message}`);
       if (error.code) {
         console.error(`   Code: ${error.code}`);
       }
-      if (error.position) {
-        console.error(`   Position: ${error.position}`);
+      if (ENABLE_SQL_LOGS) {
+        if (error.position) {
+          console.error(`   Position: ${error.position}`);
+        }
+        if (error.hint) {
+          console.error(`   Hint: ${error.hint}`);
+        }
+        if (queryPreview) {
+          console.error(`   Requête: ${queryPreview}`);
+        }
       }
-      if (error.hint) {
-        console.error(`   Hint: ${error.hint}`);
-      }
-      console.error(`   Requête: ${queryPreview}`);
       
       throw error;
     }
@@ -465,7 +480,6 @@ module.exports = {
   default: sql,
   pool,
   sql,
-  testConnection,
   executeWithRetry,
   query: (text, params) => pool.query(text, params)
 };
