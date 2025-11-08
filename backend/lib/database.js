@@ -72,89 +72,21 @@ try {
   throw error;
 }
 
-// Fonction pour tester la connexion
+// Fonction pour tester la connexion (version simplifiée et rapide)
 async function testConnection() {
   try {
-    console.log('🔄 Tentative de connexion à PostgreSQL...');
-    if (process.env.DB_HOST) {
-      console.log(`📍 Hôte: ${process.env.DB_HOST}:${process.env.DB_PORT || 5432}`);
-      console.log(`📊 Base de données: ${process.env.DB_NAME}`);
-    } else {
-      console.log('📍 Utilisation de DATABASE_URL');
-    }
+    console.log('🔄 Test rapide de connexion PostgreSQL...');
     
     const client = await pool.connect();
-    console.log('✅ Connexion réussie à PostgreSQL!');
     
-    // Exécuter une requête de test
-    const result = await client.query('SELECT NOW() as current_time, version() as version');
-    console.log('\n📅 Heure actuelle du serveur:', result.rows[0].current_time);
-    console.log('🔖 Version PostgreSQL:', result.rows[0].version.split(' ')[0] + ' ' + result.rows[0].version.split(' ')[1]);
-    
-    // Afficher les bases de données disponibles
-    const dbResult = await client.query(`
-      SELECT datname
-      FROM pg_database
-      WHERE datistemplate = false
-      ORDER BY datname;
-    `);
-    
-    console.log('\n📚 Bases de données disponibles:');
-    dbResult.rows.forEach((row, index) => {
-      console.log(`   ${index + 1}. ${row.datname}`);
-    });
-    
-    // Tester la table profiles
-    try {
-      console.log('\n🔍 Test de la table "profiles"...');
-      
-      // Vérifier si la table existe et compter les lignes
-      const countResult = await client.query('SELECT COUNT(*) as count FROM profiles');
-      console.log(`   📊 Nombre d'enregistrements: ${countResult.rows[0].count}`);
-      
-      // Afficher la structure de la table
-      const columnsResult = await client.query(`
-        SELECT column_name, data_type, character_maximum_length
-        FROM information_schema.columns
-        WHERE table_name = 'profiles'
-        ORDER BY ordinal_position;
-      `);
-      
-      if (columnsResult.rows.length > 0) {
-        console.log('\n   📋 Structure de la table "profiles":');
-        columnsResult.rows.forEach((col, index) => {
-          const length = col.character_maximum_length ? `(${col.character_maximum_length})` : '';
-          console.log(`   ${index + 1}. ${col.column_name} - ${col.data_type}${length}`);
-        });
-      }
-      
-      // Afficher quelques exemples d'enregistrements (limité à 5)
-      const sampleResult = await client.query('SELECT * FROM profiles LIMIT 5');
-      if (sampleResult.rows.length > 0) {
-        console.log('\n   📝 Exemples d\'enregistrements (max 5):');
-        sampleResult.rows.forEach((row, index) => {
-          console.log(`   ${index + 1}.`, row);
-        });
-      } else {
-        console.log('\n   ℹ️ La table "profiles" est vide');
-      }
-      
-      console.log('   ✅ Table "profiles" accessible avec succès!');
-    } catch (profileError) {
-      console.error('   ⚠️ Erreur lors du test de la table "profiles":', profileError.message);
-      console.error('   💡 Vérifiez que la table "profiles" existe dans la base de données');
-    }
+    // Test minimal : juste vérifier que la connexion fonctionne
+    await client.query('SELECT 1 as test');
     
     client.release();
-    console.log('\n✨ Test terminé avec succès!');
+    console.log('✅ Connexion PostgreSQL OK');
     return true;
   } catch (error) {
     console.error('❌ Erreur de connexion:', error.message);
-    console.error('\n💡 Vérifiez:');
-    console.error('   - Que PostgreSQL est bien démarré');
-    console.error('   - Que le port est correctement configuré');
-    console.error('   - Que les identifiants dans le fichier .env sont corrects');
-    console.error('   - Que le pare-feu autorise la connexion');
     return false;
   }
 }
@@ -319,15 +251,10 @@ function sql(strings, ...values) {
   const executeQuery = async () => {
     const client = await pool.connect();
     try {
-      // Log temporaire pour déboguer
-      if (queryText.includes('ORDER') || queryText.includes('AND')) {
-        console.log('🔍 SQL généré:', queryText.substring(0, 300));
-        console.log('🔍 Params:', queryParams);
-      }
-      // Ajouter un timeout de 20 secondes sur la requête (laisse de la marge avant le timeout Vercel de 60s)
+      // Ajouter un timeout de 10 secondes sur la requête (pour éviter les timeouts Vercel)
       const queryPromise = client.query(queryText, queryParams);
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Query timeout: requête SQL dépassée 20 secondes')), 20000);
+        setTimeout(() => reject(new Error('Query timeout: requête SQL dépassée 10 secondes')), 10000);
       });
       const result = await Promise.race([queryPromise, timeoutPromise]);
       return result.rows;

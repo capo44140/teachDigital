@@ -30,6 +30,9 @@ class ApiService {
     // Ne pas définir Content-Type si le body est FormData (le navigateur le fait automatiquement)
     const isFormData = options.body instanceof FormData;
     
+    // Timeout par défaut de 30 secondes (Vercel timeout est de 60s)
+    const timeout = options.timeout || 30000;
+    
     const config = {
       headers: {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
@@ -44,7 +47,16 @@ class ApiService {
     }
 
     try {
-      const response = await fetch(url, config);
+      // Créer une promesse avec timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      
+      const response = await fetch(url, {
+        ...config,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
       
       // Gérer les erreurs HTTP
       if (!response.ok) {
@@ -53,12 +65,19 @@ class ApiService {
           this.logout();
           throw new Error('Session expirée - Veuillez vous reconnecter');
         }
+        if (response.status === 504) {
+          throw new Error('Timeout: Le serveur a pris trop de temps à répondre. Veuillez réessayer.');
+        }
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
 
       const data = await response.json();
       return data;
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.error('Erreur API: Timeout de la requête');
+        throw new Error('Timeout: La requête a pris trop de temps. Veuillez réessayer.');
+      }
       console.error('Erreur API:', error);
       throw error;
     }

@@ -259,16 +259,21 @@ async function handleProfiles(req, res) {
   try {
     if (req.method === 'GET') {
       // GET est public - récupérer tous les profils
-      // Utiliser seulement 2 retries pour éviter les timeouts (au lieu de 5)
-      // Exclure image_data pour améliorer les performances (peut être récupéré séparément si nécessaire)
-      const profiles = await executeWithRetry(() => sql`
+      // Requête optimisée sans retry pour éviter les timeouts
+      // Exclure image_data pour améliorer les performances
+      const startTime = Date.now();
+      
+      const profiles = await sql`
         SELECT 
           id, name, description, type, is_admin, is_child, is_teen, 
           is_active, is_locked, color, avatar_class, avatar_content, 
           image_url, image_type, level, created_at, updated_at
         FROM profiles 
         ORDER BY created_at DESC
-      `, 2, 500); // 2 retries max, 500ms de délai initial
+      `;
+      
+      const duration = Date.now() - startTime;
+      console.log(`✅ Profils récupérés: ${profiles.length} en ${duration}ms`);
 
       res.status(200).json({
         success: true,
