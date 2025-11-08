@@ -1,11 +1,50 @@
 const { Pool } = require('pg');
 const dotenv = require('dotenv');
+const fs = require('fs');
+const path = require('path');
 
 // Charger les variables d'environnement
 dotenv.config();
 
 // Configuration de la connexion PostgreSQL
 // Supporte deux méthodes : variables séparées ou DATABASE_URL
+
+// Configuration des timeouts adaptés à Vercel
+// Plans gratuits: 10s max | Plans Pro/Enterprise: 60s max
+// On utilise 8s par défaut pour être sûr (plans gratuits)
+// Peut être augmenté via DB_QUERY_TIMEOUT_MS pour plans Pro/Enterprise
+
+// Détecter automatiquement le maxDuration depuis vercel.json
+let detectedMaxDuration = 10; // Par défaut: plan gratuit (10s)
+try {
+  const vercelConfigPath = path.join(__dirname, '..', 'vercel.json');
+  if (fs.existsSync(vercelConfigPath)) {
+    const vercelConfig = JSON.parse(fs.readFileSync(vercelConfigPath, 'utf8'));
+    if (vercelConfig.functions?.['api/index.js']?.maxDuration) {
+      detectedMaxDuration = vercelConfig.functions['api/index.js'].maxDuration;
+      console.log(`📋 Détection automatique depuis vercel.json: maxDuration = ${detectedMaxDuration}s`);
+    }
+  }
+} catch (error) {
+  // Ignorer les erreurs de lecture de vercel.json
+  console.log('ℹ️  Impossible de lire vercel.json, utilisation des valeurs par défaut');
+}
+
+const VERCEL_MAX_DURATION = parseInt(process.env.VERCEL_MAX_DURATION) || detectedMaxDuration; // Détection automatique ou variable d'environnement
+
+// Déterminer le timeout par défaut selon le plan Vercel détecté
+// Plans gratuits (10s): timeout de 8s pour laisser de la marge
+// Plans Pro/Enterprise (60s): timeout de 50s pour laisser de la marge
+const DEFAULT_QUERY_TIMEOUT_MS = parseInt(process.env.DB_QUERY_TIMEOUT_MS) || 
+  (VERCEL_MAX_DURATION >= 60 ? 50000 : 8000); // 50s pour Pro/Enterprise, 8s pour gratuit
+
+// Ajuster le timeout selon la configuration Vercel
+// Pour plans Pro/Enterprise (60s), on peut utiliser jusqu'à 50s pour laisser de la marge
+// Pour plans gratuits (10s), on limite à 8s pour éviter les timeouts
+const queryTimeout = VERCEL_MAX_DURATION >= 60 
+  ? Math.min(DEFAULT_QUERY_TIMEOUT_MS, 50000) // Max 50s pour plans Pro/Enterprise
+  : Math.min(DEFAULT_QUERY_TIMEOUT_MS, 8000);  // Max 8s pour plans gratuits
+
 let poolConfig;
 
 if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process.env.DB_PASSWORD) {
@@ -21,8 +60,8 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
     min: 2, // Maintenir au moins 2 connexions actives
     idleTimeoutMillis: 30000, // 30 secondes avant de fermer une connexion inactive
     connectionTimeoutMillis: 5000, // 5 secondes max pour établir une connexion
-    statement_timeout: 20000, // 20 secondes max pour éviter timeout Vercel (60s)
-    query_timeout: 20000, // 20 secondes max pour éviter timeout Vercel (60s)
+    statement_timeout: queryTimeout, // Timeout adaptatif selon plan Vercel
+    query_timeout: queryTimeout, // Timeout adaptatif selon plan Vercel
     keepAlive: true,
     keepAliveInitialDelayMillis: 10000
   };
@@ -44,8 +83,8 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
     min: 2,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
-    statement_timeout: 20000, // 20 secondes max pour éviter timeout Vercel (60s)
-    query_timeout: 20000, // 20 secondes max pour éviter timeout Vercel (60s)
+    statement_timeout: queryTimeout, // Timeout adaptatif selon plan Vercel
+    query_timeout: queryTimeout, // Timeout adaptatif selon plan Vercel
     keepAlive: true,
     keepAliveInitialDelayMillis: 10000
   };
@@ -118,16 +157,19 @@ if (process.env.DB_HOST) {
 }
 console.log('   - Connect Timeout: 5s');
 console.log('   - Idle Timeout: 30s');
-console.log('   - Statement Timeout: 20s (pour éviter timeout Vercel)');
-console.log('   - Query Timeout: 20s (pour éviter timeout Vercel)');
+console.log(`   - Statement Timeout: ${queryTimeout}ms (adapté au plan Vercel: ${VERCEL_MAX_DURATION}s max)`);
+console.log(`   - Query Timeout: ${queryTimeout}ms (adapté au plan Vercel: ${VERCEL_MAX_DURATION}s max)`);
 console.log('   - Max Connections: ' + (parseInt(process.env.DB_MAX_CONNECTIONS) || 10));
 console.log('   - Min Connections: 2');
 console.log('   - Keep-Alive: enabled');
 console.log('   - Retry automatique: enabled (2x max, délai 500ms)');
+console.log(`   - ⚠️  Vercel Timeout: ${VERCEL_MAX_DURATION}s (${VERCEL_MAX_DURATION >= 60 ? 'Plan Pro/Enterprise' : 'Plan Gratuit'})`);
 console.log('═══════════════════════════════════════════════════════════');
 
 // Fonction wrapper pour exécuter des requêtes avec retry automatique
-// OPTIMISÉ: Réduit de 5 à 2 retries max pour éviter les timeouts Vercel (60s)
+// OPTIMISÉ: Réduit de 5 à 2 retries max pour éviter les timeouts Vercel
+// Le total (timeout query + retries) doit rester sous la limite Vercel
+// Avec 2 retries de 500ms = 1s de délais max, donc timeout query peut être jusqu'à 9s pour plans gratuits
 async function executeWithRetry(queryFn, maxRetries = 2, delayMs = 500) {
   let lastError;
   
@@ -329,8 +371,19 @@ function sql(strings, ...values) {
       console.log(`   📈 Résultat: ${rows.length} lignes`);
       console.log(`   🔍 Pool stats: ${poolStats.totalCount} total, ${poolStats.idleCount} idle, ${poolStats.waitingCount} waiting`);
       
-      // Avertissement si la requête est lente
-      if (queryExecutionTime > 1000) {
+      // Avertissement si la requête est lente ou risque de timeout Vercel
+      const timeoutWarningThreshold = queryTimeout * 0.8; // 80% du timeout configuré
+      const criticalThreshold = queryTimeout * 0.9; // 90% du timeout configuré
+      
+      if (queryExecutionTime > criticalThreshold) {
+        console.error(`🚨 [SQL:${queryId}] REQUÊTE CRITIQUE - Proche du timeout (${queryExecutionTime}ms / ${queryTimeout}ms)`);
+        console.error(`   ⚠️  Risque de timeout Vercel (${VERCEL_MAX_DURATION}s max)`);
+        if (poolStats.waitingCount > 0) {
+          console.error(`   💡 ${poolStats.waitingCount} requêtes en attente - considérer augmenter DB_MAX_CONNECTIONS`);
+        }
+      } else if (queryExecutionTime > timeoutWarningThreshold) {
+        console.warn(`⚠️  [SQL:${queryId}] Requête lente - Proche du timeout (${queryExecutionTime}ms / ${queryTimeout}ms)`);
+      } else if (queryExecutionTime > 1000) {
         console.warn(`⚠️  [SQL:${queryId}] Requête lente (>1s): ${queryExecutionTime}ms`);
         if (poolStats.waitingCount > 0) {
           console.warn(`   💡 ${poolStats.waitingCount} requêtes en attente - considérer augmenter DB_MAX_CONNECTIONS`);
