@@ -1,13 +1,50 @@
 const { Pool } = require('pg');
+const dotenv = require('dotenv');
 
-// Configuration de la base de données PostgreSQL
-const connectionString = process.env.DATABASE_URL;
+// Charger les variables d'environnement
+dotenv.config();
 
-// Vérifier que DATABASE_URL est définie et non vide
-if (!connectionString || connectionString.trim() === '') {
-  const error = new Error('DATABASE_URL non définie ou vide dans les variables d\'environnement. Vérifiez votre configuration Vercel.');
+// Configuration de la connexion PostgreSQL
+// Supporte deux méthodes : variables séparées ou DATABASE_URL
+let poolConfig;
+
+if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process.env.DB_PASSWORD) {
+  // Méthode 1 : Variables d'environnement séparées (préférée)
+  poolConfig = {
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT) || 5432,
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+    max: 5,
+    idleTimeoutMillis: 60000,
+    connectionTimeoutMillis: 60000,
+  };
+  console.log('🔗 Connexion PostgreSQL configurée avec variables séparées');
+  console.log(`📍 Hôte: ${process.env.DB_HOST}:${poolConfig.port}`);
+  console.log(`📊 Base de données: ${process.env.DB_NAME}`);
+} else if (process.env.DATABASE_URL) {
+  // Méthode 2 : Connection string (compatibilité)
+  const connectionString = process.env.DATABASE_URL;
+  
+  if (!connectionString.startsWith('postgresql://') && !connectionString.startsWith('postgres://')) {
+    throw new Error('DATABASE_URL doit commencer par postgresql:// ou postgres://');
+  }
+  
+  poolConfig = {
+    connectionString,
+    max: 5,
+    idleTimeoutMillis: 60000,
+    connectionTimeoutMillis: 60000,
+    ssl: false,
+  };
+  console.log('🔗 Connexion PostgreSQL configurée avec DATABASE_URL');
+  console.log('🔍 DATABASE_URL détectée:', connectionString.replace(/:[^:@]+@/, ':****@'));
+} else {
+  const error = new Error('Configuration PostgreSQL manquante. Définissez soit (DB_HOST, DB_NAME, DB_USER, DB_PASSWORD) soit DATABASE_URL.');
   console.error('❌ Erreur de configuration PostgreSQL:', error.message);
-  console.error('💡 Pour Vercel, ajoutez DATABASE_URL dans Settings > Environment Variables');
+  console.error('💡 Variables requises: DB_HOST, DB_NAME, DB_USER, DB_PASSWORD (ou DATABASE_URL)');
   throw error;
 }
 
@@ -15,23 +52,7 @@ if (!connectionString || connectionString.trim() === '') {
 let pool;
 
 try {
-  // Vérifier que la connection string est valide (commence par postgresql:// ou postgres://)
-  if (!connectionString.startsWith('postgresql://') && !connectionString.startsWith('postgres://')) {
-    throw new Error('DATABASE_URL doit commencer par postgresql:// ou postgres://');
-  }
-  
-  console.log('🔗 Connexion à PostgreSQL configurée');
-  console.log('🔍 DATABASE_URL détectée:', connectionString.replace(/:[^:@]+@/, ':****@')); // Masquer le mot de passe dans les logs
-  console.log('📝 Longueur DATABASE_URL:', connectionString.length, 'caractères');
-  
-  // Configuration OPTIMISÉE pour PostgreSQL/Vercel serverless avec pg
-  pool = new Pool({
-    connectionString,
-    max: 5, // Nombre maximum de connexions dans le pool (augmenté pour meilleure performance)
-    idleTimeoutMillis: 60000, // 60 secondes (augmenté)
-    connectionTimeoutMillis: 60000, // 60 secondes pour la connexion (CRITICAL - augmenté)
-    ssl: false, // SSL désactivé
-  });
+  pool = new Pool(poolConfig);
   
   // Listeners pour gérer les erreurs de connexion
   pool.on('connect', () => {
@@ -47,32 +68,94 @@ try {
   });
 } catch (error) {
   console.error('❌ Erreur de configuration PostgreSQL:', error);
-  console.error('💡 Vérifiez que DATABASE_URL est correctement configurée sur Vercel');
+  console.error('💡 Vérifiez que les variables d\'environnement sont correctement configurées');
   throw error;
 }
 
 // Fonction pour tester la connexion
 async function testConnection() {
-  const client = await pool.connect();
   try {
-    console.log('🔍 Test de connexion à la base de données...');
-    const result = await client.query('SELECT 1 as test');
-    console.log('✅ Connexion à la base de données testée avec succès');
-    console.log('📊 Paramètres de connexion:');
-    console.log('   - SSL: disabled');
-    console.log('   - Connect Timeout: 60 secondes');
-    console.log('   - Statement Timeout: 60 secondes');
-    console.log('   - Max connexions: 5');
+    console.log('🔄 Tentative de connexion à PostgreSQL...');
+    if (process.env.DB_HOST) {
+      console.log(`📍 Hôte: ${process.env.DB_HOST}:${process.env.DB_PORT || 5432}`);
+      console.log(`📊 Base de données: ${process.env.DB_NAME}`);
+    } else {
+      console.log('📍 Utilisation de DATABASE_URL');
+    }
+    
+    const client = await pool.connect();
+    console.log('✅ Connexion réussie à PostgreSQL!');
+    
+    // Exécuter une requête de test
+    const result = await client.query('SELECT NOW() as current_time, version() as version');
+    console.log('\n📅 Heure actuelle du serveur:', result.rows[0].current_time);
+    console.log('🔖 Version PostgreSQL:', result.rows[0].version.split(' ')[0] + ' ' + result.rows[0].version.split(' ')[1]);
+    
+    // Afficher les bases de données disponibles
+    const dbResult = await client.query(`
+      SELECT datname
+      FROM pg_database
+      WHERE datistemplate = false
+      ORDER BY datname;
+    `);
+    
+    console.log('\n📚 Bases de données disponibles:');
+    dbResult.rows.forEach((row, index) => {
+      console.log(`   ${index + 1}. ${row.datname}`);
+    });
+    
+    // Tester la table profiles
+    try {
+      console.log('\n🔍 Test de la table "profiles"...');
+      
+      // Vérifier si la table existe et compter les lignes
+      const countResult = await client.query('SELECT COUNT(*) as count FROM profiles');
+      console.log(`   📊 Nombre d'enregistrements: ${countResult.rows[0].count}`);
+      
+      // Afficher la structure de la table
+      const columnsResult = await client.query(`
+        SELECT column_name, data_type, character_maximum_length
+        FROM information_schema.columns
+        WHERE table_name = 'profiles'
+        ORDER BY ordinal_position;
+      `);
+      
+      if (columnsResult.rows.length > 0) {
+        console.log('\n   📋 Structure de la table "profiles":');
+        columnsResult.rows.forEach((col, index) => {
+          const length = col.character_maximum_length ? `(${col.character_maximum_length})` : '';
+          console.log(`   ${index + 1}. ${col.column_name} - ${col.data_type}${length}`);
+        });
+      }
+      
+      // Afficher quelques exemples d'enregistrements (limité à 5)
+      const sampleResult = await client.query('SELECT * FROM profiles LIMIT 5');
+      if (sampleResult.rows.length > 0) {
+        console.log('\n   📝 Exemples d\'enregistrements (max 5):');
+        sampleResult.rows.forEach((row, index) => {
+          console.log(`   ${index + 1}.`, row);
+        });
+      } else {
+        console.log('\n   ℹ️ La table "profiles" est vide');
+      }
+      
+      console.log('   ✅ Table "profiles" accessible avec succès!');
+    } catch (profileError) {
+      console.error('   ⚠️ Erreur lors du test de la table "profiles":', profileError.message);
+      console.error('   💡 Vérifiez que la table "profiles" existe dans la base de données');
+    }
+    
+    client.release();
+    console.log('\n✨ Test terminé avec succès!');
     return true;
   } catch (error) {
-    console.error('❌ Erreur de connexion à la base de données:', error);
-    console.error('💡 Vérifications à faire:');
-    console.error('   - DATABASE_URL est-elle correctement configurée?');
-    console.error('   - Le serveur PostgreSQL est-il disponible?');
-    console.error('   - Les pare-feu/IP whitelist permettent la connexion?');
+    console.error('❌ Erreur de connexion:', error.message);
+    console.error('\n💡 Vérifiez:');
+    console.error('   - Que PostgreSQL est bien démarré');
+    console.error('   - Que le port est correctement configuré');
+    console.error('   - Que les identifiants dans le fichier .env sont corrects');
+    console.error('   - Que le pare-feu autorise la connexion');
     return false;
-  } finally {
-    client.release();
   }
 }
 
@@ -81,13 +164,19 @@ console.log('══════════════════════�
 console.log('🚀 Initialisation du Backend TeachDigital');
 console.log('═══════════════════════════════════════════════════════════');
 console.log('📡 Configuration PostgreSQL:');
-console.log(`   - DATABASE_URL: ${connectionString.replace(/:[^:@]+@/, ':****@')}`);
-console.log('   - SSL Mode: disabled');
-console.log('   - Connect Timeout: 30s');
-console.log('   - Statement Timeout: 30s');
-console.log('   - Idle Timeout: 30s');
+if (process.env.DB_HOST) {
+  console.log(`   - Hôte: ${process.env.DB_HOST}:${process.env.DB_PORT || 5432}`);
+  console.log(`   - Base de données: ${process.env.DB_NAME}`);
+  console.log(`   - Utilisateur: ${process.env.DB_USER}`);
+  console.log(`   - SSL: ${process.env.DB_SSL === 'true' ? 'enabled' : 'disabled'}`);
+} else {
+  console.log(`   - DATABASE_URL: ${process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':****@') || 'non définie'}`);
+  console.log('   - SSL Mode: disabled');
+}
+console.log('   - Connect Timeout: 60s');
+console.log('   - Idle Timeout: 60s');
 console.log('   - Max Connections: 5');
-console.log('   - Retry automatique: enabled (3x avec backoff)');
+console.log('   - Retry automatique: enabled (5x avec backoff)');
 console.log('═══════════════════════════════════════════════════════════');
 
 // Fonction wrapper pour exécuter des requêtes avec retry automatique
