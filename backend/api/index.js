@@ -6,6 +6,17 @@ const { handleError } = require('../lib/response.js');
 const handleBadges = require('./badges.js');
 const handleAI = require('./ai.js');
 
+// Helper pour ajouter un timeout sur les requêtes SQL (évite les timeouts Vercel)
+// Timeout par défaut: 7s (sûr pour plans gratuits Vercel 10s)
+function withQueryTimeout(queryPromise, timeoutMs = 7000, operationName = 'requête') {
+  return Promise.race([
+    queryPromise,
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error(`Timeout ${operationName} après ${timeoutMs}ms`)), timeoutMs)
+    )
+  ]);
+}
+
 module.exports = async function handler(req, res) {
 
   // Configuration CORS complète - DOIT être définie en premier
@@ -151,8 +162,8 @@ async function handleLogin(req, res) {
     }
 
     const [profile, pinData] = await Promise.all([
-      sql`SELECT * FROM profiles WHERE id = ${profileId} AND is_active = true`,
-      sql`SELECT pin_code FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1`
+      withQueryTimeout(sql`SELECT * FROM profiles WHERE id = ${profileId} AND is_active = true`, 5000, 'récupération du profil'),
+      withQueryTimeout(sql`SELECT pin_code FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1`, 5000, 'récupération du PIN')
     ]);
 
     if (!profile[0] || !pinData[0]) {
@@ -244,7 +255,7 @@ async function handleProfiles(req, res) {
       
       try {
         // Timeout explicite sur la requête pour éviter les blocages
-        const profiles = await Promise.race([
+        const profiles = await withQueryTimeout(
           sql`
             SELECT 
               id, name, description, type, is_admin, is_child, is_teen, 
@@ -253,10 +264,9 @@ async function handleProfiles(req, res) {
             FROM profiles 
             ORDER BY created_at DESC
           `,
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout requête profiles après 7s')), 7000)
-          )
-        ]);
+          7000,
+          'récupération des profils'
+        );
         
         const duration = Date.now() - startTime;
         console.log(`✅ Profils récupérés: ${profiles.length} en ${duration}ms`);
@@ -298,18 +308,22 @@ async function handleProfiles(req, res) {
       const is_child = type === 'child';
       const is_teen = type === 'teen';
 
-      const result = await sql`
-        INSERT INTO profiles (
-          name, description, type, color, avatar_class, avatar_content, 
-          level, is_admin, is_child, is_teen, is_active
-        )
-        VALUES (
-          ${name}, ${description}, ${type}, ${color || 'purple'}, 
-          ${avatar_class}, ${avatar_content}, ${level}, 
-          ${is_admin}, ${is_child}, ${is_teen}, true
-        )
-        RETURNING *
-      `;
+      const result = await withQueryTimeout(
+        sql`
+          INSERT INTO profiles (
+            name, description, type, color, avatar_class, avatar_content, 
+            level, is_admin, is_child, is_teen, is_active
+          )
+          VALUES (
+            ${name}, ${description}, ${type}, ${color || 'purple'}, 
+            ${avatar_class}, ${avatar_content}, ${level}, 
+            ${is_admin}, ${is_child}, ${is_teen}, true
+          )
+          RETURNING *
+        `,
+        5000,
+        'création du profil'
+      );
 
       res.status(201).json({
         success: true,
@@ -369,14 +383,18 @@ async function handleProfile(req, res) {
 
     // Gérer les routes standard du profil
     if (req.method === 'GET') {
-      const profiles = await sql`
-        SELECT 
-          id, name, description, type, is_admin, is_child, is_teen, 
-          is_active, is_locked, color, avatar_class, avatar_content, 
-          image_url, image_data, image_type, level, created_at, updated_at
-        FROM profiles 
-        WHERE id = ${id}
-      `;
+      const profiles = await withQueryTimeout(
+        sql`
+          SELECT 
+            id, name, description, type, is_admin, is_child, is_teen, 
+            is_active, is_locked, color, avatar_class, avatar_content, 
+            image_url, image_data, image_type, level, created_at, updated_at
+          FROM profiles 
+          WHERE id = ${id}
+        `,
+        5000,
+        'récupération du profil'
+      );
 
       if (!profiles[0]) {
         res.status(404).json({ 
@@ -406,21 +424,25 @@ async function handleProfile(req, res) {
 
       const { name, description, type, color, avatar_class, avatar_content, level, is_active } = req.body;
 
-      const result = await sql`
-        UPDATE profiles 
-        SET 
-          name = COALESCE(${name}, name),
-          description = COALESCE(${description}, description),
-          type = COALESCE(${type}, type),
-          color = COALESCE(${color}, color),
-          avatar_class = COALESCE(${avatar_class}, avatar_class),
-          avatar_content = COALESCE(${avatar_content}, avatar_content),
-          level = COALESCE(${level}, level),
-          is_active = COALESCE(${is_active}, is_active),
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${id}
-        RETURNING *
-      `;
+      const result = await withQueryTimeout(
+        sql`
+          UPDATE profiles 
+          SET 
+            name = COALESCE(${name}, name),
+            description = COALESCE(${description}, description),
+            type = COALESCE(${type}, type),
+            color = COALESCE(${color}, color),
+            avatar_class = COALESCE(${avatar_class}, avatar_class),
+            avatar_content = COALESCE(${avatar_content}, avatar_content),
+            level = COALESCE(${level}, level),
+            is_active = COALESCE(${is_active}, is_active),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ${id}
+          RETURNING *
+        `,
+        5000,
+        'mise à jour du profil'
+      );
 
       if (!result[0]) {
         res.status(404).json({ 
@@ -448,11 +470,15 @@ async function handleProfile(req, res) {
         return;
       }
 
-      const result = await sql`
-        DELETE FROM profiles 
-        WHERE id = ${id}
-        RETURNING *
-      `;
+      const result = await withQueryTimeout(
+        sql`
+          DELETE FROM profiles 
+          WHERE id = ${id}
+          RETURNING *
+        `,
+        5000,
+        'suppression du profil'
+      );
 
       if (!result[0]) {
         res.status(404).json({ 
@@ -496,9 +522,13 @@ async function handleProfilePin(req, res, profileId) {
         return;
       }
 
-      const pinData = await sql`
-        SELECT pin_code, created_at FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1
-      `;
+      const pinData = await withQueryTimeout(
+        sql`
+          SELECT pin_code, created_at FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1
+        `,
+        5000,
+        'récupération du PIN'
+      );
 
       if (!pinData[0]) {
         res.status(404).json({ 
@@ -529,9 +559,13 @@ async function handleProfilePin(req, res, profileId) {
         return;
       }
 
-      const existingPin = await sql`
-        SELECT pin_code FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1
-      `;
+      const existingPin = await withQueryTimeout(
+        sql`
+          SELECT pin_code FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1
+        `,
+        5000,
+        'vérification du PIN'
+      );
 
       if (!existingPin[0]) {
         res.status(404).json({ 
@@ -569,9 +603,13 @@ async function handleProfilePin(req, res, profileId) {
       }
 
       // Vérifier que le profil existe
-      const profile = await sql`
-        SELECT id FROM profiles WHERE id = ${profileId}
-      `;
+      const profile = await withQueryTimeout(
+        sql`
+          SELECT id FROM profiles WHERE id = ${profileId}
+        `,
+        5000,
+        'vérification du profil'
+      );
 
       if (!profile[0]) {
         res.status(404).json({ 
@@ -583,9 +621,13 @@ async function handleProfilePin(req, res, profileId) {
 
       // Vérifier le PIN actuel si fourni (sécurité additionnelle)
       if (currentPin) {
-        const existingPin = await sql`
-          SELECT pin_code FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1
-        `;
+        const existingPin = await withQueryTimeout(
+          sql`
+            SELECT pin_code FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1
+          `,
+          5000,
+          'vérification du PIN actuel'
+        );
 
         if (!existingPin[0]) {
           res.status(404).json({ 
@@ -609,11 +651,15 @@ async function handleProfilePin(req, res, profileId) {
       const hashedPin = await NativeHashService.hashPin(newPin);
 
       // Mettre à jour ou créer le PIN
-      const result = await sql`
-        INSERT INTO pin_codes (profile_id, pin_code)
-        VALUES (${profileId}, ${hashedPin})
-        RETURNING profile_id, created_at
-      `;
+      const result = await withQueryTimeout(
+        sql`
+          INSERT INTO pin_codes (profile_id, pin_code)
+          VALUES (${profileId}, ${hashedPin})
+          RETURNING profile_id, created_at
+        `,
+        5000,
+        'mise à jour du PIN'
+      );
 
       res.status(200).json({
         success: true,
@@ -690,16 +736,20 @@ async function handleLessons(req, res) {
         `);
       } else {
         // Aucun paramètre - toutes les leçons
-        lessons = await executeWithRetry(() => sql`
-          SELECT 
-            l.id, l.title, l.description, l.subject, l.level, 
-            l.image_filename, l.image_data, l.quiz_data, 
-            l.is_published, l.created_at, l.updated_at,
-            p.name as profile_name
-          FROM lessons l
-          JOIN profiles p ON l.profile_id = p.id
-          ORDER BY l.created_at DESC
-        `);
+        lessons = await withQueryTimeout(
+          executeWithRetry(() => sql`
+            SELECT 
+              l.id, l.title, l.description, l.subject, l.level, 
+              l.image_filename, l.image_data, l.quiz_data, 
+              l.is_published, l.created_at, l.updated_at,
+              p.name as profile_name
+            FROM lessons l
+            JOIN profiles p ON l.profile_id = p.id
+            ORDER BY l.created_at DESC
+          `),
+          7000,
+          'récupération des leçons'
+        );
       }
 
       res.status(200).json({
@@ -725,17 +775,21 @@ async function handleLessons(req, res) {
         return;
       }
 
-      const result = await sql`
-        INSERT INTO lessons (
-          profile_id, title, description, subject, level,
-          image_filename, image_data, quiz_data, is_published
-        )
-        VALUES (
-          ${user.profileId}, ${title}, ${description}, ${subject}, ${level},
-          ${imageFilename}, ${imageData}, ${JSON.stringify(quizData)}, ${isPublished}
-        )
-        RETURNING *
-      `;
+      const result = await withQueryTimeout(
+        sql`
+          INSERT INTO lessons (
+            profile_id, title, description, subject, level,
+            image_filename, image_data, quiz_data, is_published
+          )
+          VALUES (
+            ${user.profileId}, ${title}, ${description}, ${subject}, ${level},
+            ${imageFilename}, ${imageData}, ${JSON.stringify(quizData)}, ${isPublished}
+          )
+          RETURNING *
+        `,
+        5000,
+        'création de la leçon'
+      );
 
       res.status(201).json({
         success: true,
@@ -771,16 +825,20 @@ async function handleLesson(req, res) {
     }
 
     if (req.method === 'GET') {
-      const lessons = await sql`
-        SELECT 
-          l.id, l.title, l.description, l.subject, l.level, 
-          l.image_filename, l.image_data, l.quiz_data, 
-          l.is_published, l.created_at, l.updated_at,
-          p.name as profile_name, p.id as profile_id
-        FROM lessons l
-        JOIN profiles p ON l.profile_id = p.id
-        WHERE l.id = ${id}
-      `;
+      const lessons = await withQueryTimeout(
+        sql`
+          SELECT 
+            l.id, l.title, l.description, l.subject, l.level, 
+            l.image_filename, l.image_data, l.quiz_data, 
+            l.is_published, l.created_at, l.updated_at,
+            p.name as profile_name, p.id as profile_id
+          FROM lessons l
+          JOIN profiles p ON l.profile_id = p.id
+          WHERE l.id = ${id}
+        `,
+        5000,
+        'récupération de la leçon'
+      );
 
       if (!lessons[0]) {
         res.status(404).json({ 
@@ -805,9 +863,13 @@ async function handleLesson(req, res) {
         imageFilename, imageData, quizData, isPublished 
       } = req.body;
 
-      const existingLesson = await sql`
-        SELECT * FROM lessons WHERE id = ${id}
-      `;
+      const existingLesson = await withQueryTimeout(
+        sql`
+          SELECT * FROM lessons WHERE id = ${id}
+        `,
+        5000,
+        'vérification de la leçon'
+      );
 
       if (!existingLesson[0]) {
         res.status(404).json({ 
@@ -825,21 +887,25 @@ async function handleLesson(req, res) {
         return;
       }
 
-      const result = await sql`
-        UPDATE lessons 
-        SET 
-          title = COALESCE(${title}, title),
-          description = COALESCE(${description}, description),
-          subject = COALESCE(${subject}, subject),
-          level = COALESCE(${level}, level),
-          image_filename = COALESCE(${imageFilename}, image_filename),
-          image_data = COALESCE(${imageData}, image_data),
-          quiz_data = COALESCE(${quizData ? JSON.stringify(quizData) : null}, quiz_data),
-          is_published = COALESCE(${isPublished}, is_published),
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${id}
-        RETURNING *
-      `;
+      const result = await withQueryTimeout(
+        sql`
+          UPDATE lessons 
+          SET 
+            title = COALESCE(${title}, title),
+            description = COALESCE(${description}, description),
+            subject = COALESCE(${subject}, subject),
+            level = COALESCE(${level}, level),
+            image_filename = COALESCE(${imageFilename}, image_filename),
+            image_data = COALESCE(${imageData}, image_data),
+            quiz_data = COALESCE(${quizData ? JSON.stringify(quizData) : null}, quiz_data),
+            is_published = COALESCE(${isPublished}, is_published),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ${id}
+          RETURNING *
+        `,
+        5000,
+        'mise à jour de la leçon'
+      );
 
       res.status(200).json({
         success: true,
@@ -851,9 +917,13 @@ async function handleLesson(req, res) {
       // Authentification requise pour DELETE
       const user = authenticateToken(req);
       
-      const existingLesson = await sql`
-        SELECT * FROM lessons WHERE id = ${id}
-      `;
+      const existingLesson = await withQueryTimeout(
+        sql`
+          SELECT * FROM lessons WHERE id = ${id}
+        `,
+        5000,
+        'vérification de la leçon'
+      );
 
       if (!existingLesson[0]) {
         res.status(404).json({ 
@@ -871,11 +941,15 @@ async function handleLesson(req, res) {
         return;
       }
 
-      const result = await sql`
-        DELETE FROM lessons 
-        WHERE id = ${id}
-        RETURNING *
-      `;
+      const result = await withQueryTimeout(
+        sql`
+          DELETE FROM lessons 
+          WHERE id = ${id}
+          RETURNING *
+        `,
+        5000,
+        'suppression de la leçon'
+      );
 
       res.status(200).json({
         success: true,
@@ -933,7 +1007,7 @@ async function handleNotifications(req, res) {
       }
 
       query = sql`${query} ORDER BY n.created_at DESC`;
-      const notifications = await query;
+      const notifications = await withQueryTimeout(query, 7000, 'récupération des notifications');
 
       res.status(200).json({
         success: true,
@@ -963,9 +1037,13 @@ async function handleNotifications(req, res) {
         return;
       }
 
-      const profile = await sql`
-        SELECT id FROM profiles WHERE id = ${profileId}
-      `;
+      const profile = await withQueryTimeout(
+        sql`
+          SELECT id FROM profiles WHERE id = ${profileId}
+        `,
+        5000,
+        'vérification du profil'
+      );
 
       if (!profile[0]) {
         res.status(404).json({ 
@@ -975,11 +1053,15 @@ async function handleNotifications(req, res) {
         return;
       }
 
-      const result = await sql`
-        INSERT INTO notifications (profile_id, type, title, message, data)
-        VALUES (${profileId}, ${type}, ${title}, ${message}, ${data ? JSON.stringify(data) : null})
-        RETURNING *
-      `;
+      const result = await withQueryTimeout(
+        sql`
+          INSERT INTO notifications (profile_id, type, title, message, data)
+          VALUES (${profileId}, ${type}, ${title}, ${message}, ${data ? JSON.stringify(data) : null})
+          RETURNING *
+        `,
+        5000,
+        'création de la notification'
+      );
 
       res.status(201).json({
         success: true,
@@ -1015,15 +1097,19 @@ async function handleNotification(req, res) {
     }
 
     if (req.method === 'GET') {
-      const notifications = await sql`
-        SELECT 
-          n.id, n.type, n.title, n.message, n.data, 
-          n.is_read, n.created_at,
-          p.name as profile_name
-        FROM notifications n
-        JOIN profiles p ON n.profile_id = p.id
-        WHERE n.id = ${id}
-      `;
+      const notifications = await withQueryTimeout(
+        sql`
+          SELECT 
+            n.id, n.type, n.title, n.message, n.data, 
+            n.is_read, n.created_at,
+            p.name as profile_name
+          FROM notifications n
+          JOIN profiles p ON n.profile_id = p.id
+          WHERE n.id = ${id}
+        `,
+        5000,
+        'récupération de la notification'
+      );
 
       if (!notifications[0]) {
         res.status(404).json({ 
@@ -1045,9 +1131,13 @@ async function handleNotification(req, res) {
       
       const { isRead } = req.body;
 
-      const existingNotification = await sql`
-        SELECT * FROM notifications WHERE id = ${id}
-      `;
+      const existingNotification = await withQueryTimeout(
+        sql`
+          SELECT * FROM notifications WHERE id = ${id}
+        `,
+        5000,
+        'vérification de la notification'
+      );
 
       if (!existingNotification[0]) {
         res.status(404).json({ 
@@ -1065,14 +1155,18 @@ async function handleNotification(req, res) {
         return;
       }
 
-      const result = await sql`
-        UPDATE notifications 
-        SET 
-          is_read = COALESCE(${isRead}, is_read),
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${id}
-        RETURNING *
-      `;
+      const result = await withQueryTimeout(
+        sql`
+          UPDATE notifications 
+          SET 
+            is_read = COALESCE(${isRead}, is_read),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ${id}
+          RETURNING *
+        `,
+        5000,
+        'mise à jour de la notification'
+      );
 
       res.status(200).json({
         success: true,
@@ -1084,9 +1178,13 @@ async function handleNotification(req, res) {
       // Authentification requise pour DELETE
       const user = authenticateToken(req);
       
-      const existingNotification = await sql`
-        SELECT * FROM notifications WHERE id = ${id}
-      `;
+      const existingNotification = await withQueryTimeout(
+        sql`
+          SELECT * FROM notifications WHERE id = ${id}
+        `,
+        5000,
+        'vérification de la notification'
+      );
 
       if (!existingNotification[0]) {
         res.status(404).json({ 
@@ -1104,11 +1202,15 @@ async function handleNotification(req, res) {
         return;
       }
 
-      const result = await sql`
-        DELETE FROM notifications 
-        WHERE id = ${id}
-        RETURNING *
-      `;
+      const result = await withQueryTimeout(
+        sql`
+          DELETE FROM notifications 
+          WHERE id = ${id}
+          RETURNING *
+        `,
+        5000,
+        'suppression de la notification'
+      );
 
       res.status(200).json({
         success: true,
@@ -1133,15 +1235,19 @@ async function handleNotification(req, res) {
 async function handleActivities(req, res) {
   try {
     if (req.method === 'GET') {
-      const activities = await sql`
-        SELECT 
-          id, title, description, type, status, difficulty_level,
-          estimated_duration, target_age_group, subject_area,
-          is_active, created_at, updated_at
-        FROM activities 
-        WHERE is_active = true
-        ORDER BY created_at DESC
-      `;
+      const activities = await withQueryTimeout(
+        sql`
+          SELECT 
+            id, title, description, type, status, difficulty_level,
+            estimated_duration, target_age_group, subject_area,
+            is_active, created_at, updated_at
+          FROM activities 
+          WHERE is_active = true
+          ORDER BY created_at DESC
+        `,
+        7000,
+        'récupération des activités'
+      );
 
       res.status(200).json({
         success: true,
@@ -1170,19 +1276,23 @@ async function handleActivities(req, res) {
         return;
       }
 
-      const newActivity = await sql`
-        INSERT INTO activities (
-          title, description, type, difficulty_level,
-          estimated_duration, target_age_group, subject_area,
-          status, is_active
-        )
-        VALUES (
-          ${title}, ${description}, ${type}, ${difficulty_level || 'medium'},
-          ${estimated_duration || 30}, ${target_age_group || '6-12'}, 
-          ${subject_area || 'general'}, 'active', true
-        )
-        RETURNING *
-      `;
+      const newActivity = await withQueryTimeout(
+        sql`
+          INSERT INTO activities (
+            title, description, type, difficulty_level,
+            estimated_duration, target_age_group, subject_area,
+            status, is_active
+          )
+          VALUES (
+            ${title}, ${description}, ${type}, ${difficulty_level || 'medium'},
+            ${estimated_duration || 30}, ${target_age_group || '6-12'}, 
+            ${subject_area || 'general'}, 'active', true
+          )
+          RETURNING *
+        `,
+        5000,
+        'création de l\'activité'
+      );
 
       res.status(201).json({
         success: true,
@@ -1206,14 +1316,18 @@ async function handleActivities(req, res) {
 async function handleYoutubeVideos(req, res) {
   try {
     if (req.method === 'GET') {
-      const videos = await sql`
-        SELECT 
-          id, url, video_id, title, description, category,
-          age_group, is_active, created_at, updated_at
-        FROM youtube_videos 
-        WHERE is_active = true
-        ORDER BY created_at DESC
-      `;
+      const videos = await withQueryTimeout(
+        sql`
+          SELECT 
+            id, url, video_id, title, description, category,
+            age_group, is_active, created_at, updated_at
+          FROM youtube_videos 
+          WHERE is_active = true
+          ORDER BY created_at DESC
+        `,
+        7000,
+        'récupération des vidéos YouTube'
+      );
 
       res.status(200).json({
         success: true,
@@ -1241,16 +1355,20 @@ async function handleYoutubeVideos(req, res) {
         return;
       }
 
-      const newVideo = await sql`
-        INSERT INTO youtube_videos (
-          url, video_id, title, description, category, age_group, is_active
-        )
-        VALUES (
-          ${url}, ${video_id}, ${title}, ${description || ''}, 
-          ${category || 'general'}, ${age_group || '6-12'}, true
-        )
-        RETURNING *
-      `;
+      const newVideo = await withQueryTimeout(
+        sql`
+          INSERT INTO youtube_videos (
+            url, video_id, title, description, category, age_group, is_active
+          )
+          VALUES (
+            ${url}, ${video_id}, ${title}, ${description || ''}, 
+            ${category || 'general'}, ${age_group || '6-12'}, true
+          )
+          RETURNING *
+        `,
+        5000,
+        'création de la vidéo YouTube'
+      );
 
       res.status(201).json({
         success: true,
@@ -1287,13 +1405,17 @@ async function handlePin(req, res) {
 
     if (req.method === 'GET') {
       // Récupérer le code PIN (pour vérification)
-      const pinData = await sql`
-        SELECT pin_code, created_at, updated_at
-        FROM pin_codes 
-        WHERE profile_id = ${profileId}
-        ORDER BY created_at DESC
-        LIMIT 1
-      `;
+      const pinData = await withQueryTimeout(
+        sql`
+          SELECT pin_code, created_at, updated_at
+          FROM pin_codes 
+          WHERE profile_id = ${profileId}
+          ORDER BY created_at DESC
+          LIMIT 1
+        `,
+        5000,
+        'récupération du PIN'
+      );
 
       if (!pinData[0]) {
         res.status(404).json({ 
@@ -1325,12 +1447,16 @@ async function handlePin(req, res) {
         return;
       }
 
-      const pinData = await sql`
-        SELECT pin_code FROM pin_codes 
-        WHERE profile_id = ${profileId}
-        ORDER BY created_at DESC
-        LIMIT 1
-      `;
+      const pinData = await withQueryTimeout(
+        sql`
+          SELECT pin_code FROM pin_codes 
+          WHERE profile_id = ${profileId}
+          ORDER BY created_at DESC
+          LIMIT 1
+        `,
+        5000,
+        'vérification du PIN'
+      );
 
       if (!pinData[0]) {
         res.status(404).json({ 
@@ -1362,12 +1488,16 @@ async function handlePin(req, res) {
 
       // Vérifier le code PIN actuel si fourni
       if (currentPin) {
-        const pinData = await sql`
-          SELECT pin_code FROM pin_codes 
-          WHERE profile_id = ${profileId}
-          ORDER BY created_at DESC
-          LIMIT 1
-        `;
+        const pinData = await withQueryTimeout(
+          sql`
+            SELECT pin_code FROM pin_codes 
+            WHERE profile_id = ${profileId}
+            ORDER BY created_at DESC
+            LIMIT 1
+          `,
+          5000,
+          'vérification du PIN actuel'
+        );
 
         if (pinData[0]) {
           const isValidCurrentPin = await NativeHashService.verifyPin(currentPin, pinData[0].pin_code);
@@ -1394,28 +1524,40 @@ async function handlePin(req, res) {
       const hashedPin = await NativeHashService.hashPin(newPin);
 
       // Vérifier si un code PIN existe déjà
-      const existingPin = await sql`
-        SELECT id FROM pin_codes WHERE profile_id = ${profileId}
-      `;
+      const existingPin = await withQueryTimeout(
+        sql`
+          SELECT id FROM pin_codes WHERE profile_id = ${profileId}
+        `,
+        5000,
+        'vérification PIN existant'
+      );
 
       let result;
       if (existingPin[0]) {
         // Mettre à jour le code PIN existant
-        result = await sql`
-          UPDATE pin_codes 
-          SET 
-            pin_code = ${hashedPin},
-            updated_at = CURRENT_TIMESTAMP
-          WHERE profile_id = ${profileId}
-          RETURNING *
-        `;
+        result = await withQueryTimeout(
+          sql`
+            UPDATE pin_codes 
+            SET 
+              pin_code = ${hashedPin},
+              updated_at = CURRENT_TIMESTAMP
+            WHERE profile_id = ${profileId}
+            RETURNING *
+          `,
+          5000,
+          'mise à jour du PIN'
+        );
       } else {
         // Créer un nouveau code PIN
-        result = await sql`
-          INSERT INTO pin_codes (profile_id, pin_code)
-          VALUES (${profileId}, ${hashedPin})
-          RETURNING *
-        `;
+        result = await withQueryTimeout(
+          sql`
+            INSERT INTO pin_codes (profile_id, pin_code)
+            VALUES (${profileId}, ${hashedPin})
+            RETURNING *
+          `,
+          5000,
+          'création du PIN'
+        );
       }
 
       res.status(200).json({
@@ -1445,25 +1587,13 @@ async function handleProfileStats(req, res) {
       return;
     }
 
-    const totalProfiles = await sql`
-      SELECT COUNT(*) as count FROM profiles
-    `;
-
-    const activeProfiles = await sql`
-      SELECT COUNT(*) as count FROM profiles WHERE is_active = true
-    `;
-
-    const childProfiles = await sql`
-      SELECT COUNT(*) as count FROM profiles WHERE is_child = true
-    `;
-
-    const teenProfiles = await sql`
-      SELECT COUNT(*) as count FROM profiles WHERE is_teen = true
-    `;
-
-    const adminProfiles = await sql`
-      SELECT COUNT(*) as count FROM profiles WHERE is_admin = true
-    `;
+    const [totalProfiles, activeProfiles, childProfiles, teenProfiles, adminProfiles] = await Promise.all([
+      withQueryTimeout(sql`SELECT COUNT(*) as count FROM profiles`, 5000, 'stats total profils'),
+      withQueryTimeout(sql`SELECT COUNT(*) as count FROM profiles WHERE is_active = true`, 5000, 'stats profils actifs'),
+      withQueryTimeout(sql`SELECT COUNT(*) as count FROM profiles WHERE is_child = true`, 5000, 'stats profils enfants'),
+      withQueryTimeout(sql`SELECT COUNT(*) as count FROM profiles WHERE is_teen = true`, 5000, 'stats profils ados'),
+      withQueryTimeout(sql`SELECT COUNT(*) as count FROM profiles WHERE is_admin = true`, 5000, 'stats profils admin')
+    ]);
 
     res.status(200).json({
       success: true,
