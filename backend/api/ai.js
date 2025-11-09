@@ -53,9 +53,12 @@ module.exports = async function handler(req, res) {
   let url;
   try {
     // Authentification requise pour toutes les routes IA
-    const authResult = authenticateToken(req);
-    if (!authResult.success) {
-      return res.status(401).json(createErrorResponse('Token d\'authentification invalide'));
+    try {
+      const user = authenticateToken(req);
+      // Si on arrive ici, l'authentification a réussi
+    } catch (authError) {
+      console.error('❌ Erreur d\'authentification:', authError.message);
+      return res.status(401).json(createErrorResponse('Token d\'authentification invalide ou manquant'));
     }
 
     const { method } = req;
