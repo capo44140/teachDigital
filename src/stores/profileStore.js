@@ -117,16 +117,51 @@ export const useProfileStore = defineStore('profile', {
       this.error = null;
       
       try {
-        // Charger un profil spécifique directement depuis l'API
-        this.currentProfile = await ProfileService.getProfileById(id);
+        // Convertir l'ID en nombre si nécessaire
+        const profileId = typeof id === 'string' ? parseInt(id, 10) : id;
+        
+        // Essayer d'abord de charger depuis le store local (plus rapide)
+        const localProfile = this.getProfileById(profileId);
+        if (localProfile) {
+          console.log('✅ Profil trouvé dans le store local');
+          this.currentProfile = localProfile;
+          this.isLoading = false;
+          return localProfile;
+        }
+        
+        // Si pas dans le store, charger depuis l'API
+        console.log(`🔍 Chargement du profil ${profileId} depuis l'API...`);
+        this.currentProfile = await ProfileService.getProfileById(profileId);
         
         if (!this.currentProfile) {
+          // Dernier recours : chercher dans le store avec différents formats
+          const fallbackProfile = this.getProfileById(String(profileId)) || 
+                                  this.getProfileById(Number(profileId));
+          if (fallbackProfile) {
+            console.log('✅ Profil trouvé dans le store avec format alternatif');
+            this.currentProfile = fallbackProfile;
+            return fallbackProfile;
+          }
           throw new Error('Profil non trouvé');
         }
-        console.log('✅ Profil chargé avec succès');
+        console.log('✅ Profil chargé avec succès depuis l\'API');
+        return this.currentProfile;
       } catch (error) {
         this.error = error.message;
         console.error('❌ Erreur lors du chargement du profil:', error);
+        
+        // Fallback : essayer de trouver dans le store local même en cas d'erreur API
+        const profileId = typeof id === 'string' ? parseInt(id, 10) : id;
+        const fallbackProfile = this.getProfileById(profileId) || 
+                                this.getProfileById(String(profileId)) ||
+                                this.getProfileById(Number(profileId));
+        if (fallbackProfile) {
+          console.log('⚠️ Utilisation du profil du store local en fallback');
+          this.currentProfile = fallbackProfile;
+          return fallbackProfile;
+        }
+        
+        throw error;
       } finally {
         this.isLoading = false;
       }

@@ -56,6 +56,20 @@ class ApiService {
         if (response.status === 504) {
           throw new Error('Timeout: Le serveur a pris trop de temps à répondre. Veuillez réessayer.');
         }
+        
+        // Pour les erreurs 500, essayer de récupérer le message d'erreur du backend
+        if (response.status === 500) {
+          try {
+            const errorData = await response.json();
+            const errorMessage = errorData.message || errorData.error || 'Erreur interne du serveur';
+            console.error('Erreur 500 du serveur:', errorMessage);
+            throw new Error(`Erreur serveur: ${errorMessage}`);
+          } catch (parseError) {
+            // Si on ne peut pas parser la réponse, utiliser le message par défaut
+            throw new Error(`Erreur HTTP 500: Le serveur a rencontré une erreur interne`);
+          }
+        }
+        
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
 
