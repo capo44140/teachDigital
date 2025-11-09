@@ -974,35 +974,35 @@ async function handleLessons(req, res) {
         isPublished: safeIsPublished
       });
 
-      // Construire la requête manuellement pour éviter les problèmes avec le template tag
-      const insertQueryText = 'INSERT INTO lessons (profile_id, title, description, subject, level, image_filename, quiz_data, is_published) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *';
-      const insertQueryParams = [
-        user.profileId,
-        title,
-        safeDescription,
-        safeSubject,
-        safeLevel,
-        safeImageFilename,
-        safeQuizData,
-        safeIsPublished
-      ];
-
-      console.log(`🔧 Requête INSERT construite manuellement:`);
-      console.log(`   Text: ${insertQueryText}`);
-      console.log(`   Params (${insertQueryParams.length}):`, insertQueryParams.map((p, i) => `$${i+1}=${p === null ? 'NULL' : typeof p === 'string' ? `'${p.substring(0, 50)}${p.length > 50 ? '...' : ''}'` : p}`).join(', '));
-      console.log(`   Types: ${insertQueryParams.map(p => p === null ? 'null' : typeof p).join(', ')}`);
-
-      const insertQuery = sql(insertQueryText, insertQueryParams);
-
-      console.log(`🔧 Requête SQL générée par postgres.js:`);
-      console.log(`   Text: ${insertQuery.text}`);
-      console.log(`   Params count: ${insertQuery.params?.length || 0}`);
-      if (insertQuery.params) {
-        console.log(`   Params values:`, insertQuery.params.map((p, i) => `$${i+1}=${p === null ? 'NULL' : typeof p === 'string' ? `'${p.substring(0, 50)}${p.length > 50 ? '...' : ''}'` : p}`).join(', '));
-      }
+      // Utiliser le template literal de sql pour éviter les problèmes de syntaxe
+      console.log(`🔧 Construction de la requête INSERT avec template literal:`);
+      console.log(`   profileId: ${user.profileId}`);
+      console.log(`   title: ${title}`);
+      console.log(`   description: ${safeDescription || 'NULL'}`);
+      console.log(`   subject: ${safeSubject || 'NULL'}`);
+      console.log(`   level: ${safeLevel || 'NULL'}`);
+      console.log(`   imageFilename: ${safeImageFilename || 'NULL'}`);
+      console.log(`   quizData length: ${safeQuizData?.length || 0}`);
+      console.log(`   isPublished: ${safeIsPublished}`);
 
       const result = await withQueryTimeout(
-        insertQuery,
+        sql`
+          INSERT INTO lessons (
+            profile_id, title, description, subject, level,
+            image_filename, quiz_data, is_published
+          )
+          VALUES (
+            ${user.profileId}, 
+            ${title}, 
+            ${safeDescription}, 
+            ${safeSubject}, 
+            ${safeLevel},
+            ${safeImageFilename}, 
+            ${safeQuizData}, 
+            ${safeIsPublished}
+          )
+          RETURNING *
+        `,
         5000,
         'création de la leçon'
       );
