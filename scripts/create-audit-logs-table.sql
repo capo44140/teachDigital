@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS audit_logs (
   id SERIAL PRIMARY KEY,
   action VARCHAR(255) NOT NULL,
-  user_id INTEGER NOT NULL,
+  user_id INTEGER, -- NULL pour les logs système
   category VARCHAR(100) NOT NULL,
   level VARCHAR(20) NOT NULL DEFAULT 'info',
   details JSONB DEFAULT '{}',

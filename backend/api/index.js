@@ -1937,19 +1937,36 @@ async function handleAudit(req, res) {
     if (pathname === '/api/audit/logs' && req.method === 'POST') {
       const { action, userId, category, level = 'info', details = {}, ipAddress, userAgent } = req.body;
 
-      if (!action || !userId || !category) {
+      if (!action || !category) {
         res.status(400).json({
           success: false,
-          message: 'Action, userId et category sont requis'
+          message: 'Action et category sont requis'
         });
         return;
+      }
+
+      // Convertir userId en entier ou NULL si c'est "system" ou une chaîne non numérique
+      let safeUserId = null;
+      if (userId) {
+        if (userId === 'system' || userId === 'unknown') {
+          safeUserId = null; // Les logs système n'ont pas d'user_id
+        } else {
+          const userIdNum = parseInt(userId, 10);
+          if (!isNaN(userIdNum)) {
+            safeUserId = userIdNum;
+          } else {
+            // Si userId n'est pas un nombre valide, utiliser NULL
+            safeUserId = null;
+            console.warn(`⚠️ userId invalide reçu: "${userId}", utilisation de NULL`);
+          }
+        }
       }
 
       // Construire la requête INSERT manuellement
       const insertQueryText = 'INSERT INTO audit_logs (action, user_id, category, level, details, ip_address, user_agent, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP) RETURNING *';
       const insertQueryParams = [
         action,
-        userId,
+        safeUserId,
         category,
         level,
         JSON.stringify(details),
