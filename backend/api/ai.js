@@ -40,6 +40,28 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = API_TIMEOUT_MS) {
 }
 
 /**
+ * Gère les erreurs de réponse OpenAI avec gestion spécifique du rate limiting (429)
+ */
+async function handleOpenAIResponse(response, operation = 'OpenAI') {
+  if (!response.ok) {
+    // Gérer spécifiquement l'erreur 429 (Rate Limit)
+    if (response.status === 429) {
+      const errorData = await response.json().catch(() => ({}));
+      const retryAfter = response.headers.get('retry-after');
+      const message = errorData.error?.message || 'Limite de requêtes atteinte';
+      console.warn(`⚠️ ${operation} Rate Limit (429): ${message}${retryAfter ? ` - Retry after ${retryAfter}s` : ''}`);
+      throw new Error(`OpenAI Rate Limit: ${message}. Basculement vers alternative...`);
+    }
+    
+    // Autres erreurs HTTP
+    const errorText = await response.text().catch(() => '');
+    console.error(`❌ Erreur ${operation} ${response.status}:`, errorText.substring(0, 200));
+    throw new Error(`Erreur ${operation}: ${response.status} - ${response.statusText}`);
+  }
+  return response;
+}
+
+/**
  * Gestionnaire pour les fonctionnalités IA
  */
 module.exports = async function handler(req, res) {
@@ -302,7 +324,12 @@ async function analyzeImage(base64Image) {
     try {
       return await analyzeImageWithOpenAI(base64Image);
     } catch (error) {
-      console.warn('Erreur OpenAI, tentative avec Gemini:', error.message);
+      // Détecter spécifiquement les erreurs de rate limiting
+      if (error.message.includes('Rate Limit') || error.message.includes('429')) {
+        console.warn('⚠️ OpenAI Rate Limit détecté, basculement automatique vers Gemini...');
+      } else {
+        console.warn('⚠️ Erreur OpenAI, tentative avec Gemini:', error.message);
+      }
     }
   }
 
@@ -363,9 +390,7 @@ async function analyzeImageWithOpenAI(base64Image) {
     })
   });
 
-  if (!response.ok) {
-    throw new Error(`Erreur OpenAI: ${response.status}`);
-  }
+  await handleOpenAIResponse(response, 'OpenAI (analyse image)');
 
   const data = await response.json();
   const content = data.choices[0].message.content;
@@ -547,7 +572,12 @@ async function generateQuizFromAnalysis(analysis, childProfile) {
     try {
       return await generateQuizWithOpenAI(analysis, childProfile);
     } catch (error) {
-      console.warn('Erreur OpenAI, tentative avec Gemini:', error.message);
+      // Détecter spécifiquement les erreurs de rate limiting
+      if (error.message.includes('Rate Limit') || error.message.includes('429')) {
+        console.warn('⚠️ OpenAI Rate Limit détecté, basculement automatique vers Gemini...');
+      } else {
+        console.warn('⚠️ Erreur OpenAI, tentative avec Gemini:', error.message);
+      }
     }
   }
 
@@ -601,9 +631,7 @@ async function generateQuizWithOpenAI(analysis, childProfile) {
     })
   });
 
-  if (!response.ok) {
-    throw new Error(`Erreur OpenAI: ${response.status}`);
-  }
+  await handleOpenAIResponse(response, 'OpenAI (génération quiz)');
 
   const data = await response.json();
   const content = data.choices[0].message.content;
@@ -800,7 +828,12 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
     try {
       return await generateQuizFromMultipleAnalysesWithOpenAI(analyses, childProfile, questionCount);
     } catch (error) {
-      console.warn('Erreur OpenAI, tentative avec Gemini:', error.message);
+      // Détecter spécifiquement les erreurs de rate limiting
+      if (error.message.includes('Rate Limit') || error.message.includes('429')) {
+        console.warn('⚠️ OpenAI Rate Limit détecté, basculement automatique vers Gemini...');
+      } else {
+        console.warn('⚠️ Erreur OpenAI, tentative avec Gemini:', error.message);
+      }
     }
   }
 
@@ -854,9 +887,7 @@ async function generateQuizFromMultipleAnalysesWithOpenAI(analyses, childProfile
     })
   });
 
-  if (!response.ok) {
-    throw new Error(`Erreur OpenAI: ${response.status}`);
-  }
+  await handleOpenAIResponse(response, 'OpenAI (génération quiz multiple)');
 
   const data = await response.json();
   const content = data.choices[0].message.content;
@@ -1007,7 +1038,12 @@ async function generateQuizFromTextWithAI(inputText, childProfile, options = {})
     try {
       return await generateQuizFromTextWithOpenAI(inputText, childProfile, options);
     } catch (error) {
-      console.warn('Erreur OpenAI, tentative avec Gemini:', error.message);
+      // Détecter spécifiquement les erreurs de rate limiting
+      if (error.message.includes('Rate Limit') || error.message.includes('429')) {
+        console.warn('⚠️ OpenAI Rate Limit détecté, basculement automatique vers Gemini...');
+      } else {
+        console.warn('⚠️ Erreur OpenAI, tentative avec Gemini:', error.message);
+      }
     }
   }
 
@@ -1061,9 +1097,7 @@ async function generateQuizFromTextWithOpenAI(inputText, childProfile, options) 
     })
   });
 
-  if (!response.ok) {
-    throw new Error(`Erreur OpenAI: ${response.status}`);
-  }
+  await handleOpenAIResponse(response, 'OpenAI (génération quiz depuis texte)');
 
   const data = await response.json();
   const content = data.choices[0].message.content;
