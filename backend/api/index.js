@@ -732,6 +732,9 @@ async function handleLessons(req, res) {
           const queryStartTime = Date.now();
           // Validation et conversion des paramètres
           const profileIdNum = parseInt(profileId, 10);
+          console.log(`🔍 Debug - profileId original: "${profileId}" (type: ${typeof profileId})`);
+          console.log(`🔍 Debug - profileIdNum après parseInt: ${profileIdNum} (type: ${typeof profileIdNum}, isNaN: ${isNaN(profileIdNum)})`);
+          
           if (isNaN(profileIdNum)) {
             res.status(400).json({
               success: false,
@@ -742,41 +745,35 @@ async function handleLessons(req, res) {
           
           // Convertir published en booléen SQL (true/false)
           const isPublished = published === 'true' || published === true || published === '1';
-          console.log(`📊 Paramètres - profileId: ${profileIdNum}, isPublished: ${isPublished}`);
+          console.log(`📊 Paramètres - profileIdNum: ${profileIdNum} (type: ${typeof profileIdNum}), isPublished: ${isPublished} (type: ${typeof isPublished})`);
           
-          // Construire la requête avec la valeur booléenne directement dans le SQL
-          // Utiliser une approche qui évite les problèmes de conversion de type
-          query = isPublished 
-            ? sql`
-                SELECT 
-                  id, title, description, subject, level, 
-                  image_filename,
-                  is_published, created_at, updated_at,
-                  profile_id
-                FROM lessons
-                WHERE profile_id = ${profileIdNum}
-                  AND is_published = true
-                ORDER BY created_at DESC
-                LIMIT 100
-              `
-            : sql`
-                SELECT 
-                  id, title, description, subject, level, 
-                  image_filename,
-                  is_published, created_at, updated_at,
-                  profile_id
-                FROM lessons
-                WHERE profile_id = ${profileIdNum}
-                  AND is_published = false
-                ORDER BY created_at DESC
-                LIMIT 100
-              `;
+          // Construire la requête avec profileIdNum comme paramètre et isPublished comme valeur littérale
+          // Utiliser une seule requête SQL pour éviter les problèmes avec les conditions ternaires
+          console.log(`🔧 Construction de la requête SQL avec profileIdNum=${profileIdNum}, isPublished=${isPublished}`);
+          
+          query = sql`
+            SELECT 
+              id, title, description, subject, level, 
+              image_filename,
+              is_published, created_at, updated_at,
+              profile_id
+            FROM lessons
+            WHERE profile_id = ${profileIdNum}
+              AND is_published = ${isPublished}
+            ORDER BY created_at DESC
+            LIMIT 100
+          `;
           
           // Logger la requête SQL complète pour diagnostic
           console.log(`📝 Requête SQL générée:`);
           console.log(`   Text: ${query.text}`);
           console.log(`   Params: ${JSON.stringify(query.params)}`);
           console.log(`   Nombre de paramètres: ${query.params?.length || 0}`);
+          if (query.params && query.params.length > 0) {
+            console.log(`   Paramètres détaillés:`, query.params.map((p, i) => `$${i+1} = ${p} (type: ${typeof p})`).join(', '));
+          } else {
+            console.error(`   ⚠️  AUCUN PARAMÈTRE DÉTECTÉ - La requête ne contient pas de paramètres !`);
+          }
           
           lessons = await withQueryTimeout(
             query,
