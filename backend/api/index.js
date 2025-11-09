@@ -970,17 +970,36 @@ async function handleLesson(req, res) {
       console.log(`🔍 Récupération de la leçon ID: ${id} (type: ${typeof id})`);
       
       try {
+        // Validation et conversion de l'ID
+        const lessonIdNum = parseInt(id, 10);
+        console.log(`🔍 Debug - id original: "${id}" (type: ${typeof id})`);
+        console.log(`🔍 Debug - lessonIdNum après parseInt: ${lessonIdNum} (type: ${typeof lessonIdNum}, isNaN: ${isNaN(lessonIdNum)})`);
+        
+        if (isNaN(lessonIdNum)) {
+          res.status(400).json({
+            success: false,
+            message: 'ID de leçon invalide'
+          });
+          return;
+        }
+        
+        // Construire la requête manuellement pour garantir l'injection correcte des paramètres
+        const queryText = 'SELECT l.id, l.title, l.description, l.subject, l.level, l.image_filename, l.image_data, l.quiz_data, l.is_published, l.created_at, l.updated_at, p.name as profile_name, p.id as profile_id FROM lessons l JOIN profiles p ON l.profile_id = p.id WHERE l.id = $1';
+        const queryParams = [lessonIdNum];
+        
+        console.log(`🔧 Requête construite manuellement:`);
+        console.log(`   Text: ${queryText}`);
+        console.log(`   Params: ${JSON.stringify(queryParams)}`);
+        
+        const query = sql(queryText, queryParams);
+        
+        console.log(`📝 Requête SQL générée:`);
+        console.log(`   Text: ${query.text}`);
+        console.log(`   Params: ${JSON.stringify(query.params)}`);
+        console.log(`   Nombre de paramètres: ${query.params?.length || 0}`);
+        
         const lessons = await withQueryTimeout(
-          sql`
-            SELECT 
-              l.id, l.title, l.description, l.subject, l.level, 
-              l.image_filename, l.image_data, l.quiz_data, 
-              l.is_published, l.created_at, l.updated_at,
-              p.name as profile_name, p.id as profile_id
-            FROM lessons l
-            JOIN profiles p ON l.profile_id = p.id
-            WHERE l.id = ${parseInt(id)}
-          `,
+          query,
           5000,
           'récupération de la leçon'
         );
