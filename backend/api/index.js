@@ -741,20 +741,34 @@ async function handleLessons(req, res) {
           const isPublished = published === 'true' || published === true || published === '1';
           console.log(`📊 Paramètres - profileId: ${profileIdNum}, isPublished: ${isPublished}`);
           
-          // Requête SQL simplifiée - PostgreSQL accepte les booléens JavaScript directement
+          // Construire la requête avec la valeur booléenne directement dans le SQL
+          // Utiliser une approche qui évite les problèmes de conversion de type
           lessons = await withQueryTimeout(
-            sql`
-              SELECT 
-                id, title, description, subject, level, 
-                image_filename,
-                is_published, created_at, updated_at,
-                profile_id
-              FROM lessons
-              WHERE profile_id = ${profileIdNum}
-                AND is_published = ${isPublished}
-              ORDER BY created_at DESC
-              LIMIT 100
-            `,
+            isPublished 
+              ? sql`
+                  SELECT 
+                    id, title, description, subject, level, 
+                    image_filename,
+                    is_published, created_at, updated_at,
+                    profile_id
+                  FROM lessons
+                  WHERE profile_id = ${profileIdNum}
+                    AND is_published = true
+                  ORDER BY created_at DESC
+                  LIMIT 100
+                `
+              : sql`
+                  SELECT 
+                    id, title, description, subject, level, 
+                    image_filename,
+                    is_published, created_at, updated_at,
+                    profile_id
+                  FROM lessons
+                  WHERE profile_id = ${profileIdNum}
+                    AND is_published = false
+                  ORDER BY created_at DESC
+                  LIMIT 100
+                `,
             5000,
             'récupération des leçons par profil et statut'
           );
@@ -792,22 +806,35 @@ async function handleLessons(req, res) {
         );
         const queryTime = Date.now() - queryStartTime;
         console.log(`⏱️  Requête SQL exécutée en ${queryTime}ms`);
-      } else if (published !== undefined) {
+      } else if (published !== undefined && published !== null) {
         // Seulement published - Requête simplifiée sans JOIN
         const queryStartTime = Date.now();
-        const isPublished = published === 'true' || published === true;
+        const isPublished = published === 'true' || published === true || published === '1';
+        // Utiliser une requête conditionnelle pour éviter les problèmes de conversion de type
         lessons = await withQueryTimeout(
-          sql`
-            SELECT 
-              id, title, description, subject, level, 
-              image_filename,
-              is_published, created_at, updated_at,
-              profile_id
-            FROM lessons
-            WHERE is_published = ${isPublished}
-            ORDER BY created_at DESC
-            LIMIT 100
-          `,
+          isPublished
+            ? sql`
+                SELECT 
+                  id, title, description, subject, level, 
+                  image_filename,
+                  is_published, created_at, updated_at,
+                  profile_id
+                FROM lessons
+                WHERE is_published = true
+                ORDER BY created_at DESC
+                LIMIT 100
+              `
+            : sql`
+                SELECT 
+                  id, title, description, subject, level, 
+                  image_filename,
+                  is_published, created_at, updated_at,
+                  profile_id
+                FROM lessons
+                WHERE is_published = false
+                ORDER BY created_at DESC
+                LIMIT 100
+              `,
           5000,
           'récupération des leçons publiées'
         );
