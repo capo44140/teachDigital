@@ -50,6 +50,7 @@ module.exports = async function handler(req, res) {
 
   setCorsHeaders(res);
 
+  let url;
   try {
     // Authentification requise pour toutes les routes IA
     const authResult = authenticateToken(req);
@@ -58,7 +59,7 @@ module.exports = async function handler(req, res) {
     }
 
     const { method } = req;
-    const url = new URL(req.url, `http://${req.headers.host}`);
+    url = new URL(req.url, `http://${req.headers.host}`);
     const pathname = url.pathname;
 
     // Routes IA
@@ -86,8 +87,14 @@ module.exports = async function handler(req, res) {
     return res.status(404).json(createErrorResponse('Endpoint non trouvé'));
 
   } catch (error) {
-    console.error('Erreur dans le gestionnaire IA:', error);
-    return res.status(500).json(createErrorResponse('Erreur serveur interne'));
+    console.error('❌ Erreur dans le gestionnaire IA:', {
+      message: error.message,
+      stack: error.stack?.substring(0, 500),
+      name: error.name,
+      pathname: url?.pathname,
+      method: req.method
+    });
+    return res.status(500).json(createErrorResponse('Erreur serveur interne: ' + error.message));
   }
 };
 
@@ -132,7 +139,30 @@ async function handleGenerateQuizFromImage(req, res) {
  */
 async function handleGenerateQuizFromDocuments(req, res) {
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    console.log('🔍 Début de handleGenerateQuizFromDocuments');
+    
+    // Parser le body de manière sécurisée
+    let body;
+    try {
+      if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else if (Buffer.isBuffer(req.body)) {
+        body = JSON.parse(req.body.toString());
+      } else {
+        body = req.body;
+      }
+    } catch (parseError) {
+      console.error('❌ Erreur de parsing du body:', parseError);
+      return res.status(400).json(createErrorResponse('Format de données invalide'));
+    }
+
+    console.log('📊 Body parsé:', {
+      hasDocuments: !!body.documents,
+      documentsCount: body.documents?.length || 0,
+      hasChildProfile: !!body.childProfile,
+      questionCount: body.questionCount
+    });
+
     const { documents, childProfile, questionCount } = body;
 
     if (!documents || !Array.isArray(documents) || documents.length === 0) {
@@ -143,28 +173,61 @@ async function handleGenerateQuizFromDocuments(req, res) {
       return res.status(400).json(createErrorResponse('Profil enfant requis'));
     }
 
+    console.log(`📝 Analyse de ${documents.length} document(s)...`);
+
     // Analyser tous les documents
     const analyses = [];
-    for (const doc of documents) {
-      if (doc.type?.startsWith('image/') || doc.type === 'image') {
-        const analysis = await analyzeImage(doc.data || doc.base64);
-        analyses.push({ type: 'image', fileName: doc.name, analysis });
-      } else if (doc.type === 'application/pdf' || doc.type === 'pdf') {
-        // Pour PDF, simuler une analyse (dans une vraie implémentation, utiliser OCR)
-        analyses.push({
-          type: 'pdf',
-          fileName: doc.name,
-          analysis: { subject: 'Document PDF', topic: 'Contenu extrait', concepts: [], level: 'Primaire' }
-        });
+    for (let i = 0; i < documents.length; i++) {
+      const doc = documents[i];
+      console.log(`📄 Traitement du document ${i + 1}/${documents.length}: ${doc.name || 'sans nom'} (type: ${doc.type})`);
+      
+      try {
+        if (doc.type?.startsWith('image/') || doc.type === 'image') {
+          const imageData = doc.data || doc.base64;
+          if (!imageData) {
+            console.warn(`⚠️ Document ${i + 1} de type image mais sans données`);
+            continue;
+          }
+          console.log(`🖼️ Analyse de l'image ${i + 1}...`);
+          const analysis = await analyzeImage(imageData);
+          analyses.push({ type: 'image', fileName: doc.name, analysis });
+          console.log(`✅ Image ${i + 1} analysée avec succès`);
+        } else if (doc.type === 'application/pdf' || doc.type === 'pdf') {
+          // Pour PDF, simuler une analyse (dans une vraie implémentation, utiliser OCR)
+          console.log(`📑 Traitement du PDF ${i + 1}...`);
+          analyses.push({
+            type: 'pdf',
+            fileName: doc.name,
+            analysis: { subject: 'Document PDF', topic: 'Contenu extrait', concepts: [], level: 'Primaire' }
+          });
+          console.log(`✅ PDF ${i + 1} traité`);
+        } else {
+          console.warn(`⚠️ Type de document non supporté: ${doc.type}`);
+        }
+      } catch (docError) {
+        console.error(`❌ Erreur lors du traitement du document ${i + 1}:`, docError);
+        // Continuer avec les autres documents
+        continue;
       }
     }
+
+    if (analyses.length === 0) {
+      return res.status(400).json(createErrorResponse('Aucun document valide à analyser'));
+    }
+
+    console.log(`✅ ${analyses.length} analyse(s) complétée(s), génération du quiz...`);
 
     // Générer le quiz basé sur toutes les analyses
     const quiz = await generateQuizFromMultipleAnalyses(analyses, childProfile, questionCount || 5);
 
+    console.log('✅ Quiz généré avec succès');
     return res.status(200).json(createResponse('Quiz généré avec succès', { quiz }));
   } catch (error) {
-    console.error('Erreur lors de la génération du quiz depuis documents:', error);
+    console.error('❌ Erreur lors de la génération du quiz depuis documents:', {
+      message: error.message,
+      stack: error.stack?.substring(0, 500),
+      name: error.name
+    });
     return res.status(500).json(createErrorResponse('Erreur lors de la génération du quiz: ' + error.message));
   }
 }
