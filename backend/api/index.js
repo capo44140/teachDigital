@@ -725,6 +725,9 @@ async function handleLessons(req, res) {
         const connectionStartTime = Date.now();
         console.log(`🔌 Début de la connexion à la base de données...`);
         
+        // Déclarer query en dehors du try pour qu'elle soit accessible dans le catch
+        let query;
+        
         try {
           const queryStartTime = Date.now();
           // Validation et conversion des paramètres
@@ -743,32 +746,40 @@ async function handleLessons(req, res) {
           
           // Construire la requête avec la valeur booléenne directement dans le SQL
           // Utiliser une approche qui évite les problèmes de conversion de type
+          query = isPublished 
+            ? sql`
+                SELECT 
+                  id, title, description, subject, level, 
+                  image_filename,
+                  is_published, created_at, updated_at,
+                  profile_id
+                FROM lessons
+                WHERE profile_id = ${profileIdNum}
+                  AND is_published = true
+                ORDER BY created_at DESC
+                LIMIT 100
+              `
+            : sql`
+                SELECT 
+                  id, title, description, subject, level, 
+                  image_filename,
+                  is_published, created_at, updated_at,
+                  profile_id
+                FROM lessons
+                WHERE profile_id = ${profileIdNum}
+                  AND is_published = false
+                ORDER BY created_at DESC
+                LIMIT 100
+              `;
+          
+          // Logger la requête SQL complète pour diagnostic
+          console.log(`📝 Requête SQL générée:`);
+          console.log(`   Text: ${query.text}`);
+          console.log(`   Params: ${JSON.stringify(query.params)}`);
+          console.log(`   Nombre de paramètres: ${query.params?.length || 0}`);
+          
           lessons = await withQueryTimeout(
-            isPublished 
-              ? sql`
-                  SELECT 
-                    id, title, description, subject, level, 
-                    image_filename,
-                    is_published, created_at, updated_at,
-                    profile_id
-                  FROM lessons
-                  WHERE profile_id = ${profileIdNum}
-                    AND is_published = true
-                  ORDER BY created_at DESC
-                  LIMIT 100
-                `
-              : sql`
-                  SELECT 
-                    id, title, description, subject, level, 
-                    image_filename,
-                    is_published, created_at, updated_at,
-                    profile_id
-                  FROM lessons
-                  WHERE profile_id = ${profileIdNum}
-                    AND is_published = false
-                  ORDER BY created_at DESC
-                  LIMIT 100
-                `,
+            query,
             5000,
             'récupération des leçons par profil et statut'
           );
@@ -782,8 +793,20 @@ async function handleLessons(req, res) {
           console.error(`❌ Erreur après ${errorTime}ms:`, {
             message: error.message,
             code: error.code,
-            stack: error.stack?.substring(0, 200)
+            detail: error.detail,
+            hint: error.hint,
+            position: error.position,
+            stack: error.stack?.substring(0, 500)
           });
+          // Logger aussi la requête qui a échoué si elle existe
+          if (query && query.text) {
+            console.error(`❌ Requête SQL qui a échoué:`, {
+              text: query.text,
+              params: query.params
+            });
+          } else {
+            console.error(`❌ Requête SQL non disponible (erreur avant construction)`);
+          }
           throw error;
         }
       } else if (profileId) {
