@@ -713,6 +713,8 @@ async function handleLessons(req, res) {
       const profileId = url.searchParams.get('profileId');
       const published = url.searchParams.get('published');
 
+      console.log(`🔍 Récupération des leçons - profileId: ${profileId}, published: ${published}`);
+
       let lessons;
       
       if (profileId && published !== undefined) {
@@ -773,6 +775,8 @@ async function handleLessons(req, res) {
         );
       }
 
+      console.log(`✅ Leçons récupérées: ${lessons.length} résultat(s)`);
+
       res.status(200).json({
         success: true,
         message: 'Leçons récupérées avec succès',
@@ -787,6 +791,8 @@ async function handleLessons(req, res) {
         title, description, subject, level, 
         imageFilename, imageData, quizData, isPublished = true 
       } = req.body;
+
+      console.log(`🔍 Création d'une nouvelle leçon - titre: ${title}`);
 
       if (!title || !quizData) {
         res.status(400).json({ 
@@ -826,6 +832,12 @@ async function handleLessons(req, res) {
     }
 
   } catch (error) {
+    console.error('❌ Erreur dans handleLessons:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      pathname: req.url
+    });
     const errorResponse = handleError(error, 'Erreur lors de la gestion des leçons');
     res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
   }
@@ -835,7 +847,11 @@ async function handleLessons(req, res) {
 async function handleLesson(req, res) {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
-    const id = url.pathname.split('/').pop();
+    const pathname = url.pathname;
+    
+    // Extraire l'ID de la leçon avec une regex (/api/lessons/123)
+    const idMatch = pathname.match(/\/api\/lessons\/(\d+)/);
+    const id = idMatch ? idMatch[1] : null;
 
     if (!id) {
       res.status(400).json({ 
@@ -846,34 +862,49 @@ async function handleLesson(req, res) {
     }
 
     if (req.method === 'GET') {
-      const lessons = await withQueryTimeout(
-        sql`
-          SELECT 
-            l.id, l.title, l.description, l.subject, l.level, 
-            l.image_filename, l.image_data, l.quiz_data, 
-            l.is_published, l.created_at, l.updated_at,
-            p.name as profile_name, p.id as profile_id
-          FROM lessons l
-          JOIN profiles p ON l.profile_id = p.id
-          WHERE l.id = ${id}
-        `,
-        5000,
-        'récupération de la leçon'
-      );
+      console.log(`🔍 Récupération de la leçon ID: ${id} (type: ${typeof id})`);
+      
+      try {
+        const lessons = await withQueryTimeout(
+          sql`
+            SELECT 
+              l.id, l.title, l.description, l.subject, l.level, 
+              l.image_filename, l.image_data, l.quiz_data, 
+              l.is_published, l.created_at, l.updated_at,
+              p.name as profile_name, p.id as profile_id
+            FROM lessons l
+            JOIN profiles p ON l.profile_id = p.id
+            WHERE l.id = ${parseInt(id)}
+          `,
+          5000,
+          'récupération de la leçon'
+        );
 
-      if (!lessons[0]) {
-        res.status(404).json({ 
-          success: false, 
-          message: 'Leçon non trouvée' 
+        console.log(`✅ Leçon récupérée: ${lessons.length} résultat(s)`);
+
+        if (!lessons[0]) {
+          res.status(404).json({ 
+            success: false, 
+            message: 'Leçon non trouvée' 
+          });
+          return;
+        }
+
+        res.status(200).json({
+          success: true,
+          message: 'Leçon récupérée avec succès',
+          data: { lesson: lessons[0] }
         });
-        return;
+      } catch (sqlError) {
+        console.error('❌ Erreur SQL lors de la récupération de la leçon:', {
+          message: sqlError.message,
+          code: sqlError.code,
+          detail: sqlError.detail,
+          hint: sqlError.hint,
+          id: id
+        });
+        throw sqlError;
       }
-
-      res.status(200).json({
-        success: true,
-        message: 'Leçon récupérée avec succès',
-        data: { lesson: lessons[0] }
-      });
 
     } else if (req.method === 'PUT') {
       // Authentification requise pour PUT
@@ -884,9 +915,11 @@ async function handleLesson(req, res) {
         imageFilename, imageData, quizData, isPublished 
       } = req.body;
 
+      console.log(`🔍 Mise à jour de la leçon ID: ${id}`);
+
       const existingLesson = await withQueryTimeout(
         sql`
-          SELECT * FROM lessons WHERE id = ${id}
+          SELECT * FROM lessons WHERE id = ${parseInt(id)}
         `,
         5000,
         'vérification de la leçon'
@@ -921,7 +954,7 @@ async function handleLesson(req, res) {
             quiz_data = COALESCE(${quizData ? JSON.stringify(quizData) : null}, quiz_data),
             is_published = COALESCE(${isPublished}, is_published),
             updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${id}
+          WHERE id = ${parseInt(id)}
           RETURNING *
         `,
         5000,
@@ -938,9 +971,11 @@ async function handleLesson(req, res) {
       // Authentification requise pour DELETE
       const user = authenticateToken(req);
       
+      console.log(`🔍 Suppression de la leçon ID: ${id}`);
+
       const existingLesson = await withQueryTimeout(
         sql`
-          SELECT * FROM lessons WHERE id = ${id}
+          SELECT * FROM lessons WHERE id = ${parseInt(id)}
         `,
         5000,
         'vérification de la leçon'
@@ -965,7 +1000,7 @@ async function handleLesson(req, res) {
       const result = await withQueryTimeout(
         sql`
           DELETE FROM lessons 
-          WHERE id = ${id}
+          WHERE id = ${parseInt(id)}
           RETURNING *
         `,
         5000,
@@ -986,6 +1021,12 @@ async function handleLesson(req, res) {
     }
 
   } catch (error) {
+    console.error('❌ Erreur dans handleLesson:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      pathname: req.url
+    });
     const errorResponse = handleError(error, 'Erreur lors de la gestion de la leçon');
     res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
   }
