@@ -402,6 +402,14 @@ export default {
     async scanLesson() {
       if (this.selectedFiles.length === 0 || !this.selectedChild) return
       
+      // Vérifier que l'utilisateur est connecté
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        this.errorMessage = 'Vous devez être connecté pour générer un quiz. Veuillez vous connecter avec votre code PIN.'
+        alert('Vous devez être connecté pour générer un quiz. Veuillez vous connecter avec votre code PIN.')
+        return
+      }
+      
       this.isProcessing = true
       this.generatedQuiz = null
       this.successMessage = null

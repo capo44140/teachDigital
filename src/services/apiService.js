@@ -27,6 +27,11 @@ class ApiService {
     const url = `${this.baseURL}${endpoint}`;
     const token = this.getToken();
     
+    // Log pour diagnostiquer les problèmes d'authentification
+    if (!token) {
+      console.warn('⚠️ Aucun token d\'authentification trouvé dans localStorage pour:', endpoint);
+    }
+    
     // Ne pas définir Content-Type si le body est FormData (le navigateur le fait automatiquement)
     const isFormData = options.body instanceof FormData;
     
@@ -41,6 +46,9 @@ class ApiService {
     // Ajouter le token d'authentification si disponible
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
+      console.log('✅ Token d\'authentification ajouté à la requête:', endpoint);
+    } else {
+      console.error('❌ Token manquant pour la requête:', endpoint);
     }
 
     try {
