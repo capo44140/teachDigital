@@ -719,44 +719,59 @@ async function handleLessons(req, res) {
       
       if (profileId && published !== undefined) {
         // Les deux paramètres sont fournis
-        lessons = await executeWithRetry(() => sql`
-          SELECT 
-            l.id, l.title, l.description, l.subject, l.level, 
-            l.image_filename, l.image_data, l.quiz_data, 
-            l.is_published, l.created_at, l.updated_at,
-            p.name as profile_name
-          FROM lessons l
-          JOIN profiles p ON l.profile_id = p.id
-          WHERE l.profile_id = ${parseInt(profileId)} 
-            AND l.is_published = ${published === 'true'}
-          ORDER BY l.created_at DESC
-        `);
+        lessons = await withQueryTimeout(
+          executeWithRetry(() => sql`
+            SELECT 
+              l.id, l.title, l.description, l.subject, l.level, 
+              l.image_filename, l.image_data, l.quiz_data, 
+              l.is_published, l.created_at, l.updated_at,
+              p.name as profile_name
+            FROM lessons l
+            JOIN profiles p ON l.profile_id = p.id
+            WHERE l.profile_id = ${parseInt(profileId)} 
+              AND l.is_published = ${published === 'true'}
+            ORDER BY l.created_at DESC
+            LIMIT 100
+          `),
+          7000,
+          'récupération des leçons par profil et statut'
+        );
       } else if (profileId) {
         // Seulement profileId
-        lessons = await executeWithRetry(() => sql`
-          SELECT 
-            l.id, l.title, l.description, l.subject, l.level, 
-            l.image_filename, l.image_data, l.quiz_data, 
-            l.is_published, l.created_at, l.updated_at,
-            p.name as profile_name
-          FROM lessons l
-          JOIN profiles p ON l.profile_id = p.id
-          WHERE l.profile_id = ${parseInt(profileId)}
-          ORDER BY l.created_at DESC
-        `);
+        lessons = await withQueryTimeout(
+          executeWithRetry(() => sql`
+            SELECT 
+              l.id, l.title, l.description, l.subject, l.level, 
+              l.image_filename, l.image_data, l.quiz_data, 
+              l.is_published, l.created_at, l.updated_at,
+              p.name as profile_name
+            FROM lessons l
+            JOIN profiles p ON l.profile_id = p.id
+            WHERE l.profile_id = ${parseInt(profileId)}
+            ORDER BY l.created_at DESC
+            LIMIT 100
+          `),
+          7000,
+          'récupération des leçons par profil'
+        );
       } else if (published !== undefined) {
         // Seulement published
-        lessons = await executeWithRetry(() => sql`
-          SELECT 
-            l.id, l.title, l.description, l.subject, l.level, 
-            l.image_filename, l.image_data, l.quiz_data, 
-            l.is_published, l.created_at, l.updated_at,
-            p.name as profile_name
-          FROM lessons l
-          JOIN profiles p ON l.profile_id = p.id
-          WHERE l.is_published = ${published === 'true'}
-          ORDER BY l.created_at DESC
-        `);
+        lessons = await withQueryTimeout(
+          executeWithRetry(() => sql`
+            SELECT 
+              l.id, l.title, l.description, l.subject, l.level, 
+              l.image_filename, l.image_data, l.quiz_data, 
+              l.is_published, l.created_at, l.updated_at,
+              p.name as profile_name
+            FROM lessons l
+            JOIN profiles p ON l.profile_id = p.id
+            WHERE l.is_published = ${published === 'true'}
+            ORDER BY l.created_at DESC
+            LIMIT 100
+          `),
+          7000,
+          'récupération des leçons publiées'
+        );
       } else {
         // Aucun paramètre - toutes les leçons
         lessons = await withQueryTimeout(
@@ -769,6 +784,7 @@ async function handleLessons(req, res) {
             FROM lessons l
             JOIN profiles p ON l.profile_id = p.id
             ORDER BY l.created_at DESC
+            LIMIT 100
           `),
           7000,
           'récupération des leçons'
@@ -1159,6 +1175,8 @@ async function handleNotification(req, res) {
     }
 
     if (req.method === 'GET') {
+      console.log(`🔍 Récupération de la notification ID: ${id} (type: ${typeof id})`);
+      
       const notifications = await withQueryTimeout(
         sql`
           SELECT 
@@ -1167,7 +1185,7 @@ async function handleNotification(req, res) {
             p.name as profile_name
           FROM notifications n
           JOIN profiles p ON n.profile_id = p.id
-          WHERE n.id = ${id}
+          WHERE n.id = ${parseInt(id)}
         `,
         5000,
         'récupération de la notification'
@@ -1195,7 +1213,7 @@ async function handleNotification(req, res) {
 
       const existingNotification = await withQueryTimeout(
         sql`
-          SELECT * FROM notifications WHERE id = ${id}
+          SELECT * FROM notifications WHERE id = ${parseInt(id)}
         `,
         5000,
         'vérification de la notification'
@@ -1223,7 +1241,7 @@ async function handleNotification(req, res) {
           SET 
             is_read = COALESCE(${isRead}, is_read),
             updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${id}
+          WHERE id = ${parseInt(id)}
           RETURNING *
         `,
         5000,
@@ -1242,7 +1260,7 @@ async function handleNotification(req, res) {
       
       const existingNotification = await withQueryTimeout(
         sql`
-          SELECT * FROM notifications WHERE id = ${id}
+          SELECT * FROM notifications WHERE id = ${parseInt(id)}
         `,
         5000,
         'vérification de la notification'
@@ -1267,7 +1285,7 @@ async function handleNotification(req, res) {
       const result = await withQueryTimeout(
         sql`
           DELETE FROM notifications 
-          WHERE id = ${id}
+          WHERE id = ${parseInt(id)}
           RETURNING *
         `,
         5000,

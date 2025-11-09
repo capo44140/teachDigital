@@ -49,6 +49,10 @@ async function migrateLessons() {
     console.log('🔍 Création des index...')
     await sql`CREATE INDEX IF NOT EXISTS idx_lessons_profile ON lessons(profile_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_lessons_published ON lessons(is_published)`;
+    // Index composite pour optimiser les requêtes avec profile_id ET is_published
+    await sql`CREATE INDEX IF NOT EXISTS idx_lessons_profile_published ON lessons(profile_id, is_published)`;
+    // Index pour optimiser le tri par created_at
+    await sql`CREATE INDEX IF NOT EXISTS idx_lessons_created_at ON lessons(created_at DESC)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_quiz_results_lesson ON quiz_results(lesson_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_quiz_results_profile ON quiz_results(profile_id)`;
     
