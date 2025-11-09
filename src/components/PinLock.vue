@@ -214,10 +214,10 @@ export default {
           } else {
             // Trop de tentatives - verrouiller temporairement
             this.isLocked = true
-            this.errorMessage = PIN_CONFIG.MESSAGES.TOO_MANY_ATTEMPTS
-            setTimeout(() => {
-              this.goBack()
-            }, 3000)
+            this.errorMessage = PIN_CONFIG.MESSAGES.TOO_MANY_ATTEMPTS + ' Veuillez réessayer plus tard.'
+            // Ne pas rediriger automatiquement - rester sur la page PIN
+            // L'utilisateur peut utiliser le bouton de retour s'il le souhaite
+            console.log('⚠️ Trop de tentatives - accès verrouillé temporairement')
           }
         }
       } catch (error) {
