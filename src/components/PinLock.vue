@@ -107,6 +107,7 @@
 import { PIN_CONFIG, getCurrentPin, setPin } from '../config/pinConfig.js'
 import { useProfileStore } from '../stores/profileStore.js'
 import sessionService from '../services/sessionService.js'
+import { apiService } from '../services/apiService.js'
 
 export default {
   name: 'PinLock',
@@ -161,25 +162,37 @@ export default {
       const enteredPin = this.pinDigits.join('')
       
       try {
-        // Récupérer le profil parent (ID 1) pour vérifier le PIN
-        const profileId = 1 // Profil parent
-        const isValid = await this.profileStore.verifyPin(profileId, enteredPin)
+        // Récupérer le profil depuis la route (ou utiliser le profil parent par défaut)
+        const targetProfileId = this.$route.query.profile || '1'
+        const targetProfileIdNum = parseInt(targetProfileId, 10)
+        
+        // Vérifier le PIN pour le profil cible
+        const isValid = await this.profileStore.verifyPin(targetProfileIdNum, enteredPin)
         
         if (isValid) {
-          // PIN correct - créer une session et rediriger vers le dashboard
-          const profileId = this.$route.query.profile || '1'
-          console.log('PIN correct, création de session pour le profil:', profileId)
+          // PIN correct - obtenir le token JWT via login
+          console.log('PIN correct, connexion pour obtenir le token JWT pour le profil:', targetProfileIdNum)
+          
+          try {
+            // Appeler login pour obtenir le token JWT et le stocker dans localStorage
+            await apiService.login(targetProfileIdNum, enteredPin)
+            console.log('✅ Token JWT obtenu et stocké dans localStorage')
+          } catch (loginError) {
+            console.error('❌ Erreur lors de la connexion après vérification du PIN:', loginError)
+            // Continuer quand même avec la session locale si le login échoue
+            // (pour ne pas bloquer l'utilisateur si l'API est temporairement indisponible)
+          }
           
           // Créer une session persistante
-          sessionService.createSession(profileId, this.profileName)
+          sessionService.createSession(targetProfileId, this.profileName)
           
           // Sauvegarder le profil sélectionné dans localStorage
-          localStorage.setItem('selectedProfile', JSON.stringify({ id: profileId, name: this.profileName }))
+          localStorage.setItem('selectedProfile', JSON.stringify({ id: targetProfileId, name: this.profileName }))
           
           this.$router.push({ 
             path: '/dashboard', 
             query: { 
-              profile: profileId,
+              profile: targetProfileId,
               unlocked: 'true'
             } 
           }).catch(error => {
