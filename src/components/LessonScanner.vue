@@ -330,7 +330,7 @@ export default {
             this.validationErrors = []
             this.validationWarnings = validation.warnings
             
-            // Enregistrer l'upload d'image dans les logs d'audit
+            // Enregistrer l'upload d'image dans les logs d'audit (sans métadonnées volumineuses)
             if (this.auditLogService) {
               this.auditLogService.logDataAccess(
                 this.selectedChild?.id || 'unknown',
@@ -339,8 +339,8 @@ export default {
                 {
                   fileName: file.name,
                   fileSize: file.size,
-                  fileType: file.type,
-                  validation: validation.metadata
+                  fileType: file.type
+                  // Ne pas stocker validation.metadata (contient dimensions, etc. - trop volumineux)
                 }
               )
             }

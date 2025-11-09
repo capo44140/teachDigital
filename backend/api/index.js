@@ -945,15 +945,16 @@ async function handleLessons(req, res) {
         return;
       }
 
+      // Ne pas stocker image_data (trop volumineux), garder seulement le nom du fichier pour référence
       const result = await withQueryTimeout(
         sql`
           INSERT INTO lessons (
             profile_id, title, description, subject, level,
-            image_filename, image_data, quiz_data, is_published
+            image_filename, quiz_data, is_published
           )
           VALUES (
             ${user.profileId}, ${title}, ${description}, ${subject}, ${level},
-            ${imageFilename}, ${imageData}, ${JSON.stringify(quizData)}, ${isPublished}
+            ${imageFilename}, ${JSON.stringify(quizData)}, ${isPublished}
           )
           RETURNING *
         `,
@@ -1022,7 +1023,8 @@ async function handleLesson(req, res) {
         }
         
         // Construire la requête manuellement pour garantir l'injection correcte des paramètres
-        const queryText = 'SELECT l.id, l.title, l.description, l.subject, l.level, l.image_filename, l.image_data, l.quiz_data, l.is_published, l.created_at, l.updated_at, p.name as profile_name, p.id as profile_id FROM lessons l JOIN profiles p ON l.profile_id = p.id WHERE l.id = $1';
+        // Exclure image_data (trop volumineux, ne plus stocké)
+        const queryText = 'SELECT l.id, l.title, l.description, l.subject, l.level, l.image_filename, l.quiz_data, l.is_published, l.created_at, l.updated_at, p.name as profile_name, p.id as profile_id FROM lessons l JOIN profiles p ON l.profile_id = p.id WHERE l.id = $1';
         const queryParams = [lessonIdNum];
         
         console.log(`🔧 Requête construite manuellement:`);
@@ -1103,6 +1105,7 @@ async function handleLesson(req, res) {
         return;
       }
 
+      // Ne pas stocker image_data (trop volumineux), garder seulement le nom du fichier pour référence
       const result = await withQueryTimeout(
         sql`
           UPDATE lessons 
@@ -1112,7 +1115,6 @@ async function handleLesson(req, res) {
             subject = COALESCE(${subject}, subject),
             level = COALESCE(${level}, level),
             image_filename = COALESCE(${imageFilename}, image_filename),
-            image_data = COALESCE(${imageData}, image_data),
             quiz_data = COALESCE(${quizData ? JSON.stringify(quizData) : null}, quiz_data),
             is_published = COALESCE(${isPublished}, is_published),
             updated_at = CURRENT_TIMESTAMP
