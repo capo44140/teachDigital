@@ -714,84 +714,113 @@ async function handleLessons(req, res) {
       const published = url.searchParams.get('published');
 
       console.log(`🔍 Récupération des leçons - profileId: ${profileId}, published: ${published}`);
+      const startTime = Date.now();
 
       let lessons;
       
       if (profileId && published !== undefined) {
         // Les deux paramètres sont fournis
-        lessons = await withQueryTimeout(
-          executeWithRetry(() => sql`
-            SELECT 
-              l.id, l.title, l.description, l.subject, l.level, 
-              l.image_filename, l.image_data, l.quiz_data, 
-              l.is_published, l.created_at, l.updated_at,
-              p.name as profile_name
-            FROM lessons l
-            JOIN profiles p ON l.profile_id = p.id
-            WHERE l.profile_id = ${parseInt(profileId)} 
-              AND l.is_published = ${published === 'true'}
-            ORDER BY l.created_at DESC
-            LIMIT 100
-          `),
-          7000,
-          'récupération des leçons par profil et statut'
-        );
+        // OPTIMISATION: Requête simplifiée sans JOIN pour améliorer les performances
+        // Exclure image_data et quiz_data des listes (très volumineux en base64)
+        const connectionStartTime = Date.now();
+        console.log(`🔌 Début de la connexion à la base de données...`);
+        
+        try {
+          const queryStartTime = Date.now();
+          // Requête simplifiée sans JOIN - profile_name peut être chargé séparément si nécessaire
+          lessons = await withQueryTimeout(
+            sql`
+              SELECT 
+                id, title, description, subject, level, 
+                image_filename,
+                is_published, created_at, updated_at,
+                profile_id
+              FROM lessons
+              WHERE profile_id = ${parseInt(profileId)} 
+                AND is_published = ${published === 'true'}
+              ORDER BY created_at DESC
+              LIMIT 100
+            `,
+            5000,
+            'récupération des leçons par profil et statut'
+          );
+          const queryTime = Date.now() - queryStartTime;
+          const connectionTime = Date.now() - connectionStartTime;
+          console.log(`⏱️  Connexion établie en ${connectionTime - queryTime}ms`);
+          console.log(`⏱️  Requête SQL exécutée en ${queryTime}ms`);
+          console.log(`⏱️  Temps total: ${connectionTime}ms`);
+        } catch (error) {
+          const errorTime = Date.now() - connectionStartTime;
+          console.error(`❌ Erreur après ${errorTime}ms:`, {
+            message: error.message,
+            code: error.code,
+            stack: error.stack?.substring(0, 200)
+          });
+          throw error;
+        }
       } else if (profileId) {
-        // Seulement profileId
+        // Seulement profileId - Requête simplifiée sans JOIN
+        const queryStartTime = Date.now();
         lessons = await withQueryTimeout(
-          executeWithRetry(() => sql`
+          sql`
             SELECT 
-              l.id, l.title, l.description, l.subject, l.level, 
-              l.image_filename, l.image_data, l.quiz_data, 
-              l.is_published, l.created_at, l.updated_at,
-              p.name as profile_name
-            FROM lessons l
-            JOIN profiles p ON l.profile_id = p.id
-            WHERE l.profile_id = ${parseInt(profileId)}
-            ORDER BY l.created_at DESC
+              id, title, description, subject, level, 
+              image_filename,
+              is_published, created_at, updated_at,
+              profile_id
+            FROM lessons
+            WHERE profile_id = ${parseInt(profileId)}
+            ORDER BY created_at DESC
             LIMIT 100
-          `),
-          7000,
+          `,
+          5000,
           'récupération des leçons par profil'
         );
+        const queryTime = Date.now() - queryStartTime;
+        console.log(`⏱️  Requête SQL exécutée en ${queryTime}ms`);
       } else if (published !== undefined) {
-        // Seulement published
+        // Seulement published - Requête simplifiée sans JOIN
+        const queryStartTime = Date.now();
         lessons = await withQueryTimeout(
-          executeWithRetry(() => sql`
+          sql`
             SELECT 
-              l.id, l.title, l.description, l.subject, l.level, 
-              l.image_filename, l.image_data, l.quiz_data, 
-              l.is_published, l.created_at, l.updated_at,
-              p.name as profile_name
-            FROM lessons l
-            JOIN profiles p ON l.profile_id = p.id
-            WHERE l.is_published = ${published === 'true'}
-            ORDER BY l.created_at DESC
+              id, title, description, subject, level, 
+              image_filename,
+              is_published, created_at, updated_at,
+              profile_id
+            FROM lessons
+            WHERE is_published = ${published === 'true'}
+            ORDER BY created_at DESC
             LIMIT 100
-          `),
-          7000,
+          `,
+          5000,
           'récupération des leçons publiées'
         );
+        const queryTime = Date.now() - queryStartTime;
+        console.log(`⏱️  Requête SQL exécutée en ${queryTime}ms`);
       } else {
-        // Aucun paramètre - toutes les leçons
+        // Aucun paramètre - toutes les leçons - Requête simplifiée sans JOIN
+        const queryStartTime = Date.now();
         lessons = await withQueryTimeout(
-          executeWithRetry(() => sql`
+          sql`
             SELECT 
-              l.id, l.title, l.description, l.subject, l.level, 
-              l.image_filename, l.image_data, l.quiz_data, 
-              l.is_published, l.created_at, l.updated_at,
-              p.name as profile_name
-            FROM lessons l
-            JOIN profiles p ON l.profile_id = p.id
-            ORDER BY l.created_at DESC
+              id, title, description, subject, level, 
+              image_filename,
+              is_published, created_at, updated_at,
+              profile_id
+            FROM lessons
+            ORDER BY created_at DESC
             LIMIT 100
-          `),
-          7000,
+          `,
+          5000,
           'récupération des leçons'
         );
+        const queryTime = Date.now() - queryStartTime;
+        console.log(`⏱️  Requête SQL exécutée en ${queryTime}ms`);
       }
 
-      console.log(`✅ Leçons récupérées: ${lessons.length} résultat(s)`);
+      const totalTime = Date.now() - startTime;
+      console.log(`✅ Leçons récupérées: ${lessons.length} résultat(s) en ${totalTime}ms`);
 
       res.status(200).json({
         success: true,
