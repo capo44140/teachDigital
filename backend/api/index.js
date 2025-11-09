@@ -127,6 +127,10 @@ module.exports = async function handler(req, res) {
       return await handleInitPins(req, res);
     }
 
+    // Routes des logs d'audit
+    if (pathname.startsWith('/api/audit')) {
+      return await handleAudit(req, res);
+    }
 
     // Route non trouvée
     res.status(404).json({ 
@@ -1839,5 +1843,224 @@ async function handleInitPins(req, res) {
 
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+}
+
+// Handler des logs d'audit
+async function handleAudit(req, res) {
+  try {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const pathname = url.pathname;
+
+    // POST /api/audit/logs - Créer un log d'audit
+    if (pathname === '/api/audit/logs' && req.method === 'POST') {
+      const { action, userId, category, level = 'info', details = {}, ipAddress, userAgent } = req.body;
+
+      if (!action || !userId || !category) {
+        res.status(400).json({
+          success: false,
+          message: 'Action, userId et category sont requis'
+        });
+        return;
+      }
+
+      // Construire la requête INSERT manuellement
+      const insertQueryText = 'INSERT INTO audit_logs (action, user_id, category, level, details, ip_address, user_agent, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP) RETURNING *';
+      const insertQueryParams = [
+        action,
+        userId,
+        category,
+        level,
+        JSON.stringify(details),
+        ipAddress || null,
+        userAgent || null
+      ];
+
+      console.log(`🔧 Requête INSERT audit log construite manuellement:`);
+      console.log(`   Text: ${insertQueryText}`);
+      console.log(`   Params: ${JSON.stringify(insertQueryParams)}`);
+
+      const insertQuery = sql(insertQueryText, insertQueryParams);
+
+      const result = await withQueryTimeout(
+        insertQuery,
+        5000,
+        'création du log d\'audit'
+      );
+
+      res.status(201).json({
+        success: true,
+        message: 'Log d\'audit créé avec succès',
+        data: { log: result[0] }
+      });
+
+    // GET /api/audit/logs - Récupérer les logs d'audit
+    } else if (pathname === '/api/audit/logs' && req.method === 'GET') {
+      // Authentification requise pour GET
+      const user = authenticateToken(req);
+      
+      const userId = url.searchParams.get('userId');
+      const category = url.searchParams.get('category');
+      const level = url.searchParams.get('level');
+      const limit = parseInt(url.searchParams.get('limit') || '100', 10);
+      const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+
+      // Construire la requête SELECT avec filtres
+      let queryText = 'SELECT id, action, user_id, category, level, details, ip_address, user_agent, created_at FROM audit_logs WHERE 1=1';
+      const queryParams = [];
+      let paramIndex = 1;
+
+      if (userId) {
+        queryText += ` AND user_id = $${paramIndex++}`;
+        queryParams.push(userId);
+      }
+      if (category) {
+        queryText += ` AND category = $${paramIndex++}`;
+        queryParams.push(category);
+      }
+      if (level) {
+        queryText += ` AND level = $${paramIndex++}`;
+        queryParams.push(level);
+      }
+
+      queryText += ` ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+      queryParams.push(limit, offset);
+
+      console.log(`🔧 Requête GET audit logs construite manuellement:`);
+      console.log(`   Text: ${queryText}`);
+      console.log(`   Params: ${JSON.stringify(queryParams)}`);
+
+      const query = sql(queryText, queryParams);
+
+      const logs = await withQueryTimeout(
+        query,
+        5000,
+        'récupération des logs d\'audit'
+      );
+
+      // Parser les détails JSON
+      const parsedLogs = logs.map(log => ({
+        ...log,
+        details: typeof log.details === 'string' ? JSON.parse(log.details) : log.details
+      }));
+
+      res.status(200).json({
+        success: true,
+        message: 'Logs d\'audit récupérés avec succès',
+        data: { logs: parsedLogs }
+      });
+
+    // GET /api/audit/stats - Statistiques de sécurité
+    } else if (pathname === '/api/audit/stats' && req.method === 'GET') {
+      // Authentification requise pour GET
+      const user = authenticateToken(req);
+      
+      const days = parseInt(url.searchParams.get('days') || '7', 10);
+
+      // Construire la requête pour les statistiques avec paramètres
+      const statsQueryText = `
+        SELECT 
+          COUNT(*) FILTER (WHERE level = 'critical') as critical_count,
+          COUNT(*) FILTER (WHERE level = 'error') as error_count,
+          COUNT(*) FILTER (WHERE level = 'warning') as warning_count,
+          COUNT(*) FILTER (WHERE level = 'info') as info_count,
+          COUNT(*) FILTER (WHERE category = 'security') as security_count,
+          COUNT(*) FILTER (WHERE category = 'authentication') as auth_count
+        FROM audit_logs 
+        WHERE created_at >= CURRENT_TIMESTAMP - (INTERVAL '1 day' * $1)
+      `;
+      const statsQueryParams = [days];
+      const statsQuery = sql(statsQueryText, statsQueryParams);
+
+      console.log(`🔧 Requête GET audit stats construite manuellement:`);
+      console.log(`   Text: ${statsQueryText}`);
+      console.log(`   Params: ${JSON.stringify(statsQueryParams)}`);
+
+      const stats = await withQueryTimeout(
+        statsQuery,
+        5000,
+        'récupération des statistiques d\'audit'
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Statistiques d\'audit récupérées avec succès',
+        data: stats[0] || {}
+      });
+
+    // POST /api/audit/export - Exporter les logs
+    } else if (pathname === '/api/audit/export' && req.method === 'POST') {
+      // Authentification requise pour export
+      const user = authenticateToken(req);
+      
+      const { filters = {} } = req.body;
+
+      // Construire la requête avec filtres
+      let queryText = 'SELECT * FROM audit_logs WHERE 1=1';
+      const queryParams = [];
+      let paramIndex = 1;
+
+      if (filters.userId) {
+        queryText += ` AND user_id = $${paramIndex++}`;
+        queryParams.push(filters.userId);
+      }
+      if (filters.category) {
+        queryText += ` AND category = $${paramIndex++}`;
+        queryParams.push(filters.category);
+      }
+      if (filters.level) {
+        queryText += ` AND level = $${paramIndex++}`;
+        queryParams.push(filters.level);
+      }
+      if (filters.startDate) {
+        queryText += ` AND created_at >= $${paramIndex++}`;
+        queryParams.push(filters.startDate);
+      }
+      if (filters.endDate) {
+        queryText += ` AND created_at <= $${paramIndex++}`;
+        queryParams.push(filters.endDate);
+      }
+
+      queryText += ' ORDER BY created_at DESC';
+
+      const query = sql(queryText, queryParams);
+
+      const logs = await withQueryTimeout(
+        query,
+        5000,
+        'export des logs d\'audit'
+      );
+
+      // Formater en CSV
+      const csv = logs.map(log => {
+        const details = typeof log.details === 'string' ? log.details : JSON.stringify(log.details);
+        return `${log.id},${log.action},${log.user_id},${log.category},${log.level},"${details}",${log.ip_address || ''},${log.user_agent || ''},${log.created_at}`;
+      }).join('\n');
+
+      const csvHeader = 'id,action,user_id,category,level,details,ip_address,user_agent,created_at\n';
+
+      res.status(200).json({
+        success: true,
+        message: 'Logs exportés avec succès',
+        data: { export: csvHeader + csv }
+      });
+
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'Endpoint audit non trouvé'
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Erreur dans handleAudit:', {
+      message: error.message,
+      stack: error.stack?.substring(0, 500),
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint
+    });
+    const errorResponse = handleError(error, 'Erreur lors de la gestion des logs d\'audit');
+    res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
   }
 }
