@@ -731,25 +731,36 @@ async function handleLessons(req, res) {
         try {
           const queryStartTime = Date.now();
           // Validation et conversion des paramètres
-
+          const profileIdNum = parseInt(profileId, 10);
           console.log(`🔍 Debug - profileId original: "${profileId}" (type: ${typeof profileId})`);
+          console.log(`🔍 Debug - profileIdNum après parseInt: ${profileIdNum} (type: ${typeof profileIdNum}, isNaN: ${isNaN(profileIdNum)})`);
           
-          // Construire la requête avec profileIdNum comme paramètre et isPublished comme valeur littérale
-          // Utiliser une seule requête SQL pour éviter les problèmes avec les conditions ternaires
-          console.log(`🔧 Construction de la requête SQL avec profileId=${profileId}, published=${published}`);
+          if (isNaN(profileIdNum)) {
+            res.status(400).json({
+              success: false,
+              message: 'ID de profil invalide'
+            });
+            return;
+          }
           
-          query = sql`
-            SELECT 
-              id, title, description, subject, level, 
-              image_filename,
-              is_published, created_at, updated_at,
-              profile_id
-            FROM lessons
-            WHERE profile_id = ${profileId}
-              AND is_published = ${published}
-            ORDER BY created_at DESC
-            LIMIT 100
-          `;
+          // Convertir published en booléen JavaScript (pas string)
+          const isPublished = published === 'true' || published === true || published === '1';
+          console.log(`📊 Paramètres - profileIdNum: ${profileIdNum} (type: ${typeof profileIdNum}), isPublished: ${isPublished} (type: ${typeof isPublished})`);
+          
+          // Construire la requête avec les paramètres correctement typés
+          console.log(`🔧 Construction de la requête SQL avec profileIdNum=${profileIdNum} (number), isPublished=${isPublished} (boolean)`);
+          
+          // Construire la requête en séparant les paramètres pour éviter les problèmes d'injection
+          // Utiliser une requête sur une seule ligne pour éviter les problèmes de formatage
+          const queryText = 'SELECT id, title, description, subject, level, image_filename, is_published, created_at, updated_at, profile_id FROM lessons WHERE profile_id = $1 AND is_published = $2 ORDER BY created_at DESC LIMIT 100';
+          const queryParams = [profileIdNum, isPublished];
+          
+          console.log(`🔧 Requête construite manuellement:`);
+          console.log(`   Text: ${queryText}`);
+          console.log(`   Params: ${JSON.stringify(queryParams)}`);
+          
+          // Utiliser sql() avec texte et paramètres séparés
+          query = sql(queryText, queryParams);
           
           // Logger la requête SQL complète pour diagnostic
           console.log(`📝 Requête SQL générée:`);
