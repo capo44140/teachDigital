@@ -160,37 +160,211 @@ async function handleGenerateQuizFromImage(req, res) {
 }
 
 /**
+ * Parse FormData pour Vercel Functions
+ * Vercel Functions avec @vercel/node peut parser FormData automatiquement
+ * Cette fonction gère les deux cas : parsing automatique et manuel
+ */
+async function parseFormData(req) {
+  // Vérifier si c'est déjà un objet parsé (Vercel peut le faire automatiquement)
+  if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
+    // Si le body contient déjà les champs, c'est que Vercel l'a déjà parsé
+    if (req.body.file_0 || req.body.childProfile) {
+      return req.body;
+    }
+  }
+
+  // Si le body est un buffer ou une string, essayer de parser avec busboy
+  let Busboy;
+  try {
+    Busboy = require('@fastify/busboy');
+  } catch (e) {
+    // Si busboy n'est pas disponible, essayer avec busboy standard
+    try {
+      Busboy = require('busboy');
+    } catch (e2) {
+      throw new Error('Impossible de parser FormData: busboy non disponible');
+    }
+  }
+
+  return new Promise((resolve, reject) => {
+    const busboy = Busboy({ headers: req.headers });
+    const fields = {};
+    const files = [];
+
+    busboy.on('file', (fieldname, file, info) => {
+      // @fastify/busboy peut avoir différentes signatures selon la version
+      // Support pour les deux formats possibles
+      let filename, mimetype;
+      if (info) {
+        filename = info.filename || info.name || 'unknown';
+        mimetype = info.mimeType || info.mimetype || 'application/octet-stream';
+      } else {
+        // Si info n'est pas fourni, utiliser les valeurs par défaut
+        filename = 'unknown';
+        mimetype = 'application/octet-stream';
+      }
+      
+      const chunks = [];
+      file.on('data', (chunk) => {
+        chunks.push(chunk);
+      });
+      file.on('end', () => {
+        files.push({
+          fieldname,
+          filename,
+          mimetype,
+          buffer: Buffer.concat(chunks)
+        });
+      });
+      file.on('error', (err) => {
+        reject(err);
+      });
+    });
+
+    busboy.on('field', (fieldname, value) => {
+      fields[fieldname] = value;
+    });
+
+    busboy.on('finish', () => {
+      resolve({ fields, files });
+    });
+
+    busboy.on('error', (err) => {
+      reject(err);
+    });
+
+    // Parser le body
+    if (req.body) {
+      if (Buffer.isBuffer(req.body)) {
+        busboy.end(req.body);
+      } else if (typeof req.body === 'string') {
+        busboy.end(Buffer.from(req.body));
+      } else {
+        // Si c'est déjà un objet, essayer de le convertir
+        resolve(req.body);
+      }
+    } else {
+      // Pour Vercel Functions, le body peut être dans req
+      if (req.on) {
+        req.pipe(busboy);
+      } else {
+        reject(new Error('Body vide et pas de stream disponible'));
+      }
+    }
+  });
+}
+
+/**
+ * Convertit un buffer en base64
+ */
+function bufferToBase64(buffer) {
+  return buffer.toString('base64');
+}
+
+/**
  * Génère un quiz à partir de plusieurs documents
+ * Supporte maintenant FormData pour éviter les erreurs 413
  */
 async function handleGenerateQuizFromDocuments(req, res) {
   try {
     console.log('🔍 Début de handleGenerateQuizFromDocuments');
+    console.log('📋 Content-Type:', req.headers['content-type']);
     
-    // Parser le body de manière sécurisée
-    let body;
-    try {
-      if (typeof req.body === 'string') {
-        body = JSON.parse(req.body);
-      } else if (Buffer.isBuffer(req.body)) {
-        body = JSON.parse(req.body.toString());
-      } else {
-        body = req.body;
+    const contentType = req.headers['content-type'] || '';
+    const isFormData = contentType.includes('multipart/form-data');
+    
+    let documents = [];
+    let childProfile;
+    let questionCount = 5;
+    
+    if (isFormData) {
+      // Parser FormData
+      console.log('📦 Parsing FormData...');
+      const parsed = await parseFormData(req);
+      
+      // Extraire les fichiers et métadonnées
+      if (parsed.files && parsed.fields) {
+        // Format avec busboy
+        const fileCount = parseInt(parsed.fields.fileCount || '0');
+        for (let i = 0; i < fileCount; i++) {
+          const file = parsed.files.find(f => f.fieldname === `file_${i}`);
+          if (file) {
+            const fileName = parsed.fields[`file_${i}_name`] || file.filename;
+            const fileType = parsed.fields[`file_${i}_type`] || file.mimetype;
+            
+            documents.push({
+              name: fileName,
+              type: fileType,
+              buffer: file.buffer,
+              base64: bufferToBase64(file.buffer)
+            });
+          }
+        }
+        
+        childProfile = JSON.parse(parsed.fields.childProfile || '{}');
+        questionCount = parseInt(parsed.fields.questionCount || '5');
+      } else if (parsed.file_0) {
+        // Format déjà parsé par Vercel
+        const fileCount = parseInt(parsed.fileCount || '0');
+        for (let i = 0; i < fileCount; i++) {
+          const file = parsed[`file_${i}`];
+          const fileName = parsed[`file_${i}_name`] || 'unknown';
+          const fileType = parsed[`file_${i}_type`] || 'application/octet-stream';
+          
+          // Convertir le fichier en base64 si c'est un buffer
+          let base64Data;
+          if (Buffer.isBuffer(file)) {
+            base64Data = bufferToBase64(file);
+          } else if (typeof file === 'string') {
+            base64Data = file;
+          } else {
+            console.warn(`⚠️ Format de fichier non reconnu pour file_${i}`);
+            continue;
+          }
+          
+          documents.push({
+            name: fileName,
+            type: fileType,
+            base64: base64Data
+          });
+        }
+        
+        childProfile = typeof parsed.childProfile === 'string' 
+          ? JSON.parse(parsed.childProfile) 
+          : parsed.childProfile;
+        questionCount = parseInt(parsed.questionCount || '5');
       }
-    } catch (parseError) {
-      console.error('❌ Erreur de parsing du body:', parseError);
-      return res.status(400).json(createErrorResponse('Format de données invalide'));
+    } else {
+      // Format JSON classique (rétrocompatibilité)
+      console.log('📦 Parsing JSON...');
+      let body;
+      try {
+        if (typeof req.body === 'string') {
+          body = JSON.parse(req.body);
+        } else if (Buffer.isBuffer(req.body)) {
+          body = JSON.parse(req.body.toString());
+        } else {
+          body = req.body;
+        }
+      } catch (parseError) {
+        console.error('❌ Erreur de parsing du body:', parseError);
+        return res.status(400).json(createErrorResponse('Format de données invalide'));
+      }
+
+      const { documents: bodyDocuments, childProfile: bodyChildProfile, questionCount: bodyQuestionCount } = body;
+      documents = bodyDocuments || [];
+      childProfile = bodyChildProfile;
+      questionCount = bodyQuestionCount || 5;
     }
 
-    console.log('📊 Body parsé:', {
-      hasDocuments: !!body.documents,
-      documentsCount: body.documents?.length || 0,
-      hasChildProfile: !!body.childProfile,
-      questionCount: body.questionCount
+    console.log('📊 Données parsées:', {
+      documentsCount: documents.length,
+      hasChildProfile: !!childProfile,
+      questionCount: questionCount,
+      isFormData: isFormData
     });
 
-    const { documents, childProfile, questionCount } = body;
-
-    if (!documents || !Array.isArray(documents) || documents.length === 0) {
+    if (!documents || documents.length === 0) {
       return res.status(400).json(createErrorResponse('Documents requis'));
     }
 
@@ -208,7 +382,7 @@ async function handleGenerateQuizFromDocuments(req, res) {
       
       try {
         if (doc.type?.startsWith('image/') || doc.type === 'image') {
-          const imageData = doc.data || doc.base64;
+          const imageData = doc.base64 || doc.data;
           if (!imageData) {
             console.warn(`⚠️ Document ${i + 1} de type image mais sans données`);
             continue;
@@ -243,7 +417,7 @@ async function handleGenerateQuizFromDocuments(req, res) {
     console.log(`✅ ${analyses.length} analyse(s) complétée(s), génération du quiz...`);
 
     // Générer le quiz basé sur toutes les analyses
-    const quiz = await generateQuizFromMultipleAnalyses(analyses, childProfile, questionCount || 5);
+    const quiz = await generateQuizFromMultipleAnalyses(analyses, childProfile, questionCount);
 
     console.log('✅ Quiz généré avec succès');
     return res.status(200).json(createResponse('Quiz généré avec succès', { quiz }));

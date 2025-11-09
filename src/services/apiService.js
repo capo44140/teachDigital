@@ -88,6 +88,9 @@ class ApiService {
           this.logout();
           throw new Error('Session expirée - Veuillez vous reconnecter');
         }
+        if (response.status === 413) {
+          throw new Error('Erreur HTTP: 413 - Les fichiers sont trop volumineux. Veuillez réduire la taille des images ou utiliser moins de fichiers.');
+        }
         if (response.status === 504) {
           throw new Error('Timeout: Le serveur a pris trop de temps à répondre. Veuillez réessayer.');
         }
