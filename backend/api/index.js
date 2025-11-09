@@ -165,9 +165,35 @@ async function handleLogin(req, res) {
       return;
     }
 
+    // Validation et conversion de l'ID
+    const profileIdNum = parseInt(profileId, 10);
+    console.log(`🔍 Debug - profileId original: "${profileId}" (type: ${typeof profileId})`);
+    console.log(`🔍 Debug - profileIdNum après parseInt: ${profileIdNum} (type: ${typeof profileIdNum}, isNaN: ${isNaN(profileIdNum)})`);
+
+    if (isNaN(profileIdNum)) {
+      res.status(400).json({
+        success: false,
+        message: 'ID de profil invalide'
+      });
+      return;
+    }
+
+    // Construire les requêtes manuellement pour garantir l'injection correcte des paramètres
+    const profileQueryText = 'SELECT * FROM profiles WHERE id = $1 AND is_active = true';
+    const profileQueryParams = [profileIdNum];
+    const profileQuery = sql(profileQueryText, profileQueryParams);
+
+    const pinQueryText = 'SELECT pin_code FROM pin_codes WHERE profile_id = $1 ORDER BY created_at DESC LIMIT 1';
+    const pinQueryParams = [profileIdNum];
+    const pinQuery = sql(pinQueryText, pinQueryParams);
+
+    console.log(`🔧 Requêtes LOGIN construites manuellement:`);
+    console.log(`   Profile - Text: ${profileQueryText}, Params: ${JSON.stringify(profileQueryParams)}`);
+    console.log(`   PIN - Text: ${pinQueryText}, Params: ${JSON.stringify(pinQueryParams)}`);
+
     const [profile, pinData] = await Promise.all([
-      withQueryTimeout(sql`SELECT * FROM profiles WHERE id = ${profileId} AND is_active = true`, 5000, 'récupération du profil'),
-      withQueryTimeout(sql`SELECT pin_code FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1`, 5000, 'récupération du PIN')
+      withQueryTimeout(profileQuery, 5000, 'récupération du profil'),
+      withQueryTimeout(pinQuery, 5000, 'récupération du PIN')
     ]);
 
     if (!profile[0] || !pinData[0]) {
