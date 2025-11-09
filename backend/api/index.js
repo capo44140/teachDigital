@@ -191,9 +191,10 @@ async function handleLogin(req, res) {
     console.log(`   Profile - Text: ${profileQueryText}, Params: ${JSON.stringify(profileQueryParams)}`);
     console.log(`   PIN - Text: ${pinQueryText}, Params: ${JSON.stringify(pinQueryParams)}`);
 
+    // Timeout plus long pour le login (vérification PIN peut prendre du temps)
     const [profile, pinData] = await Promise.all([
-      withQueryTimeout(profileQuery, 5000, 'récupération du profil'),
-      withQueryTimeout(pinQuery, 5000, 'récupération du PIN')
+      withQueryTimeout(profileQuery, 10000, 'récupération du profil'),
+      withQueryTimeout(pinQuery, 10000, 'récupération du PIN')
     ]);
 
     if (!profile[0] || !pinData[0]) {

@@ -21,16 +21,41 @@ class ApiService {
   }
 
   /**
+   * Effectuer une requête fetch avec timeout
+   */
+  async fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Timeout: Le serveur a pris trop de temps à répondre. Veuillez réessayer.');
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Effectuer une requête HTTP
    */
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const token = this.getToken();
     
-    // Log pour diagnostiquer les problèmes d'authentification
-    if (!token) {
-      console.warn('⚠️ Aucun token d\'authentification trouvé dans localStorage pour:', endpoint);
-    }
+    // Endpoints qui ne nécessitent pas de token
+    const publicEndpoints = ['/api/auth/login', '/api/auth/logout'];
+    const isPublicEndpoint = publicEndpoints.includes(endpoint);
+    
+    // Timeout plus long pour le login (peut prendre du temps avec la vérification du PIN)
+    const timeout = isPublicEndpoint ? 60000 : 30000; // 60s pour login, 30s pour les autres
     
     // Ne pas définir Content-Type si le body est FormData (le navigateur le fait automatiquement)
     const isFormData = options.body instanceof FormData;
@@ -47,12 +72,14 @@ class ApiService {
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
       console.log('✅ Token d\'authentification ajouté à la requête:', endpoint);
-    } else {
-      console.error('❌ Token manquant pour la requête:', endpoint);
+    } else if (!isPublicEndpoint) {
+      // Afficher un avertissement uniquement pour les endpoints qui nécessitent un token
+      console.warn('⚠️ Aucun token d\'authentification trouvé pour:', endpoint);
     }
 
     try {
-      const response = await fetch(url, config);
+      console.log(`🌐 Requête vers: ${endpoint} (timeout: ${timeout}ms)`);
+      const response = await this.fetchWithTimeout(url, config, timeout);
       
       // Gérer les erreurs HTTP
       if (!response.ok) {
