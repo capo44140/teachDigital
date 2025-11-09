@@ -1583,24 +1583,31 @@ async function handlePin(req, res) {
     const pathParts = url.pathname.split('/');
     const profileId = pathParts[3]; // /api/profiles/{id}/pin
 
-    if (!profileId) {
+    // Validation et conversion de l'ID
+    const profileIdNum = parseInt(profileId, 10);
+    console.log(`🔍 Debug - profileId original: "${profileId}" (type: ${typeof profileId})`);
+    console.log(`🔍 Debug - profileIdNum après parseInt: ${profileIdNum} (type: ${typeof profileIdNum}, isNaN: ${isNaN(profileIdNum)})`);
+
+    if (!profileId || isNaN(profileIdNum)) {
       res.status(400).json({ 
         success: false, 
-        message: 'ID de profil requis' 
+        message: 'ID de profil invalide' 
       });
       return;
     }
 
     if (req.method === 'GET') {
       // Récupérer le code PIN (pour vérification)
+      const queryText = 'SELECT pin_code, created_at, updated_at FROM pin_codes WHERE profile_id = $1 ORDER BY created_at DESC LIMIT 1';
+      const queryParams = [profileIdNum];
+      const query = sql(queryText, queryParams);
+
+      console.log(`🔧 Requête GET PIN construite manuellement:`);
+      console.log(`   Text: ${queryText}`);
+      console.log(`   Params: ${JSON.stringify(queryParams)}`);
+
       const pinData = await withQueryTimeout(
-        sql`
-          SELECT pin_code, created_at, updated_at
-          FROM pin_codes 
-          WHERE profile_id = ${profileId}
-          ORDER BY created_at DESC
-          LIMIT 1
-        `,
+        query,
         5000,
         'récupération du PIN'
       );
@@ -1635,13 +1642,17 @@ async function handlePin(req, res) {
         return;
       }
 
+      // Construire la requête manuellement pour garantir l'injection correcte des paramètres
+      const queryText = 'SELECT pin_code FROM pin_codes WHERE profile_id = $1 ORDER BY created_at DESC LIMIT 1';
+      const queryParams = [profileIdNum];
+      const query = sql(queryText, queryParams);
+
+      console.log(`🔧 Requête POST PIN construite manuellement:`);
+      console.log(`   Text: ${queryText}`);
+      console.log(`   Params: ${JSON.stringify(queryParams)}`);
+
       const pinData = await withQueryTimeout(
-        sql`
-          SELECT pin_code FROM pin_codes 
-          WHERE profile_id = ${profileId}
-          ORDER BY created_at DESC
-          LIMIT 1
-        `,
+        query,
         5000,
         'vérification du PIN'
       );
@@ -1676,13 +1687,16 @@ async function handlePin(req, res) {
 
       // Vérifier le code PIN actuel si fourni
       if (currentPin) {
+        const checkQueryText = 'SELECT pin_code FROM pin_codes WHERE profile_id = $1 ORDER BY created_at DESC LIMIT 1';
+        const checkQueryParams = [profileIdNum];
+        const checkQuery = sql(checkQueryText, checkQueryParams);
+
+        console.log(`🔧 Requête vérification PIN actuel construite manuellement:`);
+        console.log(`   Text: ${checkQueryText}`);
+        console.log(`   Params: ${JSON.stringify(checkQueryParams)}`);
+
         const pinData = await withQueryTimeout(
-          sql`
-            SELECT pin_code FROM pin_codes 
-            WHERE profile_id = ${profileId}
-            ORDER BY created_at DESC
-            LIMIT 1
-          `,
+          checkQuery,
           5000,
           'vérification du PIN actuel'
         );
@@ -1712,10 +1726,16 @@ async function handlePin(req, res) {
       const hashedPin = await NativeHashService.hashPin(newPin);
 
       // Vérifier si un code PIN existe déjà
+      const checkExistingQueryText = 'SELECT id FROM pin_codes WHERE profile_id = $1';
+      const checkExistingQueryParams = [profileIdNum];
+      const checkExistingQuery = sql(checkExistingQueryText, checkExistingQueryParams);
+
+      console.log(`🔧 Requête vérification PIN existant construite manuellement:`);
+      console.log(`   Text: ${checkExistingQueryText}`);
+      console.log(`   Params: ${JSON.stringify(checkExistingQueryParams)}`);
+
       const existingPin = await withQueryTimeout(
-        sql`
-          SELECT id FROM pin_codes WHERE profile_id = ${profileId}
-        `,
+        checkExistingQuery,
         5000,
         'vérification PIN existant'
       );
@@ -1723,26 +1743,31 @@ async function handlePin(req, res) {
       let result;
       if (existingPin[0]) {
         // Mettre à jour le code PIN existant
+        const updateQueryText = 'UPDATE pin_codes SET pin_code = $1, updated_at = CURRENT_TIMESTAMP WHERE profile_id = $2 RETURNING *';
+        const updateQueryParams = [hashedPin, profileIdNum];
+        const updateQuery = sql(updateQueryText, updateQueryParams);
+
+        console.log(`🔧 Requête UPDATE PIN construite manuellement:`);
+        console.log(`   Text: ${updateQueryText}`);
+        console.log(`   Params: ${JSON.stringify(updateQueryParams)}`);
+
         result = await withQueryTimeout(
-          sql`
-            UPDATE pin_codes 
-            SET 
-              pin_code = ${hashedPin},
-              updated_at = CURRENT_TIMESTAMP
-            WHERE profile_id = ${profileId}
-            RETURNING *
-          `,
+          updateQuery,
           5000,
           'mise à jour du PIN'
         );
       } else {
         // Créer un nouveau code PIN
+        const insertQueryText = 'INSERT INTO pin_codes (profile_id, pin_code) VALUES ($1, $2) RETURNING *';
+        const insertQueryParams = [profileIdNum, hashedPin];
+        const insertQuery = sql(insertQueryText, insertQueryParams);
+
+        console.log(`🔧 Requête INSERT PIN construite manuellement:`);
+        console.log(`   Text: ${insertQueryText}`);
+        console.log(`   Params: ${JSON.stringify(insertQueryParams)}`);
+
         result = await withQueryTimeout(
-          sql`
-            INSERT INTO pin_codes (profile_id, pin_code)
-            VALUES (${profileId}, ${hashedPin})
-            RETURNING *
-          `,
+          insertQuery,
           5000,
           'création du PIN'
         );
