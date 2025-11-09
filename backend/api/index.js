@@ -731,25 +731,12 @@ async function handleLessons(req, res) {
         try {
           const queryStartTime = Date.now();
           // Validation et conversion des paramètres
-          const profileIdNum = parseInt(profileId, 10);
+
           console.log(`🔍 Debug - profileId original: "${profileId}" (type: ${typeof profileId})`);
-          console.log(`🔍 Debug - profileIdNum après parseInt: ${profileIdNum} (type: ${typeof profileIdNum}, isNaN: ${isNaN(profileIdNum)})`);
-          
-          if (isNaN(profileIdNum)) {
-            res.status(400).json({
-              success: false,
-              message: 'ID de profil invalide'
-            });
-            return;
-          }
-          
-          // Convertir published en booléen SQL (true/false)
-          const isPublished = published === 'true' || published === true || published === '1';
-          console.log(`📊 Paramètres - profileIdNum: ${profileIdNum} (type: ${typeof profileIdNum}), isPublished: ${isPublished} (type: ${typeof isPublished})`);
           
           // Construire la requête avec profileIdNum comme paramètre et isPublished comme valeur littérale
           // Utiliser une seule requête SQL pour éviter les problèmes avec les conditions ternaires
-          console.log(`🔧 Construction de la requête SQL avec profileIdNum=${profileIdNum}, isPublished=${isPublished}`);
+          console.log(`🔧 Construction de la requête SQL avec profileId=${profileId}, published=${published}`);
           
           query = sql`
             SELECT 
@@ -758,8 +745,8 @@ async function handleLessons(req, res) {
               is_published, created_at, updated_at,
               profile_id
             FROM lessons
-            WHERE profile_id = ${profileIdNum}
-              AND is_published = ${isPublished}
+            WHERE profile_id = ${profileId}
+              AND is_published = ${published}
             ORDER BY created_at DESC
             LIMIT 100
           `;
