@@ -945,7 +945,35 @@ async function handleLessons(req, res) {
         return;
       }
 
+      if (!user.profileId) {
+        res.status(400).json({ 
+          success: false, 
+          message: 'ID de profil manquant' 
+        });
+        return;
+      }
+
       // Ne pas stocker image_data (trop volumineux), garder seulement le nom du fichier pour référence
+      // S'assurer que toutes les valeurs sont définies (null au lieu de undefined)
+      // Convertir les valeurs undefined en null pour éviter les erreurs SQL
+      const safeDescription = description || null;
+      const safeSubject = subject || null;
+      const safeLevel = level || null;
+      const safeImageFilename = imageFilename || null;
+      const safeQuizData = JSON.stringify(quizData);
+      const safeIsPublished = isPublished !== undefined ? isPublished : true;
+
+      console.log(`🔧 Valeurs pour INSERT:`, {
+        profileId: user.profileId,
+        title,
+        description: safeDescription,
+        subject: safeSubject,
+        level: safeLevel,
+        imageFilename: safeImageFilename,
+        hasQuizData: !!safeQuizData,
+        isPublished: safeIsPublished
+      });
+
       const result = await withQueryTimeout(
         sql`
           INSERT INTO lessons (
@@ -953,8 +981,14 @@ async function handleLessons(req, res) {
             image_filename, quiz_data, is_published
           )
           VALUES (
-            ${user.profileId}, ${title}, ${description}, ${subject}, ${level},
-            ${imageFilename}, ${JSON.stringify(quizData)}, ${isPublished}
+            ${user.profileId}, 
+            ${title}, 
+            ${safeDescription}, 
+            ${safeSubject}, 
+            ${safeLevel},
+            ${safeImageFilename}, 
+            ${safeQuizData}, 
+            ${safeIsPublished}
           )
           RETURNING *
         `,
