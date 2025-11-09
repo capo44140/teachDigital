@@ -191,10 +191,10 @@ async function handleLogin(req, res) {
     console.log(`   Profile - Text: ${profileQueryText}, Params: ${JSON.stringify(profileQueryParams)}`);
     console.log(`   PIN - Text: ${pinQueryText}, Params: ${JSON.stringify(pinQueryParams)}`);
 
-    // Timeout plus long pour le login (vérification PIN peut prendre du temps)
+    // Timeout réduit pour les requêtes SQL (laisser du temps pour les autres opérations)
     const [profile, pinData] = await Promise.all([
-      withQueryTimeout(profileQuery, 10000, 'récupération du profil'),
-      withQueryTimeout(pinQuery, 10000, 'récupération du PIN')
+      withQueryTimeout(profileQuery, 5000, 'récupération du profil'),
+      withQueryTimeout(pinQuery, 5000, 'récupération du PIN')
     ]);
 
     if (!profile[0] || !pinData[0]) {
@@ -205,6 +205,7 @@ async function handleLogin(req, res) {
       return;
     }
 
+    // Vérification du PIN (peut être lente avec les logs)
     const isValidPin = await NativeHashService.verifyPin(pin, pinData[0].pin_code);
     if (!isValidPin) {
       res.status(401).json({ 
@@ -214,6 +215,7 @@ async function handleLogin(req, res) {
       return;
     }
 
+    // Génération des tokens (rapide)
     const tokenPayload = {
       profileId: profile[0].id,
       name: profile[0].name,
@@ -225,7 +227,12 @@ async function handleLogin(req, res) {
     const sessionToken = generateToken({ profileId: profile[0].id });
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    await createSession(profile[0].id, sessionToken, expiresAt);
+    // Création de session en arrière-plan (non-bloquant) pour éviter le timeout
+    // On ne bloque pas la réponse sur cette opération
+    createSession(profile[0].id, sessionToken, expiresAt).catch(err => {
+      console.error('⚠️ Erreur lors de la création de session (non-bloquant):', err);
+      // On continue même si la session n'a pas pu être créée
+    });
 
     res.status(200).json({
       success: true,
