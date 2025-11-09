@@ -383,32 +383,47 @@ async function handleProfile(req, res) {
 
     // Gérer les routes standard du profil
     if (req.method === 'GET') {
-      const profiles = await withQueryTimeout(
-        sql`
-          SELECT 
-            id, name, description, type, is_admin, is_child, is_teen, 
-            is_active, is_locked, color, avatar_class, avatar_content, 
-            image_url, image_data, image_type, level, created_at, updated_at
-          FROM profiles 
-          WHERE id = ${id}
-        `,
-        5000,
-        'récupération du profil'
-      );
+      console.log(`🔍 Récupération du profil ID: ${id} (type: ${typeof id})`);
+      
+      try {
+        const profiles = await withQueryTimeout(
+          sql`
+            SELECT 
+              id, name, description, type, is_admin, is_child, is_teen, 
+              is_active, is_locked, color, avatar_class, avatar_content, 
+              image_url, image_data, image_type, level, created_at, updated_at
+            FROM profiles 
+            WHERE id = ${parseInt(id)}
+          `,
+          5000,
+          'récupération du profil'
+        );
 
-      if (!profiles[0]) {
-        res.status(404).json({ 
-          success: false, 
-          message: 'Profil non trouvé' 
+        console.log(`✅ Profil récupéré: ${profiles.length} résultat(s)`);
+
+        if (!profiles[0]) {
+          res.status(404).json({ 
+            success: false, 
+            message: 'Profil non trouvé' 
+          });
+          return;
+        }
+
+        res.status(200).json({
+          success: true,
+          message: 'Profil récupéré avec succès',
+          data: { profile: profiles[0] }
         });
-        return;
+      } catch (sqlError) {
+        console.error('❌ Erreur SQL lors de la récupération du profil:', {
+          message: sqlError.message,
+          code: sqlError.code,
+          detail: sqlError.detail,
+          hint: sqlError.hint,
+          id: id
+        });
+        throw sqlError;
       }
-
-      res.status(200).json({
-        success: true,
-        message: 'Profil récupéré avec succès',
-        data: { profile: profiles[0] }
-      });
 
     } else if (req.method === 'PUT') {
       // Authentification requise pour PUT
@@ -502,6 +517,12 @@ async function handleProfile(req, res) {
     }
 
   } catch (error) {
+    console.error('❌ Erreur dans handleProfile:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      pathname: req.url
+    });
     const errorResponse = handleError(error, 'Erreur lors de la gestion du profil');
     res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
   }

@@ -75,6 +75,28 @@ function handleError(error, defaultMessage = 'Erreur interne du serveur') {
     return validationErrorResponse([error.message]);
   }
   
+  // Gérer les erreurs de base de données PostgreSQL
+  // Les codes d'erreur PostgreSQL sont des chaînes de 5 caractères (ex: '23505', '42P01', 'ECONNREFUSED')
+  if (error.code && (typeof error.code === 'string' || typeof error.code === 'number')) {
+    console.error('Erreur PostgreSQL:', {
+      code: error.code,
+      message: error.message,
+      detail: error.detail,
+      hint: error.hint
+    });
+    return errorResponse(
+      error.message || defaultMessage,
+      500,
+      error.detail || error.hint
+    );
+  }
+  
+  // Gérer les erreurs de timeout
+  if (error.message && error.message.includes('timeout') || error.message && error.message.includes('Timeout')) {
+    console.error('Erreur de timeout:', error.message);
+    return errorResponse('La requête a pris trop de temps. Veuillez réessayer.', 504);
+  }
+  
   return errorResponse(defaultMessage);
 }
 
