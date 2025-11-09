@@ -54,41 +54,70 @@ class NativeHashService {
    */
   static async verifyPin(pin, hashedPin) {
     try {
+      console.log('🔍 Début de la vérification du code PIN');
+      console.log('📝 PIN fourni:', pin ? `${pin.length} caractères` : 'null/undefined');
+      console.log('📝 Hachage fourni:', hashedPin ? `${hashedPin.length} caractères` : 'null/undefined');
+      
       if (!pin || !hashedPin) {
         console.log('❌ Code PIN ou hachage manquant');
+        console.log('   - PIN présent:', !!pin);
+        console.log('   - Hachage présent:', !!hashedPin);
         return false;
       }
       
       // Vérifier le format du hachage
+      console.log('🔍 Vérification du format du hachage...');
       if (!hashedPin.startsWith('$native$')) {
         console.log('❌ Format de hachage non reconnu');
+        console.log('   - Préfixe attendu: $native$');
+        console.log('   - Préfixe reçu:', hashedPin.substring(0, Math.min(20, hashedPin.length)));
         return false;
       }
+      console.log('✅ Format de hachage reconnu ($native$)');
       
       // Extraire le salt et le hash
+      console.log('🔍 Extraction des composants du hachage...');
       const parts = hashedPin.split('$');
+      console.log('   - Nombre de parties:', parts.length);
       if (parts.length !== 4) {
         console.log('❌ Format de hachage invalide');
+        console.log('   - Format attendu: $native$<salt>$<hash>');
+        console.log('   - Format reçu:', parts.length, 'parties');
         return false;
       }
       
       const saltBase64 = parts[2];
       const storedHashBase64 = parts[3];
+      console.log('✅ Composants extraits');
+      console.log('   - Salt (base64):', saltBase64 ? `${saltBase64.length} caractères` : 'vide');
+      console.log('   - Hash stocké (base64):', storedHashBase64 ? `${storedHashBase64.length} caractères` : 'vide');
       
       // Décoder le salt
+      console.log('🔍 Décodage du salt...');
       const salt = Buffer.from(saltBase64, 'base64');
+      console.log('   - Salt décodé:', salt.length, 'octets');
       
       // Hacher le PIN avec le même salt
+      console.log('🔍 Calcul du hash du PIN avec le salt...');
       const hash = crypto.createHash('sha256');
       hash.update(salt);
       hash.update(pin);
       const computedHashBase64 = hash.digest('base64');
+      console.log('   - Hash calculé (base64):', computedHashBase64 ? `${computedHashBase64.length} caractères` : 'vide');
       
+      // Comparaison
+      console.log('🔍 Comparaison des hashs...');
       const isValid = computedHashBase64 === storedHashBase64;
+      console.log('   - Hash stocké:', storedHashBase64.substring(0, 20) + '...');
+      console.log('   - Hash calculé:', computedHashBase64.substring(0, 20) + '...');
+      console.log('   - Correspondance:', isValid ? '✅ OUI' : '❌ NON');
+      
       console.log(isValid ? '✅ Code PIN valide' : '❌ Code PIN invalide');
       return isValid;
     } catch (error) {
       console.error('❌ Erreur lors de la vérification du code PIN:', error);
+      console.error('   - Message:', error.message);
+      console.error('   - Stack:', error.stack);
       return false;
     }
   }
