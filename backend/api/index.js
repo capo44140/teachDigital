@@ -713,12 +713,12 @@ async function handleLessons(req, res) {
       const profileId = url.searchParams.get('profileId');
       const published = url.searchParams.get('published');
 
-      console.log(`🔍 Récupération des leçons - profileId: ${profileId}, published: ${published}`);
+      console.log(`🔍 Récupération des leçons - profileId: ${profileId}, published: ${published} (type: ${typeof published})`);
       const startTime = Date.now();
 
       let lessons;
       
-      if (profileId && published !== undefined) {
+      if (profileId && published !== null && published !== undefined) {
         // Les deux paramètres sont fournis
         // OPTIMISATION: Requête simplifiée sans JOIN pour améliorer les performances
         // Exclure image_data et quiz_data des listes (très volumineux en base64)
@@ -727,7 +727,21 @@ async function handleLessons(req, res) {
         
         try {
           const queryStartTime = Date.now();
-          // Requête simplifiée sans JOIN - profile_name peut être chargé séparément si nécessaire
+          // Validation et conversion des paramètres
+          const profileIdNum = parseInt(profileId, 10);
+          if (isNaN(profileIdNum)) {
+            res.status(400).json({
+              success: false,
+              message: 'ID de profil invalide'
+            });
+            return;
+          }
+          
+          // Convertir published en booléen SQL (true/false)
+          const isPublished = published === 'true' || published === true || published === '1';
+          console.log(`📊 Paramètres - profileId: ${profileIdNum}, isPublished: ${isPublished}`);
+          
+          // Requête SQL simplifiée - PostgreSQL accepte les booléens JavaScript directement
           lessons = await withQueryTimeout(
             sql`
               SELECT 
@@ -736,8 +750,8 @@ async function handleLessons(req, res) {
                 is_published, created_at, updated_at,
                 profile_id
               FROM lessons
-              WHERE profile_id = ${parseInt(profileId)} 
-                AND is_published = ${published === 'true'}
+              WHERE profile_id = ${profileIdNum}
+                AND is_published = ${isPublished}
               ORDER BY created_at DESC
               LIMIT 100
             `,
@@ -781,6 +795,7 @@ async function handleLessons(req, res) {
       } else if (published !== undefined) {
         // Seulement published - Requête simplifiée sans JOIN
         const queryStartTime = Date.now();
+        const isPublished = published === 'true' || published === true;
         lessons = await withQueryTimeout(
           sql`
             SELECT 
@@ -789,7 +804,7 @@ async function handleLessons(req, res) {
               is_published, created_at, updated_at,
               profile_id
             FROM lessons
-            WHERE is_published = ${published === 'true'}
+            WHERE is_published = ${isPublished}
             ORDER BY created_at DESC
             LIMIT 100
           `,
