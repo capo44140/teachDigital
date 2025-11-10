@@ -84,7 +84,19 @@ class ApiService {
       // Gérer les erreurs HTTP
       if (!response.ok) {
         if (response.status === 401) {
-          // Token expiré ou invalide
+          // Pour la vérification du PIN, lire le JSON avant de lancer l'exception
+          // car le backend retourne { success: false } même avec un statut 401
+          if (endpoint.includes('/pin') && endpoint.includes('/api/profiles/')) {
+            try {
+              const errorData = await response.json();
+              // Si c'est une vérification de PIN, retourner la réponse JSON
+              // pour que pinService puisse lire success: false
+              return errorData;
+            } catch (parseError) {
+              // Si on ne peut pas parser, continuer avec le comportement par défaut
+            }
+          }
+          // Token expiré ou invalide (pour les autres endpoints)
           this.logout();
           throw new Error('Session expirée - Veuillez vous reconnecter');
         }

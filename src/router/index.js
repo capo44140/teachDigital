@@ -272,11 +272,26 @@ router.beforeEach(async (to, from, next) => {
     const isUnlocked = to.query.unlocked === 'true'
     let currentProfile = null
     
-    // Si l'accès est déverrouillé (après vérification du PIN), permettre l'accès
+    // Si l'accès est déverrouillé (après vérification du PIN), vérifier qu'une session valide existe
     if (isUnlocked) {
-      console.log('Accès autorisé après vérification du PIN')
-      next()
-      return
+      // Vérifier qu'une session valide existe pour ce profil
+      const session = sessionService.getValidSession()
+      if (session && session.profileId === profileId && session.isUnlocked) {
+        console.log('Accès autorisé après vérification du PIN avec session valide')
+        next()
+        return
+      } else {
+        // Si unlocked=true mais pas de session valide, rediriger vers la page PIN
+        console.warn('Accès déverrouillé demandé mais session invalide, redirection vers PIN')
+        next({ 
+          path: '/pin-lock', 
+          query: { 
+            profile: profileId,
+            name: 'Parent'
+          } 
+        })
+        return
+      }
     }
     
     // Vérifier si une session valide existe

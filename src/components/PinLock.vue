@@ -168,6 +168,7 @@ export default {
         
         // Vérifier le PIN pour le profil cible
         const isValid = await this.profileStore.verifyPin(targetProfileIdNum, enteredPin)
+        console.log('🔐 Résultat de la vérification du PIN:', isValid ? '✅ VALIDE' : '❌ INVALIDE')
         
         if (isValid) {
           // PIN correct - obtenir le token JWT via login
