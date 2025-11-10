@@ -1,5 +1,5 @@
 // Test CORS simple
-const API_URL = 'https://backend-sepia-mu.vercel.app';
+const API_URL = 'http://lespoires.synology.me:3001';
 
 async function testCors() {
   console.log('🧪 Test CORS du backend\n');
