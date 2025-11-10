@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: teachdigital-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      # Configuration base de données PostgreSQL EXTERNE
+      # Utilisez l'IP de votre Synology ou le nom du conteneur PostgreSQL si sur le même réseau Docker
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${DB_USER:-teachdigital}:${DB_PASSWORD}@${DB_HOST:-host.docker.internal}:${DB_PORT:-5432}/${DB_NAME:-teachdigital}}
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-teachdigital}
+      DB_PASSWORD: ${DB_PASSWORD:-change_me_please}
+      DB_NAME: ${DB_NAME:-teachdigital}
+      # JWT Secret
+      JWT_SECRET: ${JWT_SECRET:-change_me_jwt_secret_please}
+      # Clés API IA (optionnelles)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      # Frontend URL pour CORS
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-}
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    # Si votre PostgreSQL est sur le même réseau Docker, décommentez la ligne suivante
+    # networks:
+    #   - teachdigital-network
+    # Si votre PostgreSQL est sur le réseau host, utilisez network_mode: host
+    network_mode: bridge
+    extra_hosts:
+      # Permet d'accéder au host depuis le conteneur
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Volume pour les données persistantes si nécessaire
+      - /volume1/docker/teachdigital/backendlogs:/app/logs
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Si votre PostgreSQL est sur le même réseau Docker, décommentez ceci
+# networks:
+#   teachdigital-network:
+#     external: true
+#     name: votre-reseau-postgresql
+
