@@ -5,11 +5,11 @@ RUN npm install -g pnpm
 
 WORKDIR /app
 
-# Copier les fichiers de dépendances
-COPY package.json pnpm-lock.yaml ./
+# Copier les fichiers de dépendances et configuration
+COPY package.json pnpm-lock.yaml .npmrc ./
 
-# Installer les dépendances
-RUN pnpm install --prod
+# Installer les dépendances (autoriser les scripts de build pour tesseract.js)
+RUN pnpm install --prod --config.enable-pre-post-scripts=true
 
 # Copier le reste du code
 COPY . .
