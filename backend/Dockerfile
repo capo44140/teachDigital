@@ -9,7 +9,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 
 # Installer les dépendances
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --prod
 
 # Copier le reste du code
 COPY . .
