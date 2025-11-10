@@ -176,13 +176,18 @@ async function parseFormData(req) {
   // Si le body est un buffer ou une string, essayer de parser avec busboy
   let Busboy;
   try {
+    // Essayer d'abord @fastify/busboy (recommandé pour Vercel)
     Busboy = require('@fastify/busboy');
+    console.log('✅ @fastify/busboy chargé avec succès');
   } catch (e) {
-    // Si busboy n'est pas disponible, essayer avec busboy standard
+    console.warn('⚠️ @fastify/busboy non disponible, tentative avec busboy standard...');
+    // Si @fastify/busboy n'est pas disponible, essayer avec busboy standard
     try {
       Busboy = require('busboy');
+      console.log('✅ busboy standard chargé avec succès');
     } catch (e2) {
-      throw new Error('Impossible de parser FormData: busboy non disponible');
+      console.error('❌ Erreur lors du chargement de busboy:', e2.message);
+      throw new Error('Impossible de parser FormData: busboy non disponible. Veuillez installer @fastify/busboy avec: npm install @fastify/busboy');
     }
   }
 
@@ -234,21 +239,40 @@ async function parseFormData(req) {
     });
 
     // Parser le body
+    // Pour Vercel Functions, le body peut être dans différentes formes
     if (req.body) {
       if (Buffer.isBuffer(req.body)) {
+        // Body est un Buffer
         busboy.end(req.body);
       } else if (typeof req.body === 'string') {
+        // Body est une string, convertir en Buffer
+        busboy.end(Buffer.from(req.body, 'binary'));
+      } else if (req.body instanceof Uint8Array) {
+        // Body est un Uint8Array (cas Vercel)
         busboy.end(Buffer.from(req.body));
       } else {
         // Si c'est déjà un objet, essayer de le convertir
+        console.warn('⚠️ Body est un objet, tentative de résolution directe');
         resolve(req.body);
       }
     } else {
-      // Pour Vercel Functions, le body peut être dans req
-      if (req.on) {
+      // Pour Vercel Functions, le body peut être dans req directement
+      // Vérifier si req est un stream
+      if (req.on && typeof req.pipe === 'function') {
+        // req est un stream, le pipe vers busboy
         req.pipe(busboy);
+      } else if (req.rawBody) {
+        // Vercel peut mettre le body brut dans rawBody
+        if (Buffer.isBuffer(req.rawBody)) {
+          busboy.end(req.rawBody);
+        } else if (typeof req.rawBody === 'string') {
+          busboy.end(Buffer.from(req.rawBody, 'binary'));
+        } else {
+          reject(new Error('rawBody dans un format non supporté'));
+        }
       } else {
-        reject(new Error('Body vide et pas de stream disponible'));
+        // Aucun body disponible
+        reject(new Error('Body vide et pas de stream disponible. Vérifiez que la requête contient bien des données FormData.'));
       }
     }
   });
