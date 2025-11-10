@@ -6,6 +6,7 @@ const { createResponse, createErrorResponse } = require('../lib/response.js');
 // URLs des APIs
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const MISTRAL_BASE_URL = 'https://api.mistral.ai/v1';
 
@@ -456,7 +457,7 @@ async function handleGenerateQuizFromDocuments(req, res) {
     // Si tous les services IA ont échoué, retourner un message d'erreur clair
     if (error.message.includes('Tous les services IA ont échoué')) {
       return res.status(503).json(createErrorResponse(
-        'Impossible de générer le quiz. Tous les services d\'intelligence artificielle (OpenAI, Gemini, Groq, Mistral) ont échoué. Veuillez réessayer plus tard ou vérifier la configuration des clés API.'
+        'Impossible de générer le quiz. Tous les services d\'intelligence artificielle (OpenAI, Gemini, DeepSeek, Groq, Mistral) ont échoué. Veuillez réessayer plus tard ou vérifier la configuration des clés API.'
       ));
     }
     
@@ -485,7 +486,7 @@ async function handleGenerateQuizFromText(req, res) {
     // Si tous les services IA ont échoué, retourner un message d'erreur clair
     if (error.message.includes('Tous les services IA ont échoué')) {
       return res.status(503).json(createErrorResponse(
-        'Impossible de générer le quiz. Tous les services d\'intelligence artificielle (OpenAI, Gemini, Groq, Mistral) ont échoué. Veuillez réessayer plus tard ou vérifier la configuration des clés API.'
+        'Impossible de générer le quiz. Tous les services d\'intelligence artificielle (OpenAI, Gemini, DeepSeek, Groq, Mistral) ont échoué. Veuillez réessayer plus tard ou vérifier la configuration des clés API.'
       ));
     }
     
@@ -781,6 +782,7 @@ async function generateQuizFromAnalysis(analysis, childProfile) {
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
+  const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
 
   const errors = [];
 
@@ -809,13 +811,26 @@ async function generateQuizFromAnalysis(analysis, childProfile) {
     } catch (error) {
       const errorMsg = error.message || 'Erreur inconnue';
       errors.push(`Gemini: ${errorMsg}`);
-      console.warn('Erreur Gemini, tentative avec Groq:', errorMsg);
+      console.warn('Erreur Gemini, tentative avec DeepSeek:', errorMsg);
     }
   } else {
     errors.push('Gemini: Clé API non configurée ou invalide');
   }
 
-  // Essayer Groq si Gemini échoue
+  // Essayer DeepSeek si Gemini échoue (3ème position)
+  if (isValidDeepSeekKey(process.env.DEEPSEEK_API_KEY)) {
+    try {
+      return await generateQuizWithDeepSeek(analysis, childProfile);
+    } catch (error) {
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`DeepSeek: ${errorMsg}`);
+      console.warn('Erreur DeepSeek, tentative avec Groq:', errorMsg);
+    }
+  } else {
+    errors.push('DeepSeek: Clé API non configurée ou invalide');
+  }
+
+  // Essayer Groq si DeepSeek échoue
   if (isValidGroqKey(groqApiKey)) {
     try {
       return await generateQuizWithGroq(analysis, childProfile);
@@ -1060,6 +1075,64 @@ async function generateQuizWithGroq(analysis, childProfile) {
 }
 
 /**
+ * Génère un quiz avec DeepSeek
+ */
+async function generateQuizWithDeepSeek(analysis, childProfile) {
+  const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
+  
+  const response = await fetchWithTimeout(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${deepseekApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'system',
+          content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. Créez des questions claires, éducatives et adaptées au niveau de l'enfant. L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}.`
+        },
+        {
+          role: 'user',
+          content: `Basé sur cette analyse de leçon: ${JSON.stringify(analysis)}, générez un quiz de 5 questions avec 4 options chacune. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
+        }
+      ],
+      max_tokens: 1500,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur DeepSeek: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.choices[0].message.content;
+  
+  // Nettoyer le texte pour extraire le JSON
+  let jsonText = responseText.trim();
+  
+  if (jsonText.startsWith('```json')) {
+    jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  
+  const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    jsonText = jsonMatch[0];
+  }
+  
+  try {
+    return JSON.parse(jsonText);
+  } catch (parseError) {
+    console.error('Erreur de parsing JSON DeepSeek:', parseError);
+    throw new Error('Impossible de parser la réponse de DeepSeek');
+  }
+}
+
+/**
  * Génère un quiz avec Mistral
  */
 async function generateQuizWithMistral(analysis, childProfile) {
@@ -1124,6 +1197,7 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
+  const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
 
   const errors = [];
 
@@ -1152,13 +1226,26 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
     } catch (error) {
       const errorMsg = error.message || 'Erreur inconnue';
       errors.push(`Gemini: ${errorMsg}`);
-      console.warn('Erreur Gemini, tentative avec Groq:', errorMsg);
+      console.warn('Erreur Gemini, tentative avec DeepSeek:', errorMsg);
     }
   } else {
     errors.push('Gemini: Clé API non configurée ou invalide');
   }
 
-  // Essayer Groq si Gemini échoue
+  // Essayer DeepSeek si Gemini échoue (3ème position)
+  if (isValidDeepSeekKey(process.env.DEEPSEEK_API_KEY)) {
+    try {
+      return await generateQuizFromMultipleAnalysesWithDeepSeek(analyses, childProfile, questionCount);
+    } catch (error) {
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`DeepSeek: ${errorMsg}`);
+      console.warn('Erreur DeepSeek, tentative avec Groq:', errorMsg);
+    }
+  } else {
+    errors.push('DeepSeek: Clé API non configurée ou invalide');
+  }
+
+  // Essayer Groq si DeepSeek échoue
   if (isValidGroqKey(groqApiKey)) {
     try {
       return await generateQuizFromMultipleAnalysesWithGroq(analyses, childProfile, questionCount);
@@ -1301,6 +1388,61 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
 /**
  * Génère un quiz à partir de plusieurs analyses avec Groq
  */
+async function generateQuizFromMultipleAnalysesWithDeepSeek(analyses, childProfile, questionCount) {
+  const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
+  
+  const response = await fetchWithTimeout(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${deepseekApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'system',
+          content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. Créez des questions claires, éducatives et adaptées au niveau de l'enfant. L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}. Générez exactement ${questionCount} questions avec 4 options chacune.`
+        },
+        {
+          role: 'user',
+          content: `Basé sur ces analyses de documents: ${JSON.stringify(analyses)}, générez un quiz de ${questionCount} questions qui couvre l'ensemble du contenu. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
+        }
+      ],
+      max_tokens: 3000,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur DeepSeek: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.choices[0].message.content;
+  
+  // Nettoyer le texte pour extraire le JSON
+  let jsonText = responseText.trim();
+  
+  if (jsonText.startsWith('```json')) {
+    jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  
+  const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    jsonText = jsonMatch[0];
+  }
+  
+  try {
+    return JSON.parse(jsonText);
+  } catch (parseError) {
+    console.error('Erreur de parsing JSON DeepSeek:', parseError);
+    throw new Error('Impossible de parser la réponse de DeepSeek');
+  }
+}
+
 async function generateQuizFromMultipleAnalysesWithMistral(analyses, childProfile, questionCount) {
   const mistralApiKey = process.env.MISTRAL_API_KEY;
   
@@ -1418,6 +1560,7 @@ async function generateQuizFromTextWithAI(inputText, childProfile, options = {})
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
+  const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
 
   const errors = [];
 
@@ -1446,13 +1589,26 @@ async function generateQuizFromTextWithAI(inputText, childProfile, options = {})
     } catch (error) {
       const errorMsg = error.message || 'Erreur inconnue';
       errors.push(`Gemini: ${errorMsg}`);
-      console.warn('Erreur Gemini, tentative avec Groq:', errorMsg);
+      console.warn('Erreur Gemini, tentative avec DeepSeek:', errorMsg);
     }
   } else {
     errors.push('Gemini: Clé API non configurée ou invalide');
   }
 
-  // Essayer Groq si Gemini échoue
+  // Essayer DeepSeek si Gemini échoue (3ème position)
+  if (isValidDeepSeekKey(process.env.DEEPSEEK_API_KEY)) {
+    try {
+      return await generateQuizFromTextWithDeepSeek(inputText, childProfile, options);
+    } catch (error) {
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`DeepSeek: ${errorMsg}`);
+      console.warn('Erreur DeepSeek, tentative avec Groq:', errorMsg);
+    }
+  } else {
+    errors.push('DeepSeek: Clé API non configurée ou invalide');
+  }
+
+  // Essayer Groq si DeepSeek échoue
   if (isValidGroqKey(groqApiKey)) {
     try {
       return await generateQuizFromTextWithGroq(inputText, childProfile, options);
@@ -1620,7 +1776,65 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
 }
 
 /**
- * Génère un quiz à partir d'un texte avec Groq
+ * Génère un quiz à partir d'un texte avec DeepSeek
+ */
+async function generateQuizFromTextWithDeepSeek(inputText, childProfile, options) {
+  const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
+  
+  const response = await fetchWithTimeout(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${deepseekApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'system',
+          content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. Créez des questions claires, éducatives et adaptées au niveau de l'enfant. L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}. Générez exactement ${options.questionCount || 5} questions avec 4 options chacune. Niveau de difficulté: ${options.difficulty || 'moyen'}.`
+        },
+        {
+          role: 'user',
+          content: `Basé sur ce texte de leçon: "${inputText}", générez un quiz adapté à l'enfant. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur DeepSeek: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.choices[0].message.content;
+  
+  // Nettoyer le texte pour extraire le JSON
+  let jsonText = responseText.trim();
+  
+  if (jsonText.startsWith('```json')) {
+    jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  
+  const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    jsonText = jsonMatch[0];
+  }
+  
+  try {
+    return JSON.parse(jsonText);
+  } catch (parseError) {
+    console.error('Erreur de parsing JSON DeepSeek:', parseError);
+    throw new Error('Impossible de parser la réponse de DeepSeek');
+  }
+}
+
+/**
+ * Génère un quiz à partir d'un texte avec Mistral
  */
 async function generateQuizFromTextWithMistral(inputText, childProfile, options) {
   const mistralApiKey = process.env.MISTRAL_API_KEY;
@@ -1763,6 +1977,16 @@ function isValidGroqKey(apiKey) {
 }
 
 /**
+ * Vérifie si une clé API DeepSeek est valide
+ */
+function isValidDeepSeekKey(apiKey) {
+  return apiKey && 
+         apiKey !== 'your-deepseek-api-key-here' && 
+         apiKey.startsWith('sk-') && 
+         apiKey.length > 20;
+}
+
+/**
  * Vérifie si une clé API Mistral est valide
  */
 function isValidMistralKey(apiKey) {
@@ -1785,6 +2009,9 @@ async function validateApiKey(apiType) {
     case 'gemini':
       apiKey = process.env.GEMINI_API_KEY;
       return isValidGeminiKey(apiKey);
+    case 'deepseek':
+      apiKey = process.env.DEEPSEEK_API_KEY;
+      return isValidDeepSeekKey(apiKey);
     case 'groq':
       apiKey = process.env.GROQ_API_KEY;
       return isValidGroqKey(apiKey);
@@ -1802,10 +2029,11 @@ async function validateApiKey(apiType) {
 async function hasAtLeastOneValidKey() {
   const openaiValid = await validateApiKey('openai');
   const geminiValid = await validateApiKey('gemini');
+  const deepseekValid = await validateApiKey('deepseek');
   const groqValid = await validateApiKey('groq');
   const mistralValid = await validateApiKey('mistral');
   
-  return openaiValid || geminiValid || groqValid || mistralValid;
+  return openaiValid || geminiValid || deepseekValid || groqValid || mistralValid;
 }
 
 // ==================== FONCTIONS DÉMO (FALLBACK) ====================
