@@ -29,7 +29,7 @@ export class PinService {
 
       if (response.success) {
         console.log('✅ Code PIN vérifié avec succès');
-        return response.data.isValid || true;
+        return true;
       } else {
         console.log('❌ Code PIN incorrect');
         return false;

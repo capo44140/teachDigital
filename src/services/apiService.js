@@ -238,7 +238,7 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ pin })
     });
-    return response.success ? response.data.isValid : false;
+    return response.success === true;
   }
 
   /**
