@@ -2,6 +2,7 @@ const { sql } = require('../lib/database.js');
 const { authenticateToken } = require('../lib/auth.js');
 const { setCorsHeaders, handleCors } = require('../lib/cors.js');
 const { createResponse, createErrorResponse } = require('../lib/response.js');
+const Tesseract = require('tesseract.js');
 
 // URLs des APIs
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
@@ -528,53 +529,124 @@ async function handleHasValidKey(req, res) {
 // ==================== FONCTIONS HELPER IA ====================
 
 /**
- * Analyse une image avec l'IA
+ * Extrait le texte d'une image en utilisant Tesseract OCR
+ * @param {string} base64Image - Image en base64
+ * @returns {Promise<string>} Texte extrait de l'image
  */
-async function analyzeImage(base64Image) {
-  const openaiApiKey = process.env.OPENAI_API_KEY;
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  const groqApiKey = process.env.GROQ_API_KEY;
-
-  // Essayer d'abord OpenAI
-  if (isValidOpenAIKey(openaiApiKey)) {
-    try {
-      return await analyzeImageWithOpenAI(base64Image);
-    } catch (error) {
-      // Détecter spécifiquement les erreurs de rate limiting
-      if (error.message.includes('Rate Limit') || error.message.includes('429')) {
-        console.warn('⚠️ OpenAI Rate Limit détecté, basculement automatique vers Gemini...');
-      } else {
-        console.warn('⚠️ Erreur OpenAI, tentative avec Gemini:', error.message);
+async function extractTextFromImage(base64Image) {
+  try {
+    console.log('🔍 Début de l\'extraction OCR...');
+    
+    // Convertir base64 en buffer
+    const imageBuffer = Buffer.from(base64Image, 'base64');
+    
+    // Utiliser Tesseract pour extraire le texte
+    // Configuration pour le français et l'anglais
+    const { data: { text } } = await Tesseract.recognize(imageBuffer, 'fra+eng', {
+      logger: (info) => {
+        if (info.status === 'recognizing text') {
+          console.log(`📝 OCR: ${Math.round(info.progress * 100)}%`);
+        }
       }
+    });
+    
+    const extractedText = text.trim();
+    console.log(`✅ Texte extrait (${extractedText.length} caractères)`);
+    
+    if (!extractedText || extractedText.length === 0) {
+      console.warn('⚠️ Aucun texte extrait de l\'image');
+      return 'Aucun texte détecté dans l\'image.';
     }
+    
+    return extractedText;
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'extraction OCR:', error);
+    throw new Error(`Erreur OCR: ${error.message}`);
   }
-
-  // Essayer Gemini si OpenAI échoue
-  if (isValidGeminiKey(geminiApiKey)) {
-    try {
-      return await analyzeImageWithGemini(base64Image);
-    } catch (error) {
-      console.warn('Erreur Gemini, tentative avec Groq:', error.message);
-    }
-  }
-
-  // Essayer Groq si Gemini échoue
-  if (isValidGroqKey(groqApiKey)) {
-    try {
-      return await analyzeImageWithGroq(base64Image);
-    } catch (error) {
-      console.warn('Erreur Groq:', error.message);
-    }
-  }
-
-  // Fallback vers le mode démo
-  return getDemoAnalysis();
 }
 
 /**
- * Analyse une image avec OpenAI
+ * Analyse une image avec l'IA en utilisant OCR
+ * Extrait d'abord le texte avec Tesseract, puis envoie le texte au LLM
  */
-async function analyzeImageWithOpenAI(base64Image) {
+async function analyzeImage(base64Image) {
+  try {
+    // Extraire le texte de l'image avec OCR
+    const extractedText = await extractTextFromImage(base64Image);
+    
+    // Analyser le texte extrait avec les LLM
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    const groqApiKey = process.env.GROQ_API_KEY;
+    const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
+    const mistralApiKey = process.env.MISTRAL_API_KEY;
+
+    // Essayer d'abord OpenAI
+    if (isValidOpenAIKey(openaiApiKey)) {
+      try {
+        return await analyzeTextWithOpenAI(extractedText);
+      } catch (error) {
+        // Détecter spécifiquement les erreurs de rate limiting
+        if (error.message.includes('Rate Limit') || error.message.includes('429')) {
+          console.warn('⚠️ OpenAI Rate Limit détecté, basculement automatique vers Gemini...');
+        } else {
+          console.warn('⚠️ Erreur OpenAI, tentative avec Gemini:', error.message);
+        }
+      }
+    }
+
+    // Essayer Gemini si OpenAI échoue
+    if (isValidGeminiKey(geminiApiKey)) {
+      try {
+        return await analyzeTextWithGemini(extractedText);
+      } catch (error) {
+        console.warn('Erreur Gemini, tentative avec DeepSeek:', error.message);
+      }
+    }
+
+    // Essayer DeepSeek si Gemini échoue
+    if (isValidDeepSeekKey(deepseekApiKey)) {
+      try {
+        return await analyzeTextWithDeepSeek(extractedText);
+      } catch (error) {
+        console.warn('Erreur DeepSeek, tentative avec Groq:', error.message);
+      }
+    }
+
+    // Essayer Groq si DeepSeek échoue
+    if (isValidGroqKey(groqApiKey)) {
+      try {
+        return await analyzeTextWithGroq(extractedText);
+      } catch (error) {
+        console.warn('Erreur Groq, tentative avec Mistral:', error.message);
+      }
+    }
+
+    // Essayer Mistral si Groq échoue
+    if (isValidMistralKey(mistralApiKey)) {
+      try {
+        return await analyzeTextWithMistral(extractedText);
+      } catch (error) {
+        console.warn('Erreur Mistral:', error.message);
+      }
+    }
+
+    // Fallback vers le mode démo
+    console.warn('⚠️ Tous les services IA ont échoué, utilisation du mode démo');
+    return getDemoAnalysis();
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'analyse de l\'image:', error);
+    // En cas d'erreur OCR, retourner une analyse basique
+    return getDemoAnalysis();
+  }
+}
+
+/**
+ * Analyse un texte extrait d'une image avec OpenAI
+ * @param {string} extractedText - Texte extrait de l'image par OCR
+ * @returns {Promise<Object>} Analyse structurée du contenu
+ */
+async function analyzeTextWithOpenAI(extractedText) {
   const openaiApiKey = process.env.OPENAI_API_KEY;
   
   const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
@@ -588,25 +660,17 @@ async function analyzeImageWithOpenAI(base64Image) {
       messages: [
         {
           role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Analysez cette image de leçon et extrayez les concepts clés, les informations importantes et les sujets abordés. Répondez en français au format JSON: {"titre_principal": "...", "concepts_cles": [...], "informations_importantes": [...], "niveau": "...", "matiere": "..."}'
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`
-              }
-            }
-          ]
+          content: `Analysez ce texte extrait d'une image de leçon et extrayez les concepts clés, les informations importantes et les sujets abordés. Répondez en français au format JSON: {"titre_principal": "...", "concepts_cles": [...], "informations_importantes": [...], "niveau": "...", "matiere": "..."}
+
+Texte extrait de l'image:
+${extractedText}`
         }
       ],
       max_tokens: 1000
     })
   });
 
-  await handleOpenAIResponse(response, 'OpenAI (analyse image)');
+  await handleOpenAIResponse(response, 'OpenAI (analyse texte OCR)');
 
   const data = await response.json();
   const content = data.choices[0].message.content;
@@ -625,9 +689,11 @@ async function analyzeImageWithOpenAI(base64Image) {
 }
 
 /**
- * Analyse une image avec Gemini
+ * Analyse un texte extrait d'une image avec Gemini
+ * @param {string} extractedText - Texte extrait de l'image par OCR
+ * @returns {Promise<Object>} Analyse structurée du contenu
  */
-async function analyzeImageWithGemini(base64Image, retryCount = 0) {
+async function analyzeTextWithGemini(extractedText, retryCount = 0) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const maxRetries = 1; // Réduit de 2 à 1 pour éviter timeout
   
@@ -639,17 +705,12 @@ async function analyzeImageWithGemini(base64Image, retryCount = 0) {
       },
       body: JSON.stringify({
         contents: [{
-          parts: [
-            {
-              text: 'Analysez cette image de leçon et extrayez les concepts clés, les informations importantes et les sujets abordés. Répondez en français au format JSON. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"titre_principal": "...", "concepts_cles": [...], "informations_importantes": [...], "niveau": "...", "matiere": "..."}'
-            },
-            {
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data: base64Image
-              }
-            }
-          ]
+          parts: [{
+            text: `Analysez ce texte extrait d'une image de leçon et extrayez les concepts clés, les informations importantes et les sujets abordés. Répondez en français au format JSON. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"titre_principal": "...", "concepts_cles": [...], "informations_importantes": [...], "niveau": "...", "matiere": "..."}
+
+Texte extrait de l'image:
+${extractedText}`
+          }]
         }],
         generationConfig: {
           maxOutputTokens: 2000,
@@ -697,23 +758,25 @@ async function analyzeImageWithGemini(base64Image, retryCount = 0) {
     } catch (parseError) {
       if (retryCount < maxRetries) {
         await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
-        return analyzeImageWithGemini(base64Image, retryCount + 1);
+        return analyzeTextWithGemini(extractedText, retryCount + 1);
       }
       throw new Error('Impossible de parser la réponse de Gemini');
     }
   } catch (error) {
     if (retryCount < maxRetries && error.message.includes('tronquée')) {
       await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
-      return analyzeImageWithGemini(base64Image, retryCount + 1);
+      return analyzeTextWithGemini(extractedText, retryCount + 1);
     }
     throw error;
   }
 }
 
 /**
- * Analyse une image avec Groq
+ * Analyse un texte extrait d'une image avec Groq
+ * @param {string} extractedText - Texte extrait de l'image par OCR
+ * @returns {Promise<Object>} Analyse structurée du contenu
  */
-async function analyzeImageWithGroq(base64Image) {
+async function analyzeTextWithGroq(extractedText) {
   const groqApiKey = process.env.GROQ_API_KEY;
   
   const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
@@ -727,18 +790,10 @@ async function analyzeImageWithGroq(base64Image) {
       messages: [
         {
           role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Analysez cette image de leçon et extrayez les concepts clés, les informations importantes et les sujets abordés. Répondez en français au format JSON. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire.'
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`
-              }
-            }
-          ]
+          content: `Analysez ce texte extrait d'une image de leçon et extrayez les concepts clés, les informations importantes et les sujets abordés. Répondez en français au format JSON. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"titre_principal": "...", "concepts_cles": [...], "informations_importantes": [...], "niveau": "...", "matiere": "..."}
+
+Texte extrait de l'image:
+${extractedText}`
         }
       ],
       max_tokens: 1000,
@@ -772,6 +827,124 @@ async function analyzeImageWithGroq(base64Image) {
   } catch (parseError) {
     console.error('Erreur de parsing JSON Groq:', parseError);
     throw new Error('Impossible de parser la réponse de Groq');
+  }
+}
+
+/**
+ * Analyse un texte extrait d'une image avec DeepSeek
+ * @param {string} extractedText - Texte extrait de l'image par OCR
+ * @returns {Promise<Object>} Analyse structurée du contenu
+ */
+async function analyzeTextWithDeepSeek(extractedText) {
+  const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
+  
+  const response = await fetchWithTimeout(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${deepseekApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'user',
+          content: `Analysez ce texte extrait d'une image de leçon et extrayez les concepts clés, les informations importantes et les sujets abordés. Répondez en français au format JSON. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"titre_principal": "...", "concepts_cles": [...], "informations_importantes": [...], "niveau": "...", "matiere": "..."}
+
+Texte extrait de l'image:
+${extractedText}`
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur DeepSeek: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.choices[0].message.content;
+  
+  // Nettoyer le texte pour extraire le JSON
+  let jsonText = responseText.trim();
+  
+  if (jsonText.startsWith('```json')) {
+    jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  
+  const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    jsonText = jsonMatch[0];
+  }
+  
+  try {
+    return JSON.parse(jsonText);
+  } catch (parseError) {
+    console.error('Erreur de parsing JSON DeepSeek:', parseError);
+    throw new Error('Impossible de parser la réponse de DeepSeek');
+  }
+}
+
+/**
+ * Analyse un texte extrait d'une image avec Mistral
+ * @param {string} extractedText - Texte extrait de l'image par OCR
+ * @returns {Promise<Object>} Analyse structurée du contenu
+ */
+async function analyzeTextWithMistral(extractedText) {
+  const mistralApiKey = process.env.MISTRAL_API_KEY;
+  
+  const response = await fetchWithTimeout(`${MISTRAL_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${mistralApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'mistral-large-latest',
+      messages: [
+        {
+          role: 'user',
+          content: `Analysez ce texte extrait d'une image de leçon et extrayez les concepts clés, les informations importantes et les sujets abordés. Répondez en français au format JSON. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"titre_principal": "...", "concepts_cles": [...], "informations_importantes": [...], "niveau": "...", "matiere": "..."}
+
+Texte extrait de l'image:
+${extractedText}`
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur Mistral: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.choices[0].message.content;
+  
+  // Nettoyer le texte pour extraire le JSON
+  let jsonText = responseText.trim();
+  
+  if (jsonText.startsWith('```json')) {
+    jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  
+  const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    jsonText = jsonMatch[0];
+  }
+  
+  try {
+    return JSON.parse(jsonText);
+  } catch (parseError) {
+    console.error('Erreur de parsing JSON Mistral:', parseError);
+    throw new Error('Impossible de parser la réponse de Mistral');
   }
 }
 
