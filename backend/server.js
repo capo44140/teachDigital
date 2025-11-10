@@ -49,8 +49,71 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Middleware explicite pour gérer les requêtes OPTIONS (preflight)
+// Doit être défini AVANT le handler pour garantir que les en-têtes CORS sont toujours présents
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://teach-digital.vercel.app',
+    'https://teachdigital.vercel.app',
+    process.env.FRONTEND_URL,
+    process.env.ALLOWED_ORIGIN
+  ].filter(Boolean);
+  
+  const isLocalhost = origin && origin.startsWith('http://localhost');
+  const isAllowedOrigin = origin && (allowedOrigins.includes(origin) || isLocalhost);
+  const corsOrigin = (origin && isAllowedOrigin) ? origin : '*';
+  
+  console.log(`🔍 Requête OPTIONS (preflight) - Origin: ${origin}, Allowed: ${isAllowedOrigin}, CORS Origin: ${corsOrigin}`);
+  
+  res.setHeader('Access-Control-Allow-Origin', corsOrigin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.setHeader('Access-Control-Allow-Credentials', corsOrigin !== '*' ? 'true' : 'false');
+  res.setHeader('Vary', 'Origin');
+  
+  console.log(`✅ En-têtes CORS définis pour OPTIONS: Access-Control-Allow-Origin=${corsOrigin}`);
+  
+  res.status(200).end();
+});
+
+// Middleware pour garantir que les en-têtes CORS sont définis sur toutes les réponses
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://teach-digital.vercel.app',
+    'https://teachdigital.vercel.app',
+    process.env.FRONTEND_URL,
+    process.env.ALLOWED_ORIGIN
+  ].filter(Boolean);
+  
+  const isLocalhost = origin && origin.startsWith('http://localhost');
+  const isAllowedOrigin = origin && (allowedOrigins.includes(origin) || isLocalhost);
+  const corsOrigin = (origin && isAllowedOrigin) ? origin : '*';
+  
+  // Définir les en-têtes CORS sur toutes les réponses
+  res.setHeader('Access-Control-Allow-Origin', corsOrigin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.setHeader('Access-Control-Allow-Credentials', corsOrigin !== '*' ? 'true' : 'false');
+  res.setHeader('Vary', 'Origin');
+  
+  next();
+});
+
 // Middleware pour convertir les requêtes Express en format compatible avec le handler Vercel
 app.use('*', async (req, res) => {
+  // Ne pas traiter les requêtes OPTIONS ici, elles sont déjà gérées par le middleware précédent
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
   // Créer un objet de requête compatible avec le handler Vercel
   const vercelReq = {
     method: req.method,
