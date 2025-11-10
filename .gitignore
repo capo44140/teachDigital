@@ -30,6 +30,9 @@ dist-ssr
 .env.test.local
 .env.production.local
 
+# Synology deployment config
+.synology-deploy.json
+
 # Vercel
 .vercel
 

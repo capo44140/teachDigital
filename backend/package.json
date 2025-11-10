@@ -8,6 +8,8 @@
     "build": "echo 'No build step required for Vercel Functions'",
     "deploy": "node scripts/deploy.js production",
     "deploy:preview": "node scripts/deploy.js preview",
+    "deploy:synology": "powershell -ExecutionPolicy Bypass -File ./deploy-synology.ps1",
+    "deploy:synology:skip-build": "powershell -ExecutionPolicy Bypass -File ./deploy-synology.ps1 -SkipBuild",
     "setup:env": "node scripts/setup-env.js",
     "init-badges": "node scripts/init-badges.js",
     "test": "echo 'Tests à implémenter'"

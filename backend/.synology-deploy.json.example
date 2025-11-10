@@ -1,0 +1,6 @@
+{
+  "host": "192.168.1.35",
+  "user": "cammel",
+  "deployPath": "/volume1/docker/teachdigital"
+}
+
