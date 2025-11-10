@@ -10,7 +10,7 @@ class ApiService {
     // En production, utiliser l'URL complète du backend Vercel
     this.baseURL = isDevelopment 
       ? (import.meta.env.VITE_API_URL || '') // Proxy Vite utilise des chemins relatifs
-      : (import.meta.env.VITE_API_URL_PROD || 'https://backend-sepia-mu.vercel.app');
+      : (import.meta.env.VITE_API_URL_PROD || 'https://lespoires.synology.me:3001');
   }
 
   /**

@@ -177,7 +177,7 @@ export default defineConfig(({ mode }) => {
       // Proxy pour contourner CORS en développement
       proxy: {
         '/api': {
-          target: 'https://backend-sepia-mu.vercel.app',
+          target: 'https://lespoires.synology.me:3001',
           changeOrigin: true,
           secure: true,
           rewrite: (path) => path // Garder le chemin /api tel quel
