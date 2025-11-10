@@ -12,7 +12,7 @@ const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const MISTRAL_BASE_URL = 'https://api.mistral.ai/v1';
 
 // Timeout pour les appels API externes (30s max pour éviter timeout Vercel 60s)
-const API_TIMEOUT_MS = 60000;
+const API_TIMEOUT_MS = 90000;
 
 /**
  * Fonction helper pour fetch avec timeout
