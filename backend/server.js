@@ -18,15 +18,26 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
-  // Liste des origines autorisées
+  // Construire la liste des origines autorisées
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:5173',
     'https://teach-digital.vercel.app',
-    'https://teachdigital.vercel.app',
-    process.env.FRONTEND_URL,
-    process.env.ALLOWED_ORIGIN
-  ].filter(Boolean);
+    'https://teachdigital.vercel.app'
+  ];
+  
+  // Ajouter FRONTEND_URL si défini
+  if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+  }
+  
+  // Ajouter ALLOWED_ORIGIN si défini (peut contenir plusieurs URLs séparées par des virgules)
+  if (process.env.ALLOWED_ORIGIN) {
+    const additionalOrigins = process.env.ALLOWED_ORIGIN.split(',')
+      .map(url => url.trim())
+      .filter(Boolean);
+    allowedOrigins.push(...additionalOrigins);
+  }
   
   // Autoriser localhost en développement
   const isLocalhost = origin && origin.startsWith('http://localhost');
@@ -39,6 +50,7 @@ app.use((req, res, next) => {
   // Log pour le débogage
   if (req.method === 'OPTIONS') {
     console.log(`🔍 Requête OPTIONS (preflight) - Origin: ${origin}, Allowed: ${isAllowedOrigin}, CORS Origin: ${corsOrigin}`);
+    console.log(`📋 Origines autorisées: ${allowedOrigins.join(', ')}`);
   }
   
   // Définir les en-têtes CORS sur toutes les réponses
@@ -49,12 +61,16 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Max-Age', '86400');
     res.setHeader('Access-Control-Allow-Credentials', corsOrigin !== '*' ? 'true' : 'false');
     res.setHeader('Vary', 'Origin');
+  } else {
+    // Si l'origine n'est pas autorisée, ne pas définir les en-têtes CORS
+    // Cela permettra au navigateur d'afficher une erreur CORS claire
+    console.warn(`⚠️ Origine non autorisée: ${origin}`);
   }
   
   // Gérer les requêtes OPTIONS (preflight) - DOIT retourner immédiatement
   if (req.method === 'OPTIONS') {
-    console.log(`✅ En-têtes CORS définis pour OPTIONS: Access-Control-Allow-Origin=${corsOrigin}`);
-    return res.status(200).end();
+    console.log(`✅ En-têtes CORS définis pour OPTIONS: Access-Control-Allow-Origin=${corsOrigin || 'none'}`);
+    return res.status(corsOrigin ? 200 : 403).end();
   }
   
   next();
