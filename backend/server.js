@@ -9,10 +9,6 @@ const handler = require('./api/index.js');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware pour parser le body
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
 // Configuration CORS - Middleware personnalisé pour un contrôle total
 // DOIT être défini AVANT tous les autres middlewares
 app.use((req, res, next) => {
@@ -76,18 +72,108 @@ app.use((req, res, next) => {
   next();
 });
 
+// Middleware pour parser FormData avec busboy AVANT les autres middlewares
+app.use(async (req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    try {
+      // Parser FormData avec busboy
+      const Busboy = require('@fastify/busboy');
+      const busboy = Busboy({ headers: req.headers });
+      const fields = {};
+      const files = [];
+
+      busboy.on('file', (fieldname, file, info) => {
+        let filename, mimetype;
+        if (info) {
+          filename = info.filename || info.name || 'unknown';
+          mimetype = info.mimeType || info.mimetype || 'application/octet-stream';
+        } else {
+          filename = 'unknown';
+          mimetype = 'application/octet-stream';
+        }
+        
+        const chunks = [];
+        file.on('data', (chunk) => {
+          chunks.push(chunk);
+        });
+        file.on('end', () => {
+          files.push({
+            fieldname,
+            filename,
+            mimetype,
+            buffer: Buffer.concat(chunks)
+          });
+        });
+        file.on('error', (err) => {
+          console.error('❌ Erreur lors de la lecture du fichier:', err);
+        });
+      });
+
+      busboy.on('field', (fieldname, value) => {
+        fields[fieldname] = value;
+      });
+
+      busboy.on('finish', () => {
+        // Stocker les données parsées dans req.body pour compatibilité
+        req.body = {
+          fields,
+          files
+        };
+        // Stocker aussi dans req.parsedFormData pour accès direct
+        req.parsedFormData = {
+          fields,
+          files
+        };
+        next();
+      });
+
+      busboy.on('error', (err) => {
+        console.error('❌ Erreur lors du parsing FormData:', err);
+        return res.status(400).json({
+          success: false,
+          message: 'Erreur lors du parsing FormData: ' + err.message
+        });
+      });
+
+      // Parser le stream
+      req.pipe(busboy);
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'initialisation de busboy:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erreur serveur lors du parsing FormData'
+      });
+    }
+  } else {
+    // Pour les autres types, continuer avec les parsers Express normaux
+    next();
+  }
+});
+
+// Middleware pour parser le body JSON et URL-encoded
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
 // Middleware pour convertir les requêtes Express en format compatible avec le handler Vercel
 app.use('*', async (req, res) => {
   // Les requêtes OPTIONS sont déjà gérées par le middleware CORS précédent
   
   // Créer un objet de requête compatible avec le handler Vercel
+  const contentType = req.headers['content-type'] || '';
+  const isFormData = contentType.includes('multipart/form-data');
+  
   const vercelReq = {
     method: req.method,
     url: req.originalUrl || req.url,
     headers: req.headers,
-    body: req.body,
+    body: req.body, // Contient les données parsées (JSON, URL-encoded, ou FormData)
     query: req.query,
-    params: req.params
+    params: req.params,
+    // Pour FormData, ajouter les données parsées dans le format attendu par le handler
+    ...(isFormData && req.parsedFormData && {
+      parsedFormData: req.parsedFormData
+    })
   };
   
   // Créer un objet de réponse compatible avec Express

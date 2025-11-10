@@ -168,12 +168,21 @@ async function handleGenerateQuizFromImage(req, res) {
  * Cette fonction gère les deux cas : parsing automatique et manuel
  */
 async function parseFormData(req) {
-  // Vérifier si c'est déjà un objet parsé (Vercel peut le faire automatiquement)
+  // Vérifier si c'est déjà un objet parsé (Express middleware ou Vercel)
   if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
+    // Si le body contient déjà les champs parsés par Express (format { fields, files })
+    if (req.body.fields && req.body.files) {
+      return req.body;
+    }
     // Si le body contient déjà les champs, c'est que Vercel l'a déjà parsé
     if (req.body.file_0 || req.body.childProfile) {
       return req.body;
     }
+  }
+  
+  // Vérifier si parsedFormData est disponible (parsed par Express middleware)
+  if (req.parsedFormData && req.parsedFormData.fields && req.parsedFormData.files) {
+    return req.parsedFormData;
   }
 
   // Si le body est un buffer ou une string, essayer de parser avec busboy
@@ -309,15 +318,27 @@ async function handleGenerateQuizFromDocuments(req, res) {
       console.log('📦 Parsing FormData...');
       const parsed = await parseFormData(req);
       
+      console.log('📊 Données parsées par parseFormData:', {
+        hasFields: !!parsed.fields,
+        hasFiles: !!parsed.files,
+        fieldsKeys: parsed.fields ? Object.keys(parsed.fields) : [],
+        filesCount: parsed.files ? parsed.files.length : 0
+      });
+      
       // Extraire les fichiers et métadonnées
       if (parsed.files && parsed.fields) {
         // Format avec busboy
         const fileCount = parseInt(parsed.fields.fileCount || '0');
+        console.log(`📁 Nombre de fichiers attendus: ${fileCount}`);
+        console.log(`📁 Fichiers disponibles:`, parsed.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })));
+        
         for (let i = 0; i < fileCount; i++) {
           const file = parsed.files.find(f => f.fieldname === `file_${i}`);
           if (file) {
             const fileName = parsed.fields[`file_${i}_name`] || file.filename;
             const fileType = parsed.fields[`file_${i}_type`] || file.mimetype;
+            
+            console.log(`✅ Fichier ${i} trouvé:`, { fileName, fileType, size: file.buffer?.length || 0 });
             
             documents.push({
               name: fileName,
@@ -325,6 +346,8 @@ async function handleGenerateQuizFromDocuments(req, res) {
               buffer: file.buffer,
               base64: bufferToBase64(file.buffer)
             });
+          } else {
+            console.warn(`⚠️ Fichier ${i} non trouvé dans parsed.files`);
           }
         }
         
