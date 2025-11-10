@@ -272,12 +272,24 @@ export default {
     }
   },
   async created() {
+    console.log('[LessonScanner] created() - Initialisation du composant')
+    
     // Import dynamique pour éviter les problèmes d'initialisation
-    const { auditLogService } = await import('../services/auditLogService.js')
-    this.auditLogService = auditLogService
+    try {
+      const { auditLogService } = await import('../services/auditLogService.js')
+      this.auditLogService = auditLogService
+      console.log('[LessonScanner] created() - AuditLogService chargé avec succès')
+    } catch (error) {
+      console.error('[LessonScanner] created() - Erreur lors du chargement d\'AuditLogService:', error)
+    }
     
     const store = useProfileStore()
+    console.log('[LessonScanner] created() - Chargement des profils...')
     await store.loadProfiles()
+    console.log('[LessonScanner] created() - Profils chargés:', {
+      profilesCount: store.nonAdminProfiles?.length || 0,
+      profiles: store.nonAdminProfiles?.map(p => ({ id: p.id, name: p.name })) || []
+    })
   },
   methods: {
     goBack() {
@@ -285,6 +297,12 @@ export default {
     },
     
     selectChild(child) {
+      console.log('[LessonScanner] selectChild() - Enfant sélectionné:', {
+        id: child.id,
+        name: child.name,
+        age: child.age,
+        level: child.level
+      })
       this.selectedChild = child
     },
     
@@ -305,12 +323,30 @@ export default {
     },
     
     async handleFiles(files) {
+      console.log('[LessonScanner] handleFiles() - Début du traitement des fichiers:', {
+        filesCount: files.length,
+        fileNames: files.map(f => f.name),
+        fileTypes: files.map(f => f.type),
+        fileSizes: files.map(f => `${f.name}: ${this.formatFileSize(f.size)}`)
+      })
+      
       const validFiles = []
       const validPreviews = []
       
       for (const file of files) {
+        console.log('[LessonScanner] handleFiles() - Traitement du fichier:', {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          sizeFormatted: this.formatFileSize(file.size)
+        })
+        
         // Vérifier le type de fichier
         if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+          console.warn('[LessonScanner] handleFiles() - Type de fichier non supporté:', {
+            fileName: file.name,
+            fileType: file.type
+          })
           alert(`Le fichier ${file.name} n'est pas supporté. Formats acceptés: JPG, PNG, PDF`)
           continue
         }
@@ -318,11 +354,22 @@ export default {
         // Valider l'image côté serveur (pour les images uniquement)
         if (file.type.startsWith('image/')) {
           try {
+            console.log('[LessonScanner] handleFiles() - Validation de l\'image:', file.name)
             const validation = await this.imageValidator.validateImage(file)
+            console.log('[LessonScanner] handleFiles() - Résultat de la validation:', {
+              fileName: file.name,
+              valid: validation.valid,
+              errors: validation.errors,
+              warnings: validation.warnings
+            })
             
             if (!validation.valid) {
               this.validationErrors = validation.errors
               this.validationWarnings = validation.warnings
+              console.error('[LessonScanner] handleFiles() - Validation échouée:', {
+                fileName: file.name,
+                errors: validation.errors
+              })
               alert(`Erreur de validation pour ${file.name}: ${validation.errors.join(', ')}`)
               continue
             }
@@ -332,6 +379,7 @@ export default {
             
             // Enregistrer l'upload d'image dans les logs d'audit (sans métadonnées volumineuses)
             if (this.auditLogService) {
+              console.log('[LessonScanner] handleFiles() - Enregistrement de l\'upload dans les logs d\'audit')
               this.auditLogService.logDataAccess(
                 this.selectedChild?.id || 'unknown',
                 'image_upload',
@@ -345,7 +393,12 @@ export default {
               )
             }
           } catch (error) {
-            console.error('Erreur lors de la validation de l\'image:', error)
+            console.error('[LessonScanner] handleFiles() - Erreur lors de la validation de l\'image:', {
+              fileName: file.name,
+              error: error,
+              message: error.message,
+              stack: error.stack
+            })
             if (this.auditLogService) {
               this.auditLogService.logSystemError(
                 'Image validation failed',
@@ -359,6 +412,7 @@ export default {
         }
         
         validFiles.push(file)
+        console.log('[LessonScanner] handleFiles() - Fichier ajouté à la liste valide:', file.name)
         
         // Créer un aperçu pour les images
         if (file.type.startsWith('image/')) {
@@ -366,15 +420,23 @@ export default {
           reader.onload = (e) => {
             validPreviews.push(e.target.result)
             this.filePreviews = [...validPreviews]
+            console.log('[LessonScanner] handleFiles() - Aperçu créé pour:', file.name)
           }
           reader.readAsDataURL(file)
         } else {
           // Pour les PDF, on n'affiche pas d'aperçu
           validPreviews.push(null)
+          console.log('[LessonScanner] handleFiles() - PDF détecté, pas d\'aperçu:', file.name)
         }
       }
       
       // Ajouter les fichiers valides à la liste
+      console.log('[LessonScanner] handleFiles() - Fichiers valides finaux:', {
+        validFilesCount: validFiles.length,
+        validFileNames: validFiles.map(f => f.name),
+        totalSelectedFiles: this.selectedFiles.length + validFiles.length
+      })
+      
       this.selectedFiles = [...this.selectedFiles, ...validFiles]
       this.filePreviews = [...this.filePreviews, ...validPreviews]
     },
@@ -400,15 +462,35 @@ export default {
     },
     
     async scanLesson() {
-      if (this.selectedFiles.length === 0 || !this.selectedChild) return
+      console.log('[LessonScanner] scanLesson() - Début de la génération de quiz')
+      
+      if (this.selectedFiles.length === 0 || !this.selectedChild) {
+        console.warn('[LessonScanner] scanLesson() - Validation échouée:', {
+          filesCount: this.selectedFiles.length,
+          hasChild: !!this.selectedChild
+        })
+        return
+      }
       
       // Vérifier que l'utilisateur est connecté
       const token = localStorage.getItem('auth_token')
       if (!token) {
+        console.error('[LessonScanner] scanLesson() - Pas de token d\'authentification')
         this.errorMessage = 'Vous devez être connecté pour générer un quiz. Veuillez vous connecter avec votre code PIN.'
         alert('Vous devez être connecté pour générer un quiz. Veuillez vous connecter avec votre code PIN.')
         return
       }
+      
+      console.log('[LessonScanner] scanLesson() - Paramètres:', {
+        childId: this.selectedChild.id,
+        childName: this.selectedChild.name,
+        filesCount: this.selectedFiles.length,
+        fileNames: this.selectedFiles.map(f => f.name),
+        fileSizes: this.selectedFiles.map(f => `${f.name}: ${this.formatFileSize(f.size)}`),
+        fileTypes: this.selectedFiles.map(f => f.type),
+        questionCount: this.questionCount,
+        hasToken: !!token
+      })
       
       this.isProcessing = true
       this.generatedQuiz = null
@@ -418,17 +500,23 @@ export default {
 
       try {
         // Vérifier le rate limiting
+        console.log('[LessonScanner] scanLesson() - Vérification du rate limiting...')
         const rateLimitCheck = rateLimitService.checkRateLimit(this.selectedChild.id, 'openai')
+        console.log('[LessonScanner] scanLesson() - Rate limit check:', rateLimitCheck)
+        
         if (!rateLimitCheck.allowed) {
+          console.warn('[LessonScanner] scanLesson() - Rate limit atteint:', rateLimitCheck)
           alert(`Limite de requêtes atteinte. Réessayez dans ${rateLimitCheck.retryAfter} secondes.`)
           return
         }
         
         // Enregistrer la requête dans le rate limiting
         rateLimitService.recordRequest(this.selectedChild.id, 'openai')
+        console.log('[LessonScanner] scanLesson() - Requête enregistrée dans le rate limiting')
         
         // Enregistrer le début de l'analyse dans les logs d'audit
         if (this.auditLogService) {
+          console.log('[LessonScanner] scanLesson() - Enregistrement du début dans les logs d\'audit...')
           this.auditLogService.logApiUsage(
             this.selectedChild.id,
             'openai',
@@ -443,26 +531,56 @@ export default {
         }
         
         // Simuler l'analyse des documents et la génération du quiz
+        console.log('[LessonScanner] scanLesson() - Appel à generateQuizFromDocuments...')
+        console.log('[LessonScanner] scanLesson() - Profil enfant:', {
+          id: this.selectedChild.id,
+          name: this.selectedChild.name,
+          age: this.selectedChild.age,
+          level: this.selectedChild.level
+        })
+        
+        this.processStatus = 'Génération du quiz en cours...'
         const aiService = new AIService()
+        const startTime = Date.now()
+        
         const quiz = await aiService.generateQuizFromDocuments(
           this.selectedFiles, 
           this.selectedChild, 
           parseInt(this.questionCount)
         )
+        
+        const duration = Date.now() - startTime
+        console.log('[LessonScanner] scanLesson() - Quiz généré avec succès:', {
+          duration: `${duration}ms`,
+          hasQuiz: !!quiz,
+          quizTitle: quiz?.title,
+          questionsCount: quiz?.questions?.length || 0,
+          quizStructure: quiz ? Object.keys(quiz) : null
+        })
+        
         this.generatedQuiz = quiz
         
         // Sauvegarder la leçon via le service de migration
+        console.log('[LessonScanner] scanLesson() - Sauvegarde de la leçon...')
+        this.processStatus = 'Sauvegarde de la leçon...'
+        
         const savedLesson = await migrationService.saveLesson(
           quiz, 
           this.selectedChild.id, 
           this.selectedFiles
         )
         
+        console.log('[LessonScanner] scanLesson() - Leçon sauvegardée:', {
+          lessonId: savedLesson?.id,
+          hasLesson: !!savedLesson
+        })
+        
         // Ajouter l'ID de la leçon sauvegardée au quiz
         this.generatedQuiz.lessonId = savedLesson.id
         
         // Enregistrer le succès de l'analyse
         if (this.auditLogService) {
+          console.log('[LessonScanner] scanLesson() - Enregistrement du succès dans les logs d\'audit...')
           this.auditLogService.logApiUsage(
             this.selectedChild.id,
             'openai',
@@ -476,6 +594,7 @@ export default {
           )
         }
         
+        console.log('[LessonScanner] scanLesson() - Redirection vers QuizGenerator...')
         // Rediriger vers le quiz
         this.$router.push({
           name: 'QuizGenerator',
@@ -486,10 +605,20 @@ export default {
           }
         })
       } catch (error) {
-        console.error('Erreur lors de la génération du quiz:', error)
+        console.error('[LessonScanner] scanLesson() - ERREUR lors de la génération du quiz:', {
+          error: error,
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+          cause: error.cause,
+          response: error.response,
+          status: error.status,
+          statusText: error.statusText
+        })
         
         // Enregistrer l'échec de l'analyse
         if (this.auditLogService) {
+          console.log('[LessonScanner] scanLesson() - Enregistrement de l\'échec dans les logs d\'audit...')
           this.auditLogService.logApiUsage(
             this.selectedChild.id,
             'openai',
@@ -497,14 +626,21 @@ export default {
             {
               action: 'QUIZ_GENERATION_FAILED',
               error: error.message,
-              fileCount: this.selectedFiles.length
+              errorName: error.name,
+              errorStack: error.stack?.substring(0, 500), // Limiter la taille
+              fileCount: this.selectedFiles.length,
+              fileNames: this.selectedFiles.map(f => f.name),
+              questionCount: this.questionCount
             }
           )
         }
         
+        this.errorMessage = `Erreur lors de la génération du quiz: ${error.message}`
         alert('Erreur lors de la génération du quiz. Veuillez réessayer.')
       } finally {
+        console.log('[LessonScanner] scanLesson() - Fin du traitement (finally)')
         this.isProcessing = false
+        this.processStatus = ''
       }
     },
     
