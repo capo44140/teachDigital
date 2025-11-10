@@ -451,6 +451,14 @@ async function handleGenerateQuizFromDocuments(req, res) {
       stack: error.stack?.substring(0, 500),
       name: error.name
     });
+    
+    // Si tous les services IA ont échoué, retourner un message d'erreur clair
+    if (error.message.includes('Tous les services IA ont échoué')) {
+      return res.status(503).json(createErrorResponse(
+        'Impossible de générer le quiz. Tous les services d\'intelligence artificielle (OpenAI, Gemini, Groq) ont échoué. Veuillez réessayer plus tard ou vérifier la configuration des clés API.'
+      ));
+    }
+    
     return res.status(500).json(createErrorResponse('Erreur lors de la génération du quiz: ' + error.message));
   }
 }
@@ -472,6 +480,14 @@ async function handleGenerateQuizFromText(req, res) {
     return res.status(200).json(createResponse('Quiz généré avec succès', { quiz }));
   } catch (error) {
     console.error('Erreur lors de la génération du quiz depuis texte:', error);
+    
+    // Si tous les services IA ont échoué, retourner un message d'erreur clair
+    if (error.message.includes('Tous les services IA ont échoué')) {
+      return res.status(503).json(createErrorResponse(
+        'Impossible de générer le quiz. Tous les services d\'intelligence artificielle (OpenAI, Gemini, Groq) ont échoué. Veuillez réessayer plus tard ou vérifier la configuration des clés API.'
+      ));
+    }
+    
     return res.status(500).json(createErrorResponse('Erreur lors de la génération du quiz: ' + error.message));
   }
 }
@@ -765,18 +781,24 @@ async function generateQuizFromAnalysis(analysis, childProfile) {
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
 
+  const errors = [];
+
   // Essayer d'abord OpenAI
   if (isValidOpenAIKey(openaiApiKey)) {
     try {
       return await generateQuizWithOpenAI(analysis, childProfile);
     } catch (error) {
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`OpenAI: ${errorMsg}`);
       // Détecter spécifiquement les erreurs de rate limiting
       if (error.message.includes('Rate Limit') || error.message.includes('429')) {
         console.warn('⚠️ OpenAI Rate Limit détecté, basculement automatique vers Gemini...');
       } else {
-        console.warn('⚠️ Erreur OpenAI, tentative avec Gemini:', error.message);
+        console.warn('⚠️ Erreur OpenAI, tentative avec Gemini:', errorMsg);
       }
     }
+  } else {
+    errors.push('OpenAI: Clé API non configurée ou invalide');
   }
 
   // Essayer Gemini si OpenAI échoue
@@ -784,8 +806,12 @@ async function generateQuizFromAnalysis(analysis, childProfile) {
     try {
       return await generateQuizWithGemini(analysis, childProfile);
     } catch (error) {
-      console.warn('Erreur Gemini, tentative avec Groq:', error.message);
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`Gemini: ${errorMsg}`);
+      console.warn('Erreur Gemini, tentative avec Groq:', errorMsg);
     }
+  } else {
+    errors.push('Gemini: Clé API non configurée ou invalide');
   }
 
   // Essayer Groq si Gemini échoue
@@ -793,12 +819,18 @@ async function generateQuizFromAnalysis(analysis, childProfile) {
     try {
       return await generateQuizWithGroq(analysis, childProfile);
     } catch (error) {
-      console.warn('Erreur Groq:', error.message);
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`Groq: ${errorMsg}`);
+      console.warn('Erreur Groq:', errorMsg);
     }
+  } else {
+    errors.push('Groq: Clé API non configurée ou invalide');
   }
 
-  // Fallback vers le mode démo
-  return getDemoQuiz(childProfile);
+  // Si tous les services ont échoué, lancer une erreur au lieu de retourner un quiz démo
+  const errorMessage = `Impossible de générer le quiz. Tous les services IA ont échoué:\n${errors.join('\n')}`;
+  console.error('❌ Tous les services IA ont échoué:', errors);
+  throw new Error(errorMessage);
 }
 
 /**
@@ -1021,18 +1053,24 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
 
+  const errors = [];
+
   // Essayer d'abord OpenAI
   if (isValidOpenAIKey(openaiApiKey)) {
     try {
       return await generateQuizFromMultipleAnalysesWithOpenAI(analyses, childProfile, questionCount);
     } catch (error) {
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`OpenAI: ${errorMsg}`);
       // Détecter spécifiquement les erreurs de rate limiting
       if (error.message.includes('Rate Limit') || error.message.includes('429')) {
         console.warn('⚠️ OpenAI Rate Limit détecté, basculement automatique vers Gemini...');
       } else {
-        console.warn('⚠️ Erreur OpenAI, tentative avec Gemini:', error.message);
+        console.warn('⚠️ Erreur OpenAI, tentative avec Gemini:', errorMsg);
       }
     }
+  } else {
+    errors.push('OpenAI: Clé API non configurée ou invalide');
   }
 
   // Essayer Gemini si OpenAI échoue
@@ -1040,8 +1078,12 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
     try {
       return await generateQuizFromMultipleAnalysesWithGemini(analyses, childProfile, questionCount);
     } catch (error) {
-      console.warn('Erreur Gemini, tentative avec Groq:', error.message);
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`Gemini: ${errorMsg}`);
+      console.warn('Erreur Gemini, tentative avec Groq:', errorMsg);
     }
+  } else {
+    errors.push('Gemini: Clé API non configurée ou invalide');
   }
 
   // Essayer Groq si Gemini échoue
@@ -1049,12 +1091,18 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
     try {
       return await generateQuizFromMultipleAnalysesWithGroq(analyses, childProfile, questionCount);
     } catch (error) {
-      console.warn('Erreur Groq:', error.message);
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`Groq: ${errorMsg}`);
+      console.warn('Erreur Groq:', errorMsg);
     }
+  } else {
+    errors.push('Groq: Clé API non configurée ou invalide');
   }
 
-  // Fallback vers le mode démo
-  return getDemoQuizFromDocuments(childProfile, questionCount);
+  // Si tous les services ont échoué, lancer une erreur au lieu de retourner un quiz démo
+  const errorMessage = `Impossible de générer le quiz. Tous les services IA ont échoué:\n${errors.join('\n')}`;
+  console.error('❌ Tous les services IA ont échoué:', errors);
+  throw new Error(errorMessage);
 }
 
 /**
@@ -1231,18 +1279,24 @@ async function generateQuizFromTextWithAI(inputText, childProfile, options = {})
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
 
+  const errors = [];
+
   // Essayer d'abord OpenAI
   if (isValidOpenAIKey(openaiApiKey)) {
     try {
       return await generateQuizFromTextWithOpenAI(inputText, childProfile, options);
     } catch (error) {
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`OpenAI: ${errorMsg}`);
       // Détecter spécifiquement les erreurs de rate limiting
       if (error.message.includes('Rate Limit') || error.message.includes('429')) {
         console.warn('⚠️ OpenAI Rate Limit détecté, basculement automatique vers Gemini...');
       } else {
-        console.warn('⚠️ Erreur OpenAI, tentative avec Gemini:', error.message);
+        console.warn('⚠️ Erreur OpenAI, tentative avec Gemini:', errorMsg);
       }
     }
+  } else {
+    errors.push('OpenAI: Clé API non configurée ou invalide');
   }
 
   // Essayer Gemini si OpenAI échoue
@@ -1250,8 +1304,12 @@ async function generateQuizFromTextWithAI(inputText, childProfile, options = {})
     try {
       return await generateQuizFromTextWithGemini(inputText, childProfile, options);
     } catch (error) {
-      console.warn('Erreur Gemini, tentative avec Groq:', error.message);
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`Gemini: ${errorMsg}`);
+      console.warn('Erreur Gemini, tentative avec Groq:', errorMsg);
     }
+  } else {
+    errors.push('Gemini: Clé API non configurée ou invalide');
   }
 
   // Essayer Groq si Gemini échoue
@@ -1259,12 +1317,18 @@ async function generateQuizFromTextWithAI(inputText, childProfile, options = {})
     try {
       return await generateQuizFromTextWithGroq(inputText, childProfile, options);
     } catch (error) {
-      console.warn('Erreur Groq:', error.message);
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`Groq: ${errorMsg}`);
+      console.warn('Erreur Groq:', errorMsg);
     }
+  } else {
+    errors.push('Groq: Clé API non configurée ou invalide');
   }
 
-  // Fallback vers le mode démo
-  return getDemoQuizFromText(childProfile, options);
+  // Si tous les services ont échoué, lancer une erreur au lieu de retourner un quiz démo
+  const errorMessage = `Impossible de générer le quiz. Tous les services IA ont échoué:\n${errors.join('\n')}`;
+  console.error('❌ Tous les services IA ont échoué:', errors);
+  throw new Error(errorMessage);
 }
 
 /**
