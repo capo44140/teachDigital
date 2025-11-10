@@ -4,7 +4,7 @@
  * Script de test des endpoints API
  */
 
-const API_BASE_URL = 'http://lespoires.synology.me:3001';
+const API_BASE_URL = 'https://lespoires.synology.me:3002';
 
 async function testEndpoint(method, endpoint, data = null, token = null) {
   const url = `${API_BASE_URL}${endpoint}`;

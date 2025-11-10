@@ -1,5 +1,5 @@
 // Test simple de l'API
-const API_URL = 'https://lespoires.synology.me:3001/';
+const API_URL = 'https://lespoires.synology.me:3002/';
 
 async function testAPI() {
   console.log('🧪 Test simple de l\'API\n');

@@ -177,7 +177,7 @@ export default defineConfig(({ mode }) => {
       // Proxy pour contourner CORS en développement
       proxy: {
         '/api': {
-          target: 'https://lespoires.synology.me:3001',
+          target: 'https://lespoires.synology.me:3002',
           changeOrigin: true,
           secure: true,
           rewrite: (path) => path // Garder le chemin /api tel quel

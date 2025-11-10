@@ -401,6 +401,11 @@ docker-compose exec backend sh
 4. **Limitez l'accès** au port 3001 via le pare-feu Synology
 5. **Sauvegardez régulièrement** votre base de données PostgreSQL
 
+### Configuration HTTPS
+
+Pour configurer HTTPS sur votre Synology, consultez le guide détaillé :
+- **[Guide HTTPS Synology](HTTPS-SYNOLOGY-SETUP.md)** - Configuration complète HTTPS avec Let's Encrypt
+
 ### Générer un JWT_SECRET fort
 
 ```bash

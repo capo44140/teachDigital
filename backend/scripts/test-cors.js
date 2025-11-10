@@ -1,5 +1,5 @@
 // Test CORS simple
-const API_URL = 'http://lespoires.synology.me:3001';
+const API_URL = 'https://lespoires.synology.me:3002';
 
 async function testCors() {
   console.log('🧪 Test CORS du backend\n');
