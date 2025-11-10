@@ -27,7 +27,10 @@ export class PinService {
         body: JSON.stringify({ pin: inputPin })
       });
 
-      if (response.success) {
+      // Le backend retourne toujours success: true mais avec data.isValid qui indique la validité réelle
+      const isValid = response.success && response.data && response.data.isValid === true;
+      
+      if (isValid) {
         console.log('✅ Code PIN vérifié avec succès');
         return true;
       } else {

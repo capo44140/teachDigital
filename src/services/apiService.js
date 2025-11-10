@@ -250,7 +250,8 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ pin })
     });
-    return response.success === true;
+    // Le backend retourne toujours success: true mais avec data.isValid qui indique la validité réelle
+    return response.success && response.data && response.data.isValid === true;
   }
 
   /**
