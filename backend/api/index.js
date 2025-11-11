@@ -960,7 +960,9 @@ async function handleLessons(req, res) {
       const safeSubject = subject || null;
       const safeLevel = level || null;
       const safeImageFilename = imageFilename || null;
-      const safeQuizData = JSON.stringify(quizData);
+      // ✅ IMPORTANT: Passer l'objet directement, pas JSON.stringify()
+      // Le driver PostgreSQL gère automatiquement la conversion et l'échappement
+      const safeQuizData = quizData || null;
       const safeIsPublished = isPublished !== undefined ? isPublished : true;
 
       console.log(`🔧 Valeurs pour INSERT:`, {
@@ -982,7 +984,7 @@ async function handleLessons(req, res) {
       console.log(`   subject: ${safeSubject || 'NULL'}`);
       console.log(`   level: ${safeLevel || 'NULL'}`);
       console.log(`   imageFilename: ${safeImageFilename || 'NULL'}`);
-      console.log(`   quizData length: ${safeQuizData?.length || 0}`);
+      console.log(`   hasQuizData: ${!!safeQuizData}`);
       console.log(`   isPublished: ${safeIsPublished}`);
 
       const result = await withQueryTimeout(

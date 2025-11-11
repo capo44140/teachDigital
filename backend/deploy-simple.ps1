@@ -249,11 +249,8 @@ if (-not $composeFound) {
     exit 1
 }
 
-# Determiner le chemin parent (sans /backend a la fin)
+# Le docker-compose.yml est dans le repertoire de deploiement (backend)
 $dockerPath = $DeployPath
-if ($dockerPath -match '/backend$') {
-    $dockerPath = $dockerPath -replace '/backend$', ''
-}
 
 # Verifier que docker-compose.yml existe
 Write-Info "   Verification de docker-compose.yml..."
@@ -261,49 +258,88 @@ ssh $sshAlias "test -f $dockerPath/docker-compose.yml" 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "   [!] docker-compose.yml non trouve dans $dockerPath"
     Write-Info "   Le script va continuer mais Docker ne sera pas gere"
-    Write-Info "   Assurez-vous que docker-compose.yml existe dans le repertoire parent"
+    Write-Info "   Assurez-vous que docker-compose.yml existe dans $dockerPath"
 } else {
-    Write-Success "   [OK] docker-compose.yml trouve"
+    Write-Success "   [OK] docker-compose.yml trouve dans $dockerPath"
     
     # Script de deploiement Docker
-    $dockerScriptLines = @(
-        "cd $dockerPath",
-        "echo '[DOCKER] Reconstruction et redemarrage des conteneurs...'",
-        "if [ -f docker-compose.yml ]; then",
-        "    $dockerComposeCmd down",
-        "    echo '[BUILD] Reconstruction de l'image...'",
-        "    $dockerComposeCmd build --no-cache",
-        "    echo '[START] Demarrage des conteneurs...'",
-        "    $dockerComposeCmd up -d",
-        "    echo '[OK] Conteneurs demarres'",
-        "    echo '[STATUS] Etat des conteneurs:'",
-        "    $dockerComposeCmd ps",
-        "    echo '[LOGS] Logs recents:'",
-        "    $dockerComposeCmd logs --tail=20 backend",
-        "    sleep 5",
-        "    echo '[HEALTH] Verification de la sante...'",
-        "    if curl -f http://localhost:3001/health > /dev/null 2>&1; then",
-        "        echo '[OK] Service repond correctement'",
-        "    else",
-        "        echo '[WARNING] Service ne repond pas encore (peut prendre quelques secondes)'",
-        "    fi",
-        "else",
-        "    echo '[ERREUR] docker-compose.yml introuvable dans $dockerPath'",
-        "    exit 1",
-        "fi"
-    )
+    # Construire le script bash - attention aux line endings Windows
+    $dockerScript = @"
+cd "$dockerPath"
+echo '[DOCKER] Reconstruction et redemarrage des conteneurs...'
+if [ -f docker-compose.yml ]; then
+    $dockerComposeCmd down
+    echo '[BUILD] Reconstruction de l image...'
+    $dockerComposeCmd build --no-cache
+    echo '[START] Demarrage des conteneurs...'
+    $dockerComposeCmd up -d
+    echo '[OK] Conteneurs demarres'
+    echo '[STATUS] Etat des conteneurs:'
+    $dockerComposeCmd ps
+    echo '[LOGS] Logs recents:'
+    $dockerComposeCmd logs --tail=20 backend
+    sleep 5
+    echo '[HEALTH] Verification de la sante...'
+    if curl -f http://localhost:3001/health > /dev/null 2>&1; then
+        echo '[OK] Service repond correctement'
+    else
+        echo '[WARNING] Service ne repond pas encore - peut prendre quelques secondes'
+    fi
+else
+    echo '[ERREUR] docker-compose.yml introuvable dans $dockerPath'
+    exit 1
+fi
+"@
+
+    # Convertir les line endings Windows en Unix
+    # PowerShell utilise \r\n (Windows) par defaut, bash attend \n (Unix)
+    $dockerScriptUnix = $dockerScript -replace "`r`n", "`n"
     
-    # Joindre avec des sauts de ligne Unix
-    $dockerScript = $dockerScriptLines -join "`n"
+    # Creer un fichier temporaire local avec line endings Unix
+    $tempScript = [System.IO.Path]::GetTempFileName()
+    $tempScriptSh = "$tempScript.sh"
+    [System.IO.File]::WriteAllText($tempScriptSh, $dockerScriptUnix, [System.Text.Encoding]::UTF8)
     
-    # Executer le script Docker via SSH
-    ssh $sshAlias $dockerScript
+    # Transferer le script sur le serveur et l'executer
+    Write-Info "   Execution du script Docker via SSH..."
+    $remoteScript = "/tmp/deploy-docker-$([System.Guid]::NewGuid().ToString('N').Substring(0,8)).sh"
     
-    if ($LASTEXITCODE -eq 0) {
+    # Copier le script sur le serveur
+    scp $tempScriptSh "${sshAlias}:${remoteScript}" 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "[ERREUR] Impossible de transferer le script Docker"
+        Remove-Item $tempScript, $tempScriptSh -ErrorAction SilentlyContinue
+        exit 1
+    }
+    
+    # Executer le script distant
+    $result = ssh $sshAlias "chmod +x $remoteScript && bash $remoteScript 2>&1 && rm -f $remoteScript"
+    $dockerExitCode = $LASTEXITCODE
+    
+    # Nettoyer le fichier temporaire local
+    Remove-Item $tempScript, $tempScriptSh -ErrorAction SilentlyContinue
+    
+    if ($dockerExitCode -eq 0) {
         Write-Success "[OK] Docker gere avec succes"
+        # Afficher les logs de deploiement
+        if ($result) {
+            $result | ForEach-Object {
+                if ($_ -match "(\[OK\]|\[START\]|demarres|repond)") {
+                    Write-Success "   $_"
+                } elseif ($_ -match "(\[ERREUR\]|\[WARNING\])") {
+                    Write-Warning "   $_"
+                } elseif ($_ -match "\[") {
+                    Write-Info "   $_"
+                }
+            }
+        }
     } else {
         Write-Error "[ERREUR] Echec de la gestion Docker"
-        Write-Info "   Verifiez les logs: ssh $sshAlias 'cd $dockerPath && $dockerComposeCmd logs'"
+        Write-Info "   Verifiez les logs: ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd logs`""
+        if ($result) {
+            Write-Info "   Details:"
+            $result | ForEach-Object { Write-Info "   $_" }
+        }
         exit 1
     }
 }
@@ -314,9 +350,9 @@ Write-Success "Deploiement termine avec succes!"
 Write-Success "=========================================="
 Write-Info ""
 Write-Info "Commandes utiles:"
-Write-Info "  Logs Docker: ssh $sshAlias 'cd $dockerPath && $dockerComposeCmd logs -f backend'"
-Write-Info "  Status:      ssh $sshAlias 'cd $dockerPath && $dockerComposeCmd ps'"
-Write-Info "  Restart:     ssh $sshAlias 'cd $dockerPath && $dockerComposeCmd restart backend'"
-Write-Info "  Stop:        ssh $sshAlias 'cd $dockerPath && $dockerComposeCmd stop backend'"
-Write-Info "  Shell:       ssh $sshAlias 'cd $dockerPath && $dockerComposeCmd exec backend sh'"
+Write-Info "  Logs Docker: ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd logs -f backend`""
+Write-Info "  Status:      ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd ps`""
+Write-Info "  Restart:     ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd restart backend`""
+Write-Info "  Stop:        ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd stop backend`""
+Write-Info "  Shell:       ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd exec backend sh`""
 
