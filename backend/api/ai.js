@@ -20,6 +20,7 @@ const API_TIMEOUT_MS = 90000;
  * Suit les bonnes pratiques avec AbortController et finally block
  */
 async function fetchWithTimeout(url, options = {}, timeoutMs = API_TIMEOUT_MS) {
+  console.log(`🌐 fetchWithTimeout: ${url.substring(0, 50)}... (timeout: ${timeoutMs}ms)`);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
@@ -46,6 +47,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = API_TIMEOUT_MS) {
  * Gère les erreurs de réponse OpenAI avec gestion spécifique du rate limiting (429)
  */
 async function handleOpenAIResponse(response, operation = 'OpenAI') {
+  console.log(`🔍 handleOpenAIResponse: ${operation} (status: ${response.status})`);
   if (!response.ok) {
     // Gérer spécifiquement l'erreur 429 (Rate Limit)
     if (response.status === 429) {
@@ -68,6 +70,7 @@ async function handleOpenAIResponse(response, operation = 'OpenAI') {
  * Gestionnaire pour les fonctionnalités IA
  */
 module.exports = async function handler(req, res) {
+  console.log(`🚀 handler: ${req.method} ${req.url}`);
   // Gestion CORS
   if (req.method === 'OPTIONS') {
     return handleCors(req, res);
@@ -130,6 +133,7 @@ module.exports = async function handler(req, res) {
  * Génère un quiz à partir d'une image
  */
 async function handleGenerateQuizFromImage(req, res) {
+  console.log('📸 handleGenerateQuizFromImage: Début');
   try {
     let imageBase64, childProfile;
     
@@ -168,6 +172,7 @@ async function handleGenerateQuizFromImage(req, res) {
  * Cette fonction gère les deux cas : parsing automatique et manuel
  */
 async function parseFormData(req) {
+  console.log('📦 parseFormData: Début du parsing');
   // Vérifier si c'est déjà un objet parsé (Express middleware ou Vercel)
   if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
     // Si le body contient déjà les champs parsés par Express (format { fields, files })
@@ -302,6 +307,7 @@ function bufferToBase64(buffer) {
  * Supporte maintenant FormData pour éviter les erreurs 413
  */
 async function handleGenerateQuizFromDocuments(req, res) {
+  console.log('📚 handleGenerateQuizFromDocuments: Début');
   try {
     console.log('🔍 Début de handleGenerateQuizFromDocuments');
     console.log('📋 Content-Type:', req.headers['content-type']);
@@ -493,6 +499,7 @@ async function handleGenerateQuizFromDocuments(req, res) {
  * Génère un quiz à partir d'un texte
  */
 async function handleGenerateQuizFromText(req, res) {
+  console.log('📝 handleGenerateQuizFromText: Début');
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const { text, childProfile, options = {} } = body;
@@ -522,6 +529,7 @@ async function handleGenerateQuizFromText(req, res) {
  * Vérifie si une clé API est valide
  */
 async function handleValidateKey(req, res) {
+  console.log('🔑 handleValidateKey: Début');
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const apiType = url.searchParams.get('type') || 'openai';
@@ -539,6 +547,7 @@ async function handleValidateKey(req, res) {
  * Vérifie si au moins une clé API est valide
  */
 async function handleHasValidKey(req, res) {
+  console.log('✅ handleHasValidKey: Début');
   try {
     const hasValidKey = await hasAtLeastOneValidKey();
 
@@ -575,6 +584,7 @@ async function extractTextFromImage(base64Image) {
     
     const extractedText = text.trim();
     console.log(`✅ Texte extrait (${extractedText.length} caractères)`);
+    console.log('📄 Texte extrait:', extractedText);
     
     if (!extractedText || extractedText.length === 0) {
       console.warn('⚠️ Aucun texte extrait de l\'image');
@@ -593,6 +603,7 @@ async function extractTextFromImage(base64Image) {
  * Extrait d'abord le texte avec Tesseract, puis envoie le texte au LLM
  */
 async function analyzeImage(base64Image) {
+  console.log('🖼️ analyzeImage: Début de l\'analyse');
   try {
     // Extraire le texte de l'image avec OCR
     const extractedText = await extractTextFromImage(base64Image);
@@ -670,6 +681,7 @@ async function analyzeImage(base64Image) {
  * @returns {Promise<Object>} Analyse structurée du contenu
  */
 async function analyzeTextWithOpenAI(extractedText) {
+  console.log('🤖 analyzeTextWithOpenAI: Début (texte: ' + extractedText.substring(0, 50) + '...)');
   const openaiApiKey = process.env.OPENAI_API_KEY;
   
   const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
@@ -717,11 +729,12 @@ ${extractedText}`
  * @returns {Promise<Object>} Analyse structurée du contenu
  */
 async function analyzeTextWithGemini(extractedText, retryCount = 0) {
+  console.log(`🤖 analyzeTextWithGemini: Début (retry: ${retryCount}, texte: ${extractedText.substring(0, 50)}...)`);
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const maxRetries = 1; // Réduit de 2 à 1 pour éviter timeout
   
   try {
-    const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+    const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.5-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -800,6 +813,7 @@ ${extractedText}`
  * @returns {Promise<Object>} Analyse structurée du contenu
  */
 async function analyzeTextWithGroq(extractedText) {
+  console.log('🤖 analyzeTextWithGroq: Début (texte: ' + extractedText.substring(0, 50) + '...)');
   const groqApiKey = process.env.GROQ_API_KEY;
   
   const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
@@ -859,6 +873,7 @@ ${extractedText}`
  * @returns {Promise<Object>} Analyse structurée du contenu
  */
 async function analyzeTextWithDeepSeek(extractedText) {
+  console.log('🤖 analyzeTextWithDeepSeek: Début (texte: ' + extractedText.substring(0, 50) + '...)');
   const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
   
   const response = await fetchWithTimeout(`${DEEPSEEK_BASE_URL}/chat/completions`, {
@@ -918,6 +933,7 @@ ${extractedText}`
  * @returns {Promise<Object>} Analyse structurée du contenu
  */
 async function analyzeTextWithMistral(extractedText) {
+  console.log('🤖 analyzeTextWithMistral: Début (texte: ' + extractedText.substring(0, 50) + '...)');
   const mistralApiKey = process.env.MISTRAL_API_KEY;
   
   const response = await fetchWithTimeout(`${MISTRAL_BASE_URL}/chat/completions`, {
@@ -975,6 +991,7 @@ ${extractedText}`
  * Génère un quiz basé sur l'analyse
  */
 async function generateQuizFromAnalysis(analysis, childProfile) {
+  console.log('🎯 generateQuizFromAnalysis: Début (age: ' + (childProfile?.age || 'N/A') + ', level: ' + (childProfile?.level || 'N/A') + ')');
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
@@ -1062,6 +1079,7 @@ async function generateQuizFromAnalysis(analysis, childProfile) {
  * Génère un quiz avec OpenAI
  */
 async function generateQuizWithOpenAI(analysis, childProfile) {
+  console.log('🎲 generateQuizWithOpenAI: Début');
   const openaiApiKey = process.env.OPENAI_API_KEY;
   
   const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
@@ -1106,6 +1124,7 @@ async function generateQuizWithOpenAI(analysis, childProfile) {
  * Génère un quiz avec Gemini
  */
 async function generateQuizWithGemini(analysis, childProfile, retryCount = 0) {
+  console.log(`🎲 generateQuizWithGemini: Début (retry: ${retryCount})`);
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const maxRetries = 1; // Réduit de 2 à 1 pour éviter timeout
   
@@ -1216,6 +1235,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
  * Génère un quiz avec Groq
  */
 async function generateQuizWithGroq(analysis, childProfile) {
+  console.log('🎲 generateQuizWithGroq: Début');
   const groqApiKey = process.env.GROQ_API_KEY;
   
   const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
@@ -1274,6 +1294,7 @@ async function generateQuizWithGroq(analysis, childProfile) {
  * Génère un quiz avec DeepSeek
  */
 async function generateQuizWithDeepSeek(analysis, childProfile) {
+  console.log('🎲 generateQuizWithDeepSeek: Début');
   const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
   
   const response = await fetchWithTimeout(`${DEEPSEEK_BASE_URL}/chat/completions`, {
@@ -1332,6 +1353,7 @@ async function generateQuizWithDeepSeek(analysis, childProfile) {
  * Génère un quiz avec Mistral
  */
 async function generateQuizWithMistral(analysis, childProfile) {
+  console.log('🎲 generateQuizWithMistral: Début');
   const mistralApiKey = process.env.MISTRAL_API_KEY;
   
   const response = await fetchWithTimeout(`${MISTRAL_BASE_URL}/chat/completions`, {
@@ -1390,6 +1412,7 @@ async function generateQuizWithMistral(analysis, childProfile) {
  * Génère un quiz à partir de plusieurs analyses
  */
 async function generateQuizFromMultipleAnalyses(analyses, childProfile, questionCount) {
+  console.log(`🎯 generateQuizFromMultipleAnalyses: Début (${analyses.length} analyses, ${questionCount} questions)`);
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
@@ -1477,6 +1500,7 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
  * Génère un quiz à partir de plusieurs analyses avec OpenAI
  */
 async function generateQuizFromMultipleAnalysesWithOpenAI(analyses, childProfile, questionCount) {
+  console.log(`🎲 generateQuizFromMultipleAnalysesWithOpenAI: Début (${questionCount} questions)`);
   const openaiApiKey = process.env.OPENAI_API_KEY;
   
   const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
@@ -1521,6 +1545,7 @@ async function generateQuizFromMultipleAnalysesWithOpenAI(analyses, childProfile
  * Génère un quiz à partir de plusieurs analyses avec Gemini
  */
 async function generateQuizFromMultipleAnalysesWithGemini(analyses, childProfile, questionCount) {
+  console.log(`🎲 generateQuizFromMultipleAnalysesWithGemini: Début (${questionCount} questions)`);
   const geminiApiKey = process.env.GEMINI_API_KEY;
   
   const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
@@ -1585,6 +1610,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
  * Génère un quiz à partir de plusieurs analyses avec Groq
  */
 async function generateQuizFromMultipleAnalysesWithDeepSeek(analyses, childProfile, questionCount) {
+  console.log(`🎲 generateQuizFromMultipleAnalysesWithDeepSeek: Début (${questionCount} questions)`);
   const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
   
   const response = await fetchWithTimeout(`${DEEPSEEK_BASE_URL}/chat/completions`, {
@@ -1640,6 +1666,7 @@ async function generateQuizFromMultipleAnalysesWithDeepSeek(analyses, childProfi
 }
 
 async function generateQuizFromMultipleAnalysesWithMistral(analyses, childProfile, questionCount) {
+  console.log(`🎲 generateQuizFromMultipleAnalysesWithMistral: Début (${questionCount} questions)`);
   const mistralApiKey = process.env.MISTRAL_API_KEY;
   
   const response = await fetchWithTimeout(`${MISTRAL_BASE_URL}/chat/completions`, {
@@ -1695,6 +1722,7 @@ async function generateQuizFromMultipleAnalysesWithMistral(analyses, childProfil
 }
 
 async function generateQuizFromMultipleAnalysesWithGroq(analyses, childProfile, questionCount) {
+  console.log(`🎲 generateQuizFromMultipleAnalysesWithGroq: Début (${questionCount} questions)`);
   const groqApiKey = process.env.GROQ_API_KEY;
   
   const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
@@ -1753,6 +1781,7 @@ async function generateQuizFromMultipleAnalysesWithGroq(analyses, childProfile, 
  * Génère un quiz à partir d'un texte avec l'IA
  */
 async function generateQuizFromTextWithAI(inputText, childProfile, options = {}) {
+  console.log(`📝 generateQuizFromTextWithAI: Début (texte: ${inputText.substring(0, 50)}..., questions: ${options.questionCount || 5})`);
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
@@ -1840,6 +1869,7 @@ async function generateQuizFromTextWithAI(inputText, childProfile, options = {})
  * Génère un quiz à partir d'un texte avec OpenAI
  */
 async function generateQuizFromTextWithOpenAI(inputText, childProfile, options) {
+  console.log('🎲 generateQuizFromTextWithOpenAI: Début');
   const openaiApiKey = process.env.OPENAI_API_KEY;
   
   const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
@@ -1884,6 +1914,7 @@ async function generateQuizFromTextWithOpenAI(inputText, childProfile, options) 
  * Génère un quiz à partir d'un texte avec Gemini
  */
 async function generateQuizFromTextWithGemini(inputText, childProfile, options, retryCount = 0) {
+  console.log(`🎲 generateQuizFromTextWithGemini: Début (retry: ${retryCount})`);
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const maxRetries = 1; // Réduit de 2 à 1 pour éviter timeout
   
@@ -1975,6 +2006,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
  * Génère un quiz à partir d'un texte avec DeepSeek
  */
 async function generateQuizFromTextWithDeepSeek(inputText, childProfile, options) {
+  console.log('🎲 generateQuizFromTextWithDeepSeek: Début');
   const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
   
   const response = await fetchWithTimeout(`${DEEPSEEK_BASE_URL}/chat/completions`, {
@@ -2033,6 +2065,7 @@ async function generateQuizFromTextWithDeepSeek(inputText, childProfile, options
  * Génère un quiz à partir d'un texte avec Mistral
  */
 async function generateQuizFromTextWithMistral(inputText, childProfile, options) {
+  console.log('🎲 generateQuizFromTextWithMistral: Début');
   const mistralApiKey = process.env.MISTRAL_API_KEY;
   
   const response = await fetchWithTimeout(`${MISTRAL_BASE_URL}/chat/completions`, {
@@ -2088,6 +2121,7 @@ async function generateQuizFromTextWithMistral(inputText, childProfile, options)
 }
 
 async function generateQuizFromTextWithGroq(inputText, childProfile, options) {
+  console.log('🎲 generateQuizFromTextWithGroq: Début');
   const groqApiKey = process.env.GROQ_API_KEY;
   
   const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
@@ -2196,6 +2230,7 @@ function isValidMistralKey(apiKey) {
  * Fonction helper pour valider une clé API
  */
 async function validateApiKey(apiType) {
+  console.log(`🔑 validateApiKey: ${apiType}`);
   let apiKey;
   
   switch (apiType) {
@@ -2223,6 +2258,7 @@ async function validateApiKey(apiType) {
  * Fonction helper pour vérifier si au moins une clé API est valide
  */
 async function hasAtLeastOneValidKey() {
+  console.log('🔑 hasAtLeastOneValidKey: Début');
   const openaiValid = await validateApiKey('openai');
   const geminiValid = await validateApiKey('gemini');
   const deepseekValid = await validateApiKey('deepseek');
