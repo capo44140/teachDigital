@@ -5,6 +5,7 @@ const { createResponse, createErrorResponse } = require('../lib/response.js');
 const Tesseract = require('tesseract.js');
 
 // URLs des APIs
+const LOCAL_LLM_BASE_URL = process.env.LOCAL_LLM_URL || 'http://192.168.1.128:11434/v1'; // Par défaut Ollama
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
@@ -609,13 +610,22 @@ async function analyzeImage(base64Image) {
     const extractedText = await extractTextFromImage(base64Image);
     
     // Analyser le texte extrait avec les LLM
+    // Essayer d'abord le LLM local
+    if (isLocalLLMAvailable()) {
+      try {
+        return await analyzeTextWithLocalLLM(extractedText);
+      } catch (error) {
+        console.warn('⚠️ Erreur LLM local, tentative avec OpenAI:', error.message);
+      }
+    }
+
     const openaiApiKey = process.env.OPENAI_API_KEY;
     const geminiApiKey = process.env.GEMINI_API_KEY;
     const groqApiKey = process.env.GROQ_API_KEY;
     const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
     const mistralApiKey = process.env.MISTRAL_API_KEY;
 
-    // Essayer d'abord OpenAI
+    // Essayer OpenAI si LLM local échoue
     if (isValidOpenAIKey(openaiApiKey)) {
       try {
         return await analyzeTextWithOpenAI(extractedText);
@@ -672,6 +682,66 @@ async function analyzeImage(base64Image) {
     console.error('❌ Erreur lors de l\'analyse de l\'image:', error);
     // En cas d'erreur OCR, retourner une analyse basique
     return getDemoAnalysis();
+  }
+}
+
+/**
+ * Analyse un texte extrait d'une image avec le LLM local
+ * @param {string} extractedText - Texte extrait de l'image par OCR
+ * @returns {Promise<Object>} Analyse structurée du contenu
+ */
+async function analyzeTextWithLocalLLM(extractedText) {
+  console.log('🏠 analyzeTextWithLocalLLM: Début (texte: ' + extractedText.substring(0, 50) + '...)');
+  const localLLMUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
+  const localLLMModel = process.env.LOCAL_LLM_MODEL || 'qwen/qwen3-vl-4b'; // Modèle par défaut
+  
+  const response = await fetchWithTimeout(`${localLLMUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: localLLMModel,
+      messages: [
+        {
+          role: 'user',
+          content: `Analysez ce texte extrait d'une image de leçon et extrayez les concepts clés, les informations importantes et les sujets abordés. Répondez en français au format JSON. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"titre_principal": "...", "concepts_cles": [...], "informations_importantes": [...], "niveau": "...", "matiere": "..."}
+
+Texte extrait de l'image:
+${extractedText}`
+        }
+      ],
+      max_tokens: 1000,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur LLM local: ${response.status} - ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.choices[0].message.content;
+  
+  // Nettoyer le texte pour extraire le JSON
+  let jsonText = responseText.trim();
+  
+  if (jsonText.startsWith('```json')) {
+    jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  
+  const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    jsonText = jsonMatch[0];
+  }
+  
+  try {
+    return JSON.parse(jsonText);
+  } catch (parseError) {
+    console.error('Erreur de parsing JSON LLM local:', parseError);
+    throw new Error('Impossible de parser la réponse du LLM local');
   }
 }
 
@@ -992,14 +1062,27 @@ ${extractedText}`
  */
 async function generateQuizFromAnalysis(analysis, childProfile) {
   console.log('🎯 generateQuizFromAnalysis: Début (age: ' + (childProfile?.age || 'N/A') + ', level: ' + (childProfile?.level || 'N/A') + ')');
+  const errors = [];
+
+  // Essayer d'abord le LLM local
+  if (isLocalLLMAvailable()) {
+    try {
+      return await generateQuizWithLocalLLM(analysis, childProfile);
+    } catch (error) {
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`LLM local: ${errorMsg}`);
+      console.warn('⚠️ Erreur LLM local, tentative avec OpenAI:', errorMsg);
+    }
+  } else {
+    errors.push('LLM local: Non disponible');
+  }
+
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
   const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
 
-  const errors = [];
-
-  // Essayer d'abord OpenAI
+  // Essayer OpenAI si LLM local échoue
   if (isValidOpenAIKey(openaiApiKey)) {
     try {
       return await generateQuizWithOpenAI(analysis, childProfile);
@@ -1073,6 +1156,65 @@ async function generateQuizFromAnalysis(analysis, childProfile) {
   const errorMessage = `Impossible de générer le quiz. Tous les services IA ont échoué:\n${errors.join('\n')}`;
   console.error('❌ Tous les services IA ont échoué:', errors);
   throw new Error(errorMessage);
+}
+
+/**
+ * Génère un quiz avec le LLM local
+ */
+async function generateQuizWithLocalLLM(analysis, childProfile) {
+  console.log('🏠 generateQuizWithLocalLLM: Début');
+  const localLLMUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
+  const localLLMModel = process.env.LOCAL_LLM_MODEL || 'qwen/qwen3-vl-4b'; // Modèle par défaut
+  
+  const response = await fetchWithTimeout(`${localLLMUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: localLLMModel,
+      messages: [
+        {
+          role: 'system',
+          content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. Créez des questions claires, éducatives et adaptées au niveau de l'enfant. L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}.`
+        },
+        {
+          role: 'user',
+          content: `Basé sur cette analyse de leçon: ${JSON.stringify(analysis)}, générez un quiz de 5 questions avec 4 options chacune. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
+        }
+      ],
+      max_tokens: 1500,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur LLM local: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.choices[0].message.content;
+  
+  // Nettoyer le texte pour extraire le JSON
+  let jsonText = responseText.trim();
+  
+  if (jsonText.startsWith('```json')) {
+    jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  
+  const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    jsonText = jsonMatch[0];
+  }
+  
+  try {
+    return JSON.parse(jsonText);
+  } catch (parseError) {
+    console.error('Erreur de parsing JSON LLM local:', parseError);
+    throw new Error('Impossible de parser la réponse du LLM local');
+  }
 }
 
 /**
@@ -1413,14 +1555,27 @@ async function generateQuizWithMistral(analysis, childProfile) {
  */
 async function generateQuizFromMultipleAnalyses(analyses, childProfile, questionCount) {
   console.log(`🎯 generateQuizFromMultipleAnalyses: Début (${analyses.length} analyses, ${questionCount} questions)`);
+  const errors = [];
+
+  // Essayer d'abord le LLM local
+  if (isLocalLLMAvailable()) {
+    try {
+      return await generateQuizFromMultipleAnalysesWithLocalLLM(analyses, childProfile, questionCount);
+    } catch (error) {
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`LLM local: ${errorMsg}`);
+      console.warn('⚠️ Erreur LLM local, tentative avec OpenAI:', errorMsg);
+    }
+  } else {
+    errors.push('LLM local: Non disponible');
+  }
+
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
   const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
 
-  const errors = [];
-
-  // Essayer d'abord OpenAI
+  // Essayer OpenAI si LLM local échoue
   if (isValidOpenAIKey(openaiApiKey)) {
     try {
       return await generateQuizFromMultipleAnalysesWithOpenAI(analyses, childProfile, questionCount);
@@ -1494,6 +1649,65 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
   const errorMessage = `Impossible de générer le quiz. Tous les services IA ont échoué:\n${errors.join('\n')}`;
   console.error('❌ Tous les services IA ont échoué:', errors);
   throw new Error(errorMessage);
+}
+
+/**
+ * Génère un quiz à partir de plusieurs analyses avec le LLM local
+ */
+async function generateQuizFromMultipleAnalysesWithLocalLLM(analyses, childProfile, questionCount) {
+  console.log(`🏠 generateQuizFromMultipleAnalysesWithLocalLLM: Début (${questionCount} questions)`);
+  const localLLMUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
+  const localLLMModel = process.env.LOCAL_LLM_MODEL || 'llama3.2'; // Modèle par défaut
+  
+  const response = await fetchWithTimeout(`${localLLMUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: localLLMModel,
+      messages: [
+        {
+          role: 'system',
+          content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. Créez des questions claires, éducatives et adaptées au niveau de l'enfant. L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}. Générez exactement ${questionCount} questions avec 4 options chacune.`
+        },
+        {
+          role: 'user',
+          content: `Basé sur ces analyses de documents: ${JSON.stringify(analyses)}, générez un quiz de ${questionCount} questions qui couvre l'ensemble du contenu. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
+        }
+      ],
+      max_tokens: 3000,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur LLM local: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.choices[0].message.content;
+  
+  // Nettoyer le texte pour extraire le JSON
+  let jsonText = responseText.trim();
+  
+  if (jsonText.startsWith('```json')) {
+    jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  
+  const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    jsonText = jsonMatch[0];
+  }
+  
+  try {
+    return JSON.parse(jsonText);
+  } catch (parseError) {
+    console.error('Erreur de parsing JSON LLM local:', parseError);
+    throw new Error('Impossible de parser la réponse du LLM local');
+  }
 }
 
 /**
@@ -1782,14 +1996,27 @@ async function generateQuizFromMultipleAnalysesWithGroq(analyses, childProfile, 
  */
 async function generateQuizFromTextWithAI(inputText, childProfile, options = {}) {
   console.log(`📝 generateQuizFromTextWithAI: Début (texte: ${inputText.substring(0, 50)}..., questions: ${options.questionCount || 5})`);
+  const errors = [];
+
+  // Essayer d'abord le LLM local
+  if (isLocalLLMAvailable()) {
+    try {
+      return await generateQuizFromTextWithLocalLLM(inputText, childProfile, options);
+    } catch (error) {
+      const errorMsg = error.message || 'Erreur inconnue';
+      errors.push(`LLM local: ${errorMsg}`);
+      console.warn('⚠️ Erreur LLM local, tentative avec OpenAI:', errorMsg);
+    }
+  } else {
+    errors.push('LLM local: Non disponible');
+  }
+
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.GROQ_API_KEY;
   const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
 
-  const errors = [];
-
-  // Essayer d'abord OpenAI
+  // Essayer OpenAI si LLM local échoue
   if (isValidOpenAIKey(openaiApiKey)) {
     try {
       return await generateQuizFromTextWithOpenAI(inputText, childProfile, options);
@@ -1863,6 +2090,65 @@ async function generateQuizFromTextWithAI(inputText, childProfile, options = {})
   const errorMessage = `Impossible de générer le quiz. Tous les services IA ont échoué:\n${errors.join('\n')}`;
   console.error('❌ Tous les services IA ont échoué:', errors);
   throw new Error(errorMessage);
+}
+
+/**
+ * Génère un quiz à partir d'un texte avec le LLM local
+ */
+async function generateQuizFromTextWithLocalLLM(inputText, childProfile, options) {
+  console.log('🏠 generateQuizFromTextWithLocalLLM: Début');
+  const localLLMUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
+  const localLLMModel = process.env.LOCAL_LLM_MODEL || 'llama3.2'; // Modèle par défaut
+  
+  const response = await fetchWithTimeout(`${localLLMUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: localLLMModel,
+      messages: [
+        {
+          role: 'system',
+          content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. Créez des questions claires, éducatives et adaptées au niveau de l'enfant. L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}. Générez exactement ${options.questionCount || 5} questions avec 4 options chacune. Niveau de difficulté: ${options.difficulty || 'moyen'}.`
+        },
+        {
+          role: 'user',
+          content: `Basé sur ce texte de leçon: "${inputText}", générez un quiz adapté à l'enfant. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Erreur LLM local: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.choices[0].message.content;
+  
+  // Nettoyer le texte pour extraire le JSON
+  let jsonText = responseText.trim();
+  
+  if (jsonText.startsWith('```json')) {
+    jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+  } else if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+  }
+  
+  const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    jsonText = jsonMatch[0];
+  }
+  
+  try {
+    return JSON.parse(jsonText);
+  } catch (parseError) {
+    console.error('Erreur de parsing JSON LLM local:', parseError);
+    throw new Error('Impossible de parser la réponse du LLM local');
+  }
 }
 
 /**
@@ -2224,6 +2510,15 @@ function isValidMistralKey(apiKey) {
          apiKey !== 'your-mistral-api-key-here' && 
          apiKey.startsWith('mistral-') && 
          apiKey.length > 20;
+}
+
+/**
+ * Vérifie si le LLM local est disponible
+ */
+function isLocalLLMAvailable() {
+  const localLLMUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
+  const localLLMEnabled = process.env.LOCAL_LLM_ENABLED !== 'false'; // Activé par défaut si URL configurée
+  return localLLMEnabled && localLLMUrl && localLLMUrl !== '';
 }
 
 /**
