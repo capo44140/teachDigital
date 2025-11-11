@@ -30,6 +30,12 @@ services:
       # Frontend URL pour CORS
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-}
+      # Configuration des logs
+      LOGS_DIR: /app/logs
+      LOG_ENABLE_FILE: ${LOG_ENABLE_FILE:-true}
+      LOG_DEBUG: ${LOG_DEBUG:-false}
+      LOG_MAX_SIZE: ${LOG_MAX_SIZE:-10485760}
+      LOG_MAX_FILES: ${LOG_MAX_FILES:-5}
     ports:
       - "${BACKEND_PORT:-3001}:3001"
     # Si votre PostgreSQL est sur le même réseau Docker, décommentez la ligne suivante

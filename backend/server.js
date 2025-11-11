@@ -5,6 +5,7 @@
 
 const express = require('express');
 const handler = require('./api/index.js');
+const logger = require('./lib/logger.js');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -45,8 +46,8 @@ app.use((req, res, next) => {
   
   // Log pour le débogage
   if (req.method === 'OPTIONS') {
-    console.log(`🔍 Requête OPTIONS (preflight) - Origin: ${origin}, Allowed: ${isAllowedOrigin}, CORS Origin: ${corsOrigin}`);
-    console.log(`📋 Origines autorisées: ${allowedOrigins.join(', ')}`);
+    logger.debug(`Requête OPTIONS (preflight) - Origin: ${origin}, Allowed: ${isAllowedOrigin}, CORS Origin: ${corsOrigin}`);
+    logger.debug(`Origines autorisées: ${allowedOrigins.join(', ')}`);
   }
   
   // Définir les en-têtes CORS sur toutes les réponses
@@ -60,12 +61,12 @@ app.use((req, res, next) => {
   } else {
     // Si l'origine n'est pas autorisée, ne pas définir les en-têtes CORS
     // Cela permettra au navigateur d'afficher une erreur CORS claire
-    console.warn(`⚠️ Origine non autorisée: ${origin}`);
+    logger.warn(`Origine non autorisée: ${origin}`);
   }
   
   // Gérer les requêtes OPTIONS (preflight) - DOIT retourner immédiatement
   if (req.method === 'OPTIONS') {
-    console.log(`✅ En-têtes CORS définis pour OPTIONS: Access-Control-Allow-Origin=${corsOrigin || 'none'}`);
+    logger.debug(`En-têtes CORS définis pour OPTIONS: Access-Control-Allow-Origin=${corsOrigin || 'none'}`);
     return res.status(corsOrigin ? 200 : 403).end();
   }
   
@@ -106,7 +107,7 @@ app.use(async (req, res, next) => {
           });
         });
         file.on('error', (err) => {
-          console.error('❌ Erreur lors de la lecture du fichier:', err);
+          logger.error('Erreur lors de la lecture du fichier', err);
         });
       });
 
@@ -129,7 +130,7 @@ app.use(async (req, res, next) => {
       });
 
       busboy.on('error', (err) => {
-        console.error('❌ Erreur lors du parsing FormData:', err);
+        logger.error('Erreur lors du parsing FormData', err);
         return res.status(400).json({
           success: false,
           message: 'Erreur lors du parsing FormData: ' + err.message
@@ -139,7 +140,7 @@ app.use(async (req, res, next) => {
       // Parser le stream
       req.pipe(busboy);
     } catch (error) {
-      console.error('❌ Erreur lors de l\'initialisation de busboy:', error);
+      logger.error('Erreur lors de l\'initialisation de busboy', error);
       return res.status(500).json({
         success: false,
         message: 'Erreur serveur lors du parsing FormData'
@@ -182,7 +183,7 @@ app.use('*', async (req, res) => {
   try {
     await handler(vercelReq, res);
   } catch (error) {
-    console.error('❌ Erreur dans le handler:', error);
+    logger.error('Erreur dans le handler', error);
     if (!res.headersSent) {
       res.status(500).json({
         success: false,
@@ -203,18 +204,21 @@ app.get('/health', (req, res) => {
 
 // Démarrage du serveur
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Serveur TeachDigital démarré sur le port ${PORT}`);
-  console.log(`📡 Mode: ${process.env.NODE_ENV || 'production'}`);
-  console.log(`🔗 URL: http://0.0.0.0:${PORT}`);
+  logger.info(`Serveur TeachDigital démarré sur le port ${PORT}`);
+  logger.info(`Mode: ${process.env.NODE_ENV || 'production'}`);
+  logger.info(`URL: http://0.0.0.0:${PORT}`);
+  if (logger.enableFileLogging) {
+    logger.info(`Logs écrits dans: ${logger.logsDirectory}`);
+  }
 });
 
 // Gestion des erreurs non capturées
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.error('Unhandled Rejection', { promise: promise.toString(), reason });
 });
 
 process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
+  logger.error('Uncaught Exception', error);
   process.exit(1);
 });
 
