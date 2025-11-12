@@ -288,7 +288,6 @@ async function handleProfiles(req, res) {
     if (req.method === 'GET') {
       // GET est public - récupérer tous les profils
       // Requête optimisée sans retry pour éviter les timeouts
-      // Exclure image_data pour améliorer les performances
       const startTime = Date.now();
       
       try {
@@ -298,7 +297,7 @@ async function handleProfiles(req, res) {
             SELECT 
               id, name, description, type, is_admin, is_child, is_teen, 
               is_active, is_locked, color, avatar_class, avatar_content, 
-              image_url, image_type, level, created_at, updated_at
+              image_url, image_data, image_type, level, created_at, updated_at
             FROM profiles 
             ORDER BY created_at DESC
           `,
@@ -475,7 +474,7 @@ async function handleProfile(req, res) {
         return;
       }
 
-      const { name, description, type, color, avatar_class, avatar_content, level, is_active } = req.body;
+      const { name, description, type, color, avatar_class, avatar_content, level, is_active, image_data, image_type, image_url } = req.body;
 
       const result = await withQueryTimeout(
         sql`
@@ -489,6 +488,9 @@ async function handleProfile(req, res) {
             avatar_content = COALESCE(${avatar_content}, avatar_content),
             level = COALESCE(${level}, level),
             is_active = COALESCE(${is_active}, is_active),
+            image_data = COALESCE(${image_data}, image_data),
+            image_type = COALESCE(${image_type}, image_type),
+            image_url = COALESCE(${image_url}, image_url),
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ${id}
           RETURNING *
