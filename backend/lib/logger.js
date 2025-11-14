@@ -8,8 +8,11 @@ const path = require('path');
 
 class Logger {
   constructor() {
-    // Chemin du dossier logs
-    this.logsDir = process.env.LOGS_DIR || path.join(__dirname, '..', 'logs');
+    // Chemin du dossier logs - utiliser /logs en Docker par défaut
+    // En développement, utiliser le dossier logs/ local
+    // En Docker, utiliser un volume monté à /logs
+    const isDocker = process.env.DOCKER_ENV === 'true' || process.env.NODE_ENV === 'production';
+    this.logsDir = process.env.LOGS_DIR || (isDocker ? '/logs' : path.join(__dirname, '..', 'logs'));
     
     // Créer le dossier logs s'il n'existe pas
     if (!fs.existsSync(this.logsDir)) {

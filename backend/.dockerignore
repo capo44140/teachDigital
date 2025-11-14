@@ -1,0 +1,48 @@
+# Dépendances
+node_modules/
+pnpm-store/
+.pnpm-store/
+
+# Fichiers de logs et sorties
+logs/
+*.log
+output/
+temp/
+tmp/
+
+# Fichiers de développement
+.env
+.env.local
+.env.*.local
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Tests
+coverage/
+.nyc_output/
+
+# Build
+dist/
+build/
+.turbo/
+
+# Lock files (optionnel - à commenter si vous les incluez)
+# pnpm-lock.yaml
+
+# Documentation
+docs/
+*.md
+README*
+
+# Fichiers temporaires
+.cache/
+.temp/
+

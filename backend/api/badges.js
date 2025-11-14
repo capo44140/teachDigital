@@ -45,7 +45,41 @@ module.exports = async function handler(req, res) {
     if (pathname === '/api/badges' && method === 'POST') {
       return await handleCreateBadge(req, res);
     }
+
+    // Routes spécifiques pour les badges de profil (AVANT les routes génériques)
+    if (pathname.startsWith('/api/badges/profile/') && method === 'GET') {
+      // Extraire le profileId et le sous-chemin
+      const pathParts = pathname.split('/');
+      const profileIdIndex = pathParts.indexOf('profile') + 1;
+      const profileId = pathParts[profileIdIndex];
+      const subPath = pathParts[profileIdIndex + 1]; // unlocked, stats, recent, ou undefined
+
+      // Vérifier que profileId existe
+      if (!profileId) {
+        return res.status(400).json(createErrorResponse('ID de profil requis'));
+      }
+
+      if (subPath === 'unlocked') {
+        return await handleGetUnlockedBadges(req, res, profileId);
+      } else if (subPath === 'stats') {
+        return await handleGetBadgeStats(req, res, profileId);
+      } else if (subPath === 'recent') {
+        return await handleGetRecentlyUnlockedBadges(req, res, profileId);
+      } else if (!subPath) {
+        // Route principale: /api/badges/profile/:profileId
+        return await handleGetProfileBadges(req, res, profileId);
+      } else {
+        // Sous-chemin non reconnu
+        return res.status(404).json(createErrorResponse('Endpoint non trouvé'));
+      }
+    }
+
+    // Route pour vérifier et débloquer les badges
+    if (pathname === '/api/badges/check-unlock' && method === 'POST') {
+      return await handleCheckAndUnlockBadges(req, res);
+    }
     
+    // Routes génériques pour un badge spécifique (APRÈS les routes profile)
     if (pathname.startsWith('/api/badges/') && method === 'GET') {
       return await handleGetBadge(req, res);
     }
@@ -389,5 +423,238 @@ async function handleDeleteBadge(req, res) {
       stack: error.stack?.substring(0, 500)
     });
     return res.status(500).json(createErrorResponse('Erreur lors de la suppression du badge'));
+  }
+}
+
+/**
+ * Récupérer tous les badges d'un profil avec leur progression
+ */
+async function handleGetProfileBadges(req, res, profileId) {
+  try {
+    // Validation et conversion de l'ID
+    const profileIdNum = parseInt(profileId, 10);
+    
+    if (!profileId || isNaN(profileIdNum)) {
+      return res.status(400).json(createErrorResponse('ID de profil invalide'));
+    }
+
+    // Requête SQL pour récupérer les badges avec progression
+    const queryText = `
+      SELECT 
+        b.*,
+        COALESCE(pb.progress, 0) as progress,
+        COALESCE(pb.is_unlocked, false) as is_unlocked,
+        pb.unlocked_at
+      FROM badges b
+      LEFT JOIN profile_badges pb ON b.id = pb.badge_id AND pb.profile_id = $1
+      WHERE b.is_active = true
+      ORDER BY 
+        pb.is_unlocked DESC NULLS LAST,
+        b.category,
+        b.condition_value ASC
+    `;
+    const queryParams = [profileIdNum];
+    const query = sql(queryText, queryParams);
+
+    const badges = await withQueryTimeout(
+      query,
+      5000,
+      'récupération des badges du profil'
+    );
+
+    return res.status(200).json(createResponse('Badges du profil récupérés avec succès', badges));
+  } catch (error) {
+    console.error('❌ Erreur lors de la récupération des badges du profil:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      stack: error.stack?.substring(0, 500)
+    });
+    return res.status(500).json(createErrorResponse('Erreur lors de la récupération des badges du profil'));
+  }
+}
+
+/**
+ * Récupérer les badges débloqués d'un profil
+ */
+async function handleGetUnlockedBadges(req, res, profileId) {
+  try {
+    // Validation et conversion de l'ID
+    const profileIdNum = parseInt(profileId, 10);
+    
+    if (!profileId || isNaN(profileIdNum)) {
+      return res.status(400).json(createErrorResponse('ID de profil invalide'));
+    }
+
+    // Requête SQL pour récupérer les badges débloqués
+    const queryText = `
+      SELECT b.*, pb.unlocked_at
+      FROM badges b
+      INNER JOIN profile_badges pb ON b.id = pb.badge_id
+      WHERE pb.profile_id = $1 AND pb.is_unlocked = true
+      ORDER BY pb.unlocked_at DESC
+    `;
+    const queryParams = [profileIdNum];
+    const query = sql(queryText, queryParams);
+
+    const badges = await withQueryTimeout(
+      query,
+      5000,
+      'récupération des badges débloqués'
+    );
+
+    return res.status(200).json(createResponse('Badges débloqués récupérés avec succès', badges));
+  } catch (error) {
+    console.error('❌ Erreur lors de la récupération des badges débloqués:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      stack: error.stack?.substring(0, 500)
+    });
+    return res.status(500).json(createErrorResponse('Erreur lors de la récupération des badges débloqués'));
+  }
+}
+
+/**
+ * Récupérer les statistiques de badges d'un profil
+ */
+async function handleGetBadgeStats(req, res, profileId) {
+  try {
+    // Validation et conversion de l'ID
+    const profileIdNum = parseInt(profileId, 10);
+    
+    if (!profileId || isNaN(profileIdNum)) {
+      return res.status(400).json(createErrorResponse('ID de profil invalide'));
+    }
+
+    // Requête SQL pour récupérer les statistiques
+    const queryText = `
+      SELECT 
+        COUNT(DISTINCT b.id) as total_badges,
+        COUNT(DISTINCT CASE WHEN pb.is_unlocked = true THEN b.id END) as unlocked_badges,
+        COALESCE(SUM(CASE WHEN pb.is_unlocked = true THEN b.points ELSE 0 END), 0) as total_points
+      FROM badges b
+      LEFT JOIN profile_badges pb ON b.id = pb.badge_id AND pb.profile_id = $1
+      WHERE b.is_active = true
+    `;
+    const queryParams = [profileIdNum];
+    const query = sql(queryText, queryParams);
+
+    const result = await withQueryTimeout(
+      query,
+      5000,
+      'récupération des statistiques de badges'
+    );
+
+    const stats = result[0];
+    const total = parseInt(stats.total_badges) || 0;
+    const unlocked = parseInt(stats.unlocked_badges) || 0;
+    const locked = total - unlocked;
+    const points = parseInt(stats.total_points) || 0;
+    const percentage = total > 0 ? Math.round((unlocked / total) * 100) : 0;
+
+    const statsData = {
+      total,
+      unlocked,
+      locked,
+      points,
+      percentage
+    };
+
+    return res.status(200).json(createResponse('Statistiques de badges récupérées avec succès', statsData));
+  } catch (error) {
+    console.error('❌ Erreur lors de la récupération des statistiques de badges:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      stack: error.stack?.substring(0, 500)
+    });
+    return res.status(500).json(createErrorResponse('Erreur lors de la récupération des statistiques de badges'));
+  }
+}
+
+/**
+ * Récupérer les badges récemment débloqués d'un profil
+ */
+async function handleGetRecentlyUnlockedBadges(req, res, profileId) {
+  try {
+    // Validation et conversion de l'ID
+    const profileIdNum = parseInt(profileId, 10);
+    
+    if (!profileId || isNaN(profileIdNum)) {
+      return res.status(400).json(createErrorResponse('ID de profil invalide'));
+    }
+
+    // Récupérer le paramètre limit depuis la query string
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const limit = parseInt(url.searchParams.get('limit') || '5', 10);
+
+    // Requête SQL pour récupérer les badges récents
+    const queryText = `
+      SELECT b.*, pb.unlocked_at
+      FROM badges b
+      INNER JOIN profile_badges pb ON b.id = pb.badge_id
+      WHERE pb.profile_id = $1 AND pb.is_unlocked = true
+      ORDER BY pb.unlocked_at DESC
+      LIMIT $2
+    `;
+    const queryParams = [profileIdNum, limit];
+    const query = sql(queryText, queryParams);
+
+    const badges = await withQueryTimeout(
+      query,
+      5000,
+      'récupération des badges récents'
+    );
+
+    return res.status(200).json(createResponse('Badges récents récupérés avec succès', badges));
+  } catch (error) {
+    console.error('❌ Erreur lors de la récupération des badges récents:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      stack: error.stack?.substring(0, 500)
+    });
+    return res.status(500).json(createErrorResponse('Erreur lors de la récupération des badges récents'));
+  }
+}
+
+/**
+ * Vérifier et débloquer automatiquement les badges après une action
+ */
+async function handleCheckAndUnlockBadges(req, res) {
+  try {
+    const { profileId, actionType, actionData = {} } = req.body;
+
+    if (!profileId || !actionType) {
+      return res.status(400).json(createErrorResponse('profileId et actionType sont requis'));
+    }
+
+    const profileIdNum = parseInt(profileId, 10);
+    if (isNaN(profileIdNum)) {
+      return res.status(400).json(createErrorResponse('ID de profil invalide'));
+    }
+
+    // Pour l'instant, on retourne un tableau vide
+    // Cette fonctionnalité nécessiterait une logique plus complexe pour vérifier les conditions
+    // et débloquer les badges automatiquement selon actionType et actionData
+    // TODO: Implémenter la logique de vérification et déblocage automatique
+    
+    const unlockedBadges = [];
+
+    return res.status(200).json(createResponse('Vérification des badges terminée', { unlockedBadges }));
+  } catch (error) {
+    console.error('❌ Erreur lors de la vérification des badges:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      hint: error.hint,
+      stack: error.stack?.substring(0, 500)
+    });
+    return res.status(500).json(createErrorResponse('Erreur lors de la vérification des badges'));
   }
 }

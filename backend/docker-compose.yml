@@ -10,6 +10,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      DOCKER_ENV: "true"
       PORT: 3001
       # Configuration base de données PostgreSQL EXTERNE
       # Utilisez l'IP de votre Synology ou le nom du conteneur PostgreSQL si sur le même réseau Docker
@@ -30,8 +31,8 @@ services:
       # Frontend URL pour CORS
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-}
-      # Configuration des logs
-      LOGS_DIR: /app/logs
+      # Configuration des logs (volume monté en /logs)
+      LOGS_DIR: /logs
       LOG_ENABLE_FILE: ${LOG_ENABLE_FILE:-true}
       LOG_DEBUG: ${LOG_DEBUG:-false}
       LOG_MAX_SIZE: ${LOG_MAX_SIZE:-10485760}
@@ -47,8 +48,13 @@ services:
       # Permet d'accéder au host depuis le conteneur
       - "host.docker.internal:host-gateway"
     volumes:
-      # Volume pour les données persistantes si nécessaire
-      - /volume1/docker/teachdigital/backend/logs:/app/logs
+      # Volumes pour les fichiers de sortie (en dehors du conteneur)
+      # Adaptez les chemins selon votre système:
+      # - Linux/Mac: ./logs:/logs
+      # - Synology: /volume1/docker/teachdigital/backend/logs:/logs
+      - ${LOGS_VOLUME:-./logs}:/logs
+      - ${OUTPUT_VOLUME:-./output}:/output
+      - ${TEMP_VOLUME:-./temp}:/temp
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
