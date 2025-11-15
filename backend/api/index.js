@@ -1004,24 +1004,38 @@ async function handleLessons(req, res) {
       console.log(`   hasQuizData: ${!!safeQuizData}`);
       console.log(`   isPublished: ${safeIsPublished}`);
 
+      // Construire la requête SQL manuellement pour éviter les problèmes avec le cast jsonb
+      // Sérialiser l'objet en JSON string
+      const quizDataJson = safeQuizData ? JSON.stringify(safeQuizData) : null;
+      
+      // Construire la requête manuellement avec le cast ::jsonb dans le texte SQL
+      const insertQueryText = `
+        INSERT INTO lessons (
+          profile_id, title, description, subject, level,
+          image_filename, quiz_data, is_published
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)
+        RETURNING *
+      `;
+      const insertQueryParams = [
+        user.profileId,
+        title,
+        safeDescription,
+        safeSubject,
+        safeLevel,
+        safeImageFilename,
+        quizDataJson,
+        safeIsPublished
+      ];
+      
+      console.log(`🔧 Requête INSERT construite manuellement:`);
+      console.log(`   Text: ${insertQueryText.trim()}`);
+      console.log(`   Params count: ${insertQueryParams.length}`);
+      
+      const insertQuery = sql(insertQueryText, insertQueryParams);
+      
       const result = await withQueryTimeout(
-        sql`
-          INSERT INTO lessons (
-            profile_id, title, description, subject, level,
-            image_filename, quiz_data, is_published
-          )
-          VALUES (
-            ${user.profileId}, 
-            ${title}, 
-            ${safeDescription}, 
-            ${safeSubject}, 
-            ${safeLevel},
-            ${safeImageFilename}, 
-            ${safeQuizData}, 
-            ${safeIsPublished}
-          )
-          RETURNING *
-        `,
+        insertQuery,
         5000,
         'création de la leçon'
       );
