@@ -39,7 +39,7 @@ export class LessonRepository {
         subject: lessonData.subject,
         level: lessonData.level,
         imageFilename,
-        imageData,
+        // imageData non envoyé - trop lourd, le backend ne le stocke pas
         quizData: lessonData,
         isPublished: true
       });

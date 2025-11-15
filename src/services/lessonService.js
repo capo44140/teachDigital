@@ -20,21 +20,18 @@ export class LessonService {
    */
   static async saveLesson(lessonData, profileId, files = null) {
     try {
-      let imageData = null
       let imageFilename = null
       
-      // Traiter les fichiers si fournis
+      // Traiter les fichiers si fournis - on ne garde que le nom, pas les données (trop lourd)
       if (files) {
         if (Array.isArray(files)) {
           // Utiliser le premier fichier image comme image principale
           const firstImage = files.find(f => f.type.startsWith('image/'))
           if (firstImage) {
-            imageData = await this.fileToBase64(firstImage)
             imageFilename = firstImage.name
           }
         } else {
           // Un seul fichier
-          imageData = await this.fileToBase64(files)
           imageFilename = files.name
         }
       }
@@ -45,7 +42,7 @@ export class LessonService {
         subject: lessonData.subject || '',
         level: lessonData.level || '',
         imageFilename,
-        imageData,
+        // imageData non envoyé - trop lourd, le backend ne le stocke pas
         quizData: lessonData,
         isPublished: true
       });
