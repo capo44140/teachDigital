@@ -58,11 +58,13 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Max-Age', '86400');
     res.setHeader('Access-Control-Allow-Credentials', corsOrigin !== '*' ? 'true' : 'false');
     res.setHeader('Vary', 'Origin');
-  } else {
-    // Si l'origine n'est pas autorisée, ne pas définir les en-têtes CORS
-    // Cela permettra au navigateur d'afficher une erreur CORS claire
+  } else if (origin) {
+    // Si l'origine est définie mais non autorisée, logger un avertissement
+    // Ne pas logger si origin est undefined (requêtes directes, curl, etc.)
     logger.warn(`Origine non autorisée: ${origin}`);
   }
+  // Si origin est undefined, c'est probablement une requête directe (pas depuis un navigateur)
+  // On ne définit pas les en-têtes CORS mais on ne bloque pas non plus la requête
   
   // Gérer les requêtes OPTIONS (preflight) - DOIT retourner immédiatement
   if (req.method === 'OPTIONS') {

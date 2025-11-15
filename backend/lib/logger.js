@@ -70,8 +70,19 @@ class Logger {
       // Écrire dans le fichier
       fs.appendFileSync(logFile, formattedMessage + '\n', 'utf8');
     } catch (error) {
-      // Ne pas bloquer l'application si l'écriture fichier échoue
-      console.error('❌ Erreur lors de l\'écriture dans le fichier de log:', error);
+      // Si erreur de permissions, désactiver l'écriture fichier pour cette session
+      if (error.code === 'EACCES' || error.code === 'EPERM') {
+        // Désactiver l'écriture fichier pour éviter de répéter l'erreur
+        this.enableFileLogging = false;
+        // Logger une seule fois sur stderr (qui fonctionne toujours)
+        if (!this._permissionErrorLogged) {
+          console.error(`⚠️  Écriture fichier désactivée: permissions insuffisantes sur ${this.logsDir}`);
+          this._permissionErrorLogged = true;
+        }
+      } else {
+        // Pour les autres erreurs, logger mais continuer
+        console.error('❌ Erreur lors de l\'écriture dans le fichier de log:', error.message);
+      }
     }
   }
 
