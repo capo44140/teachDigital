@@ -962,9 +962,24 @@ async function handleLessons(req, res) {
       const safeSubject = subject || null;
       const safeLevel = level || null;
       const safeImageFilename = imageFilename || null;
-      // ✅ IMPORTANT: Passer l'objet directement, pas JSON.stringify()
-      // Le driver PostgreSQL gère automatiquement la conversion et l'échappement
-      const safeQuizData = quizData || null;
+      // ✅ IMPORTANT: Nettoyer quizData et le passer comme objet JavaScript
+      // Le driver PostgreSQL convertit automatiquement les objets JS en JSONB
+      // Supprimer les valeurs undefined pour éviter les erreurs SQL
+      const safeQuizData = quizData ? (() => {
+        try {
+          // Si c'est déjà une chaîne JSON, la parser
+          if (typeof quizData === 'string') {
+            const parsed = JSON.parse(quizData);
+            // Nettoyer les undefined
+            return JSON.parse(JSON.stringify(parsed, (key, value) => value === undefined ? null : value));
+          }
+          // Si c'est un objet, nettoyer les undefined
+          return JSON.parse(JSON.stringify(quizData, (key, value) => value === undefined ? null : value));
+        } catch (e) {
+          console.error('❌ Erreur lors du nettoyage de quizData:', e);
+          return quizData; // Fallback sur l'objet original
+        }
+      })() : null;
       const safeIsPublished = isPublished !== undefined ? isPublished : true;
 
       console.log(`🔧 Valeurs pour INSERT:`, {
