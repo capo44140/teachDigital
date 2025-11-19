@@ -14,10 +14,19 @@ class ApiService {
   }
 
   /**
-   * Obtenir le token actuel du localStorage
+   * Obtenir le token d'authentification depuis le localStorage
+   * @returns {string|null} Le token JWT ou null si absent
    */
   getToken() {
     return localStorage.getItem('auth_token');
+  }
+
+  /**
+   * Vérifier si un token est présent et valide
+   * @returns {boolean} True si un token est présent
+   */
+  hasToken() {
+    return !!this.getToken();
   }
 
   /**
@@ -77,9 +86,13 @@ class ApiService {
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
       console.log('✅ Token d\'authentification ajouté à la requête:', endpoint);
+      console.log('   - Token (premiers 20 caractères):', token.substring(0, 20) + '...');
     } else if (!isPublicEndpoint) {
       // Afficher un avertissement uniquement pour les endpoints qui nécessitent un token
       console.warn('⚠️ Aucun token d\'authentification trouvé pour:', endpoint);
+      console.warn('   - localStorage.getItem("auth_token"):', localStorage.getItem('auth_token'));
+      console.warn('   - Vous devez vous connecter avant d\'accéder à cette ressource');
+      // Ne pas bloquer la requête, laisser le backend gérer l'erreur 401
     }
 
     try {
@@ -102,6 +115,8 @@ class ApiService {
             }
           }
           // Token expiré ou invalide (pour les autres endpoints)
+          // Supprimer le token du localStorage comme dans badgeApiService
+          localStorage.removeItem('auth_token');
           this.logout();
           throw new Error('Session expirée - Veuillez vous reconnecter');
         }

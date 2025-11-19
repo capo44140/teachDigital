@@ -28,11 +28,19 @@ module.exports = async function handler(req, res) {
 
   try {
     // Authentification requise pour toutes les routes badges
+    // Logs de débogage pour diagnostiquer les problèmes d'authentification
+    const authHeader = req.headers.authorization;
+    console.log('🔐 Debug authentification badges:');
+    console.log('   - Header Authorization présent:', !!authHeader);
+    console.log('   - Format:', authHeader ? (authHeader.startsWith('Bearer ') ? 'Bearer ✓' : 'Format incorrect') : 'Manquant');
+    
     let user;
     try {
       user = authenticateToken(req);
+      console.log('   - Authentification réussie pour profileId:', user?.profileId);
     } catch (authError) {
       // authenticateToken lance une exception si le token est manquant ou invalide
+      console.error('   - ❌ Erreur d\'authentification:', authError.message);
       return res.status(401).json(createErrorResponse(authError.message || 'Token d\'authentification invalide'));
     }
 

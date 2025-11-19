@@ -7,6 +7,21 @@ import { apiService } from './apiService.js'
 
 export class BadgeService {
   /**
+   * Obtenir le token d'authentification (délégation à apiService)
+   * @returns {string|null} Le token JWT ou null si absent
+   */
+  getToken() {
+    return apiService.getToken();
+  }
+
+  /**
+   * Vérifier si un token est présent
+   * @returns {boolean} True si un token est présent
+   */
+  hasToken() {
+    return apiService.hasToken();
+  }
+  /**
    * Récupérer tous les badges actifs
    */
   async getAllBadges() {
