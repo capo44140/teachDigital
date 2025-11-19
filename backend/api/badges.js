@@ -28,9 +28,12 @@ module.exports = async function handler(req, res) {
 
   try {
     // Authentification requise pour toutes les routes badges
-    const authResult = authenticateToken(req);
-    if (!authResult.success) {
-      return res.status(401).json(createErrorResponse('Token d\'authentification invalide'));
+    let user;
+    try {
+      user = authenticateToken(req);
+    } catch (authError) {
+      // authenticateToken lance une exception si le token est manquant ou invalide
+      return res.status(401).json(createErrorResponse(authError.message || 'Token d\'authentification invalide'));
     }
 
     const { method } = req;
