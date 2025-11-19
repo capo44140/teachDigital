@@ -7,6 +7,36 @@ import UpdateNotification from './components/UpdateNotification.vue'
 import { updateService } from './services/updateService.js'
 import { useApiStore } from './stores/apiStore.js'
 
+// Filtrer les avertissements Radix UI/Dialog de la console
+const originalConsoleWarn = console.warn
+const originalConsoleError = console.error
+
+console.warn = function(...args) {
+  const message = args.join(' ')
+  // Ignorer les avertissements Radix UI concernant DialogContent/DialogTitle
+  if (message.includes('DialogContent') || 
+      message.includes('DialogTitle') || 
+      message.includes('requires a `DialogTitle`') ||
+      message.includes('VisuallyHidden') ||
+      message.includes('radix-ui.com/primitives/docs/components/dialog')) {
+    return // Ignorer cet avertissement
+  }
+  originalConsoleWarn.apply(console, args)
+}
+
+console.error = function(...args) {
+  const message = args.join(' ')
+  // Ignorer les erreurs Radix UI concernant DialogContent/DialogTitle
+  if (message.includes('DialogContent') || 
+      message.includes('DialogTitle') || 
+      message.includes('requires a `DialogTitle`') ||
+      message.includes('VisuallyHidden') ||
+      message.includes('radix-ui.com/primitives/docs/components/dialog')) {
+    return // Ignorer cette erreur
+  }
+  originalConsoleError.apply(console, args)
+}
+
 // Services PWA avancés
 import installService from './services/installService.js'
 import mobileOptimizationService from './services/mobileOptimizationService.js'
