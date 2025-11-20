@@ -43,13 +43,13 @@ const VERCEL_MAX_DURATION = parseInt(process.env.VERCEL_MAX_DURATION) || detecte
 // Déterminer le timeout par défaut selon le plan Vercel détecté
 // Plans gratuits (10s): timeout de 8s pour laisser de la marge
 // Plans Pro/Enterprise (60s): timeout de 50s pour laisser de la marge
-const DEFAULT_QUERY_TIMEOUT_MS = parseInt(process.env.DB_QUERY_TIMEOUT_MS) || 
+const DEFAULT_QUERY_TIMEOUT_MS = parseInt(process.env.DB_QUERY_TIMEOUT_MS) ||
   (VERCEL_MAX_DURATION >= 60 ? 50000 : 8000); // 50s pour Pro/Enterprise, 8s pour gratuit
 
 // Ajuster le timeout selon la configuration Vercel
 // Pour plans Pro/Enterprise (60s), on peut utiliser jusqu'à 50s pour laisser de la marge
 // Pour plans gratuits (10s), on limite à 8s pour éviter les timeouts
-const queryTimeout = VERCEL_MAX_DURATION >= 60 
+const queryTimeout = VERCEL_MAX_DURATION >= 60
   ? Math.min(DEFAULT_QUERY_TIMEOUT_MS, 50000) // Max 50s pour plans Pro/Enterprise
   : Math.min(DEFAULT_QUERY_TIMEOUT_MS, 8000);  // Max 8s pour plans gratuits
 
@@ -79,11 +79,11 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
 } else if (process.env.DATABASE_URL) {
   // Méthode 2 : Connection string (compatibilité)
   const connectionString = process.env.DATABASE_URL;
-  
+
   if (!connectionString.startsWith('postgresql://') && !connectionString.startsWith('postgres://')) {
     throw new Error('DATABASE_URL doit commencer par postgresql:// ou postgres://');
   }
-  
+
   // Ajouter les options de performance à la connection string si elles ne sont pas déjà présentes
   poolConfig = {
     connectionString,
@@ -96,7 +96,7 @@ if (process.env.DB_HOST && process.env.DB_NAME && process.env.DB_USER && process
     keepAlive: true,
     keepAliveInitialDelayMillis: 3000 // Réduit à 3s pour connexion plus rapide
   };
-  
+
   console.log('🔗 Connexion PostgreSQL configurée avec DATABASE_URL');
   console.log('🔍 DATABASE_URL détectée:', connectionString.replace(/:[^:@]+@/, ':****@'));
 } else {
@@ -111,14 +111,14 @@ let pool;
 
 try {
   pool = new Pool(poolConfig);
-  
+
   // Listeners pour gérer les erreurs de connexion (uniquement en dev ou si logs activés)
   if (ENABLE_SQL_LOGS) {
     pool.on('connect', () => {
       // Log silencieux en production pour performance
     });
   }
-  
+
   pool.on('error', (error) => {
     // Toujours logger les erreurs critiques
     console.error('❌ ERREUR CRITIQUE de connexion PostgreSQL:');
@@ -167,7 +167,7 @@ console.log('══════════════════════�
 // Avec 2 retries de 500ms = 1s de délais max, donc timeout query peut être jusqu'à 9s pour plans gratuits
 async function executeWithRetry(queryFn, maxRetries = 2, delayMs = 500) {
   let lastError;
-  
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       if (ENABLE_SQL_LOGS && attempt > 1) {
@@ -176,9 +176,9 @@ async function executeWithRetry(queryFn, maxRetries = 2, delayMs = 500) {
       return await queryFn();
     } catch (error) {
       lastError = error;
-      
+
       // Vérifier si c'est une erreur temporaire
-      const isTemporaryError = 
+      const isTemporaryError =
         error.code === 'ECONNRESET' ||
         error.code === 'ECONNREFUSED' ||
         error.code === 'ETIMEDOUT' ||
@@ -189,7 +189,7 @@ async function executeWithRetry(queryFn, maxRetries = 2, delayMs = 500) {
         error.message?.includes('Connection lost') ||
         error.message?.includes('TLS') ||
         error.message?.includes('timeout');
-      
+
       if (!isTemporaryError || attempt === maxRetries) {
         // Erreur permanente ou dernier essai - toujours logger les erreurs
         console.error(`❌ ERREUR FINALE après ${attempt} tentatives:`, {
@@ -199,7 +199,7 @@ async function executeWithRetry(queryFn, maxRetries = 2, delayMs = 500) {
         });
         throw error;
       }
-      
+
       // Attendre avant de réessayer (délai fixe plus court pour éviter timeout)
       if (ENABLE_SQL_LOGS) {
         console.log(`⏳ Retry ${attempt}/${maxRetries} après ${delayMs}ms`);
@@ -208,7 +208,7 @@ async function executeWithRetry(queryFn, maxRetries = 2, delayMs = 500) {
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }
   }
-  
+
   throw lastError;
 }
 
@@ -222,30 +222,30 @@ function SqlIdentifier(value) {
 function buildQuery(strings, values) {
   const params_array = [];
   let paramCounter = 1;
-  
+
   const text = strings.reduce((acc, str, i) => {
     let result = acc + str;
-    
+
     if (i < values.length) {
       const value = values[i];
-      
+
       // Log de débogage uniquement si logs activés
-      if (ENABLE_SQL_LOGS && value && typeof value === 'object' && !(value instanceof SqlIdentifier)) {
+      if (ENABLE_SQL_LOGS && value && typeof value === 'object' && value !== null && !(value instanceof SqlIdentifier)) {
         // Log minimal pour le debugging
         if ('text' in value && 'params' in value) {
           console.log(`🔍 [SQL Builder] Requête imbriquée détectée à l'index ${i}`);
         }
       }
-      
+
       if (value instanceof SqlIdentifier) {
         // Les identifiants sont intégrés directement (pas de paramètre)
         result += value.value;
-      } else if (value && typeof value === 'object' && 'text' in value && 'params' in value && Array.isArray(value.params)) {
+      } else if (value && typeof value === 'object' && value !== null && 'text' in value && 'params' in value && Array.isArray(value.params)) {
         // Si c'est une requête SQL précédente, on l'intègre avec ses paramètres
         // On doit réindexer les paramètres
         const subText = String(value.text || '');
         const subParams = value.params || [];
-        
+
         if (subParams.length > 0) {
           const reindexedText = subText.replace(/\$(\d+)/g, (match, num) => {
             const oldIndex = parseInt(num);
@@ -270,10 +270,10 @@ function buildQuery(strings, values) {
         result += '$' + paramCounter++;
       }
     }
-    
+
     return result;
   });
-  
+
   return { text, params: params_array };
 }
 
@@ -281,13 +281,13 @@ function buildQuery(strings, values) {
 function sql(strings, ...values) {
   // Mesurer le temps de construction uniquement si logs activés
   const buildStartTime = ENABLE_SQL_LOGS ? Date.now() : 0;
-  
+
   // Gérer les deux cas d'appel:
   // 1. Template literal: sql`SELECT ...` 
   // 2. Appel normal: sql(text, params)
-  
+
   let query;
-  
+
   if (Array.isArray(strings)) {
     // Template literal: sql`SELECT * FROM users WHERE id = ${123}`
     query = buildQuery(strings, values);
@@ -295,29 +295,29 @@ function sql(strings, ...values) {
     // Appel normal: sql("SELECT * FROM users WHERE id = $1", [123])
     query = { text: strings, params: values[0] || [] };
   }
-  
+
   const buildTime = ENABLE_SQL_LOGS ? Date.now() - buildStartTime : 0;
-  
+
   // Créer un objet qui peut être utilisé dans d'autres templates ET awaité
   // Ne PAS exécuter immédiatement - seulement quand on await
   const queryText = query.text;
   const queryParams = query.params;
-  
+
   // Log si la construction prend du temps (uniquement si logs activés)
   if (ENABLE_SQL_LOGS && buildTime > 5) {
     console.log(`🔧 [SQL Builder] Construction requête: ${buildTime}ms`);
   }
-  
+
   // Stocker buildTime pour l'utiliser dans les logs d'exécution
   const queryBuildTime = buildTime;
-  
+
   // Créer une Promise qui sera exécutée seulement quand on await
   const executeQuery = async () => {
     // Mesurer le temps uniquement si logs activés ou si on doit vérifier les timeouts
     const totalStartTime = ENABLE_SQL_LOGS ? Date.now() : 0;
     const queryId = ENABLE_SQL_LOGS ? Math.random().toString(36).substring(2, 9) : '';
     const queryPreview = ENABLE_SQL_LOGS ? (queryText.length > 100 ? queryText.substring(0, 100) + '...' : queryText) : '';
-    
+
     // Log de début uniquement si logs activés
     if (ENABLE_SQL_LOGS) {
       console.log(`🚀 [SQL:${queryId}] Début - ${queryPreview}`);
@@ -325,7 +325,7 @@ function sql(strings, ...values) {
         console.log(`   🔧 Construction: ${queryBuildTime}ms`);
       }
     }
-    
+
     try {
       // Étape 1: Vérifier l'état du pool uniquement si logs activés ou si nécessaire
       let poolStats = null;
@@ -338,34 +338,34 @@ function sql(strings, ...values) {
           waitingCount: pool.waitingCount || 0
         };
         poolCheckTime = Date.now() - poolCheckStart;
-        
+
         if (poolCheckTime > 1) {
           console.log(`⏱️  [SQL:${queryId}] Pool check: ${poolCheckTime}ms`, poolStats);
         }
-        
+
         if (poolStats.waitingCount > 0) {
           console.warn(`⚠️  [SQL:${queryId}] ${poolStats.waitingCount} requêtes en attente dans le pool`);
         }
       }
-      
+
       // Étape 2: Exécution de la requête avec timeout global pour éviter les blocages
       // On mesure toujours le temps pour détecter les problèmes critiques, même sans logs
       if (ENABLE_SQL_LOGS) {
         console.log(`▶️  [SQL:${queryId}] Exécution de la requête...`);
       }
       const queryStartTime = Date.now(); // Toujours mesurer pour détecter les problèmes
-      
+
       // Timeout global pour éviter que la requête bloque indéfiniment
       // On utilise 90% du timeout configuré pour laisser une marge
       const globalTimeout = Math.max(queryTimeout * 0.9, 5000); // Minimum 5s
-      
+
       const queryPromise = pool.query(queryText, queryParams);
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => {
           reject(new Error(`Query timeout après ${globalTimeout}ms (limite: ${queryTimeout}ms)`));
         }, globalTimeout);
       });
-      
+
       let result;
       try {
         result = await Promise.race([queryPromise, timeoutPromise]);
@@ -376,17 +376,17 @@ function sql(strings, ...values) {
         }
         throw error;
       }
-      
+
       const queryEndTime = Date.now();
       const queryExecutionTime = queryEndTime - queryStartTime;
-      
+
       // Note: pool.query() inclut l'attente du pool + l'exécution SQL
       // On ne peut pas les séparer facilement, donc queryExecutionTime inclut les deux
-      
+
       // Étape 3: Traitement des résultats (très rapide, pas besoin de mesurer en prod)
       const rows = result.rows;
       const totalTime = ENABLE_SQL_LOGS ? Date.now() - totalStartTime : 0;
-      
+
       // Log détaillé des performances uniquement si logs activés
       if (ENABLE_SQL_LOGS) {
         console.log(`✅ [SQL:${queryId}] Terminé en ${totalTime}ms`);
@@ -400,11 +400,11 @@ function sql(strings, ...values) {
           console.log(`   🔍 Pool stats: ${poolStats.totalCount} total, ${poolStats.idleCount} idle, ${poolStats.waitingCount} waiting`);
         }
       }
-      
+
       // Avertissements critiques - toujours vérifier même sans logs détaillés
       const timeoutWarningThreshold = queryTimeout * 0.8; // 80% du timeout configuré
       const criticalThreshold = queryTimeout * 0.9; // 90% du timeout configuré
-      
+
       if (queryExecutionTime > criticalThreshold) {
         console.error(`🚨 [SQL${queryId ? ':' + queryId : ''}] REQUÊTE CRITIQUE - Proche du timeout (${queryExecutionTime}ms / ${queryTimeout}ms)`);
         console.error(`   ⚠️  Risque de timeout Vercel (${VERCEL_MAX_DURATION}s max)`);
@@ -428,12 +428,12 @@ function sql(strings, ...values) {
           console.warn(`⚠️  [SQL:${queryId}] Requête très lente (>2s): ${totalTime}ms`);
         }
       }
-      
+
       return rows;
     } catch (error) {
       // Toujours logger les erreurs, même sans logs détaillés
       const totalTime = ENABLE_SQL_LOGS ? Date.now() - totalStartTime : 0;
-      
+
       console.error(`❌ [SQL${queryId ? ':' + queryId : ''}] Erreur${totalTime > 0 ? ` après ${totalTime}ms` : ''}`);
       console.error(`   Message: ${error.message}`);
       if (error.code) {
@@ -450,18 +450,18 @@ function sql(strings, ...values) {
           console.error(`   Requête: ${queryPreview}`);
         }
       }
-      
+
       throw error;
     }
   };
-  
+
   // Créer la Promise mais ne pas l'exécuter immédiatement
   let promiseResolve, promiseReject;
   const promise = new Promise((resolve, reject) => {
     promiseResolve = resolve;
     promiseReject = reject;
   });
-  
+
   // Ajouter les propriétés text et params directement sur la Promise
   // Utiliser Object.defineProperty pour s'assurer qu'elles sont accessibles
   Object.defineProperty(promise, 'text', {
@@ -470,28 +470,28 @@ function sql(strings, ...values) {
     enumerable: true,
     configurable: false
   });
-  
+
   Object.defineProperty(promise, 'params', {
     value: queryParams,
     writable: false,
     enumerable: true,
     configurable: false
   });
-  
+
   // Surcharger then pour exécuter la requête
-  promise.then = function(resolve, reject) {
+  promise.then = function (resolve, reject) {
     return executeQuery().then(resolve, reject);
   };
-  
-  promise.catch = function(reject) {
+
+  promise.catch = function (reject) {
     return executeQuery().catch(reject);
   };
-  
+
   return promise;
 }
 
 // Ajouter une méthode sql(identifier) pour créer des identifiants
-sql.identifier = function(value) {
+sql.identifier = function (value) {
   return new SqlIdentifier(value);
 };
 
