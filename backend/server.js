@@ -6,74 +6,14 @@
 const express = require('express');
 const handler = require('./api/index.js');
 const logger = require('./lib/logger.js');
+const { corsMiddleware } = require('./lib/cors.js');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Configuration CORS - Middleware personnalisé pour un contrôle total
+// Configuration CORS - Utilisation du middleware centralisé
 // DOIT être défini AVANT tous les autres middlewares
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  // Construire la liste des origines autorisées
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'https://teach-digital.vercel.app',
-    'https://teachdigital.vercel.app'
-  ];
-  
-  // Ajouter FRONTEND_URL si défini
-  if (process.env.FRONTEND_URL) {
-    allowedOrigins.push(process.env.FRONTEND_URL);
-  }
-  
-  // Ajouter ALLOWED_ORIGIN si défini (peut contenir plusieurs URLs séparées par des virgules)
-  if (process.env.ALLOWED_ORIGIN) {
-    const additionalOrigins = process.env.ALLOWED_ORIGIN.split(',')
-      .map(url => url.trim())
-      .filter(Boolean);
-    allowedOrigins.push(...additionalOrigins);
-  }
-  
-  // Autoriser localhost en développement
-  const isLocalhost = origin && origin.startsWith('http://localhost');
-  const isAllowedOrigin = origin && (allowedOrigins.includes(origin) || isLocalhost);
-  
-  // Définir l'origine CORS : utiliser l'origine si elle est autorisée, sinon '*'
-  // Note: '*' ne peut pas être utilisé avec credentials: true
-  const corsOrigin = (origin && isAllowedOrigin) ? origin : (process.env.NODE_ENV === 'development' ? '*' : null);
-  
-  // Log pour le débogage
-  if (req.method === 'OPTIONS') {
-    logger.debug(`Requête OPTIONS (preflight) - Origin: ${origin}, Allowed: ${isAllowedOrigin}, CORS Origin: ${corsOrigin}`);
-    logger.debug(`Origines autorisées: ${allowedOrigins.join(', ')}`);
-  }
-  
-  // Définir les en-têtes CORS sur toutes les réponses
-  if (corsOrigin) {
-    res.setHeader('Access-Control-Allow-Origin', corsOrigin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
-    res.setHeader('Access-Control-Max-Age', '86400');
-    res.setHeader('Access-Control-Allow-Credentials', corsOrigin !== '*' ? 'true' : 'false');
-    res.setHeader('Vary', 'Origin');
-  } else if (origin) {
-    // Si l'origine est définie mais non autorisée, logger un avertissement
-    // Ne pas logger si origin est undefined (requêtes directes, curl, etc.)
-    logger.warn(`Origine non autorisée: ${origin}`);
-  }
-  // Si origin est undefined, c'est probablement une requête directe (pas depuis un navigateur)
-  // On ne définit pas les en-têtes CORS mais on ne bloque pas non plus la requête
-  
-  // Gérer les requêtes OPTIONS (preflight) - DOIT retourner immédiatement
-  if (req.method === 'OPTIONS') {
-    logger.debug(`En-têtes CORS définis pour OPTIONS: Access-Control-Allow-Origin=${corsOrigin || 'none'}`);
-    return res.status(corsOrigin ? 200 : 403).end();
-  }
-  
-  next();
-});
+app.use(corsMiddleware);
 
 // Middleware pour parser FormData avec busboy AVANT les autres middlewares
 app.use(async (req, res, next) => {
@@ -95,7 +35,7 @@ app.use(async (req, res, next) => {
           filename = 'unknown';
           mimetype = 'application/octet-stream';
         }
-        
+
         const chunks = [];
         file.on('data', (chunk) => {
           chunks.push(chunk);
@@ -161,11 +101,11 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Middleware pour convertir les requêtes Express en format compatible avec le handler Vercel
 app.use('*', async (req, res) => {
   // Les requêtes OPTIONS sont déjà gérées par le middleware CORS précédent
-  
+
   // Créer un objet de requête compatible avec le handler Vercel
   const contentType = req.headers['content-type'] || '';
   const isFormData = contentType.includes('multipart/form-data');
-  
+
   const vercelReq = {
     method: req.method,
     url: req.originalUrl || req.url,
@@ -178,7 +118,7 @@ app.use('*', async (req, res) => {
       parsedFormData: req.parsedFormData
     })
   };
-  
+
   // Créer un objet de réponse compatible avec Express
   // Le handler utilise directement res.status(), res.json(), etc.
   // donc on peut passer directement res
@@ -223,4 +163,3 @@ process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception', error);
   process.exit(1);
 });
-

@@ -25,14 +25,19 @@ class InstallService {
     // Événement avant l'installation
     window.addEventListener('beforeinstallprompt', (e) => {
       console.log('📱 Prompt d\'installation disponible')
+      // Intercepter l'événement pour contrôler quand afficher le prompt
+      // L'avertissement du navigateur est normal : on appelle prompt() plus tard
       e.preventDefault()
       this.deferredPrompt = e
       this.isInstallable = true
       this.installPromptShown = false
       this.installPromptDismissed = false
       
-      // Déclencher un événement personnalisé
+      // Déclencher un événement personnalisé pour que les composants puissent afficher le prompt
       this.dispatchInstallEvent('installable')
+      
+      // Note: L'avertissement "Banner not shown" est normal ici.
+      // On contrôle manuellement quand afficher le prompt via showInstallPrompt()
     })
 
     // Événement après l'installation
@@ -113,14 +118,18 @@ class InstallService {
 
   /**
    * Affiche le prompt d'installation
+   * Cette méthode doit être appelée en réponse à une action utilisateur
+   * (clique sur un bouton) pour éviter l'avertissement du navigateur
    */
   async showInstallPrompt() {
     if (!this.deferredPrompt) {
+      console.warn('⚠️ Prompt d\'installation non disponible. L\'app peut déjà être installée ou le navigateur ne supporte pas l\'installation.')
       throw new Error('Prompt d\'installation non disponible')
     }
 
     try {
-      // Afficher le prompt natif
+      console.log('📱 Affichage du prompt d\'installation natif...')
+      // Afficher le prompt natif (cela résout l'avertissement du navigateur)
       this.deferredPrompt.prompt()
       
       // Attendre la réponse de l'utilisateur
@@ -138,7 +147,7 @@ class InstallService {
         this.dispatchInstallEvent('prompt-dismissed')
       }
       
-      // Nettoyer le prompt
+      // Nettoyer le prompt (important pour éviter les fuites mémoire)
       this.deferredPrompt = null
       this.isInstallable = false
       
@@ -147,7 +156,10 @@ class InstallService {
       
       return outcome
     } catch (error) {
-      console.error('Erreur lors de l\'affichage du prompt d\'installation:', error)
+      console.error('❌ Erreur lors de l\'affichage du prompt d\'installation:', error)
+      // Nettoyer le prompt même en cas d'erreur
+      this.deferredPrompt = null
+      this.isInstallable = false
       throw error
     }
   }

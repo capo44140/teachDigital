@@ -72,7 +72,7 @@
 </template>
 
 <script>
-import { ProfileService } from '../services/profileService.js'
+import { ProfileService } from '../services/profile/index.js'
 
 export default {
   name: 'ImageUpload',
