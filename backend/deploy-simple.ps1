@@ -18,7 +18,8 @@ $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 $scriptDir = Split-Path -Leaf $scriptPath
 if ($scriptDir -eq "backend") {
     Set-Location $scriptPath
-} else {
+}
+else {
     Set-Location (Join-Path $scriptPath "backend")
 }
 
@@ -28,7 +29,8 @@ if (-not $DeployPath) {
     if (Test-Path $configFile) {
         $config = Get-Content $configFile | ConvertFrom-Json
         $DeployPath = $config.deployPath.Trim()
-    } else {
+    }
+    else {
         $DeployPath = (Read-Host "Chemin de deploiement (ex: /volume1/docker/teachdigital/backend)").Trim()
     }
 }
@@ -77,16 +79,16 @@ ssh $sshAlias "mkdir -p $DeployPath" 2>&1 | Out-Null
 # Lister les fichiers qui seront transferes (pour debug)
 Write-Info "   Verification des fichiers a transferer..."
 $fileCount = (Get-ChildItem -Path . -Recurse -File | Where-Object { 
-    $_.FullName -notmatch '\\node_modules\\' -and 
-    $_.FullName -notmatch '\\.git\\' -and 
-    $_.Name -notmatch '\.log$' -and 
-    $_.Name -ne '.env' -and 
-    $_.Name -ne '.synology-deploy.json' -and
-    $_.FullName -notmatch '\\dist\\' -and
-    $_.FullName -notmatch '\\.vscode\\' -and
-    $_.FullName -notmatch '\\.idea\\' -and
-    $_.FullName -notmatch '\\.cursor\\'
-}).Count
+        $_.FullName -notmatch '\\node_modules\\' -and 
+        $_.FullName -notmatch '\\.git\\' -and 
+        $_.Name -notmatch '\.log$' -and 
+        $_.Name -ne '.env' -and 
+        $_.Name -ne '.synology-deploy.json' -and
+        $_.FullName -notmatch '\\dist\\' -and
+        $_.FullName -notmatch '\\.vscode\\' -and
+        $_.FullName -notmatch '\\.idea\\' -and
+        $_.FullName -notmatch '\\.cursor\\'
+    }).Count
 Write-Info "   Nombre de fichiers a transferer: $fileCount"
 
 # Transferer via tar en streaming
@@ -114,7 +116,8 @@ if (Test-Path $bashPath) {
             }
         }
     }
-} else {
+}
+else {
     # Essayer directement (peut ne pas fonctionner avec les pipes PowerShell)
     Write-Warning "   Git Bash non trouve, tentative directe..."
     Write-Info "   Note: Les pipes peuvent ne pas fonctionner correctement dans PowerShell"
@@ -149,11 +152,13 @@ if ($tarExitCode -eq 0) {
             if ($LASTEXITCODE -eq 0) {
                 $remoteFiles | ForEach-Object { Write-Info "     $_" }
             }
-        } else {
+        }
+        else {
             Write-Success "   [OK] $remoteFileCount fichiers transferes"
         }
     }
-} else {
+}
+else {
     Write-Error "[ERREUR] Echec du transfert avec tar (code: $tarExitCode)"
     if ($tarOutput) {
         Write-Info "   Details de l'erreur:"
@@ -176,7 +181,8 @@ if ($tarExitCode -eq 0) {
     
     if ($scpExitCode -eq 0) {
         Write-Success "[OK] Fichiers transferes via scp"
-    } else {
+    }
+    else {
         Write-Error "[ERREUR] Echec du transfert avec scp aussi (code: $scpExitCode)"
         Write-Info "   Verifiez votre connexion SSH et les permissions"
         Write-Info "   Astuce: Installez Git for Windows pour une meilleure compatibilite avec tar"
@@ -202,7 +208,8 @@ foreach ($dockerPath in $dockerPaths) {
         $dockerFound = $true
         if ($dockerPath -eq "docker") {
             Write-Success "   [OK] Docker/Container Manager disponible"
-        } else {
+        }
+        else {
             Write-Success "   [OK] Container Manager disponible ($dockerPath)"
         }
         break
@@ -227,7 +234,8 @@ if ($LASTEXITCODE -eq 0) {
     $dockerComposeCmd = "$dockerCmd compose"
     $composeFound = $true
     Write-Success "   [OK] docker compose disponible"
-} else {
+}
+else {
     # Ancienne syntaxe: docker-compose
     # Essayer plusieurs chemins possibles
     $composePaths = @("docker-compose", "/usr/local/bin/docker-compose", "/var/packages/ContainerManager/target/usr/bin/docker-compose")
@@ -259,7 +267,8 @@ if ($LASTEXITCODE -ne 0) {
     Write-Warning "   [!] docker-compose.yml non trouve dans $dockerPath"
     Write-Info "   Le script va continuer mais Docker ne sera pas gere"
     Write-Info "   Assurez-vous que docker-compose.yml existe dans $dockerPath"
-} else {
+}
+else {
     Write-Success "   [OK] docker-compose.yml trouve dans $dockerPath"
     
     # Script de deploiement Docker
@@ -305,9 +314,10 @@ fi
     $remoteScript = "/tmp/deploy-docker-$([System.Guid]::NewGuid().ToString('N').Substring(0,8)).sh"
     
     # Copier le script sur le serveur
-    scp $tempScriptSh "${sshAlias}:${remoteScript}" 2>&1 | Out-Null
+    # Utilisation de ssh + tr pour éviter les problèmes scp et les line-endings Windows
+    $dockerScriptUnix | ssh $sshAlias "tr -d '\r' > $remoteScript" 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "[ERREUR] Impossible de transferer le script Docker"
+        Write-Error "[ERREUR] Impossible de transferer le script Docker via SSH"
         Remove-Item $tempScript, $tempScriptSh -ErrorAction SilentlyContinue
         exit 1
     }
@@ -326,14 +336,17 @@ fi
             $result | ForEach-Object {
                 if ($_ -match "(\[OK\]|\[START\]|demarres|repond)") {
                     Write-Success "   $_"
-                } elseif ($_ -match "(\[ERREUR\]|\[WARNING\])") {
+                }
+                elseif ($_ -match "(\[ERREUR\]|\[WARNING\])") {
                     Write-Warning "   $_"
-                } elseif ($_ -match "\[") {
+                }
+                elseif ($_ -match "\[") {
                     Write-Info "   $_"
                 }
             }
         }
-    } else {
+    }
+    else {
         Write-Error "[ERREUR] Echec de la gestion Docker"
         Write-Info "   Verifiez les logs: ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd logs`""
         if ($result) {
