@@ -334,7 +334,7 @@ fi
         # Afficher les logs de deploiement
         if ($result) {
             $result | ForEach-Object {
-                if ($_ -match "(\[OK\]|\[START\]|demarres|repond)") {
+                if ($_ -match "(\[OK\]|\[START\]|\[BUILD\]|demarres|repond)") {
                     Write-Success "   $_"
                 }
                 elseif ($_ -match "(\[ERREUR\]|\[WARNING\])") {
@@ -343,6 +343,21 @@ fi
                 elseif ($_ -match "\[") {
                     Write-Info "   $_"
                 }
+            }
+        }
+        
+        # Deployer le script helper pour faciliter les commandes Docker
+        Write-Info ""
+        Write-Info "   Deploiement du script helper Docker..."
+        $helperScript = Join-Path $PSScriptRoot "docker-helper.sh"
+        if (Test-Path $helperScript) {
+            # Copier le script helper et le rendre executable
+            Get-Content $helperScript -Raw | ssh $sshAlias "cat > $dockerPath/docker-helper.sh && chmod +x $dockerPath/docker-helper.sh" 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Success "   [OK] Script helper deploye"
+            }
+            else {
+                Write-Warning "   [!] Impossible de deployer le script helper"
             }
         }
     }
@@ -362,10 +377,14 @@ Write-Success "=========================================="
 Write-Success "Deploiement termine avec succes!"
 Write-Success "=========================================="
 Write-Info ""
-Write-Info "Commandes utiles:"
-Write-Info "  Logs Docker: ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd logs -f backend`""
-Write-Info "  Status:      ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd ps`""
-Write-Info "  Restart:     ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd restart backend`""
-Write-Info "  Stop:        ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd stop backend`""
-Write-Info "  Shell:       ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd exec backend sh`""
+Write-Info "Commandes utiles (via script helper):"
+Write-Info "  Logs:    ssh $sshAlias `"$dockerPath/docker-helper.sh logs`""
+Write-Info "  Status:  ssh $sshAlias `"$dockerPath/docker-helper.sh status`""
+Write-Info "  Restart: ssh $sshAlias `"$dockerPath/docker-helper.sh restart`""
+Write-Info "  Stop:    ssh $sshAlias `"$dockerPath/docker-helper.sh stop`""
+Write-Info "  Shell:   ssh $sshAlias `"$dockerPath/docker-helper.sh shell`""
+Write-Info ""
+Write-Info "Commandes Docker directes (si helper ne fonctionne pas):"
+Write-Info "  Logs:    ssh $sshAlias `"cd $dockerPath && sudo $dockerComposeCmd logs -f backend`""
+Write-Info "  Status:  ssh $sshAlias `"cd $dockerPath && sudo $dockerComposeCmd ps`""
 
