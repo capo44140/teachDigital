@@ -123,6 +123,10 @@ app.use('*', async (req, res) => {
   // Le handler utilise directement res.status(), res.json(), etc.
   // donc on peut passer directement res
   try {
+    if (vercelReq.url.startsWith('/api/badges')) {
+      console.log('🔍 [Server] Request to badges:', vercelReq.method, vercelReq.url);
+      console.log('🔍 [Server] Headers Auth:', vercelReq.headers.authorization ? 'Present' : 'Missing');
+    }
     await handler(vercelReq, res);
   } catch (error) {
     logger.error('Erreur dans le handler', error);

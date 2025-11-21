@@ -1,6 +1,6 @@
 const { sql } = require('../lib/database.js');
 const { authenticateToken } = require('../lib/auth.js');
-const { setCorsHeaders, handleCors } = require('../lib/cors.js');
+const { runCors } = require('../lib/cors.js');
 const { createResponse, createErrorResponse } = require('../lib/response.js');
 const Tesseract = require('tesseract.js');
 
@@ -24,7 +24,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = API_TIMEOUT_MS) {
   console.log(`🌐 fetchWithTimeout: ${url.substring(0, 50)}... (timeout: ${timeoutMs}ms)`);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  
+
   try {
     const response = await fetch(url, {
       ...options,
@@ -58,7 +58,7 @@ async function handleOpenAIResponse(response, operation = 'OpenAI') {
       console.warn(`⚠️ ${operation} Rate Limit (429): ${message}${retryAfter ? ` - Retry after ${retryAfter}s` : ''}`);
       throw new Error(`OpenAI Rate Limit: ${message}. Basculement vers alternative...`);
     }
-    
+
     // Autres erreurs HTTP
     const errorText = await response.text().catch(() => '');
     console.error(`❌ Erreur ${operation} ${response.status}:`, errorText.substring(0, 200));
@@ -73,11 +73,11 @@ async function handleOpenAIResponse(response, operation = 'OpenAI') {
 module.exports = async function handler(req, res) {
   console.log(`🚀 handler: ${req.method} ${req.url}`);
   // Gestion CORS
-  if (req.method === 'OPTIONS') {
-    return handleCors(req, res);
-  }
+  await runCors(req, res);
 
-  setCorsHeaders(res);
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
   let url;
   try {
@@ -98,19 +98,19 @@ module.exports = async function handler(req, res) {
     if (pathname === '/api/ai/generate-quiz-from-image' && method === 'POST') {
       return await handleGenerateQuizFromImage(req, res);
     }
-    
+
     if (pathname === '/api/ai/generate-quiz-from-documents' && method === 'POST') {
       return await handleGenerateQuizFromDocuments(req, res);
     }
-    
+
     if (pathname === '/api/ai/generate-quiz-from-text' && method === 'POST') {
       return await handleGenerateQuizFromText(req, res);
     }
-    
+
     if (pathname === '/api/ai/validate-key' && method === 'GET') {
       return await handleValidateKey(req, res);
     }
-    
+
     if (pathname === '/api/ai/has-valid-key' && method === 'GET') {
       return await handleHasValidKey(req, res);
     }
@@ -137,19 +137,19 @@ async function handleGenerateQuizFromImage(req, res) {
   console.log('📸 handleGenerateQuizFromImage: Début');
   try {
     let imageBase64, childProfile;
-    
+
     // Gérer JSON avec base64 (le frontend convertit maintenant en base64)
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    
+
     // Extraire base64 de l'image (peut être data:image/jpeg;base64,... ou juste base64)
     if (body.image) {
-      imageBase64 = body.image.includes('base64,') 
-        ? body.image.split('base64,')[1] 
+      imageBase64 = body.image.includes('base64,')
+        ? body.image.split('base64,')[1]
         : body.image;
     }
-    
-    childProfile = typeof body.childProfile === 'string' 
-      ? JSON.parse(body.childProfile) 
+
+    childProfile = typeof body.childProfile === 'string'
+      ? JSON.parse(body.childProfile)
       : body.childProfile;
 
     if (!imageBase64 || !childProfile) {
@@ -185,7 +185,7 @@ async function parseFormData(req) {
       return req.body;
     }
   }
-  
+
   // Vérifier si parsedFormData est disponible (parsed par Express middleware)
   if (req.parsedFormData && req.parsedFormData.fields && req.parsedFormData.files) {
     return req.parsedFormData;
@@ -226,7 +226,7 @@ async function parseFormData(req) {
         filename = 'unknown';
         mimetype = 'application/octet-stream';
       }
-      
+
       const chunks = [];
       file.on('data', (chunk) => {
         chunks.push(chunk);
@@ -312,41 +312,41 @@ async function handleGenerateQuizFromDocuments(req, res) {
   try {
     console.log('🔍 Début de handleGenerateQuizFromDocuments');
     console.log('📋 Content-Type:', req.headers['content-type']);
-    
+
     const contentType = req.headers['content-type'] || '';
     const isFormData = contentType.includes('multipart/form-data');
-    
+
     let documents = [];
     let childProfile;
     let questionCount = 5;
-    
+
     if (isFormData) {
       // Parser FormData
       console.log('📦 Parsing FormData...');
       const parsed = await parseFormData(req);
-      
+
       console.log('📊 Données parsées par parseFormData:', {
         hasFields: !!parsed.fields,
         hasFiles: !!parsed.files,
         fieldsKeys: parsed.fields ? Object.keys(parsed.fields) : [],
         filesCount: parsed.files ? parsed.files.length : 0
       });
-      
+
       // Extraire les fichiers et métadonnées
       if (parsed.files && parsed.fields) {
         // Format avec busboy
         const fileCount = parseInt(parsed.fields.fileCount || '0');
         console.log(`📁 Nombre de fichiers attendus: ${fileCount}`);
         console.log(`📁 Fichiers disponibles:`, parsed.files.map(f => ({ fieldname: f.fieldname, filename: f.filename })));
-        
+
         for (let i = 0; i < fileCount; i++) {
           const file = parsed.files.find(f => f.fieldname === `file_${i}`);
           if (file) {
             const fileName = parsed.fields[`file_${i}_name`] || file.filename;
             const fileType = parsed.fields[`file_${i}_type`] || file.mimetype;
-            
+
             console.log(`✅ Fichier ${i} trouvé:`, { fileName, fileType, size: file.buffer?.length || 0 });
-            
+
             documents.push({
               name: fileName,
               type: fileType,
@@ -357,7 +357,7 @@ async function handleGenerateQuizFromDocuments(req, res) {
             console.warn(`⚠️ Fichier ${i} non trouvé dans parsed.files`);
           }
         }
-        
+
         childProfile = JSON.parse(parsed.fields.childProfile || '{}');
         questionCount = parseInt(parsed.fields.questionCount || '5');
       } else if (parsed.file_0) {
@@ -367,7 +367,7 @@ async function handleGenerateQuizFromDocuments(req, res) {
           const file = parsed[`file_${i}`];
           const fileName = parsed[`file_${i}_name`] || 'unknown';
           const fileType = parsed[`file_${i}_type`] || 'application/octet-stream';
-          
+
           // Convertir le fichier en base64 si c'est un buffer
           let base64Data;
           if (Buffer.isBuffer(file)) {
@@ -378,16 +378,16 @@ async function handleGenerateQuizFromDocuments(req, res) {
             console.warn(`⚠️ Format de fichier non reconnu pour file_${i}`);
             continue;
           }
-          
+
           documents.push({
             name: fileName,
             type: fileType,
             base64: base64Data
           });
         }
-        
-        childProfile = typeof parsed.childProfile === 'string' 
-          ? JSON.parse(parsed.childProfile) 
+
+        childProfile = typeof parsed.childProfile === 'string'
+          ? JSON.parse(parsed.childProfile)
           : parsed.childProfile;
         questionCount = parseInt(parsed.questionCount || '5');
       }
@@ -436,7 +436,7 @@ async function handleGenerateQuizFromDocuments(req, res) {
     for (let i = 0; i < documents.length; i++) {
       const doc = documents[i];
       console.log(`📄 Traitement du document ${i + 1}/${documents.length}: ${doc.name || 'sans nom'} (type: ${doc.type})`);
-      
+
       try {
         if (doc.type?.startsWith('image/') || doc.type === 'image') {
           const imageData = doc.base64 || doc.data;
@@ -484,14 +484,14 @@ async function handleGenerateQuizFromDocuments(req, res) {
       stack: error.stack?.substring(0, 500),
       name: error.name
     });
-    
+
     // Si tous les services IA ont échoué, retourner un message d'erreur clair
     if (error.message.includes('Tous les services IA ont échoué')) {
       return res.status(503).json(createErrorResponse(
         'Impossible de générer le quiz. Tous les services d\'intelligence artificielle (OpenAI, Gemini, DeepSeek, Groq, Mistral) ont échoué. Veuillez réessayer plus tard ou vérifier la configuration des clés API.'
       ));
     }
-    
+
     return res.status(500).json(createErrorResponse('Erreur lors de la génération du quiz: ' + error.message));
   }
 }
@@ -514,14 +514,14 @@ async function handleGenerateQuizFromText(req, res) {
     return res.status(200).json(createResponse('Quiz généré avec succès', { quiz }));
   } catch (error) {
     console.error('Erreur lors de la génération du quiz depuis texte:', error);
-    
+
     // Si tous les services IA ont échoué, retourner un message d'erreur clair
     if (error.message.includes('Tous les services IA ont échoué')) {
       return res.status(503).json(createErrorResponse(
         'Impossible de générer le quiz. Tous les services d\'intelligence artificielle (OpenAI, Gemini, DeepSeek, Groq, Mistral) ont échoué. Veuillez réessayer plus tard ou vérifier la configuration des clés API.'
       ));
     }
-    
+
     return res.status(500).json(createErrorResponse('Erreur lors de la génération du quiz: ' + error.message));
   }
 }
@@ -569,10 +569,10 @@ async function handleHasValidKey(req, res) {
 async function extractTextFromImage(base64Image) {
   try {
     console.log('🔍 Début de l\'extraction OCR...');
-    
+
     // Convertir base64 en buffer
     const imageBuffer = Buffer.from(base64Image, 'base64');
-    
+
     // Utiliser Tesseract pour extraire le texte
     // Configuration pour le français et l'anglais
     const { data: { text } } = await Tesseract.recognize(imageBuffer, 'fra+eng', {
@@ -582,16 +582,16 @@ async function extractTextFromImage(base64Image) {
         }
       }
     });
-    
+
     const extractedText = text.trim();
     console.log(`✅ Texte extrait (${extractedText.length} caractères)`);
     console.log('📄 Texte extrait:', extractedText);
-    
+
     if (!extractedText || extractedText.length === 0) {
       console.warn('⚠️ Aucun texte extrait de l\'image');
       return 'Aucun texte détecté dans l\'image.';
     }
-    
+
     return extractedText;
   } catch (error) {
     console.error('❌ Erreur lors de l\'extraction OCR:', error);
@@ -608,7 +608,7 @@ async function analyzeImage(base64Image) {
   try {
     // Extraire le texte de l'image avec OCR
     const extractedText = await extractTextFromImage(base64Image);
-    
+
     // Analyser le texte extrait avec les LLM
     // Essayer d'abord le LLM local
     if (isLocalLLMAvailable()) {
@@ -694,7 +694,7 @@ async function analyzeTextWithLocalLLM(extractedText) {
   console.log('🏠 analyzeTextWithLocalLLM: Début (texte: ' + extractedText.substring(0, 50) + '...)');
   const localLLMUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
   const localLLMModel = process.env.LOCAL_LLM_MODEL || 'qwen/qwen3-vl-4b'; // Modèle par défaut
-  
+
   const response = await fetchWithTimeout(`${localLLMUrl}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -722,21 +722,21 @@ ${extractedText}`
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -753,7 +753,7 @@ ${extractedText}`
 async function analyzeTextWithOpenAI(extractedText) {
   console.log('🤖 analyzeTextWithOpenAI: Début (texte: ' + extractedText.substring(0, 50) + '...)');
   const openaiApiKey = process.env.OPENAI_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -779,7 +779,7 @@ ${extractedText}`
 
   const data = await response.json();
   const content = data.choices[0].message.content;
-  
+
   // Parser le JSON de la réponse
   try {
     return JSON.parse(content);
@@ -802,7 +802,7 @@ async function analyzeTextWithGemini(extractedText, retryCount = 0) {
   console.log(`🤖 analyzeTextWithGemini: Début (retry: ${retryCount}, texte: ${extractedText.substring(0, 50)}...)`);
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const maxRetries = 1; // Réduit de 2 à 1 pour éviter timeout
-  
+
   try {
     const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.5-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
@@ -832,34 +832,34 @@ ${extractedText}`
     }
 
     const data = await response.json();
-    
+
     if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
       throw new Error('Réponse Gemini incomplète');
     }
-    
+
     const responseText = data.candidates[0].content.parts[0].text;
-    
+
     // Nettoyer le texte pour extraire le JSON
     let jsonText = responseText.trim();
-    
+
     if (jsonText.startsWith('```json')) {
       jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
     } else if (jsonText.startsWith('```')) {
       jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
-    
+
     const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       jsonText = jsonMatch[0];
     }
-    
+
     try {
       const parsed = JSON.parse(jsonText);
-      
+
       if (!parsed.titre_principal && !parsed.concepts_cles) {
         throw new Error('Structure JSON invalide');
       }
-      
+
       return parsed;
     } catch (parseError) {
       if (retryCount < maxRetries) {
@@ -885,7 +885,7 @@ ${extractedText}`
 async function analyzeTextWithGroq(extractedText) {
   console.log('🤖 analyzeTextWithGroq: Début (texte: ' + extractedText.substring(0, 50) + '...)');
   const groqApiKey = process.env.GROQ_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -914,21 +914,21 @@ ${extractedText}`
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -945,7 +945,7 @@ ${extractedText}`
 async function analyzeTextWithDeepSeek(extractedText) {
   console.log('🤖 analyzeTextWithDeepSeek: Début (texte: ' + extractedText.substring(0, 50) + '...)');
   const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${DEEPSEEK_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -974,21 +974,21 @@ ${extractedText}`
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -1005,7 +1005,7 @@ ${extractedText}`
 async function analyzeTextWithMistral(extractedText) {
   console.log('🤖 analyzeTextWithMistral: Début (texte: ' + extractedText.substring(0, 50) + '...)');
   const mistralApiKey = process.env.MISTRAL_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${MISTRAL_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -1034,21 +1034,21 @@ ${extractedText}`
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -1165,7 +1165,7 @@ async function generateQuizWithLocalLLM(analysis, childProfile) {
   console.log('🏠 generateQuizWithLocalLLM: Début');
   const localLLMUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
   const localLLMModel = process.env.LOCAL_LLM_MODEL || 'qwen/qwen3-vl-4b'; // Modèle par défaut
-  
+
   const response = await fetchWithTimeout(`${localLLMUrl}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -1194,21 +1194,21 @@ async function generateQuizWithLocalLLM(analysis, childProfile) {
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -1223,7 +1223,7 @@ async function generateQuizWithLocalLLM(analysis, childProfile) {
 async function generateQuizWithOpenAI(analysis, childProfile) {
   console.log('🎲 generateQuizWithOpenAI: Début');
   const openaiApiKey = process.env.OPENAI_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -1250,7 +1250,7 @@ async function generateQuizWithOpenAI(analysis, childProfile) {
 
   const data = await response.json();
   const content = data.choices[0].message.content;
-  
+
   try {
     return JSON.parse(content);
   } catch (e) {
@@ -1269,7 +1269,7 @@ async function generateQuizWithGemini(analysis, childProfile, retryCount = 0) {
   console.log(`🎲 generateQuizWithGemini: Début (retry: ${retryCount})`);
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const maxRetries = 1; // Réduit de 2 à 1 pour éviter timeout
-  
+
   try {
     const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
@@ -1304,63 +1304,63 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
     }
 
     const data = await response.json();
-    
+
     if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
       throw new Error('Réponse Gemini incomplète');
     }
-    
+
     const responseText = data.candidates[0].content.parts[0].text;
-    
+
     // Nettoyer le texte pour extraire le JSON
     let jsonText = responseText.trim();
-    
+
     if (jsonText.startsWith('```json')) {
       jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
     } else if (jsonText.startsWith('```')) {
       jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
-    
+
     const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       jsonText = jsonMatch[0];
     }
-    
+
     try {
       const parsed = JSON.parse(jsonText);
-      
+
       if (!parsed.title || !parsed.questions || !Array.isArray(parsed.questions)) {
         throw new Error('Structure JSON invalide pour le quiz');
       }
-      
+
       // Vérifier que toutes les questions sont complètes
-      const validQuestions = parsed.questions.filter(q => 
-        q.question && 
-        q.options && 
-        Array.isArray(q.options) && 
-        q.options.length === 4 && 
+      const validQuestions = parsed.questions.filter(q =>
+        q.question &&
+        q.options &&
+        Array.isArray(q.options) &&
+        q.options.length === 4 &&
         typeof q.correctAnswer === 'number'
       );
-      
+
       if (validQuestions.length === 0) {
         throw new Error('Aucune question valide trouvée');
       }
-      
+
       if (validQuestions.length < 3 && retryCount < maxRetries) {
         await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
         return generateQuizWithGemini(analysis, childProfile, retryCount + 1);
       }
-      
+
       return {
         ...parsed,
         questions: validQuestions
       };
-      
+
     } catch (parseError) {
       if (retryCount < maxRetries) {
         await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
         return generateQuizWithGemini(analysis, childProfile, retryCount + 1);
       }
-      
+
       return getDemoQuiz(childProfile);
     }
   } catch (error) {
@@ -1368,7 +1368,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
       await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
       return generateQuizWithGemini(analysis, childProfile, retryCount + 1);
     }
-    
+
     return getDemoQuiz(childProfile);
   }
 }
@@ -1379,7 +1379,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
 async function generateQuizWithGroq(analysis, childProfile) {
   console.log('🎲 generateQuizWithGroq: Début');
   const groqApiKey = process.env.GROQ_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -1409,21 +1409,21 @@ async function generateQuizWithGroq(analysis, childProfile) {
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -1438,7 +1438,7 @@ async function generateQuizWithGroq(analysis, childProfile) {
 async function generateQuizWithDeepSeek(analysis, childProfile) {
   console.log('🎲 generateQuizWithDeepSeek: Début');
   const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${DEEPSEEK_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -1468,21 +1468,21 @@ async function generateQuizWithDeepSeek(analysis, childProfile) {
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -1497,7 +1497,7 @@ async function generateQuizWithDeepSeek(analysis, childProfile) {
 async function generateQuizWithMistral(analysis, childProfile) {
   console.log('🎲 generateQuizWithMistral: Début');
   const mistralApiKey = process.env.MISTRAL_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${MISTRAL_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -1527,21 +1527,21 @@ async function generateQuizWithMistral(analysis, childProfile) {
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -1658,7 +1658,7 @@ async function generateQuizFromMultipleAnalysesWithLocalLLM(analyses, childProfi
   console.log(`🏠 generateQuizFromMultipleAnalysesWithLocalLLM: Début (${questionCount} questions)`);
   const localLLMUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
   const localLLMModel = process.env.LOCAL_LLM_MODEL || 'llama3.2'; // Modèle par défaut
-  
+
   const response = await fetchWithTimeout(`${localLLMUrl}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -1687,21 +1687,21 @@ async function generateQuizFromMultipleAnalysesWithLocalLLM(analyses, childProfi
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -1716,7 +1716,7 @@ async function generateQuizFromMultipleAnalysesWithLocalLLM(analyses, childProfi
 async function generateQuizFromMultipleAnalysesWithOpenAI(analyses, childProfile, questionCount) {
   console.log(`🎲 generateQuizFromMultipleAnalysesWithOpenAI: Début (${questionCount} questions)`);
   const openaiApiKey = process.env.OPENAI_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -1743,7 +1743,7 @@ async function generateQuizFromMultipleAnalysesWithOpenAI(analyses, childProfile
 
   const data = await response.json();
   const content = data.choices[0].message.content;
-  
+
   try {
     return JSON.parse(content);
   } catch (e) {
@@ -1761,7 +1761,7 @@ async function generateQuizFromMultipleAnalysesWithOpenAI(analyses, childProfile
 async function generateQuizFromMultipleAnalysesWithGemini(analyses, childProfile, questionCount) {
   console.log(`🎲 generateQuizFromMultipleAnalysesWithGemini: Début (${questionCount} questions)`);
   const geminiApiKey = process.env.GEMINI_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
     method: 'POST',
     headers: {
@@ -1797,21 +1797,21 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
 
   const data = await response.json();
   const responseText = data.candidates[0].content.parts[0].text;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -1826,7 +1826,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
 async function generateQuizFromMultipleAnalysesWithDeepSeek(analyses, childProfile, questionCount) {
   console.log(`🎲 generateQuizFromMultipleAnalysesWithDeepSeek: Début (${questionCount} questions)`);
   const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${DEEPSEEK_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -1856,21 +1856,21 @@ async function generateQuizFromMultipleAnalysesWithDeepSeek(analyses, childProfi
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -1882,7 +1882,7 @@ async function generateQuizFromMultipleAnalysesWithDeepSeek(analyses, childProfi
 async function generateQuizFromMultipleAnalysesWithMistral(analyses, childProfile, questionCount) {
   console.log(`🎲 generateQuizFromMultipleAnalysesWithMistral: Début (${questionCount} questions)`);
   const mistralApiKey = process.env.MISTRAL_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${MISTRAL_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -1912,21 +1912,21 @@ async function generateQuizFromMultipleAnalysesWithMistral(analyses, childProfil
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -1938,7 +1938,7 @@ async function generateQuizFromMultipleAnalysesWithMistral(analyses, childProfil
 async function generateQuizFromMultipleAnalysesWithGroq(analyses, childProfile, questionCount) {
   console.log(`🎲 generateQuizFromMultipleAnalysesWithGroq: Début (${questionCount} questions)`);
   const groqApiKey = process.env.GROQ_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -1968,21 +1968,21 @@ async function generateQuizFromMultipleAnalysesWithGroq(analyses, childProfile, 
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -2099,7 +2099,7 @@ async function generateQuizFromTextWithLocalLLM(inputText, childProfile, options
   console.log('🏠 generateQuizFromTextWithLocalLLM: Début');
   const localLLMUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
   const localLLMModel = process.env.LOCAL_LLM_MODEL || 'llama3.2'; // Modèle par défaut
-  
+
   const response = await fetchWithTimeout(`${localLLMUrl}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -2128,21 +2128,21 @@ async function generateQuizFromTextWithLocalLLM(inputText, childProfile, options
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -2157,7 +2157,7 @@ async function generateQuizFromTextWithLocalLLM(inputText, childProfile, options
 async function generateQuizFromTextWithOpenAI(inputText, childProfile, options) {
   console.log('🎲 generateQuizFromTextWithOpenAI: Début');
   const openaiApiKey = process.env.OPENAI_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -2184,7 +2184,7 @@ async function generateQuizFromTextWithOpenAI(inputText, childProfile, options) 
 
   const data = await response.json();
   const content = data.choices[0].message.content;
-  
+
   try {
     return JSON.parse(content);
   } catch (e) {
@@ -2203,7 +2203,7 @@ async function generateQuizFromTextWithGemini(inputText, childProfile, options, 
   console.log(`🎲 generateQuizFromTextWithGemini: Début (retry: ${retryCount})`);
   const geminiApiKey = process.env.GEMINI_API_KEY;
   const maxRetries = 1; // Réduit de 2 à 1 pour éviter timeout
-  
+
   try {
     const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
@@ -2240,42 +2240,42 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
     }
 
     const data = await response.json();
-    
+
     if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
       throw new Error('Réponse Gemini incomplète');
     }
-    
+
     const responseText = data.candidates[0].content.parts[0].text;
-    
+
     // Nettoyer le texte pour extraire le JSON
     let jsonText = responseText.trim();
-    
+
     if (jsonText.startsWith('```json')) {
       jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
     } else if (jsonText.startsWith('```')) {
       jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
-    
+
     const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       jsonText = jsonMatch[0];
     }
-    
+
     try {
       const parsed = JSON.parse(jsonText);
-      
+
       if (!parsed.title || !parsed.questions || !Array.isArray(parsed.questions)) {
         throw new Error('Structure JSON invalide pour le quiz');
       }
-      
+
       return parsed;
-      
+
     } catch (parseError) {
       if (retryCount < maxRetries) {
         await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
         return generateQuizFromTextWithGemini(inputText, childProfile, options, retryCount + 1);
       }
-      
+
       return getDemoQuizFromText(childProfile, options);
     }
   } catch (error) {
@@ -2283,7 +2283,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
       await new Promise(resolve => setTimeout(resolve, 500)); // Délai réduit à 500ms
       return generateQuizFromTextWithGemini(inputText, childProfile, options, retryCount + 1);
     }
-    
+
     return getDemoQuizFromText(childProfile, options);
   }
 }
@@ -2294,7 +2294,7 @@ Format: {"title": "...", "description": "...", "questions": [{"question": "...",
 async function generateQuizFromTextWithDeepSeek(inputText, childProfile, options) {
   console.log('🎲 generateQuizFromTextWithDeepSeek: Début');
   const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${DEEPSEEK_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -2324,21 +2324,21 @@ async function generateQuizFromTextWithDeepSeek(inputText, childProfile, options
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -2353,7 +2353,7 @@ async function generateQuizFromTextWithDeepSeek(inputText, childProfile, options
 async function generateQuizFromTextWithMistral(inputText, childProfile, options) {
   console.log('🎲 generateQuizFromTextWithMistral: Début');
   const mistralApiKey = process.env.MISTRAL_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${MISTRAL_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -2383,21 +2383,21 @@ async function generateQuizFromTextWithMistral(inputText, childProfile, options)
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -2409,7 +2409,7 @@ async function generateQuizFromTextWithMistral(inputText, childProfile, options)
 async function generateQuizFromTextWithGroq(inputText, childProfile, options) {
   console.log('🎲 generateQuizFromTextWithGroq: Début');
   const groqApiKey = process.env.GROQ_API_KEY;
-  
+
   const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -2439,21 +2439,21 @@ async function generateQuizFromTextWithGroq(inputText, childProfile, options) {
 
   const data = await response.json();
   const responseText = data.choices[0].message.content;
-  
+
   // Nettoyer le texte pour extraire le JSON
   let jsonText = responseText.trim();
-  
+
   if (jsonText.startsWith('```json')) {
     jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
   } else if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
   }
-  
+
   const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     jsonText = jsonMatch[0];
   }
-  
+
   try {
     return JSON.parse(jsonText);
   } catch (parseError) {
@@ -2468,48 +2468,48 @@ async function generateQuizFromTextWithGroq(inputText, childProfile, options) {
  * Vérifie si une clé API OpenAI est valide
  */
 function isValidOpenAIKey(apiKey) {
-  return apiKey && 
-         apiKey !== 'sk-your-openai-api-key-here' && 
-         apiKey.startsWith('sk-') && 
-         apiKey.length > 20;
+  return apiKey &&
+    apiKey !== 'sk-your-openai-api-key-here' &&
+    apiKey.startsWith('sk-') &&
+    apiKey.length > 20;
 }
 
 /**
  * Vérifie si une clé API Gemini est valide
  */
 function isValidGeminiKey(apiKey) {
-  return apiKey && 
-         apiKey !== 'your-gemini-api-key-here' && 
-         apiKey.length > 20;
+  return apiKey &&
+    apiKey !== 'your-gemini-api-key-here' &&
+    apiKey.length > 20;
 }
 
 /**
  * Vérifie si une clé API Groq est valide
  */
 function isValidGroqKey(apiKey) {
-  return apiKey && 
-         apiKey !== 'your-groq-api-key-here' && 
-         apiKey.length > 20;
+  return apiKey &&
+    apiKey !== 'your-groq-api-key-here' &&
+    apiKey.length > 20;
 }
 
 /**
  * Vérifie si une clé API DeepSeek est valide
  */
 function isValidDeepSeekKey(apiKey) {
-  return apiKey && 
-         apiKey !== 'your-deepseek-api-key-here' && 
-         apiKey.startsWith('sk-') && 
-         apiKey.length > 20;
+  return apiKey &&
+    apiKey !== 'your-deepseek-api-key-here' &&
+    apiKey.startsWith('sk-') &&
+    apiKey.length > 20;
 }
 
 /**
  * Vérifie si une clé API Mistral est valide
  */
 function isValidMistralKey(apiKey) {
-  return apiKey && 
-         apiKey !== 'your-mistral-api-key-here' && 
-         apiKey.startsWith('mistral-') && 
-         apiKey.length > 20;
+  return apiKey &&
+    apiKey !== 'your-mistral-api-key-here' &&
+    apiKey.startsWith('mistral-') &&
+    apiKey.length > 20;
 }
 
 /**
@@ -2527,7 +2527,7 @@ function isLocalLLMAvailable() {
 async function validateApiKey(apiType) {
   console.log(`🔑 validateApiKey: ${apiType}`);
   let apiKey;
-  
+
   switch (apiType) {
     case 'openai':
       apiKey = process.env.OPENAI_API_KEY;
@@ -2559,7 +2559,7 @@ async function hasAtLeastOneValidKey() {
   const deepseekValid = await validateApiKey('deepseek');
   const groqValid = await validateApiKey('groq');
   const mistralValid = await validateApiKey('mistral');
-  
+
   return openaiValid || geminiValid || deepseekValid || groqValid || mistralValid;
 }
 
@@ -2656,7 +2656,7 @@ function getDemoQuiz(childProfile) {
  */
 function getDemoQuizFromDocuments(childProfile, questionCount) {
   const questions = getDemoQuestionsByDifficulty('moyen', questionCount);
-  
+
   return {
     title: 'Quiz multi-documents',
     description: `Quiz généré à partir de ${questionCount} documents - ${questionCount} questions`,
@@ -2672,9 +2672,9 @@ function getDemoQuizFromDocuments(childProfile, questionCount) {
 function getDemoQuizFromText(childProfile, options) {
   const questionCount = parseInt(options.questionCount) || 5;
   const difficulty = options.difficulty || 'moyen';
-  
+
   const questions = getDemoQuestionsByDifficulty(difficulty, questionCount);
-  
+
   return {
     title: options.title || 'Quiz généré à partir de texte',
     description: `Quiz adapté au niveau ${difficulty} - ${questionCount} questions`,
