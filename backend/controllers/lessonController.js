@@ -104,21 +104,14 @@ async function handleLessons(req, res) {
             const safeIsPublished = isPublished !== undefined ? isPublished : true;
 
             // Requête INSERT avec template literal
+            // Requête INSERT avec template literal
+            console.log(`📝 Création leçon pour profil ${user.profileId}: ${title}`);
             const result = await withQueryTimeout(
-                sql`
-          INSERT INTO lessons (
-            profile_id, title, description, subject, level,
-            image_filename, quiz_data, is_published
-          )
-          VALUES (
-            ${user.profileId}, ${title}, ${safeDescription}, ${safeSubject}, ${safeLevel}, 
-            ${safeImageFilename}, ${safeQuizData}::jsonb, ${safeIsPublished}
-          )
-          RETURNING *
-        `,
+                sql`INSERT INTO lessons (profile_id, title, description, subject, level, image_filename, quiz_data, is_published) VALUES (${user.profileId}, ${title}, ${safeDescription}, ${safeSubject}, ${safeLevel}, ${safeImageFilename}, ${safeQuizData}::jsonb, ${safeIsPublished}) RETURNING *`,
                 TIMEOUTS.STANDARD,
                 'création de la leçon'
             );
+
 
             res.status(201).json({
                 success: true,
@@ -157,20 +150,13 @@ async function handleLesson(req, res) {
         }
 
         if (req.method === 'GET') {
+            console.log(`🔍 Récupération leçon ${lessonIdNum}`);
             const lessons = await withQueryTimeout(
-                sql`
-          SELECT 
-            l.id, l.title, l.description, l.subject, l.level, 
-            l.image_filename, l.quiz_data, l.is_published, 
-            l.created_at, l.updated_at, 
-            p.name as profile_name, p.id as profile_id 
-          FROM lessons l 
-          JOIN profiles p ON l.profile_id = p.id 
-          WHERE l.id = ${lessonIdNum}
-        `,
+                sql`SELECT l.id, l.title, l.description, l.subject, l.level, l.image_filename, l.quiz_data, l.is_published, l.created_at, l.updated_at, p.name as profile_name, p.id as profile_id FROM lessons l JOIN profiles p ON l.profile_id = p.id WHERE l.id = ${lessonIdNum}`,
                 TIMEOUTS.STANDARD,
                 'récupération de la leçon'
             );
+
 
             if (!lessons[0]) {
                 res.status(404).json({ success: false, message: 'Leçon non trouvée' });
@@ -207,24 +193,13 @@ async function handleLesson(req, res) {
                 return;
             }
 
+            console.log(`✏️ Mise à jour leçon ${lessonIdNum}`);
             const result = await withQueryTimeout(
-                sql`
-          UPDATE lessons 
-          SET 
-            title = COALESCE(${title}, title),
-            description = COALESCE(${description}, description),
-            subject = COALESCE(${subject}, subject),
-            level = COALESCE(${level}, level),
-            image_filename = COALESCE(${imageFilename}, image_filename),
-            quiz_data = COALESCE(${quizData ? JSON.stringify(quizData) : null}::jsonb, quiz_data),
-            is_published = COALESCE(${isPublished}, is_published),
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${lessonIdNum}
-          RETURNING *
-        `,
+                sql`UPDATE lessons SET title = COALESCE(${title}, title), description = COALESCE(${description}, description), subject = COALESCE(${subject}, subject), level = COALESCE(${level}, level), image_filename = COALESCE(${imageFilename}, image_filename), quiz_data = COALESCE(${quizData ? JSON.stringify(quizData) : null}::jsonb, quiz_data), is_published = COALESCE(${isPublished}, is_published), updated_at = CURRENT_TIMESTAMP WHERE id = ${lessonIdNum} RETURNING *`,
                 TIMEOUTS.STANDARD,
                 'mise à jour de la leçon'
             );
+
 
             res.status(200).json({
                 success: true,
@@ -251,6 +226,7 @@ async function handleLesson(req, res) {
                 return;
             }
 
+            console.log(`🗑️ Suppression leçon ${lessonIdNum}`);
             const result = await withQueryTimeout(
                 sql`DELETE FROM lessons WHERE id = ${lessonIdNum} RETURNING *`,
                 TIMEOUTS.STANDARD,
