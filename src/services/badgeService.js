@@ -10,21 +10,22 @@ export class BadgeService {
    * Obtenir le token d'authentification (délégation à apiService)
    * @returns {string|null} Le token JWT ou null si absent
    */
-  getToken() {
-    return apiService.getToken();
+  getToken () {
+    return apiService.getToken()
   }
 
   /**
    * Vérifier si un token est présent
    * @returns {boolean} True si un token est présent
    */
-  hasToken() {
-    return apiService.hasToken();
+  hasToken () {
+    return apiService.hasToken()
   }
+
   /**
    * Récupérer tous les badges actifs
    */
-  async getAllBadges() {
+  async getAllBadges () {
     try {
       const response = await apiService.request('/api/badges')
       return response.data || []
@@ -37,7 +38,7 @@ export class BadgeService {
   /**
    * Récupérer un badge par ID
    */
-  async getBadgeById(badgeId) {
+  async getBadgeById (badgeId) {
     try {
       const response = await apiService.request(`/api/badges/${badgeId}`)
       return response.data
@@ -50,7 +51,7 @@ export class BadgeService {
   /**
    * Créer un nouveau badge personnalisé
    */
-  async createCustomBadge(badgeData) {
+  async createCustomBadge (badgeData) {
     try {
       const response = await apiService.request('/api/badges', {
         method: 'POST',
@@ -66,7 +67,7 @@ export class BadgeService {
   /**
    * Mettre à jour un badge
    */
-  async updateBadge(badgeId, badgeData) {
+  async updateBadge (badgeId, badgeData) {
     try {
       const response = await apiService.request(`/api/badges/${badgeId}`, {
         method: 'PUT',
@@ -82,7 +83,7 @@ export class BadgeService {
   /**
    * Supprimer un badge
    */
-  async deleteBadge(badgeId) {
+  async deleteBadge (badgeId) {
     try {
       const response = await apiService.request(`/api/badges/${badgeId}`, {
         method: 'DELETE'
@@ -97,7 +98,7 @@ export class BadgeService {
   /**
    * Récupérer tous les badges d'un profil avec leur progression
    */
-  async getProfileBadges(profileId) {
+  async getProfileBadges (profileId) {
     try {
       const response = await apiService.request(`/api/badges/profile/${profileId}`)
       return response.data || []
@@ -110,7 +111,7 @@ export class BadgeService {
   /**
    * Récupérer les badges débloqués d'un profil
    */
-  async getUnlockedBadges(profileId) {
+  async getUnlockedBadges (profileId) {
     try {
       const response = await apiService.request(`/api/badges/profile/${profileId}/unlocked`)
       return response.data || []
@@ -123,7 +124,7 @@ export class BadgeService {
   /**
    * Récupérer les statistiques de badges d'un profil
    */
-  async getBadgeStats(profileId) {
+  async getBadgeStats (profileId) {
     try {
       const response = await apiService.request(`/api/badges/profile/${profileId}/stats`)
       return response.data || {}
@@ -136,9 +137,9 @@ export class BadgeService {
   /**
    * Vérifier et débloquer automatiquement les badges après une action
    */
-  async checkAndUnlockBadges(profileId, actionType, actionData = {}) {
+  async checkAndUnlockBadges (profileId, actionType, actionData = {}) {
     try {
-      const response = await apiService.request(`/api/badges/check-unlock`, {
+      const response = await apiService.request('/api/badges/check-unlock', {
         method: 'POST',
         body: JSON.stringify({ profileId, actionType, actionData })
       })
@@ -152,7 +153,7 @@ export class BadgeService {
   /**
    * Récupérer les badges récemment débloqués
    */
-  async getRecentlyUnlockedBadges(profileId, limit = 5) {
+  async getRecentlyUnlockedBadges (profileId, limit = 5) {
     try {
       const response = await apiService.request(`/api/badges/profile/${profileId}/recent?limit=${limit}`)
       return response.data || []
@@ -165,7 +166,7 @@ export class BadgeService {
   /**
    * Récupérer les badges par catégorie
    */
-  async getBadgesByCategory(category) {
+  async getBadgesByCategory (category) {
     try {
       const response = await apiService.request(`/api/badges/category/${category}`)
       return response.data || []

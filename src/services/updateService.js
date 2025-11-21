@@ -17,28 +17,28 @@ const updateState = reactive({
 export const updateService = {
   // État réactif
   state: updateState,
-  
+
   // Afficher la notification de mise à jour
-  showUpdateNotification(currentVersion, newVersion) {
+  showUpdateNotification (currentVersion, newVersion) {
     updateState.currentVersion = currentVersion
     updateState.newVersion = newVersion
     updateState.isUpdateAvailable = true
     updateState.showNotification = true
   },
-  
+
   // Masquer la notification
-  hideUpdateNotification() {
+  hideUpdateNotification () {
     updateState.showNotification = false
   },
-  
+
   // Forcer la mise à jour
-  forceUpdate() {
+  forceUpdate () {
     updateState.showNotification = false
     window.location.reload()
   },
-  
+
   // Annuler la mise à jour
-  cancelUpdate() {
+  cancelUpdate () {
     updateState.showNotification = false
     // Optionnel : programmer un rappel plus tard
     setTimeout(() => {
@@ -47,9 +47,9 @@ export const updateService = {
       }
     }, 30000) // Rappel dans 30 secondes
   },
-  
+
   // Vérifier les mises à jour
-  checkForUpdates() {
+  checkForUpdates () {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistration().then((registration) => {
         if (registration) {
@@ -61,9 +61,9 @@ export const updateService = {
 }
 
 // Hook pour utiliser le service dans les composants
-export function useUpdateService() {
+export function useUpdateService () {
   return {
-    updateState: updateState,
+    updateState,
     showUpdateNotification: updateService.showUpdateNotification,
     hideUpdateNotification: updateService.hideUpdateNotification,
     forceUpdate: updateService.forceUpdate,

@@ -21,8 +21,8 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-3 text-white/80 hover:text-white backdrop-blur-xl bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10 relative group"
+              @click="goBack"
             >
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -94,13 +94,13 @@
       <button 
         v-for="tab in tabs" 
         :key="tab.id"
-        @click="activeTab = tab.id"
-            :class="[
+        :class="[
               'flex-1 min-w-32 px-4 py-3 rounded-xl transition-all duration-300 backdrop-blur-xl border text-center',
               activeTab === tab.id
                 ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-400 shadow-lg shadow-purple-500/50'
                 : 'bg-white/10 text-white/80 border-white/20 hover:bg-white/20 hover:border-white/40'
             ]"
+            @click="activeTab = tab.id"
           >
             <span class="text-lg mr-2">{{ tab.icon }}</span>
             <span class="font-medium">{{ tab.label }}</span>

@@ -21,9 +21,9 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Retour au tableau de bord"
+              @click="goBack"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -101,20 +101,20 @@
             <p class="text-sm text-white/60 mb-6">Tentative d'accès aux pages réservées aux administrateurs</p>
             <div class="space-y-3">
               <button 
-                @click="testAdminAccess('/dashboard')"
                 class="w-full px-4 py-3 bg-gradient-to-r from-red-500/20 to-red-600/20 text-red-300 rounded-xl hover:from-red-500/30 hover:to-red-600/30 transition-all duration-300 backdrop-blur-xl border border-red-400/30 hover:border-red-400/50 font-medium"
+                @click="testAdminAccess('/dashboard')"
               >
                 Dashboard Admin
               </button>
               <button 
-                @click="testAdminAccess('/manage-profiles')"
                 class="w-full px-4 py-3 bg-gradient-to-r from-red-500/20 to-red-600/20 text-red-300 rounded-xl hover:from-red-500/30 hover:to-red-600/30 transition-all duration-300 backdrop-blur-xl border border-red-400/30 hover:border-red-400/50 font-medium"
+                @click="testAdminAccess('/manage-profiles')"
               >
                 Gestion Profils
               </button>
               <button 
-                @click="testAdminAccess('/lesson-scanner')"
                 class="w-full px-4 py-3 bg-gradient-to-r from-red-500/20 to-red-600/20 text-red-300 rounded-xl hover:from-red-500/30 hover:to-red-600/30 transition-all duration-300 backdrop-blur-xl border border-red-400/30 hover:border-red-400/50 font-medium"
+                @click="testAdminAccess('/lesson-scanner')"
               >
                 Scanner Leçons
               </button>
@@ -132,14 +132,14 @@
             <p class="text-sm text-white/60 mb-6">Tentative d'accès aux pages pour enfants/adolescents</p>
             <div class="space-y-3">
               <button 
-                @click="testChildAccess('/user-dashboard')"
                 class="w-full px-4 py-3 bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 rounded-xl hover:from-green-500/30 hover:to-emerald-500/30 transition-all duration-300 backdrop-blur-xl border border-green-400/30 hover:border-green-400/50 font-medium"
+                @click="testChildAccess('/user-dashboard')"
               >
                 Dashboard Utilisateur
               </button>
               <button 
-                @click="testQuizAccess()"
                 class="w-full px-4 py-3 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-300 rounded-xl hover:from-blue-500/30 hover:to-cyan-500/30 transition-all duration-300 backdrop-blur-xl border border-blue-400/30 hover:border-blue-400/50 font-medium"
+                @click="testQuizAccess()"
               >
                 Accès Quiz
               </button>
@@ -180,14 +180,14 @@
           </h3>
           <div class="flex flex-wrap justify-center gap-4">
             <button 
-              @click="runAllTests"
               class="px-8 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/50 transition-all duration-300 font-medium"
+              @click="runAllTests"
             >
               Lancer Tous les Tests
             </button>
             <button 
-              @click="clearResults"
               class="px-8 py-3 bg-gradient-to-r from-gray-500 to-slate-500 text-white rounded-xl hover:shadow-lg hover:shadow-gray-500/50 transition-all duration-300 font-medium"
+              @click="clearResults"
             >
               Effacer Résultats
             </button>

@@ -77,9 +77,9 @@
         <div class="p-6">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
-              @click="loadComponent('LessonScanner')"
               :disabled="loadingComponents.LessonScanner"
               class="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              @click="loadComponent('LessonScanner')"
             >
               <Icon name="mdi:scanner" class="w-8 h-8 mx-auto mb-2 text-blue-600" />
               <h3 class="font-medium text-gray-900">Lesson Scanner</h3>
@@ -90,9 +90,9 @@
             </button>
 
             <button
-              @click="loadComponent('YouTubeVideoManager')"
               :disabled="loadingComponents.YouTubeVideoManager"
               class="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              @click="loadComponent('YouTubeVideoManager')"
             >
               <Icon name="mdi:youtube" class="w-8 h-8 mx-auto mb-2 text-red-600" />
               <h3 class="font-medium text-gray-900">YouTube Manager</h3>
@@ -112,8 +112,8 @@
               Temps de chargement : {{ componentLoadTime }}ms
             </p>
             <button
-              @click="unloadComponent"
               class="mt-2 px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+              @click="unloadComponent"
             >
               Décharger le composant
             </button>
@@ -132,9 +132,9 @@
         <div class="p-6">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <button
-              @click="preloadCriticalData"
               :disabled="isPreloading"
               class="p-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              @click="preloadCriticalData"
             >
               <Icon name="mdi:download" class="w-6 h-6 mx-auto mb-2" />
               <h3 class="font-medium">Précharger Données</h3>
@@ -142,9 +142,9 @@
             </button>
 
             <button
-              @click="runPerformanceTest"
               :disabled="isRunningTest"
               class="p-4 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              @click="runPerformanceTest"
             >
               <Icon name="mdi:speedometer" class="w-6 h-6 mx-auto mb-2" />
               <h3 class="font-medium">Test Performance</h3>
@@ -152,8 +152,8 @@
             </button>
 
             <button
-              @click="exportReport"
               class="p-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              @click="exportReport"
             >
               <Icon name="mdi:file-export" class="w-6 h-6 mx-auto mb-2" />
               <h3 class="font-medium">Exporter Rapport</h3>

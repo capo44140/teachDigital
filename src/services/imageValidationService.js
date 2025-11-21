@@ -4,7 +4,7 @@
  */
 
 class ImageValidationService {
-  constructor() {
+  constructor () {
     this.allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
     this.maxSize = 10 * 1024 * 1024 // 10MB
     this.minSize = 1024 // 1KB
@@ -17,7 +17,7 @@ class ImageValidationService {
    * @param {File} file - Fichier à valider
    * @returns {Promise<Object>} Résultat de la validation
    */
-  async validateImage(file) {
+  async validateImage (file) {
     const errors = []
     const warnings = []
 
@@ -72,7 +72,6 @@ class ImageValidationService {
           quality: this.assessImageQuality(file)
         }
       }
-
     } catch (error) {
       return {
         valid: false,
@@ -87,7 +86,7 @@ class ImageValidationService {
    * @param {File} file - Fichier à valider
    * @returns {Object} Résultat de la validation
    */
-  validateMimeType(file) {
+  validateMimeType (file) {
     if (!this.allowedTypes.includes(file.type)) {
       return {
         valid: false,
@@ -102,14 +101,14 @@ class ImageValidationService {
    * @param {File} file - Fichier à valider
    * @returns {Object} Résultat de la validation
    */
-  validateFileSize(file) {
+  validateFileSize (file) {
     if (file.size > this.maxSize) {
       return {
         valid: false,
         error: `Fichier trop volumineux: ${this.formatFileSize(file.size)}. Taille maximale: ${this.formatFileSize(this.maxSize)}`
       }
     }
-    
+
     if (file.size < this.minSize) {
       return {
         valid: false,
@@ -125,14 +124,14 @@ class ImageValidationService {
    * @param {File} file - Fichier à valider
    * @returns {Promise<Object>} Résultat de la validation
    */
-  async validateFileContent(file) {
+  async validateFileContent (file) {
     return new Promise((resolve) => {
       const reader = new FileReader()
-      
+
       reader.onload = (e) => {
         const arrayBuffer = e.target.result
         const uint8Array = new Uint8Array(arrayBuffer)
-        
+
         // Vérifier les magic numbers
         const magicNumbers = {
           'image/jpeg': [0xFF, 0xD8, 0xFF],
@@ -147,14 +146,14 @@ class ImageValidationService {
           return
         }
 
-        const isValidMagic = expectedMagic.every((byte, index) => 
+        const isValidMagic = expectedMagic.every((byte, index) =>
           uint8Array[index] === byte
         )
 
         if (!isValidMagic) {
-          resolve({ 
-            valid: false, 
-            error: 'Le contenu du fichier ne correspond pas au type déclaré' 
+          resolve({
+            valid: false,
+            error: 'Le contenu du fichier ne correspond pas au type déclaré'
           })
           return
         }
@@ -175,13 +174,13 @@ class ImageValidationService {
    * @param {File} file - Fichier à valider
    * @returns {Promise<Object>} Résultat de la validation
    */
-  async validateDimensions(file) {
+  async validateDimensions (file) {
     return new Promise((resolve) => {
       const img = new Image()
-      
+
       img.onload = () => {
         const dimensions = { width: img.width, height: img.height }
-        
+
         if (img.width > this.maxDimensions.width || img.height > this.maxDimensions.height) {
           resolve({
             valid: false,
@@ -214,13 +213,13 @@ class ImageValidationService {
    * @param {File} file - Fichier à valider
    * @returns {Promise<Object>} Résultat de la validation
    */
-  async validateSecurity(file) {
+  async validateSecurity (file) {
     return new Promise((resolve) => {
       const reader = new FileReader()
-      
+
       reader.onload = (e) => {
         const content = e.target.result
-        
+
         // Vérifier la présence de scripts ou de code malveillant
         const suspiciousPatterns = [
           /<script/i,
@@ -233,7 +232,7 @@ class ImageValidationService {
           /window\./i
         ]
 
-        const hasSuspiciousContent = suspiciousPatterns.some(pattern => 
+        const hasSuspiciousContent = suspiciousPatterns.some(pattern =>
           pattern.test(content)
         )
 
@@ -261,7 +260,7 @@ class ImageValidationService {
    * @param {File} file - Fichier à analyser
    * @returns {Promise<Array>} Liste des avertissements
    */
-  async getOptimizationWarnings(file) {
+  async getOptimizationWarnings (file) {
     const warnings = []
 
     // Vérifier la taille
@@ -282,9 +281,9 @@ class ImageValidationService {
    * @param {File} file - Fichier à évaluer
    * @returns {string} Niveau de qualité
    */
-  assessImageQuality(file) {
+  assessImageQuality (file) {
     const sizeInMB = file.size / (1024 * 1024)
-    
+
     if (sizeInMB < 0.5) return 'low'
     if (sizeInMB < 2) return 'medium'
     if (sizeInMB < 5) return 'high'
@@ -296,7 +295,7 @@ class ImageValidationService {
    * @param {number} bytes - Taille en octets
    * @returns {string} Taille formatée
    */
-  formatFileSize(bytes) {
+  formatFileSize (bytes) {
     if (bytes === 0) return '0 Bytes'
     const k = 1024
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
@@ -309,7 +308,7 @@ class ImageValidationService {
    * @param {File} file - Fichier à optimiser
    * @returns {Promise<File>} Fichier optimisé
    */
-  async optimizeImage(file) {
+  async optimizeImage (file) {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')

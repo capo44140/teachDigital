@@ -3,6 +3,6 @@
  * Centralise l'exportation de tous les services liés aux profils
  */
 
-export { ProfileService } from './profileService.js';
-export { PinService } from './pinService.js';
-export { SessionService } from './sessionService.js';
+export { ProfileService } from './profileService.js'
+export { PinService } from './pinService.js'
+export { SessionService } from './sessionService.js'

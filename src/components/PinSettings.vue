@@ -5,8 +5,8 @@
       <div class="flex items-center justify-between mb-8">
         <div class="flex items-center space-x-4">
           <button 
-            @click="goBack"
             class="p-2 text-white hover:bg-gray-800 rounded-lg transition-colors"
+            @click="goBack"
           >
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -36,8 +36,8 @@
             
             <div class="pt-4 border-t border-gray-700">
               <button 
-                @click="showChangeForm = true"
                 class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                @click="showChangeForm = true"
               >
                 Modifier le code PIN
               </button>
@@ -86,7 +86,7 @@
       <div v-if="showChangeForm" class="mt-8 bg-gray-800 rounded-lg p-6">
         <h3 class="text-xl font-semibold text-white mb-4">Modifier le code PIN</h3>
         
-        <form @submit.prevent="changePin" class="space-y-6">
+        <form class="space-y-6" @submit.prevent="changePin">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-2">Nouveau code PIN</label>
@@ -128,9 +128,9 @@
           <div class="flex justify-end space-x-3">
             <button 
               type="button"
-              @click="cancelChange"
               :disabled="isLoading"
               class="px-4 py-2 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+              @click="cancelChange"
             >
               Annuler
             </button>

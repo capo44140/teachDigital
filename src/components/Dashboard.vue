@@ -52,9 +52,9 @@
             
             <!-- Bouton changer de profil -->
             <button 
-              @click="changeProfile"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Changer de profil"
+              @click="changeProfile"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
@@ -63,9 +63,9 @@
             
             <!-- Bouton de déconnexion -->
             <button 
-              @click="logout"
               class="p-2 text-red-400/80 hover:text-red-300 border border-red-400/20 hover:border-red-400/40 rounded-xl backdrop-blur-xl hover:bg-red-400/10 transition-all"
               title="Se déconnecter"
+              @click="logout"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
@@ -100,8 +100,8 @@
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <!-- Gérer les profils -->
           <div 
-            @click="manageProfiles"
             class="glass-card-dashboard group cursor-pointer"
+            @click="manageProfiles"
           >
             <div class="flex items-start space-x-4">
               <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -118,8 +118,8 @@
 
           <!-- Scanner des leçons -->
           <div 
-            @click="openLessonScanner"
             class="glass-card-dashboard group cursor-pointer"
+            @click="openLessonScanner"
           >
             <div class="flex items-start space-x-4">
               <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -136,8 +136,8 @@
 
           <!-- Gérer les interrogations -->
           <div 
-            @click="openQuizManagement"
             class="glass-card-dashboard group cursor-pointer"
+            @click="openQuizManagement"
           >
             <div class="flex items-start space-x-4">
               <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-violet-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -154,8 +154,8 @@
 
           <!-- Quiz à partir de texte -->
           <div 
-            @click="openTextQuizGenerator"
             class="glass-card-dashboard group cursor-pointer"
+            @click="openTextQuizGenerator"
           >
             <div class="flex items-start space-x-4">
               <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -172,8 +172,8 @@
 
           <!-- Test de sécurité -->
           <div 
-            @click="openSecurityTest"
             class="glass-card-dashboard group cursor-pointer"
+            @click="openSecurityTest"
           >
             <div class="flex items-start space-x-4">
               <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-400 to-rose-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -190,8 +190,8 @@
 
           <!-- Test des notifications -->
           <div 
-            @click="openNotificationTest"
             class="glass-card-dashboard group cursor-pointer"
+            @click="openNotificationTest"
           >
             <div class="flex items-start space-x-4">
               <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-yellow-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -208,8 +208,8 @@
 
           <!-- Suivi des progrès -->
           <div 
-            @click="openProgressTracking"
             class="glass-card-dashboard group cursor-pointer"
+            @click="openProgressTracking"
           >
             <div class="flex items-start space-x-4">
               <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -226,8 +226,8 @@
 
           <!-- Paramètres -->
           <div 
-            @click="openParentSettings"
             class="glass-card-dashboard group cursor-pointer"
+            @click="openParentSettings"
           >
             <div class="flex items-start space-x-4">
               <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -245,8 +245,8 @@
 
           <!-- Gestion des activités -->
           <div 
-            @click="openActivityManagement"
             class="glass-card-dashboard group cursor-pointer"
+            @click="openActivityManagement"
           >
             <div class="flex items-start space-x-4">
               <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -263,8 +263,8 @@
 
           <!-- Vidéos YouTube -->
           <div 
-            @click="openYouTubeManager"
             class="glass-card-dashboard group cursor-pointer"
+            @click="openYouTubeManager"
           >
             <div class="flex items-start space-x-4">
               <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
@@ -281,8 +281,8 @@
 
           <!-- Gestion des badges -->
           <div 
-            @click="openBadgeManager"
             class="glass-card-dashboard group cursor-pointer"
+            @click="openBadgeManager"
           >
             <div class="flex items-start space-x-4">
               <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-500 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">

@@ -13,9 +13,9 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Retour au dashboard"
+              @click="goBack"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -27,10 +27,10 @@
             </div>
           </div>
           <button 
-            @click="refreshData"
             class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
             :disabled="isLoading"
             title="Actualiser les données"
+            @click="refreshData"
           >
             <svg class="w-5 h-5" :class="{ 'animate-spin': isLoading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -100,13 +100,13 @@
           <button
             v-for="child in childrenStats"
             :key="child.id"
-            @click="selectChild(child)"
             :class="[
               'p-3 rounded-xl border-2 transition-all flex flex-col items-center space-y-2',
               selectedChild?.id === child.id 
                 ? 'border-purple-400 bg-white/20' 
                 : 'border-white/20 hover:border-white/40 hover:bg-white/10'
             ]"
+            @click="selectChild(child)"
           >
             <div class="w-12 h-12 rounded-lg flex items-center justify-center" :class="child.bgColor">
               <span class="text-white font-bold text-lg">{{ child.initial }}</span>
@@ -297,9 +297,9 @@
                 
                 <div class="flex space-x-2">
                   <button 
-                    @click="viewLesson(lesson)"
                     class="p-2 text-white/60 hover:text-white border border-white/20 hover:border-white/40 rounded-lg backdrop-blur-xl hover:bg-white/10 transition-all"
                     title="Voir les détails"
+                    @click="viewLesson(lesson)"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -309,9 +309,9 @@
                   
                   <button 
                     v-if="!lesson.quizCompleted"
-                    @click="startQuiz(lesson)"
                     class="p-2 text-green-400/60 hover:text-green-300 border border-green-400/20 hover:border-green-400/40 rounded-lg backdrop-blur-xl hover:bg-green-400/10 transition-all"
                     title="Commencer le quiz"
+                    @click="startQuiz(lesson)"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m-6-8h8a2 2 0 012 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2v-8a2 2 0 012-2z"/>
@@ -319,9 +319,9 @@
                   </button>
                   
                   <button 
-                    @click="deleteLesson(lesson)"
                     class="p-2 text-red-400/60 hover:text-red-300 border border-red-400/20 hover:border-red-400/40 rounded-lg backdrop-blur-xl hover:bg-red-400/10 transition-all"
                     title="Supprimer la leçon"
+                    @click="deleteLesson(lesson)"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -383,6 +383,12 @@ export default {
     VersionInfo,
     Icon
   },
+  
+  // Rafraîchir les données quand la route change
+  async beforeRouteUpdate(to, from, next) {
+    await this.loadData()
+    next()
+  },
   data() {
     return {
       selectedChild: null,
@@ -417,12 +423,6 @@ export default {
   // Rafraîchir les données quand on revient sur la page
   async activated() {
     await this.loadData()
-  },
-  
-  // Rafraîchir les données quand la route change
-  async beforeRouteUpdate(to, from, next) {
-    await this.loadData()
-    next()
   },
   methods: {
     // Fonction utilitaire pour formater les pourcentages

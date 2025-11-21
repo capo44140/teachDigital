@@ -8,13 +8,13 @@ export const useBadgeStore = defineStore('badge', {
   state: () => ({
     // Tous les badges disponibles
     allBadges: [],
-    
+
     // Badges du profil actuel
     profileBadges: [],
-    
+
     // Badges débloqués du profil actuel
     unlockedBadges: [],
-    
+
     // Statistiques du profil actuel
     badgeStats: {
       total: 0,
@@ -23,14 +23,14 @@ export const useBadgeStore = defineStore('badge', {
       points: 0,
       percentage: 0
     },
-    
+
     // Badges récemment débloqués
     recentBadges: [],
-    
+
     // État de chargement
     loading: false,
     error: null,
-    
+
     // Profil actuel
     currentProfileId: null
   }),
@@ -47,7 +47,7 @@ export const useBadgeStore = defineStore('badge', {
      * Obtenir les badges débloqués triés par date
      */
     sortedUnlockedBadges: (state) => {
-      return [...state.unlockedBadges].sort((a, b) => 
+      return [...state.unlockedBadges].sort((a, b) =>
         new Date(b.unlocked_at) - new Date(a.unlocked_at)
       )
     },
@@ -57,14 +57,14 @@ export const useBadgeStore = defineStore('badge', {
      */
     badgesByCategory: (state) => {
       const categories = {}
-      
+
       state.profileBadges.forEach(badge => {
         if (!categories[badge.category]) {
           categories[badge.category] = []
         }
         categories[badge.category].push(badge)
       })
-      
+
       return categories
     },
 
@@ -80,7 +80,7 @@ export const useBadgeStore = defineStore('badge', {
      * Obtenir les badges en cours (avec progression > 0 mais non débloqués)
      */
     inProgressBadges: (state) => {
-      return state.profileBadges.filter(badge => 
+      return state.profileBadges.filter(badge =>
         !badge.is_unlocked && badge.progress > 0
       )
     },
@@ -111,10 +111,10 @@ export const useBadgeStore = defineStore('badge', {
     /**
      * Charger tous les badges
      */
-    async loadAllBadges() {
+    async loadAllBadges () {
       this.loading = true
       this.error = null
-      
+
       try {
         this.allBadges = await badgeService.getAllBadges()
       } catch (error) {
@@ -130,24 +130,23 @@ export const useBadgeStore = defineStore('badge', {
      * Charger les badges d'un profil
      * @param {number} profileId - ID du profil
      */
-    async loadProfileBadges(profileId) {
+    async loadProfileBadges (profileId) {
       this.loading = true
       this.error = null
       this.currentProfileId = profileId
-      
+
       try {
         // Charger les badges avec progression
         this.profileBadges = await badgeService.getProfileBadges(profileId)
-        
+
         // Charger les badges débloqués
         this.unlockedBadges = await badgeService.getUnlockedBadges(profileId)
-        
+
         // Charger les statistiques
         this.badgeStats = await badgeService.getBadgeStats(profileId)
-        
+
         // Charger les badges récents
         this.recentBadges = await badgeService.getRecentlyUnlockedBadges(profileId, 5)
-        
       } catch (error) {
         console.error('Erreur lors du chargement des badges du profil:', error)
         this.error = error.message
@@ -161,7 +160,7 @@ export const useBadgeStore = defineStore('badge', {
      * Actualiser les statistiques d'un profil
      * @param {number} profileId - ID du profil
      */
-    async refreshBadgeStats(profileId) {
+    async refreshBadgeStats (profileId) {
       try {
         this.badgeStats = await badgeService.getBadgeStats(profileId || this.currentProfileId)
       } catch (error) {
@@ -174,10 +173,10 @@ export const useBadgeStore = defineStore('badge', {
      * Créer un nouveau badge personnalisé
      * @param {Object} badgeData - Données du badge
      */
-    async createBadge(badgeData) {
+    async createBadge (badgeData) {
       this.loading = true
       this.error = null
-      
+
       try {
         const newBadge = await badgeService.createCustomBadge(badgeData)
         this.allBadges.push(newBadge)
@@ -196,19 +195,19 @@ export const useBadgeStore = defineStore('badge', {
      * @param {number} badgeId - ID du badge
      * @param {Object} badgeData - Nouvelles données
      */
-    async updateBadge(badgeId, badgeData) {
+    async updateBadge (badgeId, badgeData) {
       this.loading = true
       this.error = null
-      
+
       try {
         const updatedBadge = await badgeService.updateBadge(badgeId, badgeData)
-        
+
         // Mettre à jour dans la liste
         const index = this.allBadges.findIndex(b => b.id === badgeId)
         if (index !== -1) {
           this.allBadges[index] = updatedBadge
         }
-        
+
         return updatedBadge
       } catch (error) {
         console.error('Erreur lors de la mise à jour du badge:', error)
@@ -223,17 +222,17 @@ export const useBadgeStore = defineStore('badge', {
      * Supprimer un badge
      * @param {number} badgeId - ID du badge
      */
-    async deleteBadge(badgeId) {
+    async deleteBadge (badgeId) {
       this.loading = true
       this.error = null
-      
+
       try {
         await badgeService.deleteBadge(badgeId)
-        
+
         // Retirer de la liste
         this.allBadges = this.allBadges.filter(b => b.id !== badgeId)
         this.profileBadges = this.profileBadges.filter(b => b.id !== badgeId)
-        
+
         return true
       } catch (error) {
         console.error('Erreur lors de la suppression du badge:', error)
@@ -250,27 +249,27 @@ export const useBadgeStore = defineStore('badge', {
      * @param {string} actionType - Type d'action
      * @param {Object} actionData - Données de l'action
      */
-    async checkAndUnlockBadges(profileId, actionType, actionData = {}) {
+    async checkAndUnlockBadges (profileId, actionType, actionData = {}) {
       try {
         const newlyUnlockedBadges = await badgeService.checkAndUnlockBadges(
-          profileId, 
-          actionType, 
+          profileId,
+          actionType,
           actionData
         )
-        
+
         if (newlyUnlockedBadges.length > 0) {
           // Actualiser les données du profil
           await this.loadProfileBadges(profileId)
-          
+
           // Retourner les badges débloqués pour notification
           return newlyUnlockedBadges
         }
-        
+
         // Même si aucun badge n'est débloqué, actualiser la progression
         if (this.currentProfileId === profileId) {
           await this.loadProfileBadges(profileId)
         }
-        
+
         return []
       } catch (error) {
         console.error('Erreur lors de la vérification des badges:', error)
@@ -282,10 +281,10 @@ export const useBadgeStore = defineStore('badge', {
      * Charger les badges par catégorie
      * @param {string} category - Catégorie
      */
-    async loadBadgesByCategory(category) {
+    async loadBadgesByCategory (category) {
       this.loading = true
       this.error = null
-      
+
       try {
         const badges = await badgeService.getBadgesByCategory(category)
         return badges
@@ -301,7 +300,7 @@ export const useBadgeStore = defineStore('badge', {
     /**
      * Réinitialiser l'état du store
      */
-    reset() {
+    reset () {
       this.allBadges = []
       this.profileBadges = []
       this.unlockedBadges = []
@@ -322,15 +321,15 @@ export const useBadgeStore = defineStore('badge', {
      * Obtenir un badge par ID
      * @param {number} badgeId - ID du badge
      */
-    async getBadge(badgeId) {
+    async getBadge (badgeId) {
       try {
         // Vérifier d'abord dans le cache
         let badge = this.allBadges.find(b => b.id === badgeId)
-        
+
         if (!badge) {
           badge = await badgeService.getBadgeById(badgeId)
         }
-        
+
         return badge
       } catch (error) {
         console.error('Erreur lors de la récupération du badge:', error)
@@ -343,7 +342,7 @@ export const useBadgeStore = defineStore('badge', {
      * @param {number} profileId - ID du profil
      * @param {number} limit - Limite de résultats
      */
-    async getRecentBadges(profileId, limit = 5) {
+    async getRecentBadges (profileId, limit = 5) {
       try {
         this.recentBadges = await badgeService.getRecentlyUnlockedBadges(profileId, limit)
         return this.recentBadges
@@ -354,4 +353,3 @@ export const useBadgeStore = defineStore('badge', {
     }
   }
 })
-

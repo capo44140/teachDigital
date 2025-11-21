@@ -71,7 +71,6 @@ Write-Info ""
 
 # 3. Transfert des fichiers
 Write-Info "[3/4] Transfert des fichiers..."
-Write-Info "   Compression et envoi en cours..."
 
 # Creer le repertoire de destination
 ssh $sshAlias "mkdir -p $DeployPath" 2>&1 | Out-Null
@@ -91,56 +90,134 @@ $fileCount = (Get-ChildItem -Path . -Recurse -File | Where-Object {
     }).Count
 Write-Info "   Nombre de fichiers a transferer: $fileCount"
 
-# Transferer via tar en streaming
-# Utiliser bash si disponible (Git Bash), sinon essayer directement
-$bashPath = "C:\Program Files\Git\bin\bash.exe"
-$tarOutput = ""
+# Essayer rsync d'abord (plus rapide pour les mises a jour)
+$useRsync = $false
+rsync --version 2>&1 | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    ssh $sshAlias "rsync --version" 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        $useRsync = $true
+        Write-Info "   Utilisation de rsync (transfert optimise)..."
+    }
+}
 
-if (Test-Path $bashPath) {
-    # Utiliser Git Bash pour gerer correctement les pipes
-    # Note: Les exclusions doivent etre sans guillemets dans la commande bash
-    # Utiliser --verbose pour voir ce qui est transfere
-    # Commande tar avec extraction dans le bon repertoire
-    # Important: utiliser -C pour changer de repertoire avant extraction
-    $bashCmd = "tar -czf - --exclude=node_modules --exclude=.git --exclude='*.log' --exclude=.env --exclude=.synology-deploy.json --exclude=dist --exclude=.vscode --exclude=.idea --exclude=.cursor . 2>/dev/null | ssh $sshAlias 'mkdir -p $DeployPath && cd $DeployPath && tar -xzf - 2>&1'"
-    Write-Info "   Execution via Git Bash..."
-    Write-Info "   Transfert en cours (cela peut prendre quelques instants)..."
-    $tarOutput = & $bashPath -c $bashCmd 2>&1
-    $tarExitCode = $LASTEXITCODE
+if ($useRsync) {
+    # Transfert avec rsync (incremental, plus rapide)
+    $rsyncExcludes = @(
+        "--exclude=node_modules",
+        "--exclude=.git",
+        "--exclude=*.log",
+        "--exclude=.env",
+        "--exclude=.synology-deploy.json",
+        "--exclude=dist",
+        "--exclude=.vscode",
+        "--exclude=.idea",
+        "--exclude=.cursor"
+    )
     
-    # Afficher un resume si disponible
-    if ($tarOutput) {
-        $tarOutput | Select-Object -First 10 | ForEach-Object {
-            if ($_ -match "(extracting|creating|server\.js|package\.json|docker)") {
-                Write-Info "   $_"
+    $rsyncCmd = "rsync -avz --delete $($rsyncExcludes -join ' ') ./ ${sshAlias}:$DeployPath/"
+    $rsyncOutput = Invoke-Expression $rsyncCmd 2>&1
+    $rsyncExitCode = $LASTEXITCODE
+    
+    if ($rsyncExitCode -eq 0) {
+        Write-Success "[OK] Fichiers transferes via rsync"
+        $transferSuccess = $true
+    }
+    else {
+        Write-Warning "   [!] Echec rsync, fallback vers tar..."
+        $useRsync = $false
+    }
+}
+
+if (-not $useRsync) {
+    Write-Info "   Compression et envoi en cours..."
+
+    # Transferer via tar en streaming
+    # Utiliser bash si disponible (Git Bash), sinon essayer directement
+    $bashPath = "C:\Program Files\Git\bin\bash.exe"
+    $tarOutput = ""
+
+    if (Test-Path $bashPath) {
+        # Utiliser Git Bash pour gerer correctement les pipes
+        # Note: Les exclusions doivent etre sans guillemets dans la commande bash
+        # Utiliser --verbose pour voir ce qui est transfere
+        # Commande tar avec extraction dans le bon repertoire
+        # Important: utiliser -C pour changer de repertoire avant extraction
+        $bashCmd = "tar -czf - --exclude=node_modules --exclude=.git --exclude='*.log' --exclude=.env --exclude=.synology-deploy.json --exclude=dist --exclude=.vscode --exclude=.idea --exclude=.cursor . 2>/dev/null | ssh $sshAlias 'mkdir -p $DeployPath && cd $DeployPath && tar -xzf - 2>&1'"
+        Write-Info "   Execution via Git Bash..."
+        Write-Info "   Transfert en cours (cela peut prendre quelques instants)..."
+        $tarOutput = & $bashPath -c $bashCmd 2>&1
+        $tarExitCode = $LASTEXITCODE
+    
+        # Afficher un resume si disponible
+        if ($tarOutput) {
+            $tarOutput | Select-Object -First 10 | ForEach-Object {
+                if ($_ -match "(extracting|creating|server\.js|package\.json|docker)") {
+                    Write-Info "   $_"
+                }
             }
         }
     }
-}
-else {
-    # Essayer directement (peut ne pas fonctionner avec les pipes PowerShell)
-    Write-Warning "   Git Bash non trouve, tentative directe..."
-    Write-Info "   Note: Les pipes peuvent ne pas fonctionner correctement dans PowerShell"
-    Write-Info "   Installez Git for Windows pour une meilleure compatibilite"
+    else {
+        # Essayer directement (peut ne pas fonctionner avec les pipes PowerShell)
+        Write-Warning "   Git Bash non trouve, tentative directe..."
+        Write-Info "   Note: Les pipes peuvent ne pas fonctionner correctement dans PowerShell"
+        Write-Info "   Installez Git for Windows pour une meilleure compatibilite"
     
-    # Essayer avec tar directement
-    $tarOutput = tar -czf - --exclude=node_modules --exclude=.git --exclude='*.log' --exclude=.env --exclude=.synology-deploy.json --exclude=dist --exclude=.vscode --exclude=.idea --exclude=.cursor . 2>&1 | ssh $sshAlias "cd $DeployPath && tar -xzf -" 2>&1
-    $tarExitCode = $LASTEXITCODE
-}
+        # Essayer avec tar directement
+        $tarOutput = tar -czf - --exclude=node_modules --exclude=.git --exclude='*.log' --exclude=.env --exclude=.synology-deploy.json --exclude=dist --exclude=.vscode --exclude=.idea --exclude=.cursor . 2>&1 | ssh $sshAlias "cd $DeployPath && tar -xzf -" 2>&1
+        $tarExitCode = $LASTEXITCODE
+    }
 
-# Afficher les erreurs si presentes
-if ($tarOutput) {
-    $tarOutput | ForEach-Object {
-        if ($_ -match "(error|Error|ERROR|failed|Failed|warning|Warning)") {
-            Write-Warning "   $_"
+    # Afficher les erreurs si presentes
+    if ($tarOutput) {
+        $tarOutput | ForEach-Object {
+            if ($_ -match "(error|Error|ERROR|failed|Failed|warning|Warning)") {
+                Write-Warning "   $_"
+            }
+        }
+    }
+
+    if ($tarExitCode -eq 0) {
+        Write-Success "[OK] Fichiers transferes"
+        $transferSuccess = $true
+    }
+    else {
+        Write-Error "[ERREUR] Echec du transfert avec tar (code: $tarExitCode)"
+        if ($tarOutput) {
+            Write-Info "   Details de l'erreur:"
+            $tarOutput | ForEach-Object { Write-Info "   $_" }
+        }
+        Write-Info ""
+        Write-Info "   Tentative avec scp en fallback..."
+        
+        # Utiliser scp comme alternative
+        Write-Info "   Copie avec scp (cela peut prendre plus de temps)..."
+        $scpSource = "."
+        $scpDest = "${sshAlias}:$DeployPath"
+        
+        scp -r $scpSource $scpDest 2>&1 | ForEach-Object {
+            if ($_ -match "(error|Error|ERROR|failed|Failed)") {
+                Write-Warning "   $_"
+            }
+        }
+        $scpExitCode = $LASTEXITCODE
+        
+        if ($scpExitCode -eq 0) {
+            Write-Success "[OK] Fichiers transferes via scp"
+            $transferSuccess = $true
+        }
+        else {
+            Write-Error "[ERREUR] Echec du transfert avec scp aussi (code: $scpExitCode)"
+            Write-Info "   Verifiez votre connexion SSH et les permissions"
+            Write-Info "   Astuce: Installez Git for Windows pour une meilleure compatibilite avec tar"
+            exit 1
         }
     }
 }
 
-if ($tarExitCode -eq 0) {
-    Write-Success "[OK] Fichiers transferes"
-    
-    # Verifier que les fichiers ont bien ete copies
+# Verifier que les fichiers ont bien ete copies
+if ($transferSuccess) {
     Write-Info "   Verification des fichiers copies..."
     $remoteFileCount = ssh $sshAlias "find $DeployPath -type f 2>/dev/null | wc -l" 2>&1
     if ($LASTEXITCODE -eq 0) {
@@ -156,37 +233,6 @@ if ($tarExitCode -eq 0) {
         else {
             Write-Success "   [OK] $remoteFileCount fichiers transferes"
         }
-    }
-}
-else {
-    Write-Error "[ERREUR] Echec du transfert avec tar (code: $tarExitCode)"
-    if ($tarOutput) {
-        Write-Info "   Details de l'erreur:"
-        $tarOutput | ForEach-Object { Write-Info "   $_" }
-    }
-    Write-Info ""
-    Write-Info "   Tentative avec scp en fallback..."
-    
-    # Utiliser scp comme alternative
-    Write-Info "   Copie avec scp (cela peut prendre plus de temps)..."
-    $scpSource = "."
-    $scpDest = "${sshAlias}:$DeployPath"
-    
-    scp -r $scpSource $scpDest 2>&1 | ForEach-Object {
-        if ($_ -match "(error|Error|ERROR|failed|Failed)") {
-            Write-Warning "   $_"
-        }
-    }
-    $scpExitCode = $LASTEXITCODE
-    
-    if ($scpExitCode -eq 0) {
-        Write-Success "[OK] Fichiers transferes via scp"
-    }
-    else {
-        Write-Error "[ERREUR] Echec du transfert avec scp aussi (code: $scpExitCode)"
-        Write-Info "   Verifiez votre connexion SSH et les permissions"
-        Write-Info "   Astuce: Installez Git for Windows pour une meilleure compatibilite avec tar"
-        exit 1
     }
 }
 Write-Info ""
@@ -220,6 +266,25 @@ if (-not $dockerFound) {
     Write-Error "[ERREUR] Docker/Container Manager n'est pas installe sur le Synology"
     Write-Info "   Installez Container Manager via le Package Center"
     exit 1
+}
+
+# Verifier les permissions Docker
+Write-Info "   Verification des permissions Docker..."
+$dockerPermCheck = ssh $sshAlias "$dockerCmd ps 2>&1"
+if ($LASTEXITCODE -ne 0) {
+    if ($dockerPermCheck -match "permission denied") {
+        Write-Error "[ERREUR] Permissions Docker insuffisantes"
+        Write-Info "   Votre utilisateur n'a pas acces au socket Docker"
+        Write-Info "   Solution: Ajoutez votre utilisateur au groupe 'docker'"
+        Write-Info "   Commande: ssh $sshAlias 'sudo usermod -aG docker `$USER'"
+        exit 1
+    }
+    else {
+        Write-Warning "   [!] Impossible de verifier Docker: $dockerPermCheck"
+    }
+}
+else {
+    Write-Success "   [OK] Permissions Docker OK"
 }
 
 # Verifier docker-compose (peut etre 'docker compose' ou 'docker-compose')
@@ -287,13 +352,25 @@ if [ -f docker-compose.yml ]; then
     $dockerComposeCmd ps
     echo '[LOGS] Logs recents:'
     $dockerComposeCmd logs --tail=20 backend
-    sleep 5
     echo '[HEALTH] Verification de la sante...'
-    if curl -f http://localhost:3001/health > /dev/null 2>&1; then
-        echo '[OK] Service repond correctement'
-    else
-        echo '[WARNING] Service ne repond pas encore - peut prendre quelques secondes'
-    fi
+    # Retry avec backoff exponentiel (max 5 tentatives)
+    max_retries=5
+    retry=0
+    while [ `$retry -lt `$max_retries ]; do
+        sleep `$((2 ** retry))  # 1s, 2s, 4s, 8s, 16s
+        if curl -f http://localhost:3001/health > /dev/null 2>&1; then
+            echo '[OK] Service repond correctement (tentative '`$((retry + 1))')'
+            break
+        else
+            retry=`$((retry + 1))
+            if [ `$retry -lt `$max_retries ]; then
+                echo '[RETRY] Tentative '`$retry'/'`$max_retries' - nouvelle tentative dans '`$((2 ** retry))'s...'
+            else
+                echo '[WARNING] Service ne repond pas apres '`$max_retries' tentatives'
+                echo '[INFO] Verifiez les logs: $dockerComposeCmd logs backend'
+            fi
+        fi
+    done
 else
     echo '[ERREUR] docker-compose.yml introuvable dans $dockerPath'
     exit 1
@@ -351,10 +428,10 @@ fi
         Write-Info "   Deploiement du script helper Docker..."
         $helperScript = Join-Path $PSScriptRoot "docker-helper.sh"
         if (Test-Path $helperScript) {
-            # Copier le script helper et le rendre executable
-            Get-Content $helperScript -Raw | ssh $sshAlias "cat > $dockerPath/docker-helper.sh && chmod +x $dockerPath/docker-helper.sh" 2>&1 | Out-Null
+            # Copier le script helper avec conversion des line endings Windows vers Unix
+            Get-Content $helperScript -Raw | ssh $sshAlias "tr -d '\r' > $dockerPath/docker-helper.sh && chmod +x $dockerPath/docker-helper.sh" 2>&1 | Out-Null
             if ($LASTEXITCODE -eq 0) {
-                Write-Success "   [OK] Script helper deploye"
+                Write-Success "   [OK] Script helper deploye (line endings corriges)"
             }
             else {
                 Write-Warning "   [!] Impossible de deployer le script helper"
@@ -385,6 +462,6 @@ Write-Info "  Stop:    ssh $sshAlias `"$dockerPath/docker-helper.sh stop`""
 Write-Info "  Shell:   ssh $sshAlias `"$dockerPath/docker-helper.sh shell`""
 Write-Info ""
 Write-Info "Commandes Docker directes (si helper ne fonctionne pas):"
-Write-Info "  Logs:    ssh $sshAlias `"cd $dockerPath && sudo $dockerComposeCmd logs -f backend`""
-Write-Info "  Status:  ssh $sshAlias `"cd $dockerPath && sudo $dockerComposeCmd ps`""
+Write-Info "  Logs:    ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd logs -f backend`""
+Write-Info "  Status:  ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd ps`""
 

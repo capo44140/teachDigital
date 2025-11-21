@@ -9,7 +9,7 @@
           <h3>Installer TeachDigital</h3>
           <p>Accédez rapidement à votre application d'apprentissage</p>
         </div>
-        <button @click="dismissPrompt" class="close-button" aria-label="Fermer">
+        <button class="close-button" aria-label="Fermer" @click="dismissPrompt">
           ✕
         </button>
       </div>
@@ -35,11 +35,11 @@
         </div>
 
         <div class="prompt-actions">
-          <button @click="installApp" class="install-button" :disabled="isInstalling">
+          <button class="install-button" :disabled="isInstalling" @click="installApp">
             <span v-if="isInstalling">Installation...</span>
             <span v-else>Installer maintenant</span>
           </button>
-          <button @click="showInstallGuide" class="guide-button">
+          <button class="guide-button" @click="showInstallGuide">
             Comment installer ?
           </button>
         </div>
@@ -52,7 +52,7 @@
     <div class="install-guide">
       <div class="guide-header">
         <h3>{{ installGuide.title }}</h3>
-        <button @click="hideInstallGuide" class="close-button" aria-label="Fermer">
+        <button class="close-button" aria-label="Fermer" @click="hideInstallGuide">
           ✕
         </button>
       </div>
@@ -77,7 +77,7 @@
         </div>
 
         <div class="guide-footer">
-          <button @click="hideInstallGuide" class="got-it-button">
+          <button class="got-it-button" @click="hideInstallGuide">
             J'ai compris
           </button>
         </div>
@@ -87,7 +87,7 @@
 
   <!-- Bouton d'installation flottant -->
   <div v-if="showFloatingButton" class="floating-install-button">
-    <button @click="showInstallPrompt" class="floating-button" title="Installer l'application">
+    <button class="floating-button" title="Installer l'application" @click="showInstallPrompt">
       <span class="button-icon">📱</span>
       <span class="button-text">Installer</span>
     </button>

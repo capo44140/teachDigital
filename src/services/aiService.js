@@ -9,16 +9,16 @@ class AIService {
   /**
    * Génère un quiz à partir d'une image de leçon (via backend)
    */
-  async generateQuizFromImage(imageFile, childProfile) {
+  async generateQuizFromImage (imageFile, childProfile) {
     try {
       // Convertir l'image en base64 pour l'envoyer en JSON
       const base64Image = await this.fileToBase64(imageFile)
-      
+
       const response = await apiService.request('/api/ai/generate-quiz-from-image', {
         method: 'POST',
         body: JSON.stringify({
           image: base64Image,
-          childProfile: childProfile
+          childProfile
         })
       })
 
@@ -32,7 +32,7 @@ class AIService {
   /**
    * Convertit un fichier en base64
    */
-  fileToBase64(file) {
+  fileToBase64 (file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.readAsDataURL(file)
@@ -45,18 +45,18 @@ class AIService {
    * Génère un quiz à partir de plusieurs documents (images et PDF) (via backend)
    * Utilise FormData pour éviter les erreurs 413 (Content Too Large)
    */
-  async generateQuizFromDocuments(files, childProfile, questionCount = 5) {
+  async generateQuizFromDocuments (files, childProfile, questionCount = 5) {
     try {
       // Utiliser FormData au lieu de JSON pour éviter les erreurs 413
       const formData = new FormData()
-      
+
       // Ajouter les fichiers directement (plus efficace que base64)
       files.forEach((file, index) => {
         formData.append(`file_${index}`, file)
         formData.append(`file_${index}_name`, file.name)
         formData.append(`file_${index}_type`, file.type)
       })
-      
+
       // Ajouter les métadonnées
       formData.append('childProfile', JSON.stringify(childProfile))
       formData.append('questionCount', questionCount.toString())
@@ -70,12 +70,12 @@ class AIService {
       return response.data?.quiz || null
     } catch (error) {
       console.error('Erreur lors de la génération du quiz multi-documents:', error)
-      
+
       // Message d'erreur plus explicite pour 413
       if (error.message.includes('413') || error.message.includes('Content Too Large')) {
         throw new Error('Les fichiers sont trop volumineux. Veuillez réduire la taille des images ou utiliser moins de fichiers.')
       }
-      
+
       throw new Error('Impossible de générer le quiz. Veuillez réessayer.')
     }
   }
@@ -83,7 +83,7 @@ class AIService {
   /**
    * Génère un quiz personnalisé basé sur un texte (via backend)
    */
-  async generateQuizFromText(inputText, childProfile, options = {}) {
+  async generateQuizFromText (inputText, childProfile, options = {}) {
     try {
       const response = await apiService.request('/api/ai/generate-quiz-from-text', {
         method: 'POST',
@@ -104,7 +104,7 @@ class AIService {
   /**
    * Vérifie si une clé API est valide (via backend)
    */
-  async isValidApiKey(apiType = 'openai') {
+  async isValidApiKey (apiType = 'openai') {
     try {
       const response = await apiService.request(`/api/ai/validate-key?type=${apiType}`)
       return response.data?.isValid || false
@@ -117,7 +117,7 @@ class AIService {
   /**
    * Vérifie si au moins une clé API est valide (via backend)
    */
-  async hasValidApiKey() {
+  async hasValidApiKey () {
     try {
       const response = await apiService.request('/api/ai/has-valid-key')
       return response.data?.hasValidKey || false

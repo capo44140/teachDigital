@@ -10,11 +10,10 @@ import { apiService } from '../apiService.js'
  * Gère la création, vérification et suppression des sessions utilisateur
  */
 export class SessionService {
-  
   /**
    * Créer une session (via backend)
    */
-  static async createSession(profileId, sessionToken, expiresAt) {
+  static async createSession (profileId, sessionToken, expiresAt) {
     try {
       const response = await apiService.request('/api/sessions', {
         method: 'POST',
@@ -26,13 +25,13 @@ export class SessionService {
       throw error
     }
   }
-  
+
   /**
    * Vérifier une session (via backend)
    */
-  static async verifySession(sessionToken) {
+  static async verifySession (sessionToken) {
     try {
-      const response = await apiService.request(`/api/sessions/verify`, {
+      const response = await apiService.request('/api/sessions/verify', {
         method: 'POST',
         body: JSON.stringify({ sessionToken })
       })
@@ -42,11 +41,11 @@ export class SessionService {
       throw error
     }
   }
-  
+
   /**
    * Supprimer une session (via backend)
    */
-  static async deleteSession(sessionToken) {
+  static async deleteSession (sessionToken) {
     try {
       const response = await apiService.request(`/api/sessions/${sessionToken}`, {
         method: 'DELETE'
@@ -57,11 +56,11 @@ export class SessionService {
       throw error
     }
   }
-  
+
   /**
    * Nettoyer les sessions expirées (via backend)
    */
-  static async cleanExpiredSessions() {
+  static async cleanExpiredSessions () {
     try {
       const response = await apiService.request('/api/sessions/clean', {
         method: 'POST'

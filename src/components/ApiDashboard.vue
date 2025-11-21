@@ -12,8 +12,8 @@
               Connecté en tant que <strong>{{ user?.name }}</strong>
             </span>
             <button
-              @click="handleLogout"
               class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+              @click="handleLogout"
             >
               Déconnexion
             </button>
@@ -40,8 +40,8 @@
               </div>
               <div class="mt-2">
                 <button
-                  @click="apiStore.clearError()"
                   class="text-sm bg-red-100 hover:bg-red-200 text-red-800 px-2 py-1 rounded"
+                  @click="apiStore.clearError()"
                 >
                   Fermer
                 </button>
@@ -113,32 +113,32 @@
         <h2 class="text-lg font-medium text-gray-900 mb-4">Actions rapides</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <button
-            @click="refreshData"
             :disabled="loading"
             class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
+            @click="refreshData"
           >
             {{ loading ? 'Chargement...' : 'Actualiser' }}
           </button>
           
           <button
             v-if="isAdmin"
-            @click="showCreateProfile = true"
             class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            @click="showCreateProfile = true"
           >
             Nouveau profil
           </button>
           
           <button
-            @click="showCreateLesson = true"
             class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            @click="showCreateLesson = true"
           >
             Nouvelle leçon
           </button>
           
           <button
-            @click="markAllAsRead"
             :disabled="unreadCount === 0"
             class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
+            @click="markAllAsRead"
           >
             Marquer tout comme lu
           </button>

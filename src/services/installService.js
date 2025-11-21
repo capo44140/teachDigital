@@ -4,16 +4,16 @@
  */
 
 class InstallService {
-  constructor() {
+  constructor () {
     this.deferredPrompt = null
     this.isInstalled = false
     this.isInstallable = false
     this.installPromptShown = false
     this.installPromptDismissed = false
-    
+
     // Écouter les événements d'installation
     this.setupEventListeners()
-    
+
     // Vérifier l'état d'installation
     this.checkInstallationStatus()
   }
@@ -21,7 +21,7 @@ class InstallService {
   /**
    * Configure les écouteurs d'événements
    */
-  setupEventListeners() {
+  setupEventListeners () {
     // Événement avant l'installation
     window.addEventListener('beforeinstallprompt', (e) => {
       console.log('📱 Prompt d\'installation disponible')
@@ -32,10 +32,10 @@ class InstallService {
       this.isInstallable = true
       this.installPromptShown = false
       this.installPromptDismissed = false
-      
+
       // Déclencher un événement personnalisé pour que les composants puissent afficher le prompt
       this.dispatchInstallEvent('installable')
-      
+
       // Note: L'avertissement "Banner not shown" est normal ici.
       // On contrôle manuellement quand afficher le prompt via showInstallPrompt()
     })
@@ -46,10 +46,10 @@ class InstallService {
       this.isInstalled = true
       this.isInstallable = false
       this.deferredPrompt = null
-      
+
       // Déclencher un événement personnalisé
       this.dispatchInstallEvent('installed')
-      
+
       // Sauvegarder l'état d'installation
       this.saveInstallationState()
     })
@@ -63,13 +63,13 @@ class InstallService {
   /**
    * Vérifie l'état d'installation
    */
-  checkInstallationStatus() {
+  checkInstallationStatus () {
     // Vérifier si l'app est déjà installée
     this.isInstalled = this.isAppInstalled()
-    
+
     // Vérifier si l'app peut être installée
     this.isInstallable = this.canInstallApp()
-    
+
     console.log('📱 État d\'installation:', {
       isInstalled: this.isInstalled,
       isInstallable: this.isInstallable
@@ -79,17 +79,17 @@ class InstallService {
   /**
    * Vérifie si l'app est installée
    */
-  isAppInstalled() {
+  isAppInstalled () {
     // Vérifier le mode standalone
     if (window.matchMedia('(display-mode: standalone)').matches) {
       return true
     }
-    
+
     // Vérifier si l'app est lancée depuis l'écran d'accueil (iOS)
     if (window.navigator.standalone === true) {
       return true
     }
-    
+
     // Vérifier les paramètres sauvegardés
     const savedState = this.getInstallationState()
     return savedState.isInstalled || false
@@ -98,17 +98,17 @@ class InstallService {
   /**
    * Vérifie si l'app peut être installée
    */
-  canInstallApp() {
+  canInstallApp () {
     return this.deferredPrompt !== null
   }
 
   /**
    * Détecte le mode standalone
    */
-  detectStandaloneMode() {
+  detectStandaloneMode () {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
                         window.navigator.standalone === true
-    
+
     if (isStandalone && !this.isInstalled) {
       this.isInstalled = true
       this.saveInstallationState()
@@ -121,7 +121,7 @@ class InstallService {
    * Cette méthode doit être appelée en réponse à une action utilisateur
    * (clique sur un bouton) pour éviter l'avertissement du navigateur
    */
-  async showInstallPrompt() {
+  async showInstallPrompt () {
     if (!this.deferredPrompt) {
       console.warn('⚠️ Prompt d\'installation non disponible. L\'app peut déjà être installée ou le navigateur ne supporte pas l\'installation.')
       throw new Error('Prompt d\'installation non disponible')
@@ -131,12 +131,12 @@ class InstallService {
       console.log('📱 Affichage du prompt d\'installation natif...')
       // Afficher le prompt natif (cela résout l'avertissement du navigateur)
       this.deferredPrompt.prompt()
-      
+
       // Attendre la réponse de l'utilisateur
       const { outcome } = await this.deferredPrompt.userChoice
-      
+
       console.log('📱 Résultat du prompt d\'installation:', outcome)
-      
+
       if (outcome === 'accepted') {
         console.log('✅ Utilisateur a accepté l\'installation')
         this.installPromptShown = true
@@ -146,14 +146,14 @@ class InstallService {
         this.installPromptDismissed = true
         this.dispatchInstallEvent('prompt-dismissed')
       }
-      
+
       // Nettoyer le prompt (important pour éviter les fuites mémoire)
       this.deferredPrompt = null
       this.isInstallable = false
-      
+
       // Sauvegarder l'état
       this.saveInstallationState()
-      
+
       return outcome
     } catch (error) {
       console.error('❌ Erreur lors de l\'affichage du prompt d\'installation:', error)
@@ -167,7 +167,7 @@ class InstallService {
   /**
    * Affiche un guide d'installation personnalisé
    */
-  showInstallGuide() {
+  showInstallGuide () {
     const userAgent = navigator.userAgent.toLowerCase()
     let guide = null
 
@@ -188,7 +188,7 @@ class InstallService {
   /**
    * Guide d'installation pour Chrome/Edge
    */
-  getChromeInstallGuide() {
+  getChromeInstallGuide () {
     return {
       title: 'Installer TeachDigital',
       steps: [
@@ -212,7 +212,7 @@ class InstallService {
   /**
    * Guide d'installation pour Firefox
    */
-  getFirefoxInstallGuide() {
+  getFirefoxInstallGuide () {
     return {
       title: 'Installer TeachDigital',
       steps: [
@@ -236,7 +236,7 @@ class InstallService {
   /**
    * Guide d'installation pour Safari (iOS)
    */
-  getSafariInstallGuide() {
+  getSafariInstallGuide () {
     return {
       title: 'Ajouter à l\'écran d\'accueil',
       steps: [
@@ -264,7 +264,7 @@ class InstallService {
   /**
    * Guide d'installation générique
    */
-  getGenericInstallGuide() {
+  getGenericInstallGuide () {
     return {
       title: 'Installer TeachDigital',
       steps: [
@@ -288,7 +288,7 @@ class InstallService {
   /**
    * Vérifie si l'utilisateur a déjà vu le prompt
    */
-  hasSeenInstallPrompt() {
+  hasSeenInstallPrompt () {
     const state = this.getInstallationState()
     return state.promptShown || state.promptDismissed
   }
@@ -296,7 +296,7 @@ class InstallService {
   /**
    * Détermine si le prompt doit être affiché
    */
-  shouldShowInstallPrompt() {
+  shouldShowInstallPrompt () {
     // Ne pas afficher si déjà installé
     if (this.isInstalled) {
       return false
@@ -319,7 +319,7 @@ class InstallService {
   /**
    * Vérifie les conditions d'affichage du prompt
    */
-  checkInstallConditions() {
+  checkInstallConditions () {
     // Attendre que l'utilisateur ait interagi avec l'app
     const sessionTime = Date.now() - (window.sessionStartTime || Date.now())
     const minSessionTime = 30 * 1000 // 30 secondes
@@ -346,10 +346,10 @@ class InstallService {
   /**
    * Vérifie si l'utilisateur a effectué des actions significatives
    */
-  hasSignificantActivity() {
+  hasSignificantActivity () {
     const state = this.getInstallationState()
-    return state.hasCreatedProfile || 
-           state.hasCompletedQuiz || 
+    return state.hasCreatedProfile ||
+           state.hasCompletedQuiz ||
            state.hasViewedLessons ||
            state.sessionCount > 3
   }
@@ -357,7 +357,7 @@ class InstallService {
   /**
    * Incrémente le compteur de visites
    */
-  incrementVisitCount() {
+  incrementVisitCount () {
     const state = this.getInstallationState()
     state.visitCount = (state.visitCount || 0) + 1
     state.lastVisit = Date.now()
@@ -367,9 +367,9 @@ class InstallService {
   /**
    * Marque une activité significative
    */
-  markSignificantActivity(activityType) {
+  markSignificantActivity (activityType) {
     const state = this.getInstallationState()
-    
+
     switch (activityType) {
       case 'profile_created':
         state.hasCreatedProfile = true
@@ -381,21 +381,21 @@ class InstallService {
         state.hasViewedLessons = true
         break
     }
-    
+
     this.saveInstallationState(state)
   }
 
   /**
    * Sauvegarde l'état d'installation
    */
-  saveInstallationState(customState = null) {
+  saveInstallationState (customState = null) {
     const state = customState || this.getInstallationState()
-    
+
     state.isInstalled = this.isInstalled
     state.promptShown = this.installPromptShown
     state.promptDismissed = this.installPromptDismissed
     state.lastUpdated = Date.now()
-    
+
     try {
       localStorage.setItem('teachdigital_install_state', JSON.stringify(state))
     } catch (error) {
@@ -406,21 +406,23 @@ class InstallService {
   /**
    * Récupère l'état d'installation
    */
-  getInstallationState() {
+  getInstallationState () {
     try {
       const stored = localStorage.getItem('teachdigital_install_state')
-      return stored ? JSON.parse(stored) : {
-        isInstalled: false,
-        promptShown: false,
-        promptDismissed: false,
-        visitCount: 0,
-        sessionCount: 0,
-        hasCreatedProfile: false,
-        hasCompletedQuiz: false,
-        hasViewedLessons: false,
-        lastVisit: null,
-        lastUpdated: null
-      }
+      return stored
+        ? JSON.parse(stored)
+        : {
+            isInstalled: false,
+            promptShown: false,
+            promptDismissed: false,
+            visitCount: 0,
+            sessionCount: 0,
+            hasCreatedProfile: false,
+            hasCompletedQuiz: false,
+            hasViewedLessons: false,
+            lastVisit: null,
+            lastUpdated: null
+          }
     } catch (error) {
       console.warn('Impossible de charger l\'état d\'installation:', error)
       return {
@@ -441,7 +443,7 @@ class InstallService {
   /**
    * Récupère le nombre de visites
    */
-  getVisitCount() {
+  getVisitCount () {
     const state = this.getInstallationState()
     return state.visitCount || 0
   }
@@ -449,7 +451,7 @@ class InstallService {
   /**
    * Déclenche un événement personnalisé
    */
-  dispatchInstallEvent(eventType, detail = {}) {
+  dispatchInstallEvent (eventType, detail = {}) {
     const event = new CustomEvent('install-event', {
       detail: {
         type: eventType,
@@ -462,9 +464,9 @@ class InstallService {
   /**
    * Obtient les statistiques d'installation
    */
-  getStats() {
+  getStats () {
     const state = this.getInstallationState()
-    
+
     return {
       isInstalled: this.isInstalled,
       isInstallable: this.isInstallable,
@@ -482,7 +484,7 @@ class InstallService {
   /**
    * Réinitialise l'état d'installation (pour les tests)
    */
-  resetInstallationState() {
+  resetInstallationState () {
     localStorage.removeItem('teachdigital_install_state')
     this.isInstalled = false
     this.installPromptShown = false

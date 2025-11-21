@@ -6,8 +6,8 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              @click="goBack"
             >
               <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -229,8 +229,8 @@
       <!-- Bouton de retour fixe en bas -->
       <div class="fixed bottom-6 right-6">
         <button 
-          @click="goBack"
           class="bg-white text-purple-600 font-bold py-4 px-6 rounded-full shadow-2xl hover:bg-purple-50 transition-all duration-300 transform hover:scale-110 flex items-center space-x-2"
+          @click="goBack"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>

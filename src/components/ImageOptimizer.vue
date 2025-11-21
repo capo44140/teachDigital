@@ -14,8 +14,8 @@
         type="file"
         accept="image/*"
         multiple
-        @change="handleFileSelect"
         class="hidden"
+        @change="handleFileSelect"
       />
       
       <div v-if="!isProcessing" class="drop-content">
@@ -172,14 +172,14 @@
 
           <div v-if="result.success" class="mt-3 flex space-x-2">
             <button
-              @click="downloadOptimizedImage(result.data.blob, result.file)"
               class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+              @click="downloadOptimizedImage(result.data.blob, result.file)"
             >
               Télécharger
             </button>
             <button
-              @click="previewImage(result.data.blob)"
               class="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
+              @click="previewImage(result.data.blob)"
             >
               Aperçu
             </button>
@@ -229,8 +229,8 @@
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-semibold">Aperçu de l'image optimisée</h3>
           <button
-            @click="closePreview"
             class="text-gray-500 hover:text-gray-700"
+            @click="closePreview"
           >
             <Icon name="mdi:close" class="w-6 h-6" />
           </button>

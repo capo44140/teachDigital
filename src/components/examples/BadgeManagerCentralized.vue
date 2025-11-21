@@ -17,8 +17,8 @@
               icon="←"
               gradient="primary"
               size="small"
-              @click="goBack"
               custom-class="!p-3"
+              @click="goBack"
             />
             <div>
               <h1 class="lg-text-primary text-2xl font-bold">Retour au dashboard</h1>
@@ -99,8 +99,8 @@
             :icon="tab.icon"
             :gradient="activeTab === tab.id ? 'quiz' : 'info'"
             size="small"
-            @click="setActiveTab(tab.id)"
             :custom-class="activeTab === tab.id ? 'shadow-lg shadow-purple-500/20' : ''"
+            @click="setActiveTab(tab.id)"
           />
         </div>
       </GlassCard>

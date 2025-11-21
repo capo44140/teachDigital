@@ -2,7 +2,7 @@
  * Service de gestion de session pour éviter de ressaisir le code PIN
  */
 class SessionService {
-  constructor() {
+  constructor () {
     this.SESSION_KEY = 'teachdigital_session'
     this.SESSION_DURATION = 30 * 60 * 1000 // 30 minutes en millisecondes
   }
@@ -12,14 +12,14 @@ class SessionService {
    * @param {string} profileId - ID du profil déverrouillé
    * @param {string} profileName - Nom du profil
    */
-  createSession(profileId, profileName) {
+  createSession (profileId, profileName) {
     const sessionData = {
       profileId,
       profileName,
       timestamp: Date.now(),
       isUnlocked: true
     }
-    
+
     localStorage.setItem(this.SESSION_KEY, JSON.stringify(sessionData))
     console.log('✅ Session créée pour le profil:', profileName)
   }
@@ -28,10 +28,10 @@ class SessionService {
    * Vérifier si une session valide existe
    * @returns {Object|null} - Données de session ou null si invalide
    */
-  getValidSession() {
+  getValidSession () {
     try {
       const sessionData = localStorage.getItem(this.SESSION_KEY)
-      
+
       if (!sessionData) {
         return null
       }
@@ -61,7 +61,7 @@ class SessionService {
    * @param {string} profileId - ID du profil à vérifier
    * @returns {boolean} - True si l'accès est déverrouillé
    */
-  isUnlocked(profileId) {
+  isUnlocked (profileId) {
     const session = this.getValidSession()
     return session && session.profileId === profileId && session.isUnlocked
   }
@@ -69,7 +69,7 @@ class SessionService {
   /**
    * Prolonger la session (remettre à jour le timestamp)
    */
-  extendSession() {
+  extendSession () {
     const session = this.getValidSession()
     if (session) {
       session.timestamp = Date.now()
@@ -81,7 +81,7 @@ class SessionService {
   /**
    * Effacer la session
    */
-  clearSession() {
+  clearSession () {
     localStorage.removeItem(this.SESSION_KEY)
     console.log('🚪 Session effacée')
   }
@@ -90,7 +90,7 @@ class SessionService {
    * Obtenir les informations de la session actuelle
    * @returns {Object|null} - Informations de session ou null
    */
-  getCurrentSession() {
+  getCurrentSession () {
     return this.getValidSession()
   }
 
@@ -98,7 +98,7 @@ class SessionService {
    * Vérifier si une session existe (même expirée)
    * @returns {boolean} - True si une session existe
    */
-  hasSession() {
+  hasSession () {
     return localStorage.getItem(this.SESSION_KEY) !== null
   }
 }

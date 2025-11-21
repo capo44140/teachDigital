@@ -6,8 +6,8 @@
         <!-- Logo TeachDigital -->
         <div class="flex items-center space-x-4">
           <button 
-            @click="goBack"
             class="p-2 hover:bg-gray-200 rounded-full transition-colors"
+            @click="goBack"
           >
             <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -120,18 +120,18 @@
           <div class="flex items-center space-x-4">
             <div class="flex items-center space-x-2">
               <input 
+                id="is_active"
                 v-model="profile.is_active"
                 type="checkbox"
-                id="is_active"
                 class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
               >
               <label for="is_active" class="text-sm text-gray-700">Profil actif</label>
             </div>
             <div class="flex items-center space-x-2">
               <input 
+                id="is_locked"
                 v-model="profile.is_locked"
                 type="checkbox"
-                id="is_locked"
                 class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
               >
               <label for="is_locked" class="text-sm text-gray-700">Profil verrouillé</label>
@@ -143,24 +143,24 @@
         <div class="space-y-4">
           <!-- Bouton Enregistrer -->
           <button 
-            @click="saveProfile"
             class="w-full bg-black text-white py-3 px-6 rounded-md font-medium hover:bg-gray-800 transition-colors"
+            @click="saveProfile"
           >
             Enregistrer
           </button>
           
           <!-- Bouton Annuler -->
           <button 
-            @click="cancelEdit"
             class="w-full text-black py-2 px-6 rounded-md font-medium hover:bg-gray-100 transition-colors"
+            @click="cancelEdit"
           >
             Annuler
           </button>
           
           <!-- Bouton Supprimer le profil -->
           <button 
-            @click="deleteProfile"
             class="w-full text-red-600 py-2 px-6 rounded-md font-medium hover:bg-red-50 transition-colors"
+            @click="deleteProfile"
           >
             Supprimer le profil
           </button>
@@ -185,8 +185,8 @@
               </div>
             </div>
             <button 
-              @click="goToProfileSettings"
               class="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              @click="goToProfileSettings"
             >
               <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -243,12 +243,12 @@
           <button 
             v-for="avatar in availableAvatars"
             :key="avatar.id"
-            @click="selectAvatar(avatar)"
             :class="[
               'w-16 h-16 rounded-lg flex items-center justify-center transition-all',
               avatar.class,
               selectedAvatar?.id === avatar.id ? 'ring-4 ring-red-500' : 'hover:scale-105'
             ]"
+            @click="selectAvatar(avatar)"
           >
             <div v-html="avatar.content"></div>
           </button>
@@ -256,14 +256,14 @@
 
         <div class="flex justify-end space-x-3">
           <button 
-            @click="closeAvatarModal"
             class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            @click="closeAvatarModal"
           >
             Annuler
           </button>
           <button 
-            @click="confirmAvatarChange"
             class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            @click="confirmAvatarChange"
           >
             Confirmer
           </button>

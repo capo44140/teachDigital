@@ -25,7 +25,6 @@ const TextQuizGenerator = () => import(/* webpackChunkName: "ai-components" */ '
 const YouTubeVideoManager = () => import(/* webpackChunkName: "youtube-components" */ '../components/YouTubeVideoManager.vue')
 const YouTubeKidsViewer = () => import(/* webpackChunkName: "youtube-components" */ '../components/YouTubeKidsViewerSimple.vue')
 
-
 // Composants de sécurité (chunk: security-components)
 const SecurityDashboard = () => import(/* webpackChunkName: "security-components" */ '../components/SecurityDashboard.vue')
 const SecurityTest = () => import(/* webpackChunkName: "security-components" */ '../components/SecurityTest.vue')
@@ -234,7 +233,7 @@ const routes = [
     path: '/liquid-glass-test',
     name: 'LiquidGlassTest',
     component: LiquidGlassTest
-  },
+  }
 ]
 
 const router = createRouter({
@@ -253,12 +252,12 @@ router.beforeEach(async (to, from, next) => {
   // Vérifier l'authentification API
   if (to.meta.requiresApiAuth) {
     const apiStore = useApiStore()
-    
+
     // Initialiser le store si nécessaire
     if (!apiStore.isAuthenticated) {
       await apiStore.initialize()
     }
-    
+
     if (!apiStore.isAuthenticated) {
       console.log('Redirection vers la page de connexion API')
       next({ path: '/api-login' })
@@ -271,7 +270,7 @@ router.beforeEach(async (to, from, next) => {
     const profileId = to.query.profile
     const isUnlocked = to.query.unlocked === 'true'
     let currentProfile = null
-    
+
     // Si l'accès est déverrouillé (après vérification du PIN), vérifier qu'une session valide existe
     if (isUnlocked) {
       // Vérifier qu'une session valide existe pour ce profil
@@ -283,17 +282,17 @@ router.beforeEach(async (to, from, next) => {
       } else {
         // Si unlocked=true mais pas de session valide, rediriger vers la page PIN
         console.warn('Accès déverrouillé demandé mais session invalide, redirection vers PIN')
-        next({ 
-          path: '/pin-lock', 
-          query: { 
+        next({
+          path: '/pin-lock',
+          query: {
             profile: profileId,
             name: 'Parent'
-          } 
+          }
         })
         return
       }
     }
-    
+
     // Vérifier si une session valide existe
     const session = sessionService.getValidSession()
     if (session && sessionService.isUnlocked(profileId)) {
@@ -303,7 +302,7 @@ router.beforeEach(async (to, from, next) => {
       next()
       return
     }
-    
+
     if (profileId) {
       try {
         const profileStore = useProfileStore()
@@ -313,7 +312,7 @@ router.beforeEach(async (to, from, next) => {
         console.error('Erreur lors du chargement du profil:', error)
       }
     }
-    
+
     if (!currentProfile || !currentProfile.is_admin) {
       console.warn('Accès refusé à la page admin:', to.path)
       next({ path: '/' })
@@ -325,10 +324,10 @@ router.beforeEach(async (to, from, next) => {
   if (to.meta.requiresChildOrTeen) {
     const profileId = to.query.profile
     let currentProfile = null
-    
+
     console.log('🔍 [ROUTER] Vérification des permissions enfant/adolescent pour:', to.path)
     console.log('🔍 [ROUTER] Profile ID:', profileId)
-    
+
     if (profileId) {
       try {
         const profileStore = useProfileStore()
@@ -336,7 +335,7 @@ router.beforeEach(async (to, from, next) => {
         await profileStore.loadProfiles()
         console.log('🔍 [ROUTER] Tous les profils:', profileStore.profiles)
         console.log('🔍 [ROUTER] Recherche du profil ID:', profileId, 'Type:', typeof profileId)
-        
+
         // Essayer avec l'ID comme string et comme number
         currentProfile = profileStore.getProfileById(profileId)
         if (!currentProfile) {
@@ -347,7 +346,7 @@ router.beforeEach(async (to, from, next) => {
           console.log('🔍 [ROUTER] Tentative avec ID converti en string...')
           currentProfile = profileStore.getProfileById(String(profileId))
         }
-        
+
         console.log('🔍 [ROUTER] Profil trouvé:', currentProfile)
         console.log('🔍 [ROUTER] is_child:', currentProfile?.is_child)
         console.log('🔍 [ROUTER] is_teen:', currentProfile?.is_teen)
@@ -357,13 +356,13 @@ router.beforeEach(async (to, from, next) => {
     } else {
       console.warn('⚠️ [ROUTER] Aucun profileId fourni dans l\'URL')
     }
-    
+
     if (!currentProfile || (!currentProfile.is_child && !currentProfile.is_teen)) {
       console.warn('❌ [ROUTER] Accès refusé à la page enfant/adolescent:', to.path)
       console.warn('❌ [ROUTER] Profil:', currentProfile)
       console.warn('❌ [ROUTER] is_child:', currentProfile?.is_child)
       console.warn('❌ [ROUTER] is_teen:', currentProfile?.is_teen)
-      
+
       // Solution temporaire : créer un profil par défaut si aucun profil n'est trouvé
       if (to.path === '/user-dashboard') {
         console.log('⚠️ [ROUTER] Création d\'un profil par défaut pour le dashboard utilisateur')
@@ -371,11 +370,11 @@ router.beforeEach(async (to, from, next) => {
         next()
         return
       }
-      
+
       next({ path: '/' })
       return
     }
-    
+
     console.log('✅ [ROUTER] Accès autorisé pour:', to.path)
   }
 

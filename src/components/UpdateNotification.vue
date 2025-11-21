@@ -41,8 +41,8 @@
         <div class="flex space-x-3">
           <!-- Bouton Annuler -->
           <button
-            @click="handleCancel"
             class="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-gray-300"
+            @click="handleCancel"
           >
             <span class="flex items-center justify-center">
               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,8 +54,8 @@
           
           <!-- Bouton Mettre à jour -->
           <button
-            @click="handleUpdate"
             class="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-lg hover:shadow-xl"
+            @click="handleUpdate"
           >
             <span class="flex items-center justify-center">
               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

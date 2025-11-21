@@ -21,9 +21,9 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Retour au tableau de bord"
+              @click="goBack"
             >
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -103,13 +103,13 @@
                 <button 
                   v-for="theme in colorThemes" 
                   :key="theme.id"
-                  @click="selectTheme(theme)"
                   :class="[
                     'h-20 rounded-xl transition-all duration-300 transform hover:scale-110 backdrop-blur-xl border border-white/20',
                     theme.gradient,
                     settings.selectedTheme === theme.id ? 'ring-4 ring-offset-2 ring-purple-400 scale-110 shadow-lg shadow-purple-500/50' : ''
                   ]"
                   :title="theme.name"
+                  @click="selectTheme(theme)"
                 >
                   <div class="text-white font-semibold text-sm">{{ theme.emoji }}</div>
                 </button>
@@ -271,8 +271,8 @@
           
           <div class="space-y-4">
             <button 
-              @click="showHelp"
               class="w-full flex items-center justify-between p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 backdrop-blur-xl border border-yellow-400/30 rounded-xl hover:bg-yellow-500/20 transition-all"
+              @click="showHelp"
             >
               <div class="flex items-center space-x-4">
                 <div class="w-12 h-12 bg-gradient-to-br from-yellow-500/30 to-orange-500/30 rounded-xl flex items-center justify-center">
@@ -291,8 +291,8 @@
             </button>
 
             <button 
-              @click="contactParent"
               class="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 backdrop-blur-xl border border-blue-400/30 rounded-xl hover:bg-blue-500/20 transition-all"
+              @click="contactParent"
             >
               <div class="flex items-center space-x-4">
                 <div class="w-12 h-12 bg-gradient-to-br from-blue-500/30 to-purple-500/30 rounded-xl flex items-center justify-center">
@@ -315,8 +315,8 @@
         <!-- Boutons d'action -->
         <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-8">
           <button 
-            @click="saveSettings"
             class="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl shadow-lg hover:shadow-xl hover:shadow-purple-500/50 transform hover:scale-105 transition-all duration-300 font-medium text-lg backdrop-blur-xl border border-white/20"
+            @click="saveSettings"
           >
             <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -324,8 +324,8 @@
             Sauvegarder
           </button>
           <button 
-            @click="resetSettings"
             class="px-8 py-4 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 transition-all duration-300 font-medium text-lg"
+            @click="resetSettings"
           >
             <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>

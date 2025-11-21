@@ -4,7 +4,7 @@
  */
 
 class EncryptionService {
-  constructor() {
+  constructor () {
     this.algorithm = 'AES-GCM'
     this.keyLength = 256
     this.ivLength = 12 // 96 bits pour GCM
@@ -15,7 +15,7 @@ class EncryptionService {
    * Génère une clé de chiffrement
    * @returns {Promise<CryptoKey>} Clé de chiffrement
    */
-  async generateKey() {
+  async generateKey () {
     return await crypto.subtle.generateKey(
       {
         name: this.algorithm,
@@ -31,7 +31,7 @@ class EncryptionService {
    * @param {ArrayBuffer} keyData - Données de la clé
    * @returns {Promise<CryptoKey>} Clé importée
    */
-  async importKey(keyData) {
+  async importKey (keyData) {
     return await crypto.subtle.importKey(
       'raw',
       keyData,
@@ -46,7 +46,7 @@ class EncryptionService {
    * @param {CryptoKey} key - Clé à exporter
    * @returns {Promise<ArrayBuffer>} Données de la clé
    */
-  async exportKey(key) {
+  async exportKey (key) {
     return await crypto.subtle.exportKey('raw', key)
   }
 
@@ -56,30 +56,30 @@ class EncryptionService {
    * @param {CryptoKey} key - Clé de chiffrement
    * @returns {Promise<string>} Données chiffrées en base64
    */
-  async encrypt(data, key) {
+  async encrypt (data, key) {
     try {
       // Générer un IV aléatoire
       const iv = crypto.getRandomValues(new Uint8Array(this.ivLength))
-      
+
       // Convertir les données en ArrayBuffer
       const dataBuffer = new TextEncoder().encode(data)
-      
+
       // Chiffrer les données
       const encryptedBuffer = await crypto.subtle.encrypt(
         {
           name: this.algorithm,
-          iv: iv,
+          iv,
           tagLength: this.tagLength * 8
         },
         key,
         dataBuffer
       )
-      
+
       // Combiner IV + données chiffrées
       const combined = new Uint8Array(iv.length + encryptedBuffer.byteLength)
       combined.set(iv)
       combined.set(new Uint8Array(encryptedBuffer), iv.length)
-      
+
       // Convertir en base64
       return this.arrayBufferToBase64(combined)
     } catch (error) {
@@ -94,26 +94,26 @@ class EncryptionService {
    * @param {CryptoKey} key - Clé de déchiffrement
    * @returns {Promise<string>} Données déchiffrées
    */
-  async decrypt(encryptedData, key) {
+  async decrypt (encryptedData, key) {
     try {
       // Convertir depuis base64
       const combined = this.base64ToArrayBuffer(encryptedData)
-      
+
       // Extraire IV et données chiffrées
       const iv = combined.slice(0, this.ivLength)
       const encrypted = combined.slice(this.ivLength)
-      
+
       // Déchiffrer les données
       const decryptedBuffer = await crypto.subtle.decrypt(
         {
           name: this.algorithm,
-          iv: iv,
+          iv,
           tagLength: this.tagLength * 8
         },
         key,
         encrypted
       )
-      
+
       // Convertir en string
       return new TextDecoder().decode(decryptedBuffer)
     } catch (error) {
@@ -129,13 +129,13 @@ class EncryptionService {
    * @param {Uint8Array} salt - Sel pour le dérivation
    * @returns {Promise<string>} Données chiffrées
    */
-  async encryptWithPassword(data, password, salt = null) {
+  async encryptWithPassword (data, password, salt = null) {
     try {
       // Générer un sel si non fourni
       if (!salt) {
         salt = crypto.getRandomValues(new Uint8Array(16))
       }
-      
+
       // Dériver une clé depuis le mot de passe
       const keyMaterial = await crypto.subtle.importKey(
         'raw',
@@ -144,11 +144,11 @@ class EncryptionService {
         false,
         ['deriveBits', 'deriveKey']
       )
-      
+
       const key = await crypto.subtle.deriveKey(
         {
           name: 'PBKDF2',
-          salt: salt,
+          salt,
           iterations: 100000,
           hash: 'SHA-256'
         },
@@ -157,15 +157,15 @@ class EncryptionService {
         false,
         ['encrypt', 'decrypt']
       )
-      
+
       // Chiffrer les données
       const encrypted = await this.encrypt(data, key)
-      
+
       // Combiner sel + données chiffrées
       const combined = new Uint8Array(salt.length + encrypted.length)
       combined.set(salt)
       combined.set(new TextEncoder().encode(encrypted), salt.length)
-      
+
       return this.arrayBufferToBase64(combined)
     } catch (error) {
       console.error('Erreur lors du chiffrement avec mot de passe:', error)
@@ -179,15 +179,15 @@ class EncryptionService {
    * @param {string} password - Mot de passe
    * @returns {Promise<string>} Données déchiffrées
    */
-  async decryptWithPassword(encryptedData, password) {
+  async decryptWithPassword (encryptedData, password) {
     try {
       // Convertir depuis base64
       const combined = this.base64ToArrayBuffer(encryptedData)
-      
+
       // Extraire sel et données chiffrées
       const salt = combined.slice(0, 16)
       const encrypted = new TextDecoder().decode(combined.slice(16))
-      
+
       // Dériver la clé
       const keyMaterial = await crypto.subtle.importKey(
         'raw',
@@ -196,11 +196,11 @@ class EncryptionService {
         false,
         ['deriveBits', 'deriveKey']
       )
-      
+
       const key = await crypto.subtle.deriveKey(
         {
           name: 'PBKDF2',
-          salt: salt,
+          salt,
           iterations: 100000,
           hash: 'SHA-256'
         },
@@ -209,7 +209,7 @@ class EncryptionService {
         false,
         ['encrypt', 'decrypt']
       )
-      
+
       // Déchiffrer les données
       return await this.decrypt(encrypted, key)
     } catch (error) {
@@ -224,15 +224,15 @@ class EncryptionService {
    * @param {string} masterPassword - Mot de passe maître
    * @returns {Promise<Object>} Données chiffrées
    */
-  async encryptProfileData(profileData, masterPassword) {
+  async encryptProfileData (profileData, masterPassword) {
     const sensitiveFields = ['description', 'image_data', 'avatar_content']
     const encryptedData = { ...profileData }
-    
+
     for (const field of sensitiveFields) {
       if (profileData[field]) {
         try {
           encryptedData[field] = await this.encryptWithPassword(
-            profileData[field], 
+            profileData[field],
             masterPassword
           )
         } catch (error) {
@@ -241,7 +241,7 @@ class EncryptionService {
         }
       }
     }
-    
+
     return encryptedData
   }
 
@@ -251,15 +251,15 @@ class EncryptionService {
    * @param {string} masterPassword - Mot de passe maître
    * @returns {Promise<Object>} Données déchiffrées
    */
-  async decryptProfileData(encryptedData, masterPassword) {
+  async decryptProfileData (encryptedData, masterPassword) {
     const sensitiveFields = ['description', 'image_data', 'avatar_content']
     const decryptedData = { ...encryptedData }
-    
+
     for (const field of sensitiveFields) {
       if (encryptedData[field]) {
         try {
           decryptedData[field] = await this.decryptWithPassword(
-            encryptedData[field], 
+            encryptedData[field],
             masterPassword
           )
         } catch (error) {
@@ -268,7 +268,7 @@ class EncryptionService {
         }
       }
     }
-    
+
     return decryptedData
   }
 
@@ -277,7 +277,7 @@ class EncryptionService {
    * @param {string} data - Données à hasher
    * @returns {Promise<string>} Hash en base64
    */
-  async generateHash(data) {
+  async generateHash (data) {
     const encoder = new TextEncoder()
     const dataBuffer = encoder.encode(data)
     const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer)
@@ -290,7 +290,7 @@ class EncryptionService {
    * @param {string} hash - Hash de référence
    * @returns {Promise<boolean>} True si l'intégrité est vérifiée
    */
-  async verifyIntegrity(data, hash) {
+  async verifyIntegrity (data, hash) {
     try {
       const computedHash = await this.generateHash(data)
       return computedHash === hash
@@ -305,7 +305,7 @@ class EncryptionService {
    * @param {ArrayBuffer} buffer - Buffer à convertir
    * @returns {string} String base64
    */
-  arrayBufferToBase64(buffer) {
+  arrayBufferToBase64 (buffer) {
     const bytes = new Uint8Array(buffer)
     let binary = ''
     for (let i = 0; i < bytes.byteLength; i++) {
@@ -319,7 +319,7 @@ class EncryptionService {
    * @param {string} base64 - String base64
    * @returns {ArrayBuffer} Buffer
    */
-  base64ToArrayBuffer(base64) {
+  base64ToArrayBuffer (base64) {
     const binary = atob(base64)
     const bytes = new Uint8Array(binary.length)
     for (let i = 0; i < binary.length; i++) {
@@ -333,7 +333,7 @@ class EncryptionService {
    * @param {number} length - Longueur du token
    * @returns {string} Token sécurisé
    */
-  generateSecureToken(length = 32) {
+  generateSecureToken (length = 32) {
     const array = new Uint8Array(length)
     crypto.getRandomValues(array)
     return this.arrayBufferToBase64(array)

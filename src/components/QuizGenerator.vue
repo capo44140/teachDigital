@@ -21,8 +21,8 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-3 text-white/80 hover:text-white backdrop-blur-xl bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-500/10 relative group"
+              @click="goBack"
             >
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -85,8 +85,8 @@
           </div>
         </div>
         <button 
-          @click="startQuiz"
           class="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:shadow-lg hover:shadow-green-500/50 transition-all duration-300 text-lg font-medium backdrop-blur-xl border border-white/20"
+          @click="startQuiz"
         >
           Commencer le quiz
         </button>
@@ -105,13 +105,13 @@
           <button
             v-for="(option, index) in currentQuestion.options"
             :key="index"
-            @click="selectAnswer(index)"
             :class="[
               'w-full p-4 text-left rounded-xl border-2 transition-all duration-300 backdrop-blur-xl',
               selectedAnswer === index
                 ? 'border-green-400 bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-100'
                 : 'border-white/20 bg-white/5 hover:border-green-300 hover:bg-white/10 text-white'
             ]"
+            @click="selectAnswer(index)"
           >
             <div class="flex items-center space-x-3">
               <span class="w-8 h-8 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center font-medium text-white">
@@ -124,7 +124,6 @@
 
         <div class="flex justify-between">
           <button 
-            @click="previousQuestion"
             :disabled="currentQuestionIndex === 0"
             :class="[
               'px-6 py-2 rounded-xl transition-all duration-300 backdrop-blur-xl',
@@ -132,11 +131,11 @@
                 ? 'bg-white/5 text-white/40 cursor-not-allowed border border-white/10'
                 : 'bg-gradient-to-r from-gray-500 to-gray-600 text-white hover:shadow-lg hover:shadow-gray-500/50 border border-white/20'
             ]"
+            @click="previousQuestion"
           >
             Précédent
           </button>
           <button 
-            @click="nextQuestion"
             :disabled="selectedAnswer === null"
             :class="[
               'px-6 py-2 rounded-xl transition-all duration-300 backdrop-blur-xl',
@@ -144,6 +143,7 @@
                 ? 'bg-white/5 text-white/40 cursor-not-allowed border border-white/10'
                 : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:shadow-lg hover:shadow-green-500/50 border border-white/20'
             ]"
+            @click="nextQuestion"
           >
             {{ currentQuestionIndex === (quiz?.questions?.length || 0) - 1 ? 'Terminer' : 'Suivant' }}
           </button>
@@ -216,14 +216,14 @@
         <!-- Actions -->
         <div class="flex justify-center space-x-4">
           <button 
-            @click="restartQuiz"
             class="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/50 transition-all duration-300 backdrop-blur-xl border border-white/20"
+            @click="restartQuiz"
           >
             Recommencer
           </button>
           <button 
-            @click="goBack"
             class="px-6 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-xl hover:shadow-lg hover:shadow-gray-500/50 transition-all duration-300 backdrop-blur-xl border border-white/20"
+            @click="goBack"
           >
             Retour au scanner
           </button>

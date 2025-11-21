@@ -13,9 +13,9 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Retour au dashboard"
+              @click="goBack"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -39,13 +39,13 @@
           <button
             v-for="child in childProfiles"
             :key="child.id"
-            @click="selectChild(child)"
             :class="[
               'p-3 rounded-xl border-2 transition-all flex flex-col items-center space-y-2',
               selectedChild?.id === child.id 
                 ? 'border-purple-400 bg-white/20' 
                 : 'border-white/20 hover:border-white/40 hover:bg-white/10'
             ]"
+            @click="selectChild(child)"
           >
             <div class="w-12 h-12 rounded-lg flex items-center justify-center" :class="child.bgColor">
               <span class="text-white font-bold text-lg">{{ child.initial }}</span>
@@ -86,21 +86,21 @@
 
         <!-- Zone de téléchargement -->
         <div 
-          @drop="handleDrop"
-          @dragover.prevent
-          @dragenter.prevent
           :class="[
             'border-2 border-dashed rounded-2xl p-8 text-center transition-all',
             isDragOver ? 'border-purple-400 bg-purple-500/10' : 'border-white/20'
           ]"
+          @drop="handleDrop"
+          @dragover.prevent
+          @dragenter.prevent
         >
           <input
             ref="fileInput"
             type="file"
             accept="image/*,.pdf"
-            @change="handleFileSelect"
             multiple
             class="hidden"
+            @change="handleFileSelect"
           />
           
           <div v-if="selectedFiles.length === 0" class="space-y-4">
@@ -111,8 +111,8 @@
               <p class="text-lg font-medium text-white">Glissez-déposez vos documents ici</p>
               <p class="text-white/60 text-sm mt-1">ou</p>
               <button 
-                @click="$refs.fileInput.click()"
                 class="mt-3 px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/50 transition-all"
+                @click="$refs.fileInput.click()"
               >
                 Parcourir les fichiers
               </button>
@@ -132,8 +132,8 @@
                 class="relative bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl p-4 hover:bg-white/15 transition-all"
               >
                 <button 
-                  @click="removeFile(index)"
                   class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors flex items-center justify-center"
+                  @click="removeFile(index)"
                 >
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -181,13 +181,12 @@
         <div class="flex flex-col sm:flex-row justify-center gap-3 mt-8">
           <button 
             v-if="selectedFiles.length > 0"
-            @click="removeAllFiles"
             class="px-6 py-3 bg-white/10 border border-white/20 text-white rounded-xl hover:bg-white/20 hover:border-white/30 transition-all"
+            @click="removeAllFiles"
           >
             Supprimer tous les fichiers
           </button>
           <button 
-            @click="scanLesson"
             :disabled="selectedFiles.length === 0 || !selectedChild || isProcessing"
             :class="[
               'px-8 py-3 rounded-xl font-medium transition-all',
@@ -195,6 +194,7 @@
                 ? 'bg-white/5 text-white/40 cursor-not-allowed'
                 : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg hover:shadow-purple-500/50'
             ]"
+            @click="scanLesson"
           >
             <span v-if="isProcessing" class="flex items-center justify-center space-x-2">
               <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">

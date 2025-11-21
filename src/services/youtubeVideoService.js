@@ -2,11 +2,11 @@ import { apiService } from './apiService.js'
 
 /**
  * Service pour gérer les vidéos YouTube
- * 
+ *
  * ⚠️ IMPORTANT: Ce service communique via l'API backend, pas d'accès direct DB
  */
 class YouTubeVideoService {
-  constructor() {
+  constructor () {
     this.tableName = 'youtube_videos'
   }
 
@@ -14,16 +14,16 @@ class YouTubeVideoService {
    * Récupérer toutes les vidéos YouTube
    * @returns {Promise<Array>} Liste des vidéos
    */
-  async getAllVideos() {
+  async getAllVideos () {
     try {
       console.log('📺 [YOUTUBE_SERVICE] Récupération de toutes les vidéos')
-      
+
       const data = await apiService.getYouTubeVideos()
       console.log('✅ [YOUTUBE_SERVICE] Vidéos récupérées depuis l\'API:', data?.length || 0)
       return data || []
     } catch (error) {
       console.warn('⚠️ [YOUTUBE_SERVICE] Erreur API, utilisation des données de démonstration:', error.message)
-      
+
       // Données de démonstration en cas d'erreur
       const demoVideos = [
         {
@@ -63,7 +63,7 @@ class YouTubeVideoService {
           updated_at: new Date('2024-01-05').toISOString()
         }
       ]
-      
+
       console.log('✅ [YOUTUBE_SERVICE] Données de démonstration chargées:', demoVideos.length)
       return demoVideos
     }
@@ -74,12 +74,12 @@ class YouTubeVideoService {
    * @param {number} id - ID de la vidéo
    * @returns {Promise<Object>} Vidéo trouvée
    */
-  async getVideoById(id) {
+  async getVideoById (id) {
     try {
       console.log('📺 [YOUTUBE_SERVICE] Récupération de la vidéo ID:', id)
-      
+
       const data = await apiService.request(`/api/youtube-videos/${id}`)
-      
+
       if (!data.success) {
         throw new Error('Vidéo non trouvée')
       }
@@ -96,10 +96,10 @@ class YouTubeVideoService {
    * Récupérer les vidéos actives
    * @returns {Promise<Array>} Liste des vidéos actives
    */
-  async getActiveVideos() {
+  async getActiveVideos () {
     try {
       console.log('📺 [YOUTUBE_SERVICE] Récupération des vidéos actives')
-      
+
       const videos = await this.getAllVideos()
       const activeVideos = videos.filter(v => v.is_active)
 
@@ -116,10 +116,10 @@ class YouTubeVideoService {
    * @param {string} category - Catégorie des vidéos
    * @returns {Promise<Array>} Liste des vidéos de la catégorie
    */
-  async getVideosByCategory(category) {
+  async getVideosByCategory (category) {
     try {
       console.log('📺 [YOUTUBE_SERVICE] Récupération des vidéos par catégorie:', category)
-      
+
       const videos = await this.getActiveVideos()
       const categoryVideos = videos.filter(v => v.category === category)
 
@@ -136,10 +136,10 @@ class YouTubeVideoService {
    * @param {string} ageGroup - Groupe d'âge
    * @returns {Promise<Array>} Liste des vidéos pour le groupe d'âge
    */
-  async getVideosByAgeGroup(ageGroup) {
+  async getVideosByAgeGroup (ageGroup) {
     try {
       console.log('📺 [YOUTUBE_SERVICE] Récupération des vidéos par groupe d\'âge:', ageGroup)
-      
+
       const videos = await this.getActiveVideos()
       const ageGroupVideos = videos.filter(v => v.age_group === ageGroup)
 
@@ -156,10 +156,10 @@ class YouTubeVideoService {
    * @param {Object} videoData - Données de la vidéo
    * @returns {Promise<Object>} Vidéo créée
    */
-  async createVideo(videoData) {
+  async createVideo (videoData) {
     try {
       console.log('📺 [YOUTUBE_SERVICE] Création d\'une nouvelle vidéo:', videoData)
-      
+
       // Validation des données
       if (!videoData.url || !videoData.title || !videoData.category) {
         throw new Error('URL, titre et catégorie sont requis')
@@ -202,10 +202,10 @@ class YouTubeVideoService {
    * @param {Object} videoData - Nouvelles données de la vidéo
    * @returns {Promise<Object>} Vidéo mise à jour
    */
-  async updateVideo(id, videoData) {
+  async updateVideo (id, videoData) {
     try {
       console.log('📺 [YOUTUBE_SERVICE] Mise à jour de la vidéo ID:', id)
-      
+
       const updateData = { ...videoData }
 
       // Si l'URL est mise à jour, extraire le nouvel ID vidéo
@@ -238,10 +238,10 @@ class YouTubeVideoService {
    * @param {number} id - ID de la vidéo
    * @returns {Promise<boolean>} Succès de la suppression
    */
-  async deleteVideo(id) {
+  async deleteVideo (id) {
     try {
       console.log('📺 [YOUTUBE_SERVICE] Suppression de la vidéo ID:', id)
-      
+
       const result = await apiService.request(`/api/youtube-videos/${id}`, {
         method: 'DELETE'
       })
@@ -263,10 +263,10 @@ class YouTubeVideoService {
    * @param {number} id - ID de la vidéo
    * @returns {Promise<Object>} Vidéo mise à jour
    */
-  async toggleVideoStatus(id) {
+  async toggleVideoStatus (id) {
     try {
       console.log('📺 [YOUTUBE_SERVICE] Basculement du statut de la vidéo ID:', id)
-      
+
       const video = await this.getVideoById(id)
       const result = await this.updateVideo(id, {
         is_active: !video.is_active
@@ -285,12 +285,12 @@ class YouTubeVideoService {
    * @param {string} query - Terme de recherche
    * @returns {Promise<Array>} Liste des vidéos trouvées
    */
-  async searchVideos(query) {
+  async searchVideos (query) {
     try {
       console.log('📺 [YOUTUBE_SERVICE] Recherche de vidéos:', query)
-      
+
       const videos = await this.getAllVideos()
-      const results = videos.filter(v => 
+      const results = videos.filter(v =>
         v.title.toLowerCase().includes(query.toLowerCase()) ||
         v.description.toLowerCase().includes(query.toLowerCase())
       )
@@ -307,10 +307,10 @@ class YouTubeVideoService {
    * Récupérer les catégories disponibles
    * @returns {Promise<Array>} Liste des catégories
    */
-  async getCategories() {
+  async getCategories () {
     try {
       console.log('📺 [YOUTUBE_SERVICE] Récupération des catégories')
-      
+
       const videos = await this.getActiveVideos()
       const categories = [...new Set(videos.map(v => v.category))].sort()
 
@@ -326,10 +326,10 @@ class YouTubeVideoService {
    * Récupérer les statistiques des vidéos
    * @returns {Promise<Object>} Statistiques des vidéos
    */
-  async getVideoStats() {
+  async getVideoStats () {
     try {
       console.log('📺 [YOUTUBE_SERVICE] Récupération des statistiques')
-      
+
       const videos = await this.getAllVideos()
       const activeVideos = videos.filter(v => v.is_active)
       const categories = new Set(videos.map(v => v.category))
@@ -356,16 +356,16 @@ class YouTubeVideoService {
    * @param {string} url - URL YouTube
    * @returns {string|null} ID de la vidéo
    */
-  extractVideoId(url) {
+  extractVideoId (url) {
     if (!url) {
       console.warn('⚠️ [YOUTUBE_SERVICE] URL vide fournie')
       return null
     }
-    
+
     console.log('🔍 [YOUTUBE_SERVICE] Extraction de l\'ID depuis l\'URL:', url)
-    
+
     const cleanUrl = url.trim()
-    
+
     const patterns = [
       /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})/,
       /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/,
@@ -375,7 +375,7 @@ class YouTubeVideoService {
       /(?:youtube\.com\/watch\?.*v=)([a-zA-Z0-9_-]{11})/,
       /(?:youtube\.com\/watch\?[^&]*v=)([a-zA-Z0-9_-]{11})/
     ]
-    
+
     for (let i = 0; i < patterns.length; i++) {
       const pattern = patterns[i]
       const match = cleanUrl.match(pattern)
@@ -385,7 +385,7 @@ class YouTubeVideoService {
         return videoId
       }
     }
-    
+
     const flexiblePattern = /[?&]v=([a-zA-Z0-9_-]{11})/
     const flexibleMatch = cleanUrl.match(flexiblePattern)
     if (flexibleMatch && flexibleMatch[1]) {
@@ -393,7 +393,7 @@ class YouTubeVideoService {
       console.log('✅ [YOUTUBE_SERVICE] ID vidéo extrait (pattern flexible):', videoId)
       return videoId
     }
-    
+
     console.error('❌ [YOUTUBE_SERVICE] Impossible d\'extraire l\'ID vidéo de l\'URL:', cleanUrl)
     return null
   }
@@ -403,7 +403,7 @@ class YouTubeVideoService {
    * @param {string} videoId - ID de la vidéo YouTube
    * @returns {string} URL de la miniature
    */
-  getThumbnailUrl(videoId) {
+  getThumbnailUrl (videoId) {
     return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
   }
 
@@ -412,7 +412,7 @@ class YouTubeVideoService {
    * @param {string} videoId - ID de la vidéo YouTube
    * @returns {string} URL d'embed
    */
-  getEmbedUrl(videoId) {
+  getEmbedUrl (videoId) {
     return `https://www.youtube.com/embed/${videoId}`
   }
 }

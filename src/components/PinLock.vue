@@ -20,9 +20,9 @@
       <!-- Bouton de fermeture -->
       <div class="flex justify-end mb-8">
         <button 
-          @click="goBack"
           class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
           title="Retour"
+          @click="goBack"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -64,21 +64,21 @@
           <button 
             v-for="number in 9" 
             :key="number"
-            @click="addDigit(number)"
             class="glass-button-pin h-12"
+            @click="addDigit(number)"
           >
             {{ number }}
           </button>
           <button 
-            @click="addDigit(0)"
             class="glass-button-pin h-12 col-start-2"
+            @click="addDigit(0)"
           >
             0
           </button>
           <button 
-            @click="removeDigit"
             class="glass-button-pin h-12 text-lg"
             title="Supprimer"
+            @click="removeDigit"
           >
             ⌫
           </button>
@@ -92,8 +92,8 @@
         <!-- Lien mot de passe oublié -->
         <div class="text-center pt-6 border-t border-white/10">
           <button 
-            @click="forgotPin"
             class="text-sm text-white/60 hover:text-white transition-colors"
+            @click="forgotPin"
           >
             Vous avez oublié votre code PIN ?
           </button>
@@ -111,6 +111,12 @@ import { apiService } from '../services/apiService.js'
 
 export default {
   name: 'PinLock',
+  props: {
+    profileName: {
+      type: String,
+      default: 'Parent'
+    }
+  },
   setup() {
     const profileStore = useProfileStore()
     return { profileStore }
@@ -123,12 +129,6 @@ export default {
       attempts: 0,
       maxAttempts: PIN_CONFIG.MAX_ATTEMPTS,
       isLocked: false
-    }
-  },
-  props: {
-    profileName: {
-      type: String,
-      default: 'Parent'
     }
   },
   mounted() {

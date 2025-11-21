@@ -2,7 +2,7 @@
   <div class="mobile-performance-monitor">
     <div class="monitor-header">
       <h3>📱 Performance Mobile</h3>
-      <button @click="refreshStats" class="refresh-button" :disabled="isLoading">
+      <button class="refresh-button" :disabled="isLoading" @click="refreshStats">
         <span v-if="isLoading">🔄</span>
         <span v-else>↻</span>
       </button>
@@ -95,10 +95,10 @@
 
     <!-- Actions d'optimisation -->
     <div class="optimization-actions">
-      <button @click="forceOptimizations" class="action-button optimize">
+      <button class="action-button optimize" @click="forceOptimizations">
         🚀 Forcer les optimisations
       </button>
-      <button @click="toggleOptimizations" class="action-button toggle">
+      <button class="action-button toggle" @click="toggleOptimizations">
         {{ optimizationsEnabled ? '❌ Désactiver' : '✅ Activer' }} les optimisations
       </button>
     </div>

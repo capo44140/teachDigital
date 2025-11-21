@@ -14,9 +14,9 @@
           <!-- Bouton retour et titre -->
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Retour au dashboard"
+              @click="goBack"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -28,8 +28,8 @@
           <!-- Actions -->
           <div class="flex items-center space-x-3">
             <button 
-              @click="openPinSettings"
               class="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 hover:border-white/30 transition-all flex items-center space-x-2 text-sm"
+              @click="openPinSettings"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
@@ -37,8 +37,8 @@
               <span>Code PIN</span>
             </button>
             <button 
-              @click="addNewProfile"
               class="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/50 transition-all flex items-center space-x-2 text-sm"
+              @click="addNewProfile"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
@@ -134,8 +134,8 @@
         <div v-if="profiles.length === 0" class="glass-card-dashboard text-center py-16">
           <p class="text-white/60 text-lg mb-4">Aucun profil trouvé</p>
           <button 
-            @click="addNewProfile"
             class="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/50 transition-all"
+            @click="addNewProfile"
           >
             Créer le premier profil
           </button>
@@ -161,7 +161,7 @@
                 :class="profile.avatar_class"
                 class="w-16 h-16 rounded-xl flex items-center justify-center shadow-lg"
               >
-                <div v-html="profile.avatar_content" class="w-full h-full flex items-center justify-center"></div>
+                <div class="w-full h-full flex items-center justify-center" v-html="profile.avatar_content"></div>
               </div>
               
               <!-- Badges de statut -->
@@ -205,28 +205,28 @@
             <!-- Actions -->
             <div class="flex items-center space-x-2 flex-shrink-0">
               <button 
-                @click="manageImage(profile)"
                 class="p-2 text-white/60 hover:text-white border border-white/20 hover:border-white/40 rounded-lg backdrop-blur-xl hover:bg-white/10 transition-all"
                 title="Gérer l'image"
+                @click="manageImage(profile)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
               </button>
               <button 
-                @click="editProfile(profile)"
                 class="p-2 text-white/60 hover:text-white border border-white/20 hover:border-white/40 rounded-lg backdrop-blur-xl hover:bg-white/10 transition-all"
                 title="Modifier"
+                @click="editProfile(profile)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                 </svg>
               </button>
               <button 
-                @click="toggleProfileStatus(profile)"
                 :class="profile.is_active ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'"
                 class="p-2 border border-white/20 hover:border-white/40 rounded-lg backdrop-blur-xl hover:bg-white/10 transition-all"
                 :title="profile.is_active ? 'Désactiver' : 'Activer'"
+                @click="toggleProfileStatus(profile)"
               >
                 <svg v-if="profile.is_active" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/>
@@ -236,9 +236,9 @@
                 </svg>
               </button>
               <button 
-                @click="deleteProfile(profile)"
                 class="p-2 text-red-400/60 hover:text-red-300 border border-red-400/20 hover:border-red-400/40 rounded-lg backdrop-blur-xl hover:bg-red-400/10 transition-all"
                 title="Supprimer"
+                @click="deleteProfile(profile)"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -278,8 +278,8 @@
 
         <div class="flex justify-end">
           <button 
-            @click="closeImageModal"
             class="px-6 py-2 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 hover:border-white/30 transition-all"
+            @click="closeImageModal"
           >
             Fermer
           </button>
@@ -301,7 +301,7 @@
           {{ editingProfile ? 'Modifier le profil' : 'Nouveau profil' }}
         </h3>
         
-        <form @submit.prevent="saveProfile" class="space-y-4">
+        <form class="space-y-4" @submit.prevent="saveProfile">
           <div>
             <label class="block text-sm font-medium text-white/80 mb-2">Nom</label>
             <input 
@@ -360,13 +360,13 @@
               <button 
                 v-for="color in profileColors"
                 :key="color.name"
-                @click="form.color = color.name"
                 :class="[
                   'w-12 h-12 rounded-lg border-2 transition-all',
                   color.class,
                   form.color === color.name ? 'border-white ring-2 ring-white' : 'border-white/30'
                 ]"
                 type="button"
+                @click="form.color = color.name"
               ></button>
             </div>
           </div>
@@ -374,8 +374,8 @@
           <div class="flex justify-end space-x-3 pt-4">
             <button 
               type="button"
-              @click="closeModal"
               class="px-6 py-2 text-white/80 hover:text-white transition-colors"
+              @click="closeModal"
             >
               Annuler
             </button>

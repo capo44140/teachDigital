@@ -1,6 +1,6 @@
 <template>
   <div class="version-info" :class="position">
-    <div class="version-badge" @click="toggleDetails" :title="versionDetails">
+    <div class="version-badge" :title="versionDetails" @click="toggleDetails">
       <i class="fas fa-info-circle"></i>
       <span class="version-text">v{{ appVersion }}</span>
     </div>
@@ -13,11 +13,11 @@
           <span class="label">Version:</span>
           <span class="value">{{ appVersion }}</span>
         </div>
-        <div class="version-detail-item" v-if="buildDate">
+        <div v-if="buildDate" class="version-detail-item">
           <span class="label">Build:</span>
           <span class="value">{{ formatDate(buildDate) }}</span>
         </div>
-        <div class="version-detail-item" v-if="buildNumber">
+        <div v-if="buildNumber" class="version-detail-item">
           <span class="label">Build #:</span>
           <span class="value">{{ buildNumber }}</span>
         </div>
@@ -69,6 +69,22 @@ export default {
   },
   async created() {
     await this.loadVersionInfo()
+  },
+  mounted() {
+    if (this.showOnHover) {
+      this.$el.addEventListener('mouseenter', () => {
+        this.showDetails = true
+      })
+      this.$el.addEventListener('mouseleave', () => {
+        this.showDetails = false
+      })
+    }
+    
+    // Fermer les détails en cliquant ailleurs
+    document.addEventListener('click', this.handleClickOutside)
+  },
+  beforeUnmount() {
+    document.removeEventListener('click', this.handleClickOutside)
   },
   methods: {
     async loadVersionInfo() {
@@ -124,22 +140,6 @@ export default {
         this.showDetails = false
       }
     }
-  },
-  mounted() {
-    if (this.showOnHover) {
-      this.$el.addEventListener('mouseenter', () => {
-        this.showDetails = true
-      })
-      this.$el.addEventListener('mouseleave', () => {
-        this.showDetails = false
-      })
-    }
-    
-    // Fermer les détails en cliquant ailleurs
-    document.addEventListener('click', this.handleClickOutside)
-  },
-  beforeUnmount() {
-    document.removeEventListener('click', this.handleClickOutside)
   }
 }
 </script>

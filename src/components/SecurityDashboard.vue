@@ -6,8 +6,8 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              @click="goBack"
             >
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -122,10 +122,10 @@
           </div>
         </div>
         <div class="flex justify-end space-x-4 mt-4">
-          <button @click="applyFilters" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700" @click="applyFilters">
             Appliquer les filtres
           </button>
-          <button @click="clearFilters" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+          <button class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700" @click="clearFilters">
             Effacer
           </button>
         </div>
@@ -136,10 +136,10 @@
         <div class="flex items-center justify-between mb-6">
           <h3 class="text-lg font-semibold text-gray-800">Logs d'audit</h3>
           <div class="flex space-x-2">
-            <button @click="refreshLogs" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+            <button class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700" @click="refreshLogs">
               Actualiser
             </button>
-            <button @click="exportLogs" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+            <button class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700" @click="exportLogs">
               Exporter
             </button>
           </div>
@@ -179,7 +179,7 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-900">
-                  <button @click="showLogDetails(log)" class="text-blue-600 hover:text-blue-800">
+                  <button class="text-blue-600 hover:text-blue-800" @click="showLogDetails(log)">
                     Voir détails
                   </button>
                 </td>
@@ -194,7 +194,7 @@
             Affichage de {{ filteredLogs.length }} logs
           </div>
           <div class="flex space-x-2">
-            <button @click="loadMoreLogs" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+            <button class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700" @click="loadMoreLogs">
               Charger plus
             </button>
           </div>
@@ -208,7 +208,7 @@
         <div class="p-6">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-800">Détails du log</h3>
-            <button @click="selectedLog = null" class="text-gray-500 hover:text-gray-700">
+            <button class="text-gray-500 hover:text-gray-700" @click="selectedLog = null">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>

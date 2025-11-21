@@ -13,9 +13,9 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Retour au dashboard"
+              @click="goBack"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -27,10 +27,10 @@
             </div>
           </div>
           <button 
-            @click="refreshData"
             :disabled="isLoading"
             class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
             title="Actualiser les données"
+            @click="refreshData"
           >
             <svg class="w-5 h-5" :class="{ 'animate-spin': isLoading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -167,8 +167,8 @@
             </div>
 
             <button 
-              @click="viewChildProgress(child)"
               class="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/50 transition-all text-sm"
+              @click="viewChildProgress(child)"
             >
               Voir le détail
             </button>
@@ -181,8 +181,8 @@
             <h3 class="text-lg font-bold text-white mb-3 sm:mb-0">Historique des Quiz</h3>
             <select
               v-model="selectedPeriod"
-              @change="filterQuizHistory"
               class="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all w-full sm:w-auto"
+              @change="filterQuizHistory"
             >
               <option value="all" class="bg-slate-900">Tous les quiz</option>
               <option value="week" class="bg-slate-900">Cette semaine</option>

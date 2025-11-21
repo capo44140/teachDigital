@@ -21,9 +21,9 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Retour au tableau de bord"
+              @click="goBack"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -65,8 +65,8 @@
               placeholder="1"
             />
             <button
-              @click="loadProfileData"
               class="px-6 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/50 transition-all duration-300 font-medium"
+              @click="loadProfileData"
             >
               Charger les données
             </button>
@@ -83,15 +83,15 @@
           </h2>
           <div class="flex space-x-4 mb-6">
             <button
-              @click="runAllTests"
               :disabled="isRunningTests"
               class="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:shadow-lg hover:shadow-green-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
+              @click="runAllTests"
             >
               {{ isRunningTests ? 'Tests en cours...' : 'Lancer tous les tests' }}
             </button>
             <button
-              @click="clearTestResults"
               class="px-6 py-3 bg-gradient-to-r from-gray-500 to-slate-500 text-white rounded-xl hover:shadow-lg hover:shadow-gray-500/50 transition-all duration-300 font-medium"
+              @click="clearTestResults"
             >
               Effacer les résultats
             </button>
@@ -166,9 +166,9 @@
                 ></textarea>
               </div>
               <button
-                @click="createNotification"
                 :disabled="isCreating"
                 class="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
+                @click="createNotification"
               >
                 {{ isCreating ? 'Création...' : 'Créer la notification' }}
               </button>
@@ -213,9 +213,9 @@
                 />
               </div>
               <button
-                @click="createQuizNotification"
                 :disabled="isCreatingQuiz"
                 class="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:shadow-lg hover:shadow-green-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
+                @click="createQuizNotification"
               >
                 {{ isCreatingQuiz ? 'Création...' : 'Créer notification de quiz' }}
               </button>
@@ -233,30 +233,30 @@
           </h3>
           <div class="flex flex-wrap gap-4">
             <button
-              @click="loadNotifications"
               :disabled="isLoading"
               class="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
+              @click="loadNotifications"
             >
               {{ isLoading ? 'Chargement...' : 'Charger les notifications' }}
             </button>
             <button
-              @click="markAllAsRead"
               :disabled="isMarkingAll"
               class="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl hover:shadow-lg hover:shadow-yellow-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
+              @click="markAllAsRead"
             >
               {{ isMarkingAll ? 'Marquage...' : 'Tout marquer comme lu' }}
             </button>
             <button
-              @click="deleteReadNotifications"
               :disabled="isDeleting"
               class="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
+              @click="deleteReadNotifications"
             >
               {{ isDeleting ? 'Suppression...' : 'Supprimer les lues' }}
             </button>
             <button
-              @click="getNotificationStats"
               :disabled="isLoadingStats"
               class="px-6 py-3 bg-gradient-to-r from-purple-500 to-violet-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/50 disabled:opacity-50 transition-all duration-300 font-medium"
+              @click="getNotificationStats"
             >
               {{ isLoadingStats ? 'Chargement...' : 'Statistiques' }}
             </button>
@@ -313,14 +313,14 @@
                 <div class="flex space-x-2 ml-4">
                   <button
                     v-if="!notification.is_read"
-                    @click="markAsRead(notification.id)"
                     class="px-3 py-1 text-xs bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-lg hover:shadow-green-500/50 transition-all duration-300 font-medium"
+                    @click="markAsRead(notification.id)"
                   >
                     Marquer lu
                   </button>
                   <button
-                    @click="deleteNotification(notification.id)"
                     class="px-3 py-1 text-xs bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg hover:shadow-lg hover:shadow-red-500/50 transition-all duration-300 font-medium"
+                    @click="deleteNotification(notification.id)"
                   >
                     Supprimer
                   </button>
@@ -357,8 +357,8 @@
         <!-- Bouton de retour -->
         <div class="text-center">
           <button
-            @click="goBack"
             class="px-8 py-3 bg-gradient-to-r from-gray-500 to-slate-500 text-white rounded-xl hover:shadow-lg hover:shadow-gray-500/50 transition-all duration-300 font-medium"
+            @click="goBack"
           >
             Retour au Dashboard
           </button>

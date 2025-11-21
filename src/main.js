@@ -7,15 +7,19 @@ import UpdateNotification from './components/UpdateNotification.vue'
 import { updateService } from './services/updateService.js'
 import { useApiStore } from './stores/apiStore.js'
 
+// Services PWA avancés
+import installService from './services/installService.js'
+import mobileOptimizationService from './services/mobileOptimizationService.js'
+
 // Filtrer les avertissements Radix UI/Dialog de la console
 const originalConsoleWarn = console.warn
 const originalConsoleError = console.error
 
-console.warn = function(...args) {
+console.warn = function (...args) {
   const message = args.join(' ')
   // Ignorer les avertissements Radix UI concernant DialogContent/DialogTitle
-  if (message.includes('DialogContent') || 
-      message.includes('DialogTitle') || 
+  if (message.includes('DialogContent') ||
+      message.includes('DialogTitle') ||
       message.includes('requires a `DialogTitle`') ||
       message.includes('VisuallyHidden') ||
       message.includes('radix-ui.com/primitives/docs/components/dialog')) {
@@ -24,11 +28,11 @@ console.warn = function(...args) {
   originalConsoleWarn.apply(console, args)
 }
 
-console.error = function(...args) {
+console.error = function (...args) {
   const message = args.join(' ')
   // Ignorer les erreurs Radix UI concernant DialogContent/DialogTitle
-  if (message.includes('DialogContent') || 
-      message.includes('DialogTitle') || 
+  if (message.includes('DialogContent') ||
+      message.includes('DialogTitle') ||
       message.includes('requires a `DialogTitle`') ||
       message.includes('VisuallyHidden') ||
       message.includes('radix-ui.com/primitives/docs/components/dialog')) {
@@ -36,10 +40,6 @@ console.error = function(...args) {
   }
   originalConsoleError.apply(console, args)
 }
-
-// Services PWA avancés
-import installService from './services/installService.js'
-import mobileOptimizationService from './services/mobileOptimizationService.js'
 
 // Créer l'instance Pinia
 const pinia = createPinia()
@@ -57,32 +57,32 @@ if ('serviceWorker' in navigator) {
       updateViaCache: 'none' // Forcer la vérification des mises à jour
     })
       .then((registration) => {
-        console.log('✅ Service Worker enregistré avec succès:', registration.scope);
-        
+        console.log('✅ Service Worker enregistré avec succès:', registration.scope)
+
         // Vérifier les mises à jour toutes les 30 secondes
         setInterval(() => {
-          registration.update();
-        }, 30000);
-        
+          registration.update()
+        }, 30000)
+
         // Écouter les mises à jour disponibles
         registration.addEventListener('updatefound', () => {
-          console.log('🔄 Service Worker: Mise à jour disponible');
-          
-          const newWorker = registration.installing;
+          console.log('🔄 Service Worker: Mise à jour disponible')
+
+          const newWorker = registration.installing
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('🆕 Service Worker: Nouvelle version installée');
-              
+              console.log('🆕 Service Worker: Nouvelle version installée')
+
               // Utiliser la popup personnalisée au lieu de confirm()
-              updateService.showUpdateNotification('0.0.15', '0.0.16');
+              updateService.showUpdateNotification('0.0.15', '0.0.16')
             }
-          });
-        });
+          })
+        })
       })
       .catch((error) => {
-        console.log('❌ Échec de l\'enregistrement du Service Worker:', error);
-      });
-  });
+        console.log('❌ Échec de l\'enregistrement du Service Worker:', error)
+      })
+  })
 }
 
 // Fournir les services globalement
@@ -108,13 +108,13 @@ scheduleIdleTask(() => {
  * Initialise les services de manière asynchrone après le montage de l'app
  * Optimise le chemin critique en différant les requêtes non essentielles
  */
-async function initializeServicesAsync() {
+async function initializeServicesAsync () {
   console.log('🚀 Initialisation asynchrone des services...')
-  
+
   // Étape 1 : Initialiser l'apiStore depuis le cache local (rapide)
   const apiStore = useApiStore()
   apiStore.initialize()
-  
+
   // Étape 2 : Initialiser les autres services en arrière-plan
   // Sans bloquer l'interface utilisateur
   scheduleIdleTask(() => {
@@ -125,14 +125,14 @@ async function initializeServicesAsync() {
 /**
  * Initialise les services PWA en arrière-plan
  */
-async function initializePWAServices() {
+async function initializePWAServices () {
   const services = [
     { name: 'Optimisation Mobile', init: () => mobileOptimizationService.init() },
     { name: 'Installation', init: () => installService.checkInstallationStatus() }
   ]
 
   console.log('🔧 Initialisation des services PWA...')
-  
+
   const results = await Promise.allSettled(
     services.map(service => service.init())
   )
@@ -151,4 +151,3 @@ async function initializePWAServices() {
     console.log('✅ Services PWA initialisés avec succès')
   }
 }
-

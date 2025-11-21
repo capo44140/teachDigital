@@ -21,9 +21,9 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button
-              @click="goBack"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Retour au tableau de bord"
+              @click="goBack"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -109,8 +109,8 @@
               <h3 class="text-xl font-bold text-white mb-3 sm:mb-0">Historique des Quiz</h3>
               <select 
                 v-model="selectedPeriod" 
-                @change="filterQuizHistory"
                 class="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full sm:w-auto"
+                @change="filterQuizHistory"
               >
                 <option value="all" class="bg-slate-900">Tous les quiz</option>
                 <option value="week" class="bg-slate-900">Cette semaine</option>
@@ -293,8 +293,8 @@
                       </div>
                     </div>
                     <button 
-                      @click="startRecommendedQuiz(quiz)"
                       class="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:shadow-lg hover:shadow-green-500/50 transition-all font-medium"
+                      @click="startRecommendedQuiz(quiz)"
                     >
                       Commencer
                     </button>

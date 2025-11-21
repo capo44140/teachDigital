@@ -44,10 +44,8 @@ class MobileOptimizationService {
       // Configurer les écouteurs d'événements
       this.setupEventListeners()
 
-      // eslint-disable-next-line no-console
       console.log('📱 Service d\'optimisation mobile initialisé')
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Erreur lors de l\'initialisation de l\'optimisation mobile:', error)
     }
   }
@@ -84,7 +82,6 @@ class MobileOptimizationService {
     // Déterminer si c'est un appareil bas de gamme
     this.isLowEndDevice = this.detectLowEndDevice()
 
-    // eslint-disable-next-line no-console
     console.log('📱 Capacités détectées:', {
       isMobile: this.isMobile,
       isLowEndDevice: this.isLowEndDevice,

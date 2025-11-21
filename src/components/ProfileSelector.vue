@@ -47,8 +47,8 @@
           v-for="profile in profiles"
           :key="profile.id"
           :data-testid="`profile-${profile.name.toLowerCase()}`"
-          @click="selectProfile(profile)"
           class="profile-card-glass group cursor-pointer"
+          @click="selectProfile(profile)"
         >
           <!-- Carte de profil -->
           <div class="profile-card-container">
@@ -102,8 +102,8 @@
 
         <!-- Ajouter un profil -->
         <div 
-          @click="addProfile"
           class="profile-card-glass group cursor-pointer"
+          @click="addProfile"
         >
           <div class="profile-card-container">
             <div class="profile-image-glass bg-gradient-to-br from-slate-700 to-slate-800 border-2 border-dashed border-white/20 hover:border-white/40 transition-colors">

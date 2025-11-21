@@ -8,7 +8,7 @@ export class BadgeRepository {
    * Récupérer tous les badges
    * @returns {Promise<Array>} Liste des badges
    */
-  async getAllBadges() {
+  async getAllBadges () {
     try {
       const badges = await sql`
         SELECT * FROM badges 
@@ -27,7 +27,7 @@ export class BadgeRepository {
    * @param {number} badgeId - ID du badge
    * @returns {Promise<Object>} Badge
    */
-  async getBadgeById(badgeId) {
+  async getBadgeById (badgeId) {
     try {
       const result = await sql`
         SELECT * FROM badges 
@@ -45,10 +45,10 @@ export class BadgeRepository {
    * @param {Object} badgeData - Données du badge
    * @returns {Promise<Object>} Badge créé
    */
-  async createBadge(badgeData) {
+  async createBadge (badgeData) {
     try {
       const { name, description, icon, category, condition_type, condition_value, points, color } = badgeData
-      
+
       const result = await sql`
         INSERT INTO badges (name, description, icon, category, condition_type, condition_value, points, color)
         VALUES (${name}, ${description}, ${icon}, ${category}, ${condition_type}, ${condition_value}, ${points}, ${color})
@@ -67,10 +67,10 @@ export class BadgeRepository {
    * @param {Object} badgeData - Nouvelles données du badge
    * @returns {Promise<Object>} Badge mis à jour
    */
-  async updateBadge(badgeId, badgeData) {
+  async updateBadge (badgeId, badgeData) {
     try {
       const { name, description, icon, category, condition_type, condition_value, points, color, is_active } = badgeData
-      
+
       const result = await sql`
         UPDATE badges 
         SET 
@@ -99,7 +99,7 @@ export class BadgeRepository {
    * @param {number} badgeId - ID du badge
    * @returns {Promise<boolean>} Succès de la suppression
    */
-  async deleteBadge(badgeId) {
+  async deleteBadge (badgeId) {
     try {
       await sql`
         DELETE FROM badges 
@@ -117,7 +117,7 @@ export class BadgeRepository {
    * @param {number} profileId - ID du profil
    * @returns {Promise<Array>} Liste des badges avec progression
    */
-  async getProfileBadges(profileId) {
+  async getProfileBadges (profileId) {
     try {
       const badges = await sql`
         SELECT 
@@ -145,7 +145,7 @@ export class BadgeRepository {
    * @param {number} profileId - ID du profil
    * @returns {Promise<Array>} Liste des badges débloqués
    */
-  async getUnlockedBadges(profileId) {
+  async getUnlockedBadges (profileId) {
     try {
       const badges = await sql`
         SELECT b.*, pb.unlocked_at
@@ -168,7 +168,7 @@ export class BadgeRepository {
    * @param {number} progress - Progression (0-100)
    * @returns {Promise<Object>} Badge mis à jour
    */
-  async updateBadgeProgress(profileId, badgeId, progress) {
+  async updateBadgeProgress (profileId, badgeId, progress) {
     try {
       const result = await sql`
         INSERT INTO profile_badges (profile_id, badge_id, progress, updated_at)
@@ -192,7 +192,7 @@ export class BadgeRepository {
    * @param {number} badgeId - ID du badge
    * @returns {Promise<Object>} Badge débloqué
    */
-  async unlockBadge(profileId, badgeId) {
+  async unlockBadge (profileId, badgeId) {
     try {
       const result = await sql`
         INSERT INTO profile_badges (profile_id, badge_id, progress, is_unlocked, unlocked_at, updated_at)
@@ -217,7 +217,7 @@ export class BadgeRepository {
    * @param {number} profileId - ID du profil
    * @returns {Promise<Object>} Statistiques
    */
-  async getBadgeStats(profileId) {
+  async getBadgeStats (profileId) {
     try {
       const stats = await sql`
         SELECT 
@@ -228,14 +228,14 @@ export class BadgeRepository {
         LEFT JOIN profile_badges pb ON b.id = pb.badge_id AND pb.profile_id = ${profileId}
         WHERE b.is_active = true
       `
-      
+
       const result = stats[0]
       return {
         total: parseInt(result.total_badges) || 0,
         unlocked: parseInt(result.unlocked_badges) || 0,
         locked: (parseInt(result.total_badges) || 0) - (parseInt(result.unlocked_badges) || 0),
         points: parseInt(result.total_points) || 0,
-        percentage: result.total_badges > 0 
+        percentage: result.total_badges > 0
           ? Math.round((result.unlocked_badges / result.total_badges) * 100)
           : 0
       }
@@ -250,7 +250,7 @@ export class BadgeRepository {
    * @param {string} category - Catégorie du badge
    * @returns {Promise<Array>} Liste des badges
    */
-  async getBadgesByCategory(category) {
+  async getBadgesByCategory (category) {
     try {
       const badges = await sql`
         SELECT * FROM badges 
@@ -270,7 +270,7 @@ export class BadgeRepository {
    * @param {number} limit - Nombre de badges à récupérer (par défaut 5)
    * @returns {Promise<Array>} Liste des badges récents
    */
-  async getRecentlyUnlockedBadges(profileId, limit = 5) {
+  async getRecentlyUnlockedBadges (profileId, limit = 5) {
     try {
       const badges = await sql`
         SELECT b.*, pb.unlocked_at
@@ -289,4 +289,3 @@ export class BadgeRepository {
 }
 
 export default new BadgeRepository()
-

@@ -4,7 +4,7 @@
  */
 
 class ImageOptimizationService {
-  constructor() {
+  constructor () {
     this.supportedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
     this.maxFileSize = 10 * 1024 * 1024 // 10MB
     this.maxDimensions = 4096
@@ -19,7 +19,7 @@ class ImageOptimizationService {
   /**
    * Vérifie le support WebP du navigateur
    */
-  checkWebPSupport() {
+  checkWebPSupport () {
     const canvas = document.createElement('canvas')
     canvas.width = 1
     canvas.height = 1
@@ -32,7 +32,7 @@ class ImageOptimizationService {
    * @param {Object} options - Options d'optimisation
    * @returns {Promise<Object>} - Résultat de l'optimisation
    */
-  async optimizeImage(file, options = {}) {
+  async optimizeImage (file, options = {}) {
     const {
       quality = 'medium',
       maxWidth = 1920,
@@ -50,12 +50,12 @@ class ImageOptimizationService {
 
       // Créer l'image
       const image = await this.loadImage(file)
-      
+
       // Calculer les nouvelles dimensions
       const dimensions = this.calculateDimensions(
-        image.width, 
-        image.height, 
-        maxWidth, 
+        image.width,
+        image.height,
+        maxWidth,
         maxHeight
       )
 
@@ -91,7 +91,6 @@ class ImageOptimizationService {
         format: outputFormat,
         quality: outputQuality
       }
-
     } catch (error) {
       console.error('Erreur lors de l\'optimisation de l\'image:', error)
       return {
@@ -105,7 +104,7 @@ class ImageOptimizationService {
   /**
    * Valide un fichier image
    */
-  validateImage(file) {
+  validateImage (file) {
     const errors = []
     const warnings = []
 
@@ -134,7 +133,7 @@ class ImageOptimizationService {
   /**
    * Charge une image dans un élément Image
    */
-  loadImage(file) {
+  loadImage (file) {
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.onload = () => resolve(img)
@@ -146,8 +145,8 @@ class ImageOptimizationService {
   /**
    * Calcule les nouvelles dimensions en préservant le ratio
    */
-  calculateDimensions(originalWidth, originalHeight, maxWidth, maxHeight) {
-    let { width, height } = { width: originalWidth, height: originalHeight }
+  calculateDimensions (originalWidth, originalHeight, maxWidth, maxHeight) {
+    const { width, height } = { width: originalWidth, height: originalHeight }
 
     // Vérifier si un redimensionnement est nécessaire
     if (width <= maxWidth && height <= maxHeight) {
@@ -168,11 +167,11 @@ class ImageOptimizationService {
   /**
    * Optimise le contexte du canvas pour de meilleures performances
    */
-  optimizeCanvasContext(ctx) {
+  optimizeCanvasContext (ctx) {
     // Désactiver l'anti-aliasing pour les images pixelisées
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
-    
+
     // Optimiser les performances
     ctx.save()
   }
@@ -180,7 +179,7 @@ class ImageOptimizationService {
   /**
    * Détermine le format de sortie optimal
    */
-  determineOutputFormat(preferredFormat, originalType) {
+  determineOutputFormat (preferredFormat, originalType) {
     if (preferredFormat === 'auto') {
       // Utiliser WebP si supporté et si l'image n'est pas déjà WebP
       if (this.webpSupported && originalType !== 'image/webp') {
@@ -189,18 +188,18 @@ class ImageOptimizationService {
       // Sinon, garder le format original
       return originalType
     }
-    
+
     return preferredFormat
   }
 
   /**
    * Convertit un canvas en blob avec options avancées
    */
-  async canvasToBlob(canvas, format, quality, progressive = false) {
+  async canvasToBlob (canvas, format, quality, progressive = false) {
     return new Promise((resolve) => {
       // Options pour JPEG progressif
       const options = { quality }
-      
+
       if (format === 'image/jpeg' && progressive) {
         // Note: toBlob ne supporte pas directement le JPEG progressif
         // mais nous pouvons optimiser la qualité
@@ -214,7 +213,7 @@ class ImageOptimizationService {
   /**
    * Crée une vignette (thumbnail) d'une image
    */
-  async createThumbnail(file, size = 200) {
+  async createThumbnail (file, size = 200) {
     const result = await this.optimizeImage(file, {
       quality: 'medium',
       maxWidth: size,
@@ -236,10 +235,10 @@ class ImageOptimizationService {
   /**
    * Optimise plusieurs images en parallèle
    */
-  async optimizeImages(files, options = {}) {
+  async optimizeImages (files, options = {}) {
     const promises = files.map(file => this.optimizeImage(file, options))
     const results = await Promise.allSettled(promises)
-    
+
     return results.map((result, index) => ({
       file: files[index].name,
       success: result.status === 'fulfilled',
@@ -250,7 +249,7 @@ class ImageOptimizationService {
   /**
    * Génère un aperçu d'image optimisé
    */
-  async generatePreview(file, maxSize = 400) {
+  async generatePreview (file, maxSize = 400) {
     const result = await this.optimizeImage(file, {
       quality: 'low',
       maxWidth: maxSize,
@@ -268,10 +267,10 @@ class ImageOptimizationService {
   /**
    * Analyse les métadonnées d'une image
    */
-  async analyzeImage(file) {
+  async analyzeImage (file) {
     try {
       const image = await this.loadImage(file)
-      
+
       return {
         width: image.width,
         height: image.height,
@@ -293,7 +292,7 @@ class ImageOptimizationService {
   /**
    * Recommande les paramètres d'optimisation
    */
-  getOptimizationRecommendations(analysis) {
+  getOptimizationRecommendations (analysis) {
     const recommendations = []
 
     if (analysis.fileSize > 5 * 1024 * 1024) {

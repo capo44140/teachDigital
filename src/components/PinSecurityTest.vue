@@ -20,8 +20,8 @@
         </div>
         
         <button
-          @click="testPinValidation"
           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          @click="testPinValidation"
         >
           Tester la validation
         </button>
@@ -52,8 +52,8 @@
         </div>
         
         <button
-          @click="analyzePinStrength"
           class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          @click="analyzePinStrength"
         >
           Analyser la force
         </button>
@@ -96,9 +96,9 @@
         </div>
         
         <button
-          @click="testHashing"
           :disabled="isHashing"
           class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+          @click="testHashing"
         >
           {{ isHashing ? 'Hachage en cours...' : 'Tester le hachage' }}
         </button>
@@ -155,9 +155,9 @@
         </div>
         
         <button
-          @click="testVerification"
           :disabled="isVerifying"
           class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+          @click="testVerification"
         >
           {{ isVerifying ? 'Vérification en cours...' : 'Tester la vérification' }}
         </button>
@@ -179,20 +179,20 @@
       <div class="space-y-4">
         <div class="flex items-center space-x-4">
           <button
-            @click="generateSecurePin(4)"
             class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            @click="generateSecurePin(4)"
           >
             Générer PIN 4 chiffres
           </button>
           <button
-            @click="generateSecurePin(6)"
             class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            @click="generateSecurePin(6)"
           >
             Générer PIN 6 chiffres
           </button>
           <button
-            @click="generateSecurePin(8)"
             class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            @click="generateSecurePin(8)"
           >
             Générer PIN 8 chiffres
           </button>
@@ -202,8 +202,8 @@
           <p class="font-medium text-indigo-800 mb-2">Code PIN généré :</p>
           <div class="font-mono text-lg text-indigo-900">{{ generatedPin }}</div>
           <button
-            @click="copyToClipboard(generatedPin)"
             class="mt-2 text-sm text-indigo-600 hover:text-indigo-800 underline"
+            @click="copyToClipboard(generatedPin)"
           >
             Copier dans le presse-papiers
           </button>

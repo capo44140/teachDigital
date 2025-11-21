@@ -6,7 +6,7 @@
 import { apiService } from './apiService.js'
 
 class AuditLogService {
-  constructor() {
+  constructor () {
     this.levels = {
       INFO: 'info',
       WARNING: 'warning',
@@ -26,7 +26,7 @@ class AuditLogService {
   /**
    * Enregistre un événement d'audit (via backend)
    */
-  async log(action, userId, category, level = this.levels.INFO, details = {}, ipAddress = null, userAgent = null) {
+  async log (action, userId, category, level = this.levels.INFO, details = {}, ipAddress = null, userAgent = null) {
     try {
       await apiService.request('/api/audit/logs', {
         method: 'POST',
@@ -48,10 +48,10 @@ class AuditLogService {
   /**
    * Enregistre une tentative de connexion (via backend)
    */
-  async logAuthentication(userId, success, method = 'pin', details = {}) {
+  async logAuthentication (userId, success, method = 'pin', details = {}) {
     const level = success ? this.levels.INFO : this.levels.WARNING
     const action = success ? 'LOGIN_SUCCESS' : 'LOGIN_FAILED'
-    
+
     await this.log(
       action,
       userId,
@@ -68,7 +68,7 @@ class AuditLogService {
   /**
    * Enregistre un changement de profil (via backend)
    */
-  async logProfileChange(userId, action, changes = {}) {
+  async logProfileChange (userId, action, changes = {}) {
     await this.log(
       action,
       userId,
@@ -84,10 +84,10 @@ class AuditLogService {
   /**
    * Enregistre l'utilisation d'une API IA (via backend)
    */
-  async logApiUsage(userId, apiType, success, details = {}) {
+  async logApiUsage (userId, apiType, success, details = {}) {
     const level = success ? this.levels.INFO : this.levels.ERROR
     const action = success ? 'API_REQUEST_SUCCESS' : 'API_REQUEST_FAILED'
-    
+
     await this.log(
       action,
       userId,
@@ -104,7 +104,7 @@ class AuditLogService {
   /**
    * Enregistre une violation de sécurité (via backend)
    */
-  async logSecurityViolation(userId, violation, details = {}) {
+  async logSecurityViolation (userId, violation, details = {}) {
     await this.log(
       'SECURITY_VIOLATION',
       userId,
@@ -120,7 +120,7 @@ class AuditLogService {
   /**
    * Enregistre un accès aux données sensibles (via backend)
    */
-  async logDataAccess(userId, dataType, action, details = {}) {
+  async logDataAccess (userId, dataType, action, details = {}) {
     await this.log(
       action,
       userId,
@@ -136,7 +136,7 @@ class AuditLogService {
   /**
    * Enregistre une erreur système (via backend)
    */
-  async logSystemError(error, component, details = {}) {
+  async logSystemError (error, component, details = {}) {
     await this.log(
       'SYSTEM_ERROR',
       'system',
@@ -153,7 +153,7 @@ class AuditLogService {
   /**
    * Récupère les logs d'audit (via backend)
    */
-  async getLogs(filters = {}) {
+  async getLogs (filters = {}) {
     try {
       const params = new URLSearchParams()
       Object.entries(filters).forEach(([key, value]) => {
@@ -161,7 +161,7 @@ class AuditLogService {
           params.append(key, value)
         }
       })
-      
+
       const endpoint = params.toString() ? `/api/audit/logs?${params}` : '/api/audit/logs'
       const response = await apiService.request(endpoint)
       return response.data?.logs || []
@@ -174,7 +174,7 @@ class AuditLogService {
   /**
    * Récupère les statistiques de sécurité (via backend)
    */
-  async getSecurityStats(days = 7) {
+  async getSecurityStats (days = 7) {
     try {
       const response = await apiService.request(`/api/audit/stats?days=${days}`)
       return response.data || {}
@@ -187,7 +187,7 @@ class AuditLogService {
   /**
    * Exporte les logs d'audit (via backend)
    */
-  async exportLogs(filters = {}) {
+  async exportLogs (filters = {}) {
     try {
       const response = await apiService.request('/api/audit/export', {
         method: 'POST',

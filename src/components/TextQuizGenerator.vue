@@ -13,9 +13,9 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Retour au dashboard"
+              @click="goBack"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -39,13 +39,13 @@
           <button
             v-for="child in childProfiles"
             :key="child.id"
-            @click="selectChild(child)"
             :class="[
               'p-3 rounded-xl border-2 transition-all flex flex-col items-center space-y-2',
               selectedChild?.id === child.id 
                 ? 'border-purple-400 bg-white/20' 
                 : 'border-white/20 hover:border-white/40 hover:bg-white/10'
             ]"
+            @click="selectChild(child)"
           >
             <div class="w-12 h-12 rounded-lg flex items-center justify-center" :class="child.bgColor">
               <span class="text-white font-bold text-lg">{{ child.initial }}</span>
@@ -200,13 +200,12 @@
           <!-- Boutons d'action -->
           <div class="flex justify-center space-x-4">
             <button 
-              @click="clearForm"
               class="px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white hover:bg-white/20 transition-all"
+              @click="clearForm"
             >
               Effacer
             </button>
             <button 
-              @click="generateQuiz"
               :disabled="!canGenerate || isProcessing"
               :class="[
                 'px-8 py-3 rounded-xl font-medium transition-colors',
@@ -214,6 +213,7 @@
                   ? 'bg-white/10 text-white/50 cursor-not-allowed'
                   : 'bg-purple-600 text-white hover:bg-purple-700'
               ]"
+              @click="generateQuiz"
             >
               <span v-if="isProcessing" class="flex items-center space-x-2">
                 <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
@@ -234,14 +234,14 @@
           <h3 class="text-xl font-semibold text-white">Interrogation générée</h3>
           <div class="flex space-x-2">
             <button 
-              @click="previewQuiz"
               class="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white hover:bg-white/20 transition-all"
+              @click="previewQuiz"
             >
               Aperçu
             </button>
             <button 
-              @click="startQuiz"
               class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              @click="startQuiz"
             >
               Commencer le quiz
             </button>
@@ -272,8 +272,8 @@
             <div class="flex items-center justify-between">
               <h3 class="text-xl font-semibold text-gray-800">Aperçu de l'interrogation</h3>
               <button 
-                @click="showPreview = false"
                 class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"
+                @click="showPreview = false"
               >
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -299,14 +299,14 @@
             </div>
             <div class="mt-6 flex justify-end space-x-3">
               <button 
-                @click="showPreview = false"
                 class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                @click="showPreview = false"
               >
                 Fermer
               </button>
               <button 
-                @click="startQuiz"
                 class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                @click="startQuiz"
               >
                 Commencer le quiz
               </button>

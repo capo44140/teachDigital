@@ -6,7 +6,7 @@
 import { apiService } from './apiService.js'
 
 class MigrationService {
-  constructor() {
+  constructor () {
     this.apiService = apiService
     this.useNewAPI = true // Bascule pour activer/désactiver les nouvelles APIs
   }
@@ -14,7 +14,7 @@ class MigrationService {
   /**
    * Migrer les profils vers la nouvelle API
    */
-  async getProfiles() {
+  async getProfiles () {
     if (this.useNewAPI) {
       try {
         const response = await this.apiService.getProfiles()
@@ -35,7 +35,7 @@ class MigrationService {
   /**
    * Migrer les leçons vers la nouvelle API
    */
-  async getLessons() {
+  async getLessons () {
     if (this.useNewAPI) {
       try {
         const response = await this.apiService.getLessons()
@@ -56,7 +56,7 @@ class MigrationService {
   /**
    * Migrer les notifications vers la nouvelle API
    */
-  async getNotifications() {
+  async getNotifications () {
     if (this.useNewAPI) {
       try {
         const response = await this.apiService.getNotifications()
@@ -77,7 +77,7 @@ class MigrationService {
   /**
    * Migrer les vidéos YouTube vers la nouvelle API
    */
-  async getYouTubeVideos() {
+  async getYouTubeVideos () {
     if (this.useNewAPI) {
       try {
         return await this.apiService.getYouTubeVideos()
@@ -97,7 +97,7 @@ class MigrationService {
   /**
    * Sauvegarder une leçon via la nouvelle API
    */
-  async saveLesson(lessonData, profileId, files = null) {
+  async saveLesson (lessonData, profileId, files = null) {
     if (this.useNewAPI) {
       try {
         const response = await this.apiService.createLesson(lessonData)
@@ -118,7 +118,7 @@ class MigrationService {
   /**
    * Récupérer les statistiques d'un enfant
    */
-  async getChildStats(childId) {
+  async getChildStats (childId) {
     if (this.useNewAPI) {
       try {
         return await this.apiService.getProfileStats(childId)
@@ -138,7 +138,7 @@ class MigrationService {
   /**
    * Récupérer les activités via la nouvelle API
    */
-  async getActivities() {
+  async getActivities () {
     if (this.useNewAPI) {
       try {
         return await this.apiService.getActivities()
@@ -158,7 +158,7 @@ class MigrationService {
   /**
    * Récupérer les statistiques des activités
    */
-  async getActivityStats() {
+  async getActivityStats () {
     if (this.useNewAPI) {
       try {
         return await this.apiService.getActivityStats()
@@ -178,7 +178,7 @@ class MigrationService {
   /**
    * Activer/désactiver les nouvelles APIs
    */
-  setUseNewAPI(useNew) {
+  setUseNewAPI (useNew) {
     this.useNewAPI = useNew
     console.log(`🔄 Migration Service: ${useNew ? 'Nouvelles APIs activées' : 'Ancien service activé'}`)
   }
@@ -186,7 +186,7 @@ class MigrationService {
   /**
    * Obtenir le statut de migration
    */
-  getMigrationStatus() {
+  getMigrationStatus () {
     return {
       useNewAPI: this.useNewAPI,
       apiService: this.apiService.isAuthenticated(),

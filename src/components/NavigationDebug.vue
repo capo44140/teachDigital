@@ -17,8 +17,8 @@
       <div><strong>localStorage:</strong> {{ localStorageProfile || 'Vide' }}</div>
     </div>
     <button 
-      @click="toggleDebug"
       class="mt-2 px-2 py-1 bg-blue-600 rounded text-xs"
+      @click="toggleDebug"
     >
       {{ showDebug ? 'Masquer' : 'Afficher' }}
     </button>

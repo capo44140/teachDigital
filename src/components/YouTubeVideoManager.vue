@@ -13,9 +13,9 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Retour au dashboard"
+              @click="goBack"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -27,8 +27,8 @@
             </div>
           </div>
           <button 
-            @click="showAddModal = true"
             class="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/50 transition-all flex items-center space-x-2 text-sm"
+            @click="showAddModal = true"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
@@ -133,8 +133,8 @@
             />
             <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <button 
-                @click="playVideo(video.url)"
                 class="bg-red-600 text-white rounded-full p-3 hover:bg-red-700 transition-colors"
+                @click="playVideo(video.url)"
               >
                 <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z"/>
@@ -157,18 +157,18 @@
               <h3 class="text-base font-semibold text-white line-clamp-2">{{ video.title }}</h3>
               <div class="flex space-x-2 ml-2">
                 <button 
-                  @click="editVideo(video)"
                   class="p-1 text-blue-300 hover:text-blue-200 transition-colors"
                   title="Modifier"
+                  @click="editVideo(video)"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                   </svg>
                 </button>
                 <button 
-                  @click="deleteVideo(video.id)"
                   class="p-1 text-red-300 hover:text-red-200 transition-colors"
                   title="Supprimer"
+                  @click="deleteVideo(video.id)"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -195,8 +195,8 @@
       <div v-if="!isLoadingVideos && filteredVideos.length === 0" class="text-center py-16">
         <p class="text-white/60 text-lg mb-4">Aucune vidéo trouvée</p>
         <button 
-          @click="showAddModal = true"
           class="px-6 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/50 transition-all"
+          @click="showAddModal = true"
         >
           Ajouter votre première vidéo
         </button>
@@ -217,7 +217,7 @@
           {{ editingVideo ? 'Modifier la vidéo' : 'Ajouter une vidéo' }}
         </h3>
 
-        <form @submit.prevent="saveVideo" class="space-y-4">
+        <form class="space-y-4" @submit.prevent="saveVideo">
           <div>
             <label class="block text-sm font-medium text-white/80 mb-2">URL YouTube *</label>
             <input 
@@ -290,8 +290,8 @@
           <div class="flex justify-end space-x-3 pt-4">
             <button
               type="button"
-              @click="closeModal"
               class="px-6 py-2 text-white/80 hover:text-white transition-colors"
+              @click="closeModal"
             >
               Annuler
             </button>
@@ -310,7 +310,7 @@
     <!-- Modal de lecture vidéo -->
     <div v-if="showVideoModal" class="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4" @click="showVideoModal = false">
       <div class="w-full max-w-4xl" @click.stop>
-        <button @click="showVideoModal = false" class="mb-4 text-white hover:text-white/80 transition-colors">
+        <button class="mb-4 text-white hover:text-white/80 transition-colors" @click="showVideoModal = false">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>

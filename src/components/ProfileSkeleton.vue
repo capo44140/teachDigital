@@ -8,7 +8,7 @@
 
     <!-- Skeleton pour ProfileManagement -->
     <div v-else-if="type === 'management'" class="profile-list-skeleton">
-      <div class="skeleton-item" v-for="n in count" :key="n">
+      <div v-for="n in count" :key="n" class="skeleton-item">
         <div class="skeleton-avatar"></div>
         <div class="skeleton-content">
           <div class="skeleton-title"></div>
@@ -26,7 +26,7 @@
     <div v-else-if="type === 'dashboard'" class="dashboard-skeleton">
       <div class="skeleton-header"></div>
       <div class="skeleton-grid">
-        <div class="skeleton-card" v-for="n in 3" :key="n"></div>
+        <div v-for="n in 3" :key="n" class="skeleton-card"></div>
       </div>
     </div>
   </div>

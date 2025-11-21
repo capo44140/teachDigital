@@ -4,8 +4,8 @@
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-sm font-semibold text-gray-800">Migration Status</h3>
         <button 
-          @click="togglePanel"
           class="text-gray-500 hover:text-gray-700 transition-colors"
+          @click="togglePanel"
         >
           <svg 
             class="w-4 h-4 transform transition-transform" 
@@ -51,18 +51,18 @@
         <!-- Boutons de contrôle -->
         <div class="flex space-x-2">
           <button 
-            @click="toggleAPI"
             class="flex-1 px-3 py-1 text-xs font-medium rounded transition-colors"
             :class="status.useNewAPI 
               ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' 
               : 'bg-green-100 text-green-700 hover:bg-green-200'"
+            @click="toggleAPI"
           >
             {{ status.useNewAPI ? 'Désactiver' : 'Activer' }} API
           </button>
           
           <button 
-            @click="refreshStatus"
             class="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+            @click="refreshStatus"
           >
             Actualiser
           </button>

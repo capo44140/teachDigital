@@ -2,7 +2,7 @@
   <div class="pwa-diagnostics">
     <div class="diagnostics-header">
       <h3>🔧 Diagnostics PWA</h3>
-      <button @click="runDiagnostics" class="run-button" :disabled="isRunning">
+      <button class="run-button" :disabled="isRunning" @click="runDiagnostics">
         <span v-if="isRunning">🔄</span>
         <span v-else>▶️</span>
         {{ isRunning ? 'Diagnostic en cours...' : 'Lancer le diagnostic' }}

@@ -4,7 +4,7 @@
  */
 
 class ActivityService {
-  constructor() {
+  constructor () {
     this.baseUrl = '/api/activities' // URL de base pour les appels API
     this.activities = [] // Cache local des activités
   }
@@ -14,7 +14,7 @@ class ActivityService {
    * @param {Object} filters - Filtres optionnels (child_id, status, etc.)
    * @returns {Promise<Array>} Liste des activités
    */
-  async getActivities(filters = {}) {
+  async getActivities (filters = {}) {
     try {
       // Dans une vraie application, ceci ferait un appel API
       // Pour l'instant, on simule avec des données locales
@@ -67,22 +67,22 @@ class ActivityService {
 
       // Appliquer les filtres
       let filteredActivities = [...mockActivities]
-      
+
       if (filters.child_id) {
         filteredActivities = filteredActivities.filter(activity => activity.child_id === filters.child_id)
       }
-      
+
       if (filters.status) {
         filteredActivities = filteredActivities.filter(activity => activity.status === filters.status)
       }
-      
+
       if (filters.priority) {
         filteredActivities = filteredActivities.filter(activity => activity.priority === filters.priority)
       }
-      
+
       if (filters.search) {
         const searchTerm = filters.search.toLowerCase()
-        filteredActivities = filteredActivities.filter(activity => 
+        filteredActivities = filteredActivities.filter(activity =>
           activity.title.toLowerCase().includes(searchTerm) ||
           activity.description.toLowerCase().includes(searchTerm)
         )
@@ -101,7 +101,7 @@ class ActivityService {
    * @param {number} id - ID de l'activité
    * @returns {Promise<Object|null>} L'activité ou null si non trouvée
    */
-  async getActivityById(id) {
+  async getActivityById (id) {
     try {
       const activities = await this.getActivities()
       return activities.find(activity => activity.id === id) || null
@@ -116,7 +116,7 @@ class ActivityService {
    * @param {Object} activityData - Données de l'activité
    * @returns {Promise<Object>} L'activité créée
    */
-  async createActivity(activityData) {
+  async createActivity (activityData) {
     try {
       const newActivity = {
         id: Date.now(), // ID temporaire
@@ -146,10 +146,10 @@ class ActivityService {
    * @param {Object} updateData - Données à mettre à jour
    * @returns {Promise<Object>} L'activité mise à jour
    */
-  async updateActivity(id, updateData) {
+  async updateActivity (id, updateData) {
     try {
       const activityIndex = this.activities.findIndex(activity => activity.id === id)
-      
+
       if (activityIndex === -1) {
         throw new Error('Activité non trouvée')
       }
@@ -180,10 +180,10 @@ class ActivityService {
    * @param {number} id - ID de l'activité
    * @returns {Promise<boolean>} True si supprimée avec succès
    */
-  async deleteActivity(id) {
+  async deleteActivity (id) {
     try {
       const activityIndex = this.activities.findIndex(activity => activity.id === id)
-      
+
       if (activityIndex === -1) {
         throw new Error('Activité non trouvée')
       }
@@ -205,7 +205,7 @@ class ActivityService {
    * @param {string} status - Nouveau statut
    * @returns {Promise<Object>} L'activité mise à jour
    */
-  async updateActivityStatus(id, status) {
+  async updateActivityStatus (id, status) {
     return this.updateActivity(id, { status })
   }
 
@@ -214,10 +214,10 @@ class ActivityService {
    * @param {number} childId - ID de l'enfant (optionnel)
    * @returns {Promise<Object>} Statistiques des activités
    */
-  async getActivityStats(childId = null) {
+  async getActivityStats (childId = null) {
     try {
       const activities = await this.getActivities(childId ? { child_id: childId } : {})
-      
+
       const stats = {
         total: activities.length,
         active: activities.filter(a => a.status === 'active').length,
@@ -248,7 +248,7 @@ class ActivityService {
    * @param {number} childId - ID de l'enfant
    * @returns {Promise<Array>} Liste des activités de l'enfant
    */
-  async getActivitiesByChild(childId) {
+  async getActivitiesByChild (childId) {
     return this.getActivities({ child_id: childId })
   }
 
@@ -256,11 +256,11 @@ class ActivityService {
    * Récupérer les activités en retard
    * @returns {Promise<Array>} Liste des activités en retard
    */
-  async getOverdueActivities() {
+  async getOverdueActivities () {
     try {
       const activities = await this.getActivities()
       const now = new Date()
-      
+
       return activities.filter(activity => {
         if (!activity.due_date || activity.status === 'completed' || activity.status === 'cancelled') {
           return false
@@ -277,12 +277,12 @@ class ActivityService {
    * Récupérer les activités à venir (prochaines 7 jours)
    * @returns {Promise<Array>} Liste des activités à venir
    */
-  async getUpcomingActivities() {
+  async getUpcomingActivities () {
     try {
       const activities = await this.getActivities()
       const now = new Date()
       const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-      
+
       return activities.filter(activity => {
         if (!activity.due_date || activity.status === 'completed' || activity.status === 'cancelled') {
           return false
@@ -302,7 +302,7 @@ class ActivityService {
    * @param {Object} filters - Filtres additionnels
    * @returns {Promise<Array>} Liste des activités correspondantes
    */
-  async searchActivities(query, filters = {}) {
+  async searchActivities (query, filters = {}) {
     return this.getActivities({ ...filters, search: query })
   }
 
@@ -311,9 +311,9 @@ class ActivityService {
    * @param {Array} activities - Liste des activités à exporter
    * @returns {string} Contenu CSV
    */
-  exportToCSV(activities = null) {
+  exportToCSV (activities = null) {
     const data = activities || this.activities
-    
+
     if (data.length === 0) {
       return 'Aucune donnée à exporter'
     }
@@ -340,7 +340,7 @@ class ActivityService {
    * Sauvegarder les activités dans le localStorage
    * @returns {Promise<boolean>} True si sauvegardé avec succès
    */
-  async saveToLocalStorage() {
+  async saveToLocalStorage () {
     try {
       localStorage.setItem('activities', JSON.stringify(this.activities))
       return true
@@ -354,7 +354,7 @@ class ActivityService {
    * Charger les activités depuis le localStorage
    * @returns {Promise<Array>} Liste des activités chargées
    */
-  async loadFromLocalStorage() {
+  async loadFromLocalStorage () {
     try {
       const saved = localStorage.getItem('activities')
       if (saved) {

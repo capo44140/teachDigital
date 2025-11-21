@@ -3,9 +3,9 @@
     <!-- Bouton de notification avec badge - Liquid Glass Style -->
     <div class="relative">
       <button 
-        @click="toggleNotifications"
         class="p-3 text-white/80 hover:text-white backdrop-blur-xl bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-white/10 relative group"
         title="Notifications"
+        @click="toggleNotifications"
       >
         <svg class="w-6 h-6 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 0 0-15 0v5h5l-5 5-5-5h5v-5a7.5 7.5 0 0 0 15 0v5z"/>
@@ -37,16 +37,16 @@
           </h3>
           <div class="flex space-x-3">
             <button 
-              @click="markAllAsRead"
               v-if="unreadCount > 0"
               class="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transition-all duration-300 font-medium"
+              @click="markAllAsRead"
             >
               Tout marquer lu
             </button>
             <button 
-              @click="clearAllRead"
               v-if="notifications.length > unreadCount"
               class="px-3 py-1.5 bg-gradient-to-r from-gray-500 to-gray-600 text-white text-sm rounded-lg hover:shadow-lg hover:shadow-gray-500/50 transition-all duration-300 font-medium"
+              @click="clearAllRead"
             >
               Nettoyer
             </button>

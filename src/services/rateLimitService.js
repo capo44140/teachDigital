@@ -4,7 +4,7 @@
  */
 
 class RateLimitService {
-  constructor() {
+  constructor () {
     // Stockage en mémoire des requêtes (en production, utiliser Redis)
     this.requests = new Map()
     this.limits = {
@@ -27,10 +27,10 @@ class RateLimitService {
    * @param {string} apiType - Type d'API (openai, gemini)
    * @returns {Object} Résultat de la vérification
    */
-  checkRateLimit(userId, apiType = 'openai') {
+  checkRateLimit (userId, apiType = 'openai') {
     const now = Date.now()
     const limit = this.limits[apiType]
-    
+
     if (!limit) {
       return { allowed: false, reason: 'API type not supported' }
     }
@@ -70,14 +70,14 @@ class RateLimitService {
    * @param {string} userId - ID de l'utilisateur
    * @param {string} apiType - Type d'API
    */
-  recordRequest(userId, apiType = 'openai') {
+  recordRequest (userId, apiType = 'openai') {
     const now = Date.now()
     const userRequests = this.requests.get(userId) || { [apiType]: [] }
-    
+
     if (!userRequests[apiType]) {
       userRequests[apiType] = []
     }
-    
+
     userRequests[apiType].push(now)
     this.requests.set(userId, userRequests)
   }
@@ -88,7 +88,7 @@ class RateLimitService {
    * @param {number} now - Timestamp actuel
    * @param {number} window - Fenêtre de temps
    */
-  cleanOldRequests(userId, now, window) {
+  cleanOldRequests (userId, now, window) {
     const userRequests = this.requests.get(userId)
     if (!userRequests) return
 
@@ -106,23 +106,23 @@ class RateLimitService {
    * @param {string} userId - ID de l'utilisateur
    * @returns {Object} Statistiques
    */
-  getUserStats(userId) {
+  getUserStats (userId) {
     const userRequests = this.requests.get(userId) || {}
     const now = Date.now()
-    
+
     return Object.keys(this.limits).reduce((stats, apiType) => {
       const requests = userRequests[apiType] || []
       const limit = this.limits[apiType]
-      
+
       stats[apiType] = {
         used: requests.length,
         limit: limit.requests,
         remaining: Math.max(0, limit.requests - requests.length),
-        resetTime: requests.length > 0 
-          ? Math.min(...requests) + limit.window 
+        resetTime: requests.length > 0
+          ? Math.min(...requests) + limit.window
           : now
       }
-      
+
       return stats
     }, {})
   }
@@ -131,7 +131,7 @@ class RateLimitService {
    * Réinitialise le rate limiting pour un utilisateur
    * @param {string} userId - ID de l'utilisateur
    */
-  resetUserLimit(userId) {
+  resetUserLimit (userId) {
     this.requests.delete(userId)
   }
 
@@ -140,7 +140,7 @@ class RateLimitService {
    * @param {string} userId - ID de l'utilisateur
    * @returns {boolean} True si l'utilisateur est limité
    */
-  isUserRateLimited(userId) {
+  isUserRateLimited (userId) {
     const stats = this.getUserStats(userId)
     return Object.values(stats).some(stat => stat.remaining === 0)
   }

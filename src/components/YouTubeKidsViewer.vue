@@ -122,9 +122,9 @@
         <div v-if="totalPages > 1" class="glass-card-dashboard">
           <div class="flex items-center justify-center space-x-4">
       <button 
-        @click="currentPage = Math.max(1, currentPage - 1)"
         :disabled="currentPage === 1"
-              class="px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+        class="px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+              @click="currentPage = Math.max(1, currentPage - 1)"
       >
         ← Précédent
       </button>
@@ -132,9 +132,9 @@
         Page {{ currentPage }} sur {{ totalPages }}
       </span>
       <button 
-        @click="currentPage = Math.min(totalPages, currentPage + 1)"
         :disabled="currentPage === totalPages"
-              class="px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+        class="px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+              @click="currentPage = Math.min(totalPages, currentPage + 1)"
       >
         Suivant →
       </button>

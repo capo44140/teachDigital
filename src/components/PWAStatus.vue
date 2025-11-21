@@ -86,17 +86,17 @@
     </div>
 
     <div class="status-actions">
-      <button @click="refreshStatus" class="action-button" :disabled="isLoading">
+      <button class="action-button" :disabled="isLoading" @click="refreshStatus">
         <span v-if="isLoading">🔄</span>
         <span v-else>↻</span>
         Actualiser
       </button>
       
-      <button v-if="canInstall" @click="showInstallPrompt" class="action-button install">
+      <button v-if="canInstall" class="action-button install" @click="showInstallPrompt">
         📱 Installer
       </button>
       
-      <button v-if="canSubscribe" @click="subscribeNotifications" class="action-button notifications">
+      <button v-if="canSubscribe" class="action-button notifications" @click="subscribeNotifications">
         🔔 Activer les notifications
       </button>
     </div>

@@ -31,7 +31,7 @@ export class ErrorService {
    * @param {Error} originalError - Erreur originale (optionnelle)
    * @returns {Object} Erreur standardisée
    */
-  static createError(message, type = this.errorTypes.UNKNOWN, severity = this.severityLevels.MEDIUM, context = {}, originalError = null) {
+  static createError (message, type = this.errorTypes.UNKNOWN, severity = this.severityLevels.MEDIUM, context = {}, originalError = null) {
     const error = {
       id: this.generateErrorId(),
       message,
@@ -56,7 +56,7 @@ export class ErrorService {
    * @param {Object} value - Valeur invalide
    * @returns {Object} Erreur de validation
    */
-  static handleValidationError(field, message, value = null) {
+  static handleValidationError (field, message, value = null) {
     return this.createError(
       `Erreur de validation pour ${field}: ${message}`,
       this.errorTypes.VALIDATION,
@@ -72,7 +72,7 @@ export class ErrorService {
    * @param {Error} originalError - Erreur originale
    * @returns {Object} Erreur de réseau
    */
-  static handleNetworkError(operation, response = null, originalError = null) {
+  static handleNetworkError (operation, response = null, originalError = null) {
     return this.createError(
       `Erreur de réseau lors de ${operation}`,
       this.errorTypes.NETWORK,
@@ -89,7 +89,7 @@ export class ErrorService {
    * @param {Error} originalError - Erreur originale
    * @returns {Object} Erreur de base de données
    */
-  static handleDatabaseError(operation, table = null, originalError = null) {
+  static handleDatabaseError (operation, table = null, originalError = null) {
     return this.createError(
       `Erreur de base de données lors de ${operation}`,
       this.errorTypes.DATABASE,
@@ -105,7 +105,7 @@ export class ErrorService {
    * @param {string} userId - ID utilisateur (optionnel)
    * @returns {Object} Erreur d'authentification
    */
-  static handleAuthenticationError(reason, userId = null) {
+  static handleAuthenticationError (reason, userId = null) {
     return this.createError(
       `Échec d'authentification: ${reason}`,
       this.errorTypes.AUTHENTICATION,
@@ -121,7 +121,7 @@ export class ErrorService {
    * @param {string} action - Action tentée
    * @returns {Object} Erreur d'autorisation
    */
-  static handleAuthorizationError(resource, userId, action) {
+  static handleAuthorizationError (resource, userId, action) {
     return this.createError(
       `Accès refusé à ${resource} pour l'action ${action}`,
       this.errorTypes.AUTHORIZATION,
@@ -137,7 +137,7 @@ export class ErrorService {
    * @param {Object} context - Contexte métier
    * @returns {Object} Erreur de logique métier
    */
-  static handleBusinessLogicError(operation, reason, context = {}) {
+  static handleBusinessLogicError (operation, reason, context = {}) {
     return this.createError(
       `Erreur de logique métier lors de ${operation}: ${reason}`,
       this.errorTypes.BUSINESS_LOGIC,
@@ -153,7 +153,7 @@ export class ErrorService {
    * @param {Error} originalError - Erreur originale
    * @returns {Object} Erreur système
    */
-  static handleSystemError(component, message, originalError = null) {
+  static handleSystemError (component, message, originalError = null) {
     return this.createError(
       `Erreur système dans ${component}: ${message}`,
       this.errorTypes.SYSTEM,
@@ -167,7 +167,7 @@ export class ErrorService {
    * Log une erreur avec le niveau approprié
    * @param {Object} error - Erreur à logger
    */
-  static logError(error) {
+  static logError (error) {
     const logMessage = `[${error.type.toUpperCase()}] ${error.message}`
     const logData = {
       id: error.id,
@@ -198,7 +198,7 @@ export class ErrorService {
    * Génère un ID unique pour l'erreur
    * @returns {string} ID unique
    */
-  static generateErrorId() {
+  static generateErrorId () {
     return `err_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   }
 
@@ -207,7 +207,7 @@ export class ErrorService {
    * @param {Object} error - Erreur à formater
    * @returns {string} Message formaté pour l'utilisateur
    */
-  static formatForUser(error) {
+  static formatForUser (error) {
     const userMessages = {
       [this.errorTypes.VALIDATION]: 'Veuillez vérifier les informations saisies.',
       [this.errorTypes.NETWORK]: 'Problème de connexion. Veuillez réessayer.',
@@ -227,13 +227,13 @@ export class ErrorService {
    * @param {Object} error - Erreur à analyser
    * @returns {boolean} True si l'erreur est récupérable
    */
-  static isRecoverable(error) {
+  static isRecoverable (error) {
     const recoverableTypes = [
       this.errorTypes.NETWORK,
       this.errorTypes.VALIDATION
     ]
 
-    return recoverableTypes.includes(error.type) && 
+    return recoverableTypes.includes(error.type) &&
            error.severity !== this.severityLevels.CRITICAL
   }
 
@@ -242,7 +242,7 @@ export class ErrorService {
    * @param {Object} error - Erreur à analyser
    * @returns {boolean} True si l'utilisateur doit agir
    */
-  static requiresUserAction(error) {
+  static requiresUserAction (error) {
     const userActionTypes = [
       this.errorTypes.AUTHENTICATION,
       this.errorTypes.AUTHORIZATION,
@@ -258,7 +258,7 @@ export class ErrorService {
    * @param {string} operationName - Nom de l'opération pour le contexte
    * @returns {Function} Fonction wrappée
    */
-  static wrapAsyncFunction(asyncFunction, operationName) {
+  static wrapAsyncFunction (asyncFunction, operationName) {
     return async (...args) => {
       try {
         return await asyncFunction(...args)

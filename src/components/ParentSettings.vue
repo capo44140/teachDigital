@@ -13,9 +13,9 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Retour au tableau de bord"
+              @click="goBack"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -55,8 +55,8 @@
                 </div>
               </div>
               <button 
-                @click="goToProfileManagement"
                 class="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/50 transition-all text-sm"
+                @click="goToProfileManagement"
               >
                 Gérer
               </button>
@@ -75,8 +75,8 @@
                 </div>
               </div>
               <button 
-                @click="goToPinSettings"
                 class="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/50 transition-all text-sm"
+                @click="goToPinSettings"
               >
                 Configurer
               </button>
@@ -106,8 +106,8 @@
                 </div>
               </div>
               <button 
-                @click="goToProgressTracking"
                 class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:shadow-lg hover:shadow-green-500/50 transition-all text-sm"
+                @click="goToProgressTracking"
               >
                 Voir
               </button>
@@ -126,8 +126,8 @@
                 </div>
               </div>
               <button 
-                @click="goToQuizManagement"
                 class="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/50 transition-all text-sm"
+                @click="goToQuizManagement"
               >
                 Gérer
               </button>
@@ -146,8 +146,8 @@
                 </div>
               </div>
               <button 
-                @click="goToLessonScanner"
                 class="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:shadow-lg hover:shadow-indigo-500/50 transition-all text-sm"
+                @click="goToLessonScanner"
               >
                 Scanner
               </button>

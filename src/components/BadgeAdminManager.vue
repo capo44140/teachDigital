@@ -13,9 +13,9 @@
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
             <button 
-              @click="goBack"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
               title="Retour au dashboard"
+              @click="goBack"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -27,8 +27,8 @@
             </div>
           </div>
           <button 
-            @click="showCreateModal = true"
             class="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/50 transition-all flex items-center space-x-2 text-sm"
+            @click="showCreateModal = true"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -98,13 +98,13 @@
           <button
             v-for="tab in tabs"
             :key="tab.id"
-            @click="activeTab = tab.id"
             :class="[
               'px-4 py-2 rounded-xl transition-all font-medium text-sm',
               activeTab === tab.id
                 ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
                 : 'text-white/60 hover:text-white hover:bg-white/10'
             ]"
+            @click="activeTab = tab.id"
           >
             <span class="mr-2">{{ tab.icon }}</span>
             {{ tab.label }}
@@ -116,8 +116,8 @@
           <!-- Bouton créer badge -->
           <div class="flex justify-end mb-6">
             <button
-              @click="showCreateModal = true"
               class="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/50 transition-all"
+              @click="showCreateModal = true"
             >
               Créer un nouveau badge
             </button>
@@ -169,18 +169,18 @@
                   <td class="py-4 px-4">
                     <div class="flex justify-end space-x-2">
                       <button 
-                        @click="editBadge(badge)"
                         class="p-2 text-white/60 hover:text-white border border-white/20 hover:border-white/40 rounded-lg hover:bg-white/10 transition-all"
                         title="Modifier"
+                        @click="editBadge(badge)"
                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                         </svg>
                       </button>
                       <button 
-                        @click="confirmDeleteBadge(badge)"
                         class="p-2 text-red-400/60 hover:text-red-300 border border-red-400/20 hover:border-red-400/40 rounded-lg hover:bg-red-400/10 transition-all"
                         title="Supprimer"
+                        @click="confirmDeleteBadge(badge)"
                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -228,7 +228,7 @@
           {{ editingBadge ? 'Modifier le badge' : 'Créer un badge' }}
         </h3>
 
-        <form @submit.prevent="saveBadge" class="space-y-4">
+        <form class="space-y-4" @submit.prevent="saveBadge">
           <!-- Nom du badge -->
           <div>
             <label class="block text-sm font-medium text-white/80 mb-2">Nom du badge *</label>
@@ -270,8 +270,8 @@
                   v-for="emoji in emojiSuggestions.slice(0, 5)" 
                   :key="emoji"
                   type="button"
-                  @click="badgeForm.icon = emoji"
                   class="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-lg transition-all"
+                  @click="badgeForm.icon = emoji"
                 >
                   {{ emoji }}
                 </button>
@@ -343,13 +343,13 @@
                 v-for="color in colors"
                 :key="color.value"
                 type="button"
-                @click="badgeForm.color = color.value"
                 :class="[
                   'w-8 h-8 rounded-lg border-2 transition-all',
                   color.class,
                   badgeForm.color === color.value ? 'border-white scale-110' : 'border-white/20 hover:border-white/40'
                 ]"
                 :title="color.label"
+                @click="badgeForm.color = color.value"
               >
                 <svg v-if="badgeForm.color === color.value" class="w-4 h-4 text-white mx-auto" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
@@ -362,8 +362,8 @@
           <div class="flex justify-end space-x-3 pt-4">
             <button
               type="button"
-              @click="closeModals"
               class="px-6 py-2 text-white/80 hover:text-white transition-colors"
+              @click="closeModals"
             >
               Annuler
             </button>
@@ -397,14 +397,14 @@
         
         <div class="flex justify-end space-x-3">
           <button
-            @click="showDeleteModal = false"
             class="px-6 py-2 text-white/80 hover:text-white transition-colors"
+            @click="showDeleteModal = false"
           >
             Annuler
           </button>
           <button
-            @click="deleteBadge"
             class="px-6 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl hover:shadow-lg hover:shadow-red-500/50 transition-all"
+            @click="deleteBadge"
           >
             Supprimer
           </button>
