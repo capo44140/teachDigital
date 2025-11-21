@@ -18,15 +18,7 @@ async function handleLessons(req, res) {
             let lessons;
 
             // Construire la requête dynamiquement
-            let queryText = `
-        SELECT 
-          id, title, description, subject, level, 
-          image_filename,
-          is_published, created_at, updated_at,
-          profile_id
-        FROM lessons
-        WHERE 1=1
-      `;
+            let queryText = 'SELECT id, title, description, subject, level, image_filename, is_published, created_at, updated_at, profile_id FROM lessons WHERE 1=1';
             const params = [];
 
             if (profileId) {
