@@ -177,7 +177,7 @@ export default defineConfig(({ mode }) => {
       // Proxy pour contourner CORS en développement
       proxy: {
         '/api': {
-          target: 'https://teach-digital.lespoires.ovh',
+          target: 'https://teach-digital.lespoires.ovh:3002',
           changeOrigin: true,
           secure: true,
           rewrite: (path) => path // Garder le chemin /api tel quel
