@@ -17,9 +17,8 @@ async function handleLessons(req, res) {
 
             let lessons;
 
-            // Construire la requête dynamiquement
-            let queryText = 'SELECT id, title, description, subject, level, image_filename, is_published, created_at, updated_at, profile_id FROM lessons WHERE 1=1';
-            const params = [];
+            // Construire la requête dynamiquement avec sql template literals
+            const conditions = [sql`1=1`];
 
             if (profileId) {
                 const profileIdNum = parseInt(profileId, 10);
@@ -27,21 +26,19 @@ async function handleLessons(req, res) {
                     res.status(400).json({ success: false, message: 'ID de profil invalide' });
                     return;
                 }
-                params.push(profileIdNum);
-                queryText += ` AND profile_id = $${params.length}`;
+                conditions.push(sql`AND profile_id = ${profileIdNum}`);
             }
 
             if (published !== null && published !== undefined) {
                 const isPublished = published === 'true' || published === true || published === '1';
-                params.push(isPublished);
-                queryText += ` AND is_published = $${params.length}`;
+                conditions.push(sql`AND is_published = ${isPublished}`);
             }
 
-            // Ajouter le tri et la limite
-            queryText += ` ORDER BY created_at DESC LIMIT 100`;
+            // Combiner les conditions
+            const whereClause = conditions.reduce((acc, condition) => sql`${acc} ${condition}`);
 
             lessons = await withQueryTimeout(
-                sql(queryText, params),
+                sql`SELECT id, title, description, subject, level, image_filename, is_published, created_at, updated_at, profile_id FROM lessons WHERE ${whereClause} ORDER BY created_at DESC LIMIT 100`,
                 TIMEOUTS.STANDARD,
                 'récupération des leçons'
             );
