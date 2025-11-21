@@ -1,4 +1,4 @@
-const { default: sql } = require('../lib/database.js');
+const { default: sql, pool } = require('../lib/database.js');
 const { authenticateToken } = require('../lib/auth.js');
 const { handleError } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
@@ -15,6 +15,7 @@ async function handleLessons(req, res) {
             console.log(`🔍 Récupération des leçons - profileId: ${profileId}, published: ${published}`);
             const startTime = Date.now();
 
+            console.log('🦄 DEBUG: handleLessons GET start - v2');
             // Construire la requête dynamiquement (méthode robuste)
             let queryText = 'SELECT id, title, description, subject, level, image_filename, is_published, created_at, updated_at, profile_id FROM lessons';
             const params = [];
@@ -45,8 +46,9 @@ async function handleLessons(req, res) {
             console.log('🔍 DEBUG SQL:', queryText);
             console.log('🔍 DEBUG PARAMS:', params);
 
+            // Utilisation directe de pool.query pour éviter les problèmes avec le tag sql
             lessons = await withQueryTimeout(
-                sql(queryText, params),
+                pool.query(queryText, params).then(res => res.rows),
                 TIMEOUTS.STANDARD,
                 'récupération des leçons'
             );
