@@ -72,26 +72,32 @@ async function handleAudit(req, res) {
             const offset = parseInt(url.searchParams.get('offset') || '0', 10);
 
             // Construire la requête SELECT avec filtres
-            let query = sql`
+            let queryText = `
         SELECT id, action, user_id, category, level, details, ip_address, user_agent, created_at 
         FROM audit_logs 
         WHERE 1=1
       `;
+            const params = [];
 
             if (userId) {
-                query = sql`${query} AND user_id = ${userId}`;
+                params.push(userId);
+                queryText += ` AND user_id = $${params.length}`;
             }
             if (category) {
-                query = sql`${query} AND category = ${category}`;
+                params.push(category);
+                queryText += ` AND category = $${params.length}`;
             }
             if (level) {
-                query = sql`${query} AND level = ${level}`;
+                params.push(level);
+                queryText += ` AND level = $${params.length}`;
             }
 
-            query = sql`${query} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+            params.push(limit);
+            params.push(offset);
+            queryText += ` ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
             const logs = await withQueryTimeout(
-                query,
+                sql(queryText, params),
                 TIMEOUTS.STANDARD,
                 'récupération des logs d\'audit'
             );
@@ -145,28 +151,34 @@ async function handleAudit(req, res) {
             const { filters = {} } = req.body;
 
             // Construire la requête avec filtres
-            let query = sql`SELECT * FROM audit_logs WHERE 1=1`;
+            let queryText = `SELECT * FROM audit_logs WHERE 1=1`;
+            const params = [];
 
             if (filters.userId) {
-                query = sql`${query} AND user_id = ${filters.userId}`;
+                params.push(filters.userId);
+                queryText += ` AND user_id = $${params.length}`;
             }
             if (filters.category) {
-                query = sql`${query} AND category = ${filters.category}`;
+                params.push(filters.category);
+                queryText += ` AND category = $${params.length}`;
             }
             if (filters.level) {
-                query = sql`${query} AND level = ${filters.level}`;
+                params.push(filters.level);
+                queryText += ` AND level = $${params.length}`;
             }
             if (filters.startDate) {
-                query = sql`${query} AND created_at >= ${filters.startDate}`;
+                params.push(filters.startDate);
+                queryText += ` AND created_at >= $${params.length}`;
             }
             if (filters.endDate) {
-                query = sql`${query} AND created_at <= ${filters.endDate}`;
+                params.push(filters.endDate);
+                queryText += ` AND created_at <= $${params.length}`;
             }
 
-            query = sql`${query} ORDER BY created_at DESC`;
+            queryText += ` ORDER BY created_at DESC`;
 
             const logs = await withQueryTimeout(
-                query,
+                sql(queryText, params),
                 TIMEOUTS.STANDARD,
                 'export des logs d\'audit'
             );

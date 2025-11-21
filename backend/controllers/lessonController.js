@@ -17,8 +17,8 @@ async function handleLessons(req, res) {
 
             let lessons;
 
-            // Base de la requête
-            let query = sql`
+            // Construire la requête dynamiquement
+            let queryText = `
         SELECT 
           id, title, description, subject, level, 
           image_filename,
@@ -27,6 +27,7 @@ async function handleLessons(req, res) {
         FROM lessons
         WHERE 1=1
       `;
+            const params = [];
 
             if (profileId) {
                 const profileIdNum = parseInt(profileId, 10);
@@ -34,19 +35,21 @@ async function handleLessons(req, res) {
                     res.status(400).json({ success: false, message: 'ID de profil invalide' });
                     return;
                 }
-                query = sql`${query} AND profile_id = ${profileIdNum}`;
+                params.push(profileIdNum);
+                queryText += ` AND profile_id = $${params.length}`;
             }
 
             if (published !== null && published !== undefined) {
                 const isPublished = published === 'true' || published === true || published === '1';
-                query = sql`${query} AND is_published = ${isPublished}`;
+                params.push(isPublished);
+                queryText += ` AND is_published = $${params.length}`;
             }
 
             // Ajouter le tri et la limite
-            query = sql`${query} ORDER BY created_at DESC LIMIT 100`;
+            queryText += ` ORDER BY created_at DESC LIMIT 100`;
 
             lessons = await withQueryTimeout(
-                query,
+                sql(queryText, params),
                 TIMEOUTS.STANDARD,
                 'récupération des leçons'
             );

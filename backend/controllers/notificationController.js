@@ -13,7 +13,7 @@ async function handleNotifications(req, res) {
             const isRead = url.searchParams.get('isRead');
             const type = url.searchParams.get('type');
 
-            let query = sql`
+            let queryText = `
         SELECT 
           n.id, n.type, n.title, n.message, n.data, 
           n.is_read, n.created_at,
@@ -22,25 +22,30 @@ async function handleNotifications(req, res) {
         JOIN profiles p ON n.profile_id = p.id
         WHERE 1=1
       `;
+            const params = [];
 
             if (profileId) {
-                query = sql`${query} AND n.profile_id = ${profileId}`;
+                params.push(profileId);
+                queryText += ` AND n.profile_id = $${params.length}`;
             } else {
                 // Si pas de profileId, il faut être authentifié
                 const user = authenticateToken(req);
-                query = sql`${query} AND n.profile_id = ${user.profileId}`;
+                params.push(user.profileId);
+                queryText += ` AND n.profile_id = $${params.length}`;
             }
 
             if (isRead !== undefined) {
-                query = sql`${query} AND n.is_read = ${isRead === 'true'}`;
+                params.push(isRead === 'true');
+                queryText += ` AND n.is_read = $${params.length}`;
             }
 
             if (type) {
-                query = sql`${query} AND n.type = ${type}`;
+                params.push(type);
+                queryText += ` AND n.type = $${params.length}`;
             }
 
-            query = sql`${query} ORDER BY n.created_at DESC`;
-            const notifications = await withQueryTimeout(query, TIMEOUTS.DEFAULT, 'récupération des notifications');
+            queryText += ` ORDER BY n.created_at DESC`;
+            const notifications = await withQueryTimeout(sql(queryText, params), TIMEOUTS.DEFAULT, 'récupération des notifications');
 
             res.status(200).json({
                 success: true,
