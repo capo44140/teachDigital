@@ -3,21 +3,21 @@
  */
 
 class ApiService {
-  constructor () {
+  constructor() {
     // URL du backend - adapter selon l'environnement
     const isDevelopment = import.meta.env.DEV
     // En développement, utiliser le proxy Vite (chemin relatif)
     // En production, utiliser l'URL complète du backend Vercel
     this.baseURL = isDevelopment
       ? (import.meta.env.VITE_API_URL || '') // Proxy Vite utilise des chemins relatifs
-      : (import.meta.env.VITE_API_URL_PROD || 'https://lespoires.synology.me:3002')
+      : (import.meta.env.VITE_API_URL_PROD || 'https://teach-digital.lespoires.ovh')
   }
 
   /**
    * Obtenir le token d'authentification depuis le localStorage
    * @returns {string|null} Le token JWT ou null si absent
    */
-  getToken () {
+  getToken() {
     return localStorage.getItem('auth_token')
   }
 
@@ -25,14 +25,14 @@ class ApiService {
    * Vérifier si un token est présent et valide
    * @returns {boolean} True si un token est présent
    */
-  hasToken () {
+  hasToken() {
     return !!this.getToken()
   }
 
   /**
    * Effectuer une requête fetch avec timeout
    */
-  async fetchWithTimeout (url, options = {}, timeoutMs = 30000) {
+  async fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
@@ -55,7 +55,7 @@ class ApiService {
   /**
    * Effectuer une requête HTTP
    */
-  async request (endpoint, options = {}) {
+  async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`
     const token = this.getToken()
 
@@ -154,7 +154,7 @@ class ApiService {
   /**
    * Connexion avec profil et code PIN
    */
-  async login (profileId, pin) {
+  async login(profileId, pin) {
     try {
       const response = await this.request('/api/auth/login', {
         method: 'POST',
@@ -178,7 +178,7 @@ class ApiService {
   /**
    * Déconnexion
    */
-  async logout () {
+  async logout() {
     try {
       const token = this.getToken()
       if (token) {
@@ -197,7 +197,7 @@ class ApiService {
   /**
    * Vérifier le token
    */
-  async verifyToken () {
+  async verifyToken() {
     try {
       const response = await this.request('/api/auth/verify')
       return response.success ? response.data.user : null
@@ -210,14 +210,14 @@ class ApiService {
   /**
    * Vérifier si l'utilisateur est authentifié
    */
-  isAuthenticated () {
+  isAuthenticated() {
     return !!this.getToken()
   }
 
   /**
    * Récupérer tous les profils
    */
-  async getProfiles () {
+  async getProfiles() {
     const response = await this.request('/api/profiles')
     return response.success ? response.data.profiles : []
   }
@@ -225,7 +225,7 @@ class ApiService {
   /**
    * Récupérer un profil par ID
    */
-  async getProfile (id) {
+  async getProfile(id) {
     const response = await this.request(`/api/profiles/${id}`)
     return response.success ? response.data.profile : null
   }
@@ -233,7 +233,7 @@ class ApiService {
   /**
    * Créer un profil
    */
-  async createProfile (profileData) {
+  async createProfile(profileData) {
     const response = await this.request('/api/profiles', {
       method: 'POST',
       body: JSON.stringify(profileData)
@@ -244,7 +244,7 @@ class ApiService {
   /**
    * Modifier un profil
    */
-  async updateProfile (id, profileData) {
+  async updateProfile(id, profileData) {
     const response = await this.request(`/api/profiles/${id}`, {
       method: 'PUT',
       body: JSON.stringify(profileData)
@@ -255,7 +255,7 @@ class ApiService {
   /**
    * Supprimer un profil
    */
-  async deleteProfile (id) {
+  async deleteProfile(id) {
     const response = await this.request(`/api/profiles/${id}`, {
       method: 'DELETE'
     })
@@ -265,7 +265,7 @@ class ApiService {
   /**
    * Vérifier un code PIN
    */
-  async verifyPin (profileId, pin) {
+  async verifyPin(profileId, pin) {
     const response = await this.request(`/api/profiles/${profileId}/pin`, {
       method: 'POST',
       body: JSON.stringify({ pin })
@@ -277,7 +277,7 @@ class ApiService {
   /**
    * Mettre à jour le code PIN
    */
-  async updatePin (profileId, newPin, currentPin = null) {
+  async updatePin(profileId, newPin, currentPin = null) {
     const response = await this.request(`/api/profiles/${profileId}/pin`, {
       method: 'PUT',
       body: JSON.stringify({ newPin, currentPin })
@@ -288,7 +288,7 @@ class ApiService {
   /**
    * Récupérer les informations du code PIN
    */
-  async getPinInfo (profileId) {
+  async getPinInfo(profileId) {
     const response = await this.request(`/api/profiles/${profileId}/pin`, {
       method: 'GET'
     })
@@ -298,7 +298,7 @@ class ApiService {
   /**
    * Récupérer les leçons
    */
-  async getLessons (filters = {}) {
+  async getLessons(filters = {}) {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
@@ -314,7 +314,7 @@ class ApiService {
   /**
    * Récupérer une leçon par ID
    */
-  async getLesson (id) {
+  async getLesson(id) {
     const response = await this.request(`/api/lessons/${id}`)
     return response.success ? response.data.lesson : null
   }
@@ -322,7 +322,7 @@ class ApiService {
   /**
    * Créer une leçon
    */
-  async createLesson (lessonData) {
+  async createLesson(lessonData) {
     const response = await this.request('/api/lessons', {
       method: 'POST',
       body: JSON.stringify(lessonData)
@@ -333,7 +333,7 @@ class ApiService {
   /**
    * Modifier une leçon
    */
-  async updateLesson (id, lessonData) {
+  async updateLesson(id, lessonData) {
     const response = await this.request(`/api/lessons/${id}`, {
       method: 'PUT',
       body: JSON.stringify(lessonData)
@@ -344,7 +344,7 @@ class ApiService {
   /**
    * Supprimer une leçon
    */
-  async deleteLesson (id) {
+  async deleteLesson(id) {
     const response = await this.request(`/api/lessons/${id}`, {
       method: 'DELETE'
     })
@@ -354,7 +354,7 @@ class ApiService {
   /**
    * Sauvegarder un résultat de quiz
    */
-  async saveQuizResult (lessonId, resultData) {
+  async saveQuizResult(lessonId, resultData) {
     const response = await this.request(`/api/lessons/${lessonId}/quiz-results`, {
       method: 'POST',
       body: JSON.stringify(resultData)
@@ -365,7 +365,7 @@ class ApiService {
   /**
    * Récupérer les notifications
    */
-  async getNotifications (filters = {}) {
+  async getNotifications(filters = {}) {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
@@ -381,7 +381,7 @@ class ApiService {
   /**
    * Marquer une notification comme lue
    */
-  async markNotificationAsRead (id) {
+  async markNotificationAsRead(id) {
     const response = await this.request(`/api/notifications/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ isRead: true })
@@ -392,7 +392,7 @@ class ApiService {
   /**
    * Marquer toutes les notifications comme lues
    */
-  async markAllNotificationsAsRead (profileId = null) {
+  async markAllNotificationsAsRead(profileId = null) {
     const response = await this.request('/api/notifications/mark-all-read', {
       method: 'POST',
       body: JSON.stringify({ profileId })
@@ -403,7 +403,7 @@ class ApiService {
   /**
    * Récupérer toutes les activités
    */
-  async getActivities () {
+  async getActivities() {
     const response = await this.request('/api/activities')
     return response.success ? response.data.activities : []
   }
@@ -411,7 +411,7 @@ class ApiService {
   /**
    * Récupérer les statistiques des activités
    */
-  async getActivityStats () {
+  async getActivityStats() {
     const response = await this.request('/api/activities/stats')
     return response.success ? response.data.stats : null
   }
@@ -419,7 +419,7 @@ class ApiService {
   /**
    * Récupérer toutes les vidéos YouTube
    */
-  async getYouTubeVideos () {
+  async getYouTubeVideos() {
     const response = await this.request('/api/youtube-videos')
     return response.success ? response.data.videos : []
   }
@@ -427,7 +427,7 @@ class ApiService {
   /**
    * Récupérer les statistiques globales des profils
    */
-  async getProfileStats () {
+  async getProfileStats() {
     const response = await this.request('/api/profiles/stats')
     return response.success ? response.data : null
   }

@@ -112,22 +112,22 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks: (id) => {
             // Stratégie ultra-simplifiée : tout regrouper par type de dépendance
-            
+
             if (id.includes('node_modules')) {
               // Vue.js et son écosystème
               if (id.includes('vue') || id.includes('@vue') || id.includes('vue-router') || id.includes('pinia')) {
                 return 'vue-vendor'
               }
-              
+
               // Base de données
               if (id.includes('postgres') || id.includes('@neondatabase')) {
                 return 'database'
               }
-              
+
               // Toutes les autres dépendances
               return 'vendor'
             }
-            
+
             // Regrouper TOUS les composants et services dans un seul chunk
             // Cela évite les problèmes d'ordre d'initialisation entre chunks
             if (id.includes('src/')) {
@@ -177,7 +177,7 @@ export default defineConfig(({ mode }) => {
       // Proxy pour contourner CORS en développement
       proxy: {
         '/api': {
-          target: 'https://lespoires.synology.me:3002',
+          target: 'https://teach-digital.lespoires.ovh',
           changeOrigin: true,
           secure: true,
           rewrite: (path) => path // Garder le chemin /api tel quel
