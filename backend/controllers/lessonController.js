@@ -15,10 +15,10 @@ async function handleLessons(req, res) {
             console.log(`🔍 Récupération des leçons - profileId: ${profileId}, published: ${published}`);
             const startTime = Date.now();
 
-            let lessons;
-
-            // Construire la requête dynamiquement avec sql template literals
-            const conditions = [sql`1=1`];
+            // Construire la requête dynamiquement (méthode robuste)
+            let queryText = 'SELECT id, title, description, subject, level, image_filename, is_published, created_at, updated_at, profile_id FROM lessons';
+            const params = [];
+            const conditions = [];
 
             if (profileId) {
                 const profileIdNum = parseInt(profileId, 10);
@@ -26,19 +26,27 @@ async function handleLessons(req, res) {
                     res.status(400).json({ success: false, message: 'ID de profil invalide' });
                     return;
                 }
-                conditions.push(sql`AND profile_id = ${profileIdNum}`);
+                params.push(profileIdNum);
+                conditions.push(`profile_id = $${params.length}`);
             }
 
             if (published !== null && published !== undefined) {
                 const isPublished = published === 'true' || published === true || published === '1';
-                conditions.push(sql`AND is_published = ${isPublished}`);
+                params.push(isPublished);
+                conditions.push(`is_published = $${params.length}`);
             }
 
-            // Combiner les conditions
-            const whereClause = conditions.reduce((acc, condition) => sql`${acc} ${condition}`);
+            if (conditions.length > 0) {
+                queryText += ' WHERE ' + conditions.join(' AND ');
+            }
+
+            queryText += ' ORDER BY created_at DESC LIMIT 100';
+
+            console.log('🔍 DEBUG SQL:', queryText);
+            console.log('🔍 DEBUG PARAMS:', params);
 
             lessons = await withQueryTimeout(
-                sql`SELECT id, title, description, subject, level, image_filename, is_published, created_at, updated_at, profile_id FROM lessons WHERE ${whereClause} ORDER BY created_at DESC LIMIT 100`,
+                sql(queryText, params),
                 TIMEOUTS.STANDARD,
                 'récupération des leçons'
             );
