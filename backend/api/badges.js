@@ -1,6 +1,6 @@
 const { sql } = require('../lib/database.js');
 const { authenticateToken } = require('../lib/auth.js');
-const { setCorsHeaders, handleCors } = require('../lib/cors.js');
+const { runCors } = require('../lib/cors.js');
 const { createResponse, createErrorResponse } = require('../lib/response.js');
 
 /**
@@ -9,7 +9,7 @@ const { createResponse, createErrorResponse } = require('../lib/response.js');
 function withQueryTimeout(queryPromise, timeoutMs = 7000, operationName = 'requête') {
   return Promise.race([
     queryPromise,
-    new Promise((_, reject) => 
+    new Promise((_, reject) =>
       setTimeout(() => reject(new Error(`Timeout: ${operationName} a pris plus de ${timeoutMs}ms`)), timeoutMs)
     )
   ]);
@@ -20,11 +20,11 @@ function withQueryTimeout(queryPromise, timeoutMs = 7000, operationName = 'requ�
  */
 module.exports = async function handler(req, res) {
   // Gestion CORS
-  if (req.method === 'OPTIONS') {
-    return handleCors(req, res);
-  }
+  await runCors(req, res);
 
-  setCorsHeaders(res);
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
   try {
     // Authentification requise pour toutes les routes badges
@@ -33,7 +33,7 @@ module.exports = async function handler(req, res) {
     console.log('🔐 Debug authentification badges:');
     console.log('   - Header Authorization présent:', !!authHeader);
     console.log('   - Format:', authHeader ? (authHeader.startsWith('Bearer ') ? 'Bearer ✓' : 'Format incorrect') : 'Manquant');
-    
+
     let user;
     try {
       user = authenticateToken(req);
@@ -52,7 +52,7 @@ module.exports = async function handler(req, res) {
     if (pathname === '/api/badges' && method === 'GET') {
       return await handleGetAllBadges(req, res);
     }
-    
+
     if (pathname === '/api/badges' && method === 'POST') {
       return await handleCreateBadge(req, res);
     }
@@ -89,16 +89,16 @@ module.exports = async function handler(req, res) {
     if (pathname === '/api/badges/check-unlock' && method === 'POST') {
       return await handleCheckAndUnlockBadges(req, res);
     }
-    
+
     // Routes génériques pour un badge spécifique (APRÈS les routes profile)
     if (pathname.startsWith('/api/badges/') && method === 'GET') {
       return await handleGetBadge(req, res);
     }
-    
+
     if (pathname.startsWith('/api/badges/') && method === 'PUT') {
       return await handleUpdateBadge(req, res);
     }
-    
+
     if (pathname.startsWith('/api/badges/') && method === 'DELETE') {
       return await handleDeleteBadge(req, res);
     }
@@ -126,7 +126,7 @@ async function handleGetAllBadges(req, res) {
       5000,
       'récupération de tous les badges'
     );
-    
+
     return res.status(200).json(createResponse('Badges récupérés avec succès', badges));
   } catch (error) {
     console.error('❌ Erreur lors de la récupération des badges:', {
@@ -156,7 +156,7 @@ async function handleCreateBadge(req, res) {
     if (condition_value < 1) {
       return res.status(400).json(createErrorResponse('La valeur de condition doit être positive'));
     }
-    
+
     if (points < 0) {
       return res.status(400).json(createErrorResponse('Les points doivent être positifs ou nuls'));
     }
@@ -288,7 +288,7 @@ async function handleUpdateBadge(req, res) {
     if (condition_value !== undefined && condition_value < 1) {
       return res.status(400).json(createErrorResponse('La valeur de condition doit être positive'));
     }
-    
+
     if (points !== undefined && points < 0) {
       return res.status(400).json(createErrorResponse('Les points doivent être positifs ou nuls'));
     }
@@ -343,7 +343,7 @@ async function handleUpdateBadge(req, res) {
     updateParams.push(badgeIdNum);
 
     const updateQueryText = `UPDATE badges SET ${updateFields.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
-    
+
     console.log(`🔧 Requête UPDATE construite manuellement:`);
     console.log(`   Text: ${updateQueryText}`);
     console.log(`   Params: ${JSON.stringify(updateParams)}`);
@@ -444,7 +444,7 @@ async function handleGetProfileBadges(req, res, profileId) {
   try {
     // Validation et conversion de l'ID
     const profileIdNum = parseInt(profileId, 10);
-    
+
     if (!profileId || isNaN(profileIdNum)) {
       return res.status(400).json(createErrorResponse('ID de profil invalide'));
     }
@@ -493,7 +493,7 @@ async function handleGetUnlockedBadges(req, res, profileId) {
   try {
     // Validation et conversion de l'ID
     const profileIdNum = parseInt(profileId, 10);
-    
+
     if (!profileId || isNaN(profileIdNum)) {
       return res.status(400).json(createErrorResponse('ID de profil invalide'));
     }
@@ -535,7 +535,7 @@ async function handleGetBadgeStats(req, res, profileId) {
   try {
     // Validation et conversion de l'ID
     const profileIdNum = parseInt(profileId, 10);
-    
+
     if (!profileId || isNaN(profileIdNum)) {
       return res.status(400).json(createErrorResponse('ID de profil invalide'));
     }
@@ -594,7 +594,7 @@ async function handleGetRecentlyUnlockedBadges(req, res, profileId) {
   try {
     // Validation et conversion de l'ID
     const profileIdNum = parseInt(profileId, 10);
-    
+
     if (!profileId || isNaN(profileIdNum)) {
       return res.status(400).json(createErrorResponse('ID de profil invalide'));
     }
@@ -654,7 +654,7 @@ async function handleCheckAndUnlockBadges(req, res) {
     // Cette fonctionnalité nécessiterait une logique plus complexe pour vérifier les conditions
     // et débloquer les badges automatiquement selon actionType et actionData
     // TODO: Implémenter la logique de vérification et déblocage automatique
-    
+
     const unlockedBadges = [];
 
     return res.status(200).json(createResponse('Vérification des badges terminée', { unlockedBadges }));
