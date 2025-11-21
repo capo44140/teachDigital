@@ -75,6 +75,10 @@ Write-Info "[3/4] Transfert des fichiers..."
 # Creer le repertoire de destination
 ssh $sshAlias "mkdir -p $DeployPath" 2>&1 | Out-Null
 
+# Creer les dossiers de volumes avec permissions larges (pour Docker non-root)
+Write-Info "   Preparation des dossiers de volumes..."
+ssh $sshAlias "mkdir -p $DeployPath/logs $DeployPath/output $DeployPath/temp && chmod 777 $DeployPath/logs $DeployPath/output $DeployPath/temp" 2>&1 | Out-Null
+
 # Lister les fichiers qui seront transferes (pour debug)
 Write-Info "   Verification des fichiers a transferer..."
 $fileCount = (Get-ChildItem -Path . -Recurse -File | Where-Object { 
