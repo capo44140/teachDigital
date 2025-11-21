@@ -561,13 +561,10 @@ async function handlePin(req, res) {
                 return;
             }
 
+            console.log(`🔐 Vérification PIN pour profil ${profileIdNum} (PIN fourni: ${pin ? 'OUI' : 'NON'})`);
+
             const pinData = await withQueryTimeout(
-                sql`
-          SELECT pin_code 
-          FROM pin_codes 
-          WHERE profile_id = ${profileIdNum} 
-          ORDER BY created_at DESC LIMIT 1
-        `,
+                sql`SELECT pin_code FROM pin_codes WHERE profile_id = ${profileIdNum} ORDER BY created_at DESC LIMIT 1`,
                 TIMEOUTS.STANDARD,
                 'vérification du PIN'
             );

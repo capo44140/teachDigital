@@ -272,7 +272,7 @@ function buildQuery(strings, values) {
     }
 
     return result;
-  });
+  }, "");
 
   return { text, params: params_array };
 }
