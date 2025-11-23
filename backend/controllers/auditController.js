@@ -9,8 +9,8 @@ async function handleAudit(req, res) {
         const url = new URL(req.url, `http://${req.headers.host}`);
         const pathname = url.pathname;
 
-        // POST /api/audit/logs - Créer un log d'audit
-        if (pathname === '/api/audit/logs' && req.method === 'POST') {
+        // POST /logs - Créer un log d'audit
+        if (pathname === '/logs' && req.method === 'POST') {
             const { action, userId, category, level = 'info', details = {}, ipAddress, userAgent } = req.body;
 
             if (!action || !category) {
@@ -60,8 +60,8 @@ async function handleAudit(req, res) {
                 data: { log: result[0] }
             });
 
-            // GET /api/audit/logs - Récupérer les logs d'audit
-        } else if (pathname === '/api/audit/logs' && req.method === 'GET') {
+            // GET /logs - Récupérer les logs d'audit
+        } else if (pathname === '/logs' && req.method === 'GET') {
             // Authentification requise pour GET
             const user = authenticateToken(req);
 
@@ -114,8 +114,8 @@ async function handleAudit(req, res) {
                 data: { logs: parsedLogs }
             });
 
-            // GET /api/audit/stats - Statistiques de sécurité
-        } else if (pathname === '/api/audit/stats' && req.method === 'GET') {
+            // GET /stats - Statistiques de sécurité
+        } else if (pathname === '/stats' && req.method === 'GET') {
             // Authentification requise pour GET
             const user = authenticateToken(req);
 
@@ -143,8 +143,8 @@ async function handleAudit(req, res) {
                 data: stats[0] || {}
             });
 
-            // POST /api/audit/export - Exporter les logs
-        } else if (pathname === '/api/audit/export' && req.method === 'POST') {
+            // POST /export - Exporter les logs
+        } else if (pathname === '/export' && req.method === 'POST') {
             // Authentification requise pour export
             const user = authenticateToken(req);
 

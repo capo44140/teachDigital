@@ -123,8 +123,7 @@ async function handleNotifications(req, res) {
 // Handler d'une notification spécifique
 async function handleNotification(req, res) {
     try {
-        const url = new URL(req.url, `http://${req.headers.host}`);
-        const id = url.pathname.split('/').pop();
+        const id = req.params.id;
 
         if (!id) {
             res.status(400).json({

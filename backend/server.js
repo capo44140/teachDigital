@@ -98,45 +98,15 @@ app.use(async (req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Middleware pour convertir les requêtes Express en format compatible avec le handler Vercel
-app.use('*', async (req, res) => {
-  // Les requêtes OPTIONS sont déjà gérées par le middleware CORS précédent
+// Utilisation du routeur API
+app.use('/api', handler);
 
-  // Créer un objet de requête compatible avec le handler Vercel
-  const contentType = req.headers['content-type'] || '';
-  const isFormData = contentType.includes('multipart/form-data');
-
-  const vercelReq = {
-    method: req.method,
-    url: req.originalUrl || req.url,
-    headers: req.headers,
-    body: req.body, // Contient les données parsées (JSON, URL-encoded, ou FormData)
-    query: req.query,
-    params: req.params,
-    // Pour FormData, ajouter les données parsées dans le format attendu par le handler
-    ...(isFormData && req.parsedFormData && {
-      parsedFormData: req.parsedFormData
-    })
-  };
-
-  // Créer un objet de réponse compatible avec Express
-  // Le handler utilise directement res.status(), res.json(), etc.
-  // donc on peut passer directement res
-  try {
-    if (vercelReq.url.startsWith('/api/badges')) {
-      console.log('🔍 [Server] Request to badges:', vercelReq.method, vercelReq.url);
-      console.log('🔍 [Server] Headers Auth:', vercelReq.headers.authorization ? 'Present' : 'Missing');
-    }
-    await handler(vercelReq, res);
-  } catch (error) {
-    logger.error('Erreur dans le handler', error);
-    if (!res.headersSent) {
-      res.status(500).json({
-        success: false,
-        message: 'Erreur serveur interne: ' + error.message
-      });
-    }
-  }
+// Gestion des erreurs 404 pour les routes API non trouvées
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route API non trouvée'
+  });
 });
 
 // Route de santé pour Docker

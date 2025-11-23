@@ -266,6 +266,8 @@ class ApiService {
    * Vérifier un code PIN
    */
   async verifyPin(profileId, pin) {
+    if (!pin) return false
+
     const response = await this.request(`/api/profiles/${profileId}/pin`, {
       method: 'POST',
       body: JSON.stringify({ pin })

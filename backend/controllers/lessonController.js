@@ -132,10 +132,7 @@ async function handleLessons(req, res) {
 // Handler d'une leçon spécifique
 async function handleLesson(req, res) {
     try {
-        const url = new URL(req.url, `http://${req.headers.host}`);
-        const pathname = url.pathname;
-        const idMatch = pathname.match(/\/api\/lessons\/(\d+)/);
-        const id = idMatch ? idMatch[1] : null;
+        const id = req.params.id;
 
         if (!id) {
             res.status(400).json({ success: false, message: 'ID de leçon requis' });

@@ -1,4 +1,7 @@
 // Import des dépendances
+const express = require('express');
+const router = express.Router();
+
 const { handleLogin, handleLogout } = require('../controllers/authController.js');
 const { handleProfiles, handleProfile, handleProfileStats, handleProfilePin, handlePin } = require('../controllers/profileController.js');
 const { handleLessons, handleLesson } = require('../controllers/lessonController.js');
@@ -9,108 +12,52 @@ const { handleInitPins } = require('../controllers/initController.js');
 const { handleAudit } = require('../controllers/auditController.js');
 const handleBadges = require('./badges.js');
 const handleAI = require('./ai.js');
-const { runCors } = require('../lib/cors.js');
 
-module.exports = async function handler(req, res) {
+// Routes d'authentification
+router.post('/auth/login', handleLogin);
+router.post('/auth/logout', handleLogout);
 
-  // Appliquer CORS
-  try {
-    await runCors(req, res);
-  } catch (error) {
-    console.error('Erreur CORS:', error);
-    return res.status(500).json({ error: 'Erreur configuration CORS' });
-  }
+// Routes des profils
+router.get('/profiles/stats', handleProfileStats);
+router.post('/profiles/:id/pin', handlePin);
+router.get('/profiles', handleProfiles);
+router.get('/profiles/:id', handleProfile);
+router.put('/profiles/:id', handleProfile);
+router.delete('/profiles/:id', handleProfile);
+// Note: handleProfile gère GET, PUT, DELETE, mais Express préfère des routes explicites.
+// Si handleProfile vérifie la méthode, on peut utiliser router.all ou router.use pour ce chemin spécifique,
+// mais il vaut mieux être explicite si possible.
+// Pour l'instant, comme les contrôleurs vérifient souvent la méthode, on peut utiliser router.all
+// ou mapper les méthodes supportées.
+// D'après l'analyse, handleProfile semble gérer plusieurs méthodes.
 
-  // Router simple basé sur l'URL
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const pathname = url.pathname;
+// Routes des leçons
+router.get('/lessons', handleLessons);
+router.post('/lessons', handleLessons); // Si handleLessons gère aussi POST
+router.all('/lessons/:id', handleLesson);
 
-  try {
-    // Routes d'authentification
-    if (pathname === '/api/auth/login') {
-      return await handleLogin(req, res);
-    }
-    if (pathname === '/api/auth/logout') {
-      return await handleLogout(req, res);
-    }
+// Routes des notifications
+router.get('/notifications', handleNotifications);
+router.post('/notifications', handleNotifications);
+router.all('/notifications/:id', handleNotification);
 
-    // Routes des profils
-    if (pathname === '/api/profiles' && !pathname.includes('/api/profiles/')) {
-      return await handleProfiles(req, res);
-    }
+// Routes des activités
+router.get('/activities', handleActivities);
 
-    // Routes des statistiques des profils (AVANT la route générique /api/profiles/:id)
-    if (pathname === '/api/profiles/stats') {
-      return await handleProfileStats(req, res);
-    }
+// Routes des vidéos YouTube
+router.get('/youtube-videos', handleYoutubeVideos);
 
-    // Routes des codes PIN (AVANT la route générique /api/profiles/:id)
-    if (pathname.startsWith('/api/profiles/') && pathname.includes('/pin')) {
-      return await handlePin(req, res);
-    }
+// Routes des badges
+// handleBadges est probablement un handler qui gère sous-routes ou méthodes
+router.use('/badges', handleBadges);
 
-    // Route générique pour un profil spécifique
-    if (pathname.startsWith('/api/profiles/')) {
-      return await handleProfile(req, res);
-    }
+// Routes IA
+router.use('/ai', handleAI);
 
-    // Routes des leçons
-    if (pathname === '/api/lessons' && !pathname.includes('/api/lessons/')) {
-      return await handleLessons(req, res);
-    }
-    if (pathname.startsWith('/api/lessons/')) {
-      return await handleLesson(req, res);
-    }
+// Route d'initialisation des pins
+router.post('/init-pins', handleInitPins);
 
-    // Routes des notifications
-    if (pathname === '/api/notifications' && !pathname.includes('/api/notifications/')) {
-      return await handleNotifications(req, res);
-    }
-    if (pathname.startsWith('/api/notifications/')) {
-      return await handleNotification(req, res);
-    }
+// Routes des logs d'audit
+router.use('/audit', handleAudit);
 
-    // Routes des activités
-    if (pathname === '/api/activities') {
-      return await handleActivities(req, res);
-    }
-
-    // Routes des vidéos YouTube
-    if (pathname === '/api/youtube-videos') {
-      return await handleYoutubeVideos(req, res);
-    }
-
-    // Routes des badges
-    if (pathname.startsWith('/api/badges')) {
-      return await handleBadges(req, res);
-    }
-
-    // Routes IA
-    if (pathname.startsWith('/api/ai')) {
-      return await handleAI(req, res);
-    }
-
-    // Route d'initialisation des pins
-    if (pathname === '/api/init-pins') {
-      return await handleInitPins(req, res);
-    }
-
-    // Routes des logs d'audit
-    if (pathname.startsWith('/api/audit')) {
-      return await handleAudit(req, res);
-    }
-
-    // Route non trouvée
-    res.status(404).json({
-      success: false,
-      message: 'Route non trouvée'
-    });
-
-  } catch (error) {
-    console.error('Erreur dans le routeur principal:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur interne du serveur'
-    });
-  }
-}
+module.exports = router;

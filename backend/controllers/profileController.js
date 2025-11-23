@@ -115,12 +115,7 @@ async function handleProfiles(req, res) {
 // Handler d'un profil spécifique
 async function handleProfile(req, res) {
     try {
-        const url = new URL(req.url, `http://${req.headers.host}`);
-        const pathname = url.pathname;
-
-        // Extraire l'ID du profil avec une regex (/api/profiles/123 ou /api/profiles/123/pin)
-        const idMatch = pathname.match(/\/api\/profiles\/(\d+)/);
-        const id = idMatch ? idMatch[1] : null;
+        const id = req.params.id;
 
         if (!id) {
             res.status(400).json({
@@ -130,15 +125,9 @@ async function handleProfile(req, res) {
             return;
         }
 
-        // Déterminer si c'est une route imbriquée (ex: /api/profiles/1/pin)
-        const isNestedRoute = pathname.includes(`/api/profiles/${id}/`);
-        const nestedMatch = pathname.match(new RegExp(`/api/profiles/${id}/([a-z-]+)`));
-        const nestedPath = nestedMatch ? nestedMatch[1] : null;
+        // Note: Les routes imbriquées comme /pin sont maintenant gérées par le routeur principal
+        // qui appelle handlePin directement. Donc handleProfile ne gère que le profil lui-même.
 
-        // Gérer les routes imbriquées
-        if (nestedPath === 'pin') {
-            return await handleProfilePin(req, res, id);
-        }
 
         // Gérer les routes standard du profil
         if (req.method === 'GET') {
@@ -503,9 +492,8 @@ async function handleProfileStats(req, res) {
 // Handler des codes PIN (route directe)
 async function handlePin(req, res) {
     try {
-        const url = new URL(req.url, `http://${req.headers.host}`);
-        const pathParts = url.pathname.split('/');
-        const profileId = pathParts[3]; // /api/profiles/{id}/pin
+        // Utiliser req.params.id fourni par Express Router
+        const profileId = req.params.id;
 
         // Validation et conversion de l'ID
         const profileIdNum = parseInt(profileId, 10);

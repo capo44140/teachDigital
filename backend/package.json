@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "Backend API pour TeachDigital - Vercel Functions",
   "scripts": {
-    "dev": "node scripts/test-local.js",
-    "dev:vercel": "vercel dev --listen 3001",
-    "build": "echo 'No build step required for Vercel Functions'",
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "echo 'No build step required'",
     "deploy": "node scripts/deploy.js production",
     "deploy:preview": "node scripts/deploy.js preview",
     "deploy:synology": "powershell -ExecutionPolicy Bypass -File ./deploy-synology.ps1",
@@ -23,9 +23,7 @@
     "@fastify/busboy": "^2.1.1",
     "tesseract.js": "^5.0.4"
   },
-  "devDependencies": {
-    "vercel": "^32.0.0"
-  },
+  "devDependencies": {},
   "engines": {
     "node": ">=18.0.0"
   },
@@ -35,4 +33,3 @@
     ]
   }
 }
-
