@@ -1,5 +1,5 @@
 const { sql } = require('../lib/database.js');
-const { authenticateToken } = require('../lib/auth.js');
+const { authenticateToken, authenticateUser } = require('../lib/auth.js');
 const { runCors } = require('../lib/cors.js');
 const { createResponse, createErrorResponse } = require('../lib/response.js');
 
@@ -31,39 +31,28 @@ module.exports = async function handler(req, res) {
     // Logs de débogage pour diagnostiquer les problèmes d'authentification
     const authHeader = req.headers.authorization;
     console.log('🔐 Debug authentification badges:');
-    console.log('   - Header Authorization présent:', !!authHeader);
-    console.log('   - Format:', authHeader ? (authHeader.startsWith('Bearer ') ? 'Bearer ✓' : 'Format incorrect') : 'Manquant');
+    // Utiliser req.path fourni par Express (relatif au point de montage /api/badges)
+    const pathname = req.path;
 
-    let user;
-    try {
-      user = authenticateToken(req);
-      console.log('   - Authentification réussie pour profileId:', user?.profileId);
-    } catch (authError) {
-      // authenticateToken lance une exception si le token est manquant ou invalide
-      console.error('   - ❌ Erreur d\'authentification:', authError.message);
-      return res.status(401).json(createErrorResponse(authError.message || 'Token d\'authentification invalide'));
-    }
+    console.log(`🔍 Debug Badges - Path: ${pathname}, Method: ${method}, BaseUrl: ${req.baseUrl}`);
 
-    const { method } = req;
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const pathname = url.pathname;
-
-    // Routes des badges
-    if (pathname === '/api/badges' && method === 'GET') {
+    // Routes des badges (racine /api/badges)
+    if ((pathname === '/' || pathname === '') && method === 'GET') {
       return await handleGetAllBadges(req, res);
     }
 
-    if (pathname === '/api/badges' && method === 'POST') {
+    if ((pathname === '/' || pathname === '') && method === 'POST') {
       return await handleCreateBadge(req, res);
     }
 
     // Routes spécifiques pour les badges de profil (AVANT les routes génériques)
-    if (pathname.startsWith('/api/badges/profile/') && method === 'GET') {
+    // /api/badges/profile/:id -> /profile/:id
+    if (pathname.startsWith('/profile/') && method === 'GET') {
       // Extraire le profileId et le sous-chemin
       const pathParts = pathname.split('/');
-      const profileIdIndex = pathParts.indexOf('profile') + 1;
-      const profileId = pathParts[profileIdIndex];
-      const subPath = pathParts[profileIdIndex + 1]; // unlocked, stats, recent, ou undefined
+      // pathParts[0] est vide, pathParts[1] est 'profile', pathParts[2] est l'ID
+      const profileId = pathParts[2];
+      const subPath = pathParts[3]; // unlocked, stats, recent, ou undefined
 
       // Vérifier que profileId existe
       if (!profileId) {
@@ -77,7 +66,7 @@ module.exports = async function handler(req, res) {
       } else if (subPath === 'recent') {
         return await handleGetRecentlyUnlockedBadges(req, res, profileId);
       } else if (!subPath) {
-        // Route principale: /api/badges/profile/:profileId
+        // Route principale: /profile/:profileId
         return await handleGetProfileBadges(req, res, profileId);
       } else {
         // Sous-chemin non reconnu
@@ -86,25 +75,28 @@ module.exports = async function handler(req, res) {
     }
 
     // Route pour vérifier et débloquer les badges
-    if (pathname === '/api/badges/check-unlock' && method === 'POST') {
+    if (pathname === '/check-unlock' && method === 'POST') {
       return await handleCheckAndUnlockBadges(req, res);
     }
 
     // Routes génériques pour un badge spécifique (APRÈS les routes profile)
-    if (pathname.startsWith('/api/badges/') && method === 'GET') {
+    // /api/badges/:id -> /:id (mais attention, /profile est déjà géré)
+    // On vérifie que ce n'est pas une des routes spéciales
+    if (method === 'GET' && !pathname.startsWith('/profile/') && !pathname.startsWith('/check-unlock')) {
+      // C'est probablement un ID
       return await handleGetBadge(req, res);
     }
 
-    if (pathname.startsWith('/api/badges/') && method === 'PUT') {
+    if (method === 'PUT' && !pathname.startsWith('/profile/') && !pathname.startsWith('/check-unlock')) {
       return await handleUpdateBadge(req, res);
     }
 
-    if (pathname.startsWith('/api/badges/') && method === 'DELETE') {
+    if (method === 'DELETE' && !pathname.startsWith('/profile/') && !pathname.startsWith('/check-unlock')) {
       return await handleDeleteBadge(req, res);
     }
 
     // Route non trouvée
-    return res.status(404).json(createErrorResponse('Endpoint non trouvé'));
+    return res.status(404).json(createErrorResponse(`Endpoint non trouvé: ${pathname}`));
 
   } catch (error) {
     console.error('Erreur dans le gestionnaire badges:', error);
@@ -200,8 +192,8 @@ async function handleCreateBadge(req, res) {
  */
 async function handleGetBadge(req, res) {
   try {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const badgeId = url.pathname.split('/')[3];
+    // req.path est /:id (ex: /123)
+    const badgeId = req.path.split('/')[1];
 
     // Validation et conversion de l'ID
     const badgeIdNum = parseInt(badgeId, 10);
@@ -255,8 +247,8 @@ async function handleGetBadge(req, res) {
  */
 async function handleUpdateBadge(req, res) {
   try {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const badgeId = url.pathname.split('/')[3];
+    // req.path est /:id (ex: /123)
+    const badgeId = req.path.split('/')[1];
 
     // Validation et conversion de l'ID
     const badgeIdNum = parseInt(badgeId, 10);
@@ -378,8 +370,8 @@ async function handleUpdateBadge(req, res) {
  */
 async function handleDeleteBadge(req, res) {
   try {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const badgeId = url.pathname.split('/')[3];
+    // req.path est /:id (ex: /123)
+    const badgeId = req.path.split('/')[1];
 
     // Validation et conversion de l'ID
     const badgeIdNum = parseInt(badgeId, 10);

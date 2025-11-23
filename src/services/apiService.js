@@ -18,7 +18,7 @@ class ApiService {
    * @returns {string|null} Le token JWT ou null si absent
    */
   getToken() {
-    return localStorage.getItem('auth_token')
+    return localStorage.getItem('auth_token') || sessionStorage.getItem('authToken')
   }
 
   /**

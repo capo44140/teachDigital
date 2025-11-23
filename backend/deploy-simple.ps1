@@ -95,15 +95,16 @@ $fileCount = (Get-ChildItem -Path . -Recurse -File | Where-Object {
 Write-Info "   Nombre de fichiers a transferer: $fileCount"
 
 # Essayer rsync d'abord (plus rapide pour les mises a jour)
+# Force disable rsync due to detection issues on Windows
 $useRsync = $false
-rsync --version 2>&1 | Out-Null
-if ($LASTEXITCODE -eq 0) {
-    ssh $sshAlias "rsync --version" 2>&1 | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        $useRsync = $true
-        Write-Info "   Utilisation de rsync (transfert optimise)..."
-    }
-}
+# rsync --version 2>&1 | Out-Null
+# if ($LASTEXITCODE -eq 0) {
+#     ssh $sshAlias "rsync --version" 2>&1 | Out-Null
+#     if ($LASTEXITCODE -eq 0) {
+#         $useRsync = $true
+#         Write-Info "   Utilisation de rsync (transfert optimise)..."
+#     }
+# }
 
 if ($useRsync) {
     # Transfert avec rsync (incremental, plus rapide)
@@ -468,4 +469,3 @@ Write-Info ""
 Write-Info "Commandes Docker directes (si helper ne fonctionne pas):"
 Write-Info "  Logs:    ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd logs -f backend`""
 Write-Info "  Status:  ssh $sshAlias `"cd $dockerPath && $dockerComposeCmd ps`""
-

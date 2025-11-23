@@ -70,8 +70,47 @@ async function deleteSession(sessionToken) {
   }
 }
 
+// Authentifier un utilisateur (supporte JWT et Session Token)
+async function authenticateUser(req) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    throw new Error('Token manquant');
+  }
+
+  // 1. Essayer JWT (rapide, synchrone)
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    return decoded;
+  } catch (jwtError) {
+    // 2. Si JWT échoue, essayer Session Token (DB, asynchrone)
+    try {
+      const session = await verifySession(token);
+      if (session) {
+        // Adapter le format de session au format utilisateur attendu
+        return {
+          id: session.profile_id,
+          name: session.name,
+          type: session.type,
+          isAdmin: session.is_admin,
+          isChild: session.is_child,
+          isTeen: session.is_teen,
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(new Date(session.expires_at).getTime() / 1000)
+        };
+      }
+    } catch (sessionError) {
+      // Ignorer l'erreur de session pour retourner l'erreur d'auth principale
+    }
+
+    throw new Error('Token invalide ou session expirée');
+  }
+}
+
 module.exports = {
   authenticateToken,
+  authenticateUser,
   generateToken,
   verifySession,
   createSession,
