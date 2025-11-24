@@ -33,6 +33,7 @@ module.exports = async function handler(req, res) {
     console.log('🔐 Debug authentification badges:');
     // Utiliser req.path fourni par Express (relatif au point de montage /api/badges)
     const pathname = req.path;
+    const method = req.method;
 
     console.log(`🔍 Debug Badges - Path: ${pathname}, Method: ${method}, BaseUrl: ${req.baseUrl}`);
 
@@ -100,7 +101,7 @@ module.exports = async function handler(req, res) {
 
   } catch (error) {
     console.error('Erreur dans le gestionnaire badges:', error);
-    return res.status(500).json(createErrorResponse('Erreur serveur interne'));
+    return res.status(500).json(createErrorResponse('Erreur serveur interne: ' + error.message, { stack: error.stack }));
   }
 }
 
