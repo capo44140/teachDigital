@@ -95,23 +95,23 @@ module.exports = async function handler(req, res) {
     const pathname = url.pathname;
 
     // Routes IA
-    if (pathname === '/api/ai/generate-quiz-from-image' && method === 'POST') {
+    if (pathname === '/generate-quiz-from-image' && method === 'POST') {
       return await handleGenerateQuizFromImage(req, res);
     }
 
-    if (pathname === '/api/ai/generate-quiz-from-documents' && method === 'POST') {
+    if (pathname === '/generate-quiz-from-documents' && method === 'POST') {
       return await handleGenerateQuizFromDocuments(req, res);
     }
 
-    if (pathname === '/api/ai/generate-quiz-from-text' && method === 'POST') {
+    if (pathname === '/generate-quiz-from-text' && method === 'POST') {
       return await handleGenerateQuizFromText(req, res);
     }
 
-    if (pathname === '/api/ai/validate-key' && method === 'GET') {
+    if (pathname === '/validate-key' && method === 'GET') {
       return await handleValidateKey(req, res);
     }
 
-    if (pathname === '/api/ai/has-valid-key' && method === 'GET') {
+    if (pathname === '/has-valid-key' && method === 'GET') {
       return await handleHasValidKey(req, res);
     }
 
