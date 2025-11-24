@@ -246,7 +246,100 @@ async function handleLesson(req, res) {
     }
 }
 
+// Handler des résultats de quiz
+async function handleQuizResults(req, res) {
+    try {
+        const lessonId = req.params.id;
+
+        if (!lessonId) {
+            res.status(400).json({ success: false, message: 'ID de leçon requis' });
+            return;
+        }
+
+        const lessonIdNum = parseInt(lessonId, 10);
+        if (isNaN(lessonIdNum)) {
+            res.status(400).json({ success: false, message: 'ID de leçon invalide' });
+            return;
+        }
+
+        if (req.method === 'GET') {
+            // Récupérer le profileId depuis la query string
+            const url = new URL(req.url, `http://${req.headers.host}`);
+            const profileId = url.searchParams.get('profileId');
+
+            if (!profileId) {
+                res.status(400).json({ success: false, message: 'ID de profil requis' });
+                return;
+            }
+
+            const profileIdNum = parseInt(profileId, 10);
+            if (isNaN(profileIdNum)) {
+                res.status(400).json({ success: false, message: 'ID de profil invalide' });
+                return;
+            }
+
+            console.log(`🔍 Récupération résultats quiz - lessonId: ${lessonIdNum}, profileId: ${profileIdNum}`);
+
+            const results = await withQueryTimeout(
+                sql`
+                    SELECT * FROM quiz_results 
+                    WHERE lesson_id = ${lessonIdNum} AND profile_id = ${profileIdNum}
+                    ORDER BY completed_at DESC
+                `,
+                TIMEOUTS.STANDARD,
+                'récupération des résultats de quiz'
+            );
+
+            res.status(200).json({
+                success: true,
+                message: 'Résultats récupérés avec succès',
+                data: { results }
+            });
+
+        } else if (req.method === 'POST') {
+            // Sauvegarder un résultat de quiz
+            const { profileId, score, totalQuestions, answers } = req.body;
+
+            if (!profileId || score === undefined || !totalQuestions) {
+                res.status(400).json({ success: false, message: 'Données incomplètes' });
+                return;
+            }
+
+            const percentage = Math.round((score / totalQuestions) * 100);
+
+            console.log(`📝 Sauvegarde résultat quiz - lessonId: ${lessonIdNum}, profileId: ${profileId}, score: ${score}/${totalQuestions}`);
+
+            const result = await withQueryTimeout(
+                sql`
+                    INSERT INTO quiz_results (lesson_id, profile_id, score, total_questions, percentage, answers, completed_at)
+                    VALUES (${lessonIdNum}, ${profileId}, ${score}, ${totalQuestions}, ${percentage}, ${JSON.stringify(answers)}::jsonb, NOW())
+                    RETURNING *
+                `,
+                TIMEOUTS.STANDARD,
+                'sauvegarde du résultat de quiz'
+            );
+
+            // Vérifier si des badges doivent être débloqués (TODO)
+
+            res.status(201).json({
+                success: true,
+                message: 'Résultat sauvegardé avec succès',
+                data: { result: result[0] }
+            });
+
+        } else {
+            res.status(405).json({ success: false, message: 'Méthode non autorisée' });
+        }
+
+    } catch (error) {
+        console.error('❌ Erreur dans handleQuizResults:', error);
+        const errorResponse = handleError(error, 'Erreur lors de la gestion des résultats de quiz');
+        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+    }
+}
+
 module.exports = {
     handleLessons,
-    handleLesson
+    handleLesson,
+    handleQuizResults
 };
