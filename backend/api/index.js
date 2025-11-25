@@ -11,7 +11,7 @@ const { handleYoutubeVideos } = require('../controllers/youtubeController.js');
 const { handleInitPins } = require('../controllers/initController.js');
 const { handleAudit } = require('../controllers/auditController.js');
 const handleBadges = require('./badges.js');
-const handleAI = require('./ai.js');
+const handleAI = require('./ai/index.js');
 
 // Routes d'authentification
 router.post('/auth/login', handleLogin);

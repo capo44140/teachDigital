@@ -1,0 +1,103 @@
+/**
+ * Provider LLM Local pour l'analyse de texte et la génération de quiz
+ * Compatible avec Ollama et autres LLMs locaux
+ */
+
+const AIProviderBase = require('./base.js');
+const { fetchWithTimeout } = require('../../utils/fetch.js');
+const { isLocalLLMAvailable } = require('../../utils/validation.js');
+const { LOCAL_LLM_BASE_URL, DEFAULT_LOCAL_LLM_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } = require('../../utils/constants.js');
+
+class LocalLLMProvider extends AIProviderBase {
+    constructor() {
+        super('LocalLLM');
+        this.baseUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
+        this.model = process.env.LOCAL_LLM_MODEL || DEFAULT_LOCAL_LLM_MODEL;
+    }
+
+    isAvailable() {
+        return isLocalLLMAvailable();
+    }
+
+    /**
+     * Analyse un texte extrait d'une image avec le LLM local
+     * @param {string} extractedText - Texte extrait de l'image par OCR
+     * @returns {Promise<Object>} Analyse structurée du contenu
+     */
+    async analyzeText(extractedText) {
+        console.log('🏠 LocalLLM analyzeText: Début (texte: ' + extractedText.substring(0, 50) + '...)');
+
+        const response = await fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: this.model,
+                messages: [
+                    {
+                        role: 'user',
+                        content: `Analysez ce texte extrait d'une image de leçon et extrayez les concepts clés, les informations importantes et les sujets abordés. Répondez en français au format JSON. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"titre_principal": "...", "concepts_cles": [...], "informations_importantes": [...], "niveau": "...", "matiere": "..."}
+
+Texte extrait de l'image:
+${extractedText}`
+                    }
+                ],
+                max_tokens: DEFAULT_MAX_TOKENS,
+                temperature: DEFAULT_TEMPERATURE
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Erreur LLM local: ${response.status} - ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const responseText = data.choices[0].message.content;
+
+        return this.parseJSONResponse(responseText);
+    }
+
+    /**
+     * Génère un quiz avec le LLM local
+     * @param {Object} analysis - Analyse du contenu
+     * @param {Object} childProfile - Profil de l'enfant
+     * @returns {Promise<Object>} Quiz généré
+     */
+    async generateQuiz(analysis, childProfile) {
+        console.log('🏠 LocalLLM generateQuiz: Début');
+
+        const response = await fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: this.model,
+                messages: [
+                    {
+                        role: 'system',
+                        content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. Créez des questions claires, éducatives et adaptées au niveau de l'enfant. L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}.`
+                    },
+                    {
+                        role: 'user',
+                        content: `Basé sur cette analyse de leçon: ${JSON.stringify(analysis)}, générez un quiz de 5 questions avec 4 options chacune. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
+                    }
+                ],
+                max_tokens: 1500,
+                temperature: DEFAULT_TEMPERATURE
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Erreur LLM local: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const responseText = data.choices[0].message.content;
+
+        return this.parseJSONResponse(responseText);
+    }
+}
+
+module.exports = LocalLLMProvider;
