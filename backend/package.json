@@ -12,7 +12,23 @@
     "deploy:synology:skip-build": "powershell -ExecutionPolicy Bypass -File ./deploy-synology.ps1 -SkipBuild",
     "setup:env": "node scripts/setup-env.js",
     "init-badges": "node scripts/init-badges.js",
-    "test": "echo 'Tests à implémenter'"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coveragePathIgnorePatterns": [
+      "/node_modules/"
+    ],
+    "testMatch": [
+      "**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "lib/**/*.js",
+      "api/**/*.js",
+      "controllers/**/*.js"
+    ]
   },
   "dependencies": {
     "pg": "^8.11.3",

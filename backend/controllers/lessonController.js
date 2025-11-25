@@ -319,12 +319,45 @@ async function handleQuizResults(req, res) {
                 'sauvegarde du résultat de quiz'
             );
 
-            // Vérifier si des badges doivent être débloqués (TODO)
+            // Vérifier et débloquer les badges automatiquement
+            let unlockedBadges = [];
+            try {
+                const badgeService = require('../lib/badgeService.js');
+
+                // Récupérer les informations de la leçon pour le contexte
+                const lessonInfo = await withQueryTimeout(
+                    sql`SELECT subject FROM lessons WHERE id = ${lessonIdNum}`,
+                    TIMEOUTS.STANDARD,
+                    'récupération info leçon'
+                );
+
+                unlockedBadges = await badgeService.checkAndUnlockBadges(
+                    profileId,
+                    'quiz_completed',
+                    {
+                        lessonId: lessonIdNum,
+                        score,
+                        totalQuestions,
+                        percentage,
+                        subject: lessonInfo[0]?.subject
+                    }
+                );
+
+                if (unlockedBadges.length > 0) {
+                    console.log(`🎉 ${unlockedBadges.length} badge(s) débloqué(s) pour le profil ${profileId}`);
+                }
+            } catch (badgeError) {
+                // Ne pas bloquer la sauvegarde du résultat si la vérification des badges échoue
+                console.error('⚠️  Erreur lors de la vérification des badges (non bloquant):', badgeError.message);
+            }
 
             res.status(201).json({
                 success: true,
                 message: 'Résultat sauvegardé avec succès',
-                data: { result: result[0] }
+                data: {
+                    result: result[0],
+                    unlockedBadges: unlockedBadges.length > 0 ? unlockedBadges : undefined
+                }
             });
 
         } else {

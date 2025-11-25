@@ -643,14 +643,22 @@ async function handleCheckAndUnlockBadges(req, res) {
       return res.status(400).json(createErrorResponse('ID de profil invalide'));
     }
 
-    // Pour l'instant, on retourne un tableau vide
-    // Cette fonctionnalité nécessiterait une logique plus complexe pour vérifier les conditions
-    // et débloquer les badges automatiquement selon actionType et actionData
-    // TODO: Implémenter la logique de vérification et déblocage automatique
+    console.log(`🎯 Vérification des badges - profileId: ${profileIdNum}, actionType: ${actionType}`);
 
-    const unlockedBadges = [];
+    // Importer le service de badges
+    const badgeService = require('../lib/badgeService.js');
 
-    return res.status(200).json(createResponse('Vérification des badges terminée', { unlockedBadges }));
+    // Vérifier et débloquer les badges
+    const unlockedBadges = await withQueryTimeout(
+      badgeService.checkAndUnlockBadges(profileIdNum, actionType, actionData),
+      7000,
+      'vérification et déblocage des badges'
+    );
+
+    return res.status(200).json(createResponse('Vérification des badges terminée', {
+      unlockedBadges,
+      count: unlockedBadges.length
+    }));
   } catch (error) {
     console.error('❌ Erreur lors de la vérification des badges:', {
       message: error.message,
@@ -662,3 +670,4 @@ async function handleCheckAndUnlockBadges(req, res) {
     return res.status(500).json(createErrorResponse('Erreur lors de la vérification des badges'));
   }
 }
+
