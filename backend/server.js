@@ -1,6 +1,6 @@
 /**
  * Serveur Express pour TeachDigital Backend
- * Remplace le handler Vercel Functions pour le déploiement Docker
+ * Serveur standalone pour déploiement Docker/Synology
  */
 
 const express = require('express');

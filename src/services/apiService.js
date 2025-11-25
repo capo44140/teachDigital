@@ -1,5 +1,5 @@
 /**
- * Service API pour communiquer avec le backend Vercel Functions
+ * Service API pour communiquer avec le backend
  */
 
 class ApiService {
@@ -7,7 +7,7 @@ class ApiService {
     // URL du backend - adapter selon l'environnement
     const isDevelopment = import.meta.env.DEV
     // En développement, utiliser le proxy Vite (chemin relatif)
-    // En production, utiliser l'URL complète du backend Vercel
+    // En production, utiliser l'URL complète du backend
     this.baseURL = isDevelopment
       ? (import.meta.env.VITE_API_URL || '') // Proxy Vite utilise des chemins relatifs
       : (import.meta.env.VITE_API_URL_PROD || 'https://teach-digital.lespoires.ovh:3002')

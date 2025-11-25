@@ -9,49 +9,16 @@ dotenv.config();
 // Configuration de la connexion PostgreSQL
 // Supporte deux méthodes : variables séparées ou DATABASE_URL
 
-// Configuration des timeouts adaptés à Vercel
-// Plans gratuits: 10s max | Plans Pro/Enterprise: 60s max
-// On utilise 8s par défaut pour être sûr (plans gratuits)
-// Peut être augmenté via DB_QUERY_TIMEOUT_MS pour plans Pro/Enterprise
+// Configuration des timeouts pour les requêtes SQL
+// Timeout par défaut: 30s (peut être modifié via DB_QUERY_TIMEOUT_MS)
+const DEFAULT_QUERY_TIMEOUT_MS = parseInt(process.env.DB_QUERY_TIMEOUT_MS) || 30000;
 
 // Mode silencieux pour la production (pas de logs détaillés)
 const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
 const ENABLE_SQL_LOGS = process.env.DB_ENABLE_LOGS === 'true' || IS_DEVELOPMENT;
 
-// Détecter automatiquement le maxDuration depuis vercel.json
-let detectedMaxDuration = 10; // Par défaut: plan gratuit (10s)
-try {
-  const vercelConfigPath = path.join(__dirname, '..', 'vercel.json');
-  if (fs.existsSync(vercelConfigPath)) {
-    const vercelConfig = JSON.parse(fs.readFileSync(vercelConfigPath, 'utf8'));
-    if (vercelConfig.functions?.['api/index.js']?.maxDuration) {
-      detectedMaxDuration = vercelConfig.functions['api/index.js'].maxDuration;
-      if (ENABLE_SQL_LOGS) {
-        console.log(`📋 Détection automatique depuis vercel.json: maxDuration = ${detectedMaxDuration}s`);
-      }
-    }
-  }
-} catch (error) {
-  // Ignorer les erreurs de lecture de vercel.json
-  if (ENABLE_SQL_LOGS) {
-    console.log('ℹ️  Impossible de lire vercel.json, utilisation des valeurs par défaut');
-  }
-}
-
-const VERCEL_MAX_DURATION = parseInt(process.env.VERCEL_MAX_DURATION) || detectedMaxDuration; // Détection automatique ou variable d'environnement
-
-// Déterminer le timeout par défaut selon le plan Vercel détecté
-// Plans gratuits (10s): timeout de 8s pour laisser de la marge
-// Plans Pro/Enterprise (60s): timeout de 50s pour laisser de la marge
-const DEFAULT_QUERY_TIMEOUT_MS = parseInt(process.env.DB_QUERY_TIMEOUT_MS) ||
-  (VERCEL_MAX_DURATION >= 60 ? 50000 : 8000); // 50s pour Pro/Enterprise, 8s pour gratuit
-
-// Ajuster le timeout selon la configuration Vercel
-// Pour plans Pro/Enterprise (60s), on peut utiliser jusqu'à 50s pour laisser de la marge
-// Pour plans gratuits (10s), on limite à 8s pour éviter les timeouts
-const queryTimeout = VERCEL_MAX_DURATION >= 60
-  ? Math.min(DEFAULT_QUERY_TIMEOUT_MS, 50000) // Max 50s pour plans Pro/Enterprise
-  : Math.min(DEFAULT_QUERY_TIMEOUT_MS, 8000);  // Max 8s pour plans gratuits
+// Timeout pour les requêtes SQL
+const queryTimeout = DEFAULT_QUERY_TIMEOUT_MS;
 
 let poolConfig;
 
@@ -151,20 +118,17 @@ if (process.env.DB_HOST) {
 }
 console.log('   - Connect Timeout: 1s (optimisé pour Vercel)');
 console.log('   - Idle Timeout: 30s');
-console.log(`   - Statement Timeout: ${queryTimeout}ms (adapté au plan Vercel: ${VERCEL_MAX_DURATION}s max)`);
-console.log(`   - Query Timeout: ${queryTimeout}ms (adapté au plan Vercel: ${VERCEL_MAX_DURATION}s max)`);
+console.log(`   - Statement Timeout: ${queryTimeout}ms`);
+console.log(`   - Query Timeout: ${queryTimeout}ms`);
 console.log('   - Max Connections: ' + (parseInt(process.env.DB_MAX_CONNECTIONS) || 10));
 console.log('   - Min Connections: 0 (lazy connection - pas de connexions au démarrage)');
 console.log('   - Keep-Alive: enabled (3s initial delay)');
 console.log('   - Retry automatique: enabled (2x max, délai 500ms)');
-console.log(`   - ⚠️  Vercel Timeout: ${VERCEL_MAX_DURATION}s (${VERCEL_MAX_DURATION >= 60 ? 'Plan Pro/Enterprise' : 'Plan Gratuit'})`);
 console.log(`   - 📊 Logs SQL: ${ENABLE_SQL_LOGS ? 'activés' : 'désactivés'} (performance optimisée)`);
 console.log('═══════════════════════════════════════════════════════════');
 
 // Fonction wrapper pour exécuter des requêtes avec retry automatique
-// OPTIMISÉ: Réduit de 5 à 2 retries max pour éviter les timeouts Vercel
-// Le total (timeout query + retries) doit rester sous la limite Vercel
-// Avec 2 retries de 500ms = 1s de délais max, donc timeout query peut être jusqu'à 9s pour plans gratuits
+// Utilise 2 retries max avec délai de 500ms entre chaque tentative
 async function executeWithRetry(queryFn, maxRetries = 2, delayMs = 500) {
   let lastError;
 
@@ -407,7 +371,6 @@ function sql(strings, ...values) {
 
       if (queryExecutionTime > criticalThreshold) {
         console.error(`🚨 [SQL${queryId ? ':' + queryId : ''}] REQUÊTE CRITIQUE - Proche du timeout (${queryExecutionTime}ms / ${queryTimeout}ms)`);
-        console.error(`   ⚠️  Risque de timeout Vercel (${VERCEL_MAX_DURATION}s max)`);
         if (ENABLE_SQL_LOGS && poolStats && poolStats.waitingCount > 0) {
           console.error(`   💡 ${poolStats.waitingCount} requêtes en attente - considérer augmenter DB_MAX_CONNECTIONS`);
         }
