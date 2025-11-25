@@ -19,10 +19,10 @@ console.warn = function (...args) {
   const message = args.join(' ')
   // Ignorer les avertissements Radix UI concernant DialogContent/DialogTitle
   if (message.includes('DialogContent') ||
-      message.includes('DialogTitle') ||
-      message.includes('requires a `DialogTitle`') ||
-      message.includes('VisuallyHidden') ||
-      message.includes('radix-ui.com/primitives/docs/components/dialog')) {
+    message.includes('DialogTitle') ||
+    message.includes('requires a `DialogTitle`') ||
+    message.includes('VisuallyHidden') ||
+    message.includes('radix-ui.com/primitives/docs/components/dialog')) {
     return // Ignorer cet avertissement
   }
   originalConsoleWarn.apply(console, args)
@@ -32,10 +32,10 @@ console.error = function (...args) {
   const message = args.join(' ')
   // Ignorer les erreurs Radix UI concernant DialogContent/DialogTitle
   if (message.includes('DialogContent') ||
-      message.includes('DialogTitle') ||
-      message.includes('requires a `DialogTitle`') ||
-      message.includes('VisuallyHidden') ||
-      message.includes('radix-ui.com/primitives/docs/components/dialog')) {
+    message.includes('DialogTitle') ||
+    message.includes('requires a `DialogTitle`') ||
+    message.includes('VisuallyHidden') ||
+    message.includes('radix-ui.com/primitives/docs/components/dialog')) {
     return // Ignorer cette erreur
   }
   originalConsoleError.apply(console, args)
@@ -56,25 +56,45 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js', {
       updateViaCache: 'none' // Forcer la vérification des mises à jour
     })
-      .then((registration) => {
+      .then(async (registration) => {
         console.log('✅ Service Worker enregistré avec succès:', registration.scope)
 
-        // Vérifier les mises à jour toutes les 30 secondes
-        setInterval(() => {
-          registration.update()
-        }, 30000)
+        // Initialiser le service de mise à jour
+        await updateService.initialize()
 
-        // Écouter les mises à jour disponibles
+        // Vérifier les mises à jour au démarrage
+        setTimeout(() => {
+          updateService.checkForUpdates()
+        }, 5000) // Attendre 5s après le chargement
+
+        // Vérifier périodiquement (toutes les 30 minutes)
+        setInterval(() => {
+          updateService.checkForUpdates()
+        }, 30 * 60 * 1000)
+
+        // Écouter les mises à jour disponibles du Service Worker
         registration.addEventListener('updatefound', () => {
           console.log('🔄 Service Worker: Mise à jour disponible')
 
           const newWorker = registration.installing
-          newWorker.addEventListener('statechange', () => {
+          newWorker.addEventListener('statechange', async () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               console.log('🆕 Service Worker: Nouvelle version installée')
 
-              // Utiliser la popup personnalisée au lieu de confirm()
-              updateService.showUpdateNotification('0.0.15', '0.0.16')
+              // Récupérer les versions réelles
+              try {
+                const response = await fetch('/version.json?t=' + Date.now())
+                if (response.ok) {
+                  const newVersionInfo = await response.json()
+                  const currentVersion = updateService.state.currentVersion || '1.0.0'
+                  updateService.showUpdateNotification(currentVersion, newVersionInfo.version)
+                }
+              } catch (error) {
+                console.error('Erreur récupération version:', error)
+                // Fallback: afficher quand même la notification
+                const currentVersion = updateService.state.currentVersion || '1.0.0'
+                updateService.showUpdateNotification(currentVersion, 'nouvelle version')
+              }
             }
           })
         })
@@ -82,6 +102,14 @@ if ('serviceWorker' in navigator) {
       .catch((error) => {
         console.log('❌ Échec de l\'enregistrement du Service Worker:', error)
       })
+  })
+
+  // Vérifier les mises à jour quand l'app redevient visible
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      console.log('👁️ App visible, vérification des mises à jour...')
+      updateService.checkForUpdates()
+    }
   })
 }
 
@@ -108,7 +136,7 @@ scheduleIdleTask(() => {
  * Initialise les services de manière asynchrone après le montage de l'app
  * Optimise le chemin critique en différant les requêtes non essentielles
  */
-async function initializeServicesAsync () {
+async function initializeServicesAsync() {
   console.log('🚀 Initialisation asynchrone des services...')
 
   // Étape 1 : Initialiser l'apiStore depuis le cache local (rapide)
@@ -125,7 +153,7 @@ async function initializeServicesAsync () {
 /**
  * Initialise les services PWA en arrière-plan
  */
-async function initializePWAServices () {
+async function initializePWAServices() {
   const services = [
     { name: 'Optimisation Mobile', init: () => mobileOptimizationService.init() },
     { name: 'Installation', init: () => installService.checkInstallationStatus() }
