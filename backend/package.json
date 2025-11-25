@@ -18,16 +18,22 @@
   },
   "jest": {
     "testEnvironment": "node",
+    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+    "testTimeout": 30000,
     "coveragePathIgnorePatterns": [
-      "/node_modules/"
+      "/node_modules/",
+      "/tests/"
     ],
     "testMatch": [
-      "**/*.test.js"
+      "**/tests/**/*.test.js"
     ],
     "collectCoverageFrom": [
       "lib/**/*.js",
       "api/**/*.js",
       "controllers/**/*.js"
+    ],
+    "modulePathIgnorePatterns": [
+      "/node_modules/"
     ]
   },
   "dependencies": {
@@ -39,7 +45,9 @@
     "@fastify/busboy": "^2.1.1",
     "tesseract.js": "^5.0.4"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
   "engines": {
     "node": ">=18.0.0"
   },
