@@ -2,7 +2,7 @@
 # Usage: .\deploy-frontend.ps1
 
 param(
-    [string]$DeployPath = ""
+    [string]$DeployPath = "/volume1/docker/teachdigital/frontend"
 )
 
 # Couleurs
@@ -12,6 +12,7 @@ function Write-Info { Write-Host $args -ForegroundColor Cyan }
 
 # Configuration
 $sshAlias = "synology"
+$defaultDeployPath = "/volume1/docker/teachdigital/frontend"
 
 # Se positionner dans le dossier racine du projet
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -25,7 +26,7 @@ if (-not $DeployPath) {
         $DeployPath = $config.deployPath.Trim()
     }
     else {
-        $DeployPath = (Read-Host "Chemin de deploiement (ex: /volume1/docker/teachdigital/frontend)").Trim()
+        $DeployPath = $defaultDeployPath
     }
 }
 
