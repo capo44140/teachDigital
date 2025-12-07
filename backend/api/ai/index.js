@@ -98,6 +98,7 @@ async function handleGenerateQuizFromImage(req, res) {
     console.log('📸 handleGenerateQuizFromImage: Début');
     try {
         let imageBase64, childProfile;
+        let questionCount = 5;
 
         // Gérer JSON avec base64 (le frontend convertit maintenant en base64)
         const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
@@ -113,13 +114,15 @@ async function handleGenerateQuizFromImage(req, res) {
             ? JSON.parse(body.childProfile)
             : body.childProfile;
 
+        questionCount = body.questionCount || 5;
+
         if (!imageBase64 || !childProfile) {
             return res.status(400).json(createErrorResponse('Image et profil enfant requis'));
         }
 
         // Analyser l'image puis générer le quiz
         const analysis = await analyzeImage(imageBase64);
-        const quiz = await generateQuizFromAnalysis(analysis, childProfile);
+        const quiz = await generateQuizFromAnalysis(analysis, childProfile, questionCount);
 
         return res.status(200).json(createResponse('Quiz généré avec succès', { quiz }));
     } catch (error) {

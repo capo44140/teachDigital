@@ -11,10 +11,10 @@ const { generateQuizWithAI } = require('./aiProviders/index.js');
  * @param {Object} childProfile - Profil de l'enfant
  * @returns {Promise<Object>} Quiz généré
  */
-async function generateQuizFromAnalysis(analysis, childProfile) {
-    console.log('🎯 generateQuizFromAnalysis: Début (age: ' + (childProfile?.age || 'N/A') + ', level: ' + (childProfile?.level || 'N/A') + ')');
+async function generateQuizFromAnalysis(analysis, childProfile, questionCount = 5) {
+    console.log('🎯 generateQuizFromAnalysis: Début (age: ' + (childProfile?.age || 'N/A') + ', level: ' + (childProfile?.level || 'N/A') + ', questions: ' + questionCount + ')');
 
-    return await generateQuizWithAI(analysis, childProfile);
+    return await generateQuizWithAI(analysis, childProfile, questionCount);
 }
 
 /**
@@ -59,8 +59,8 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
     combinedAnalysis.concepts = [...new Set(combinedAnalysis.concepts)];
     combinedAnalysis.keyPoints = [...new Set(combinedAnalysis.keyPoints)];
 
-    // Générer le quiz avec l'analyse combinée
-    return await generateQuizWithAI(combinedAnalysis, childProfile);
+    // Générer le quiz avec l'analyse combinée et le nombre de questions demandé
+    return await generateQuizWithAI(combinedAnalysis, childProfile, questionCount);
 }
 
 /**
@@ -73,7 +73,8 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
  * @returns {Promise<Object>} Quiz généré
  */
 async function generateQuizFromTextWithAI(inputText, childProfile, options = {}) {
-    console.log(`📝 generateQuizFromTextWithAI: Début (texte: ${inputText.substring(0, 50)}..., questions: ${options.questionCount || 5})`);
+    const questionCount = options.questionCount || 5;
+    console.log(`📝 generateQuizFromTextWithAI: Début (texte: ${inputText.substring(0, 50)}..., questions: ${questionCount})`);
 
     // Créer une analyse simple à partir du texte
     const analysis = {
@@ -84,7 +85,7 @@ async function generateQuizFromTextWithAI(inputText, childProfile, options = {})
         keyPoints: [inputText]
     };
 
-    return await generateQuizWithAI(analysis, childProfile);
+    return await generateQuizWithAI(analysis, childProfile, questionCount);
 }
 
 module.exports = {

@@ -63,10 +63,11 @@ ${extractedText}`
      * Génère un quiz avec Groq
      * @param {Object} analysis - Analyse du contenu
      * @param {Object} childProfile - Profil de l'enfant
+     * @param {number} questionCount - Nombre de questions souhaitées (défaut: 5)
      * @returns {Promise<Object>} Quiz généré
      */
-    async generateQuiz(analysis, childProfile) {
-        console.log('🎲 Groq generateQuiz: Début');
+    async generateQuiz(analysis, childProfile, questionCount = 5) {
+        console.log(`🎲 Groq generateQuiz: Début (${questionCount} questions)`);
 
         const response = await fetchWithTimeout(`${GROQ_BASE_URL}/chat/completions`, {
             method: 'POST',
@@ -79,14 +80,14 @@ ${extractedText}`
                 messages: [
                     {
                         role: 'system',
-                        content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. Créez des questions claires, éducatives et adaptées au niveau de l'enfant. L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}.`
+                        content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. Créez des questions claires, éducatives et adaptées au niveau de l'enfant. L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}. Générez exactement ${questionCount} questions avec 4 options chacune.`
                     },
                     {
                         role: 'user',
-                        content: `Basé sur cette analyse de leçon: ${JSON.stringify(analysis)}, générez un quiz de 5 questions avec 4 options chacune. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
+                        content: `Basé sur cette analyse de leçon: ${JSON.stringify(analysis)}, générez un quiz de ${questionCount} questions avec 4 options chacune. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
                     }
                 ],
-                max_tokens: 1500,
+                max_tokens: Math.max(1500, questionCount * 300),
                 temperature: DEFAULT_TEMPERATURE
             })
         });

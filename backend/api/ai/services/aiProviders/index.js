@@ -92,9 +92,10 @@ async function analyzeWithAI(extractedText) {
  * Génère un quiz avec fallback automatique entre providers
  * @param {Object} analysis - Analyse du contenu
  * @param {Object} childProfile - Profil de l'enfant
+ * @param {number} questionCount - Nombre de questions souhaitées (défaut: 5)
  * @returns {Promise<Object>} Quiz généré
  */
-async function generateQuizWithAI(analysis, childProfile) {
+async function generateQuizWithAI(analysis, childProfile, questionCount = 5) {
     const providers = getAvailableProviders();
 
     if (providers.length === 0) {
@@ -102,10 +103,12 @@ async function generateQuizWithAI(analysis, childProfile) {
         return getDemoQuiz(childProfile);
     }
 
+    console.log(`🎯 Génération de quiz avec ${questionCount} questions demandées`);
+
     for (const provider of providers) {
         try {
             console.log(`🔄 Tentative de génération de quiz avec ${provider.getName()}...`);
-            const result = await provider.generateQuiz(analysis, childProfile);
+            const result = await provider.generateQuiz(analysis, childProfile, questionCount);
             console.log(`✅ Quiz généré avec succès avec ${provider.getName()}`);
             return result;
         } catch (error) {

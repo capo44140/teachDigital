@@ -40,9 +40,10 @@ class AIProviderBase {
      * Génère un quiz basé sur une analyse
      * @param {Object} analysis - Analyse du contenu
      * @param {Object} childProfile - Profil de l'enfant
+     * @param {number} questionCount - Nombre de questions souhaitées (défaut: 5)
      * @returns {Promise<Object>} Quiz généré
      */
-    async generateQuiz(analysis, childProfile) {
+    async generateQuiz(analysis, childProfile, questionCount = 5) {
         throw new Error('Method generateQuiz() must be implemented');
     }
 

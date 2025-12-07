@@ -92,11 +92,11 @@ ${extractedText}`
      * Génère un quiz avec Gemini
      * @param {Object} analysis - Analyse du contenu
      * @param {Object} childProfile - Profil de l'enfant
-     * @param {number} retryCount - Nombre de tentatives
+     * @param {number} questionCount - Nombre de questions souhaitées (défaut: 5)
      * @returns {Promise<Object>} Quiz généré
      */
-    async generateQuiz(analysis, childProfile, retryCount = 0) {
-        console.log(`🎲 Gemini generateQuiz: Début (retry: ${retryCount})`);
+    async generateQuiz(analysis, childProfile, questionCount = 5) {
+        console.log(`🎲 Gemini generateQuiz: Début (${questionCount} questions)`);
 
         try {
             const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.5-flash-exp:generateContent?key=${this.apiKey}`, {
@@ -107,9 +107,9 @@ ${extractedText}`
                 body: JSON.stringify({
                     contents: [{
                         parts: [{
-                            text: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}.
+                            text: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}. Générez exactement ${questionCount} questions avec 4 options chacune.
 
-Basé sur cette analyse de leçon: ${JSON.stringify(analysis)}, générez un quiz de 5 questions avec 4 options chacune.
+Basé sur cette analyse de leçon: ${JSON.stringify(analysis)}, générez un quiz de ${questionCount} questions avec 4 options chacune.
 
 IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire.
 
@@ -117,7 +117,7 @@ Format de réponse: {"title": "...", "description": "...", "questions": [{"quest
                         }]
                     }],
                     generationConfig: {
-                        maxOutputTokens: 3000,
+                        maxOutputTokens: Math.max(3000, questionCount * 400),
                         temperature: 0.7,
                         topP: 0.8,
                         topK: 40

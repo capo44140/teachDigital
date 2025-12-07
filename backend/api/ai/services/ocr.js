@@ -29,7 +29,7 @@ async function extractTextFromImage(base64Image) {
             }
         });
 
-        const extractedText = text.trim();
+        const extractedText = text.trim();   
         console.log(`✅ Texte extrait (${extractedText.length} caractères)`);
         console.log('📄 Texte extrait:', extractedText);
 
