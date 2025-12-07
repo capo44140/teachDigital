@@ -119,7 +119,7 @@ app.get('/health', (req, res) => {
 });
 
 // Démarrage du serveur
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   logger.info(`Serveur TeachDigital démarré sur le port ${PORT}`);
   logger.info(`Mode: ${process.env.NODE_ENV || 'production'}`);
   logger.info(`URL: http://0.0.0.0:${PORT}`);
@@ -127,6 +127,12 @@ app.listen(PORT, '0.0.0.0', () => {
     logger.info(`Logs écrits dans: ${logger.logsDirectory}`);
   }
 });
+
+// Configuration des timeouts pour les opérations IA longues
+// 180 secondes (3 minutes) pour permettre la génération de quiz avec plusieurs documents
+server.timeout = 180000; // Timeout global du serveur
+server.keepAliveTimeout = 185000; // Légèrement plus long que timeout pour éviter les race conditions
+server.headersTimeout = 190000; // Plus long que keepAliveTimeout
 
 // Gestion des erreurs non capturées
 process.on('unhandledRejection', (reason, promise) => {
