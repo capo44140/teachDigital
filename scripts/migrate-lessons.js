@@ -56,6 +56,19 @@ async function migrateLessons() {
     await sql`CREATE INDEX IF NOT EXISTS idx_quiz_results_lesson ON quiz_results(lesson_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_quiz_results_profile ON quiz_results(profile_id)`;
     
+    // Synchroniser la séquence avec les données existantes
+    console.log('🔧 Synchronisation de la séquence lessons_id_seq...')
+    try {
+      const maxIdResult = await sql`SELECT COALESCE(MAX(id), 0) as max_id FROM lessons`
+      const maxId = parseInt(maxIdResult[0].max_id, 10)
+      const nextId = maxId > 0 ? maxId + 1 : 1
+      
+      await sql`SELECT setval('lessons_id_seq', ${nextId}, false)`
+      console.log(`✅ Séquence synchronisée à ${nextId}`)
+    } catch (seqError) {
+      console.warn('⚠️  Erreur lors de la synchronisation de la séquence (non bloquant):', seqError.message)
+    }
+    
     console.log('✅ Migration des leçons terminée avec succès!')
     
     // Vérifier que les tables ont été créées

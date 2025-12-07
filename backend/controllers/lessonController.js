@@ -103,14 +103,51 @@ async function handleLessons(req, res) {
             const safeIsPublished = isPublished !== undefined ? isPublished : true;
 
             // Requête INSERT avec template literal
-            // Requête INSERT avec template literal
             console.log(`📝 Création leçon pour profil ${user.profileId}: ${title}`);
-            const result = await withQueryTimeout(
-                sql`INSERT INTO lessons (profile_id, title, description, subject, level, image_filename, quiz_data, is_published) VALUES (${user.profileId}, ${title}, ${safeDescription}, ${safeSubject}, ${safeLevel}, ${safeImageFilename}, ${safeQuizData}::jsonb, ${safeIsPublished}) RETURNING *`,
-                TIMEOUTS.STANDARD,
-                'création de la leçon'
-            );
-
+            
+            let result;
+            try {
+                result = await withQueryTimeout(
+                    sql`INSERT INTO lessons (profile_id, title, description, subject, level, image_filename, quiz_data, is_published) VALUES (${user.profileId}, ${title}, ${safeDescription}, ${safeSubject}, ${safeLevel}, ${safeImageFilename}, ${safeQuizData}::jsonb, ${safeIsPublished}) RETURNING *`,
+                    TIMEOUTS.STANDARD,
+                    'création de la leçon'
+                );
+            } catch (insertError) {
+                // Si erreur de séquence désynchronisée, corriger et réessayer
+                if (insertError.message && insertError.message.includes('duplicate key value violates unique constraint') && insertError.message.includes('lessons_pkey')) {
+                    console.warn('⚠️  Séquence désynchronisée détectée, correction automatique...');
+                    try {
+                        // Synchroniser la séquence
+                        const maxIdResult = await withQueryTimeout(
+                            sql`SELECT COALESCE(MAX(id), 0) as max_id FROM lessons`,
+                            TIMEOUTS.STANDARD,
+                            'récupération max ID'
+                        );
+                        const maxId = parseInt(maxIdResult[0].max_id, 10);
+                        const nextId = maxId + 1;
+                        
+                        await withQueryTimeout(
+                            sql`SELECT setval('lessons_id_seq', ${nextId}, false)`,
+                            TIMEOUTS.STANDARD,
+                            'correction séquence'
+                        );
+                        
+                        console.log(`✅ Séquence corrigée, prochain ID: ${nextId}`);
+                        
+                        // Réessayer l'insertion
+                        result = await withQueryTimeout(
+                            sql`INSERT INTO lessons (profile_id, title, description, subject, level, image_filename, quiz_data, is_published) VALUES (${user.profileId}, ${title}, ${safeDescription}, ${safeSubject}, ${safeLevel}, ${safeImageFilename}, ${safeQuizData}::jsonb, ${safeIsPublished}) RETURNING *`,
+                            TIMEOUTS.STANDARD,
+                            'création de la leçon (après correction)'
+                        );
+                    } catch (fixError) {
+                        console.error('❌ Erreur lors de la correction de la séquence:', fixError);
+                        throw insertError; // Relancer l'erreur originale
+                    }
+                } else {
+                    throw insertError; // Relancer l'erreur si ce n'est pas une erreur de séquence
+                }
+            }
 
             res.status(201).json({
                 success: true,
