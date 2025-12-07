@@ -9,6 +9,8 @@ const { createResponse, createErrorResponse } = require('../../lib/response.js')
 
 // Services
 const { analyzeImage } = require('./services/imageAnalysis.js');
+const { extractTextFromImage } = require('./services/ocr.js');
+const { analyzeWithAI } = require('./services/aiProviders/index.js');
 const { generateQuizFromAnalysis, generateQuizFromMultipleAnalyses, generateQuizFromTextWithAI } = require('./services/quizGenerator.js');
 const { parseFormData, bufferToBase64 } = require('./middleware/formDataParser.js');
 const { validateApiKey, hasAtLeastOneValidKey } = require('./utils/validation.js');
@@ -50,6 +52,14 @@ module.exports = async function handler(req, res) {
 
         if (pathname === '/generate-quiz-from-documents' && method === 'POST') {
             return await handleGenerateQuizFromDocuments(req, res);
+        }
+
+        if (pathname === '/extract-text-from-documents' && method === 'POST') {
+            return await handleExtractTextFromDocuments(req, res);
+        }
+
+        if (pathname === '/generate-quiz-from-analyses' && method === 'POST') {
+            return await handleGenerateQuizFromAnalyses(req, res);
         }
 
         if (pathname === '/generate-quiz-from-text' && method === 'POST') {
@@ -295,6 +305,225 @@ async function handleGenerateQuizFromDocuments(req, res) {
         return res.status(200).json(createResponse('Quiz généré avec succès', { quiz }));
     } catch (error) {
         console.error('❌ Erreur lors de la génération du quiz depuis documents:', {
+            message: error.message,
+            stack: error.stack?.substring(0, 500),
+            name: error.name
+        });
+
+        // Si tous les services IA ont échoué, retourner un message d'erreur clair
+        if (error.message.includes('Tous les services IA ont échoué')) {
+            return res.status(503).json(createErrorResponse(
+                'Impossible de générer le quiz. Tous les services d\'intelligence artificielle (OpenAI, Gemini, DeepSeek, Groq, Mistral) ont échoué. Veuillez réessayer plus tard ou vérifier la configuration des clés API.'
+            ));
+        }
+
+        return res.status(500).json(createErrorResponse('Erreur lors de la génération du quiz: ' + error.message));
+    }
+}
+
+/**
+ * Extrait le texte des documents (OCR uniquement - étape 1)
+ * Retourne les textes extraits et les analyses pour utilisation ultérieure
+ */
+async function handleExtractTextFromDocuments(req, res) {
+    console.log('📚 handleExtractTextFromDocuments: Début (OCR uniquement)');
+    try {
+        console.log('🔍 Début de handleExtractTextFromDocuments');
+        console.log('📋 Content-Type:', req.headers['content-type']);
+
+        const contentType = req.headers['content-type'] || '';
+        const isFormData = contentType.includes('multipart/form-data');
+
+        let documents = [];
+
+        if (isFormData) {
+            // Parser FormData
+            console.log('📦 Parsing FormData...');
+            const parsed = await parseFormData(req);
+
+            console.log('📊 Données parsées par parseFormData:', {
+                hasFields: !!parsed.fields,
+                hasFiles: !!parsed.files,
+                fieldsKeys: parsed.fields ? Object.keys(parsed.fields) : [],
+                filesCount: parsed.files ? parsed.files.length : 0
+            });
+
+            // Extraire les fichiers
+            if (parsed.files && parsed.fields) {
+                const fileCount = parseInt(parsed.fields.fileCount || '0');
+                console.log(`📁 Nombre de fichiers attendus: ${fileCount}`);
+
+                for (let i = 0; i < fileCount; i++) {
+                    const file = parsed.files.find(f => f.fieldname === `file_${i}`);
+                    if (file) {
+                        const fileName = parsed.fields[`file_${i}_name`] || file.filename;
+                        const fileType = parsed.fields[`file_${i}_type`] || file.mimetype;
+
+                        documents.push({
+                            name: fileName,
+                            type: fileType,
+                            buffer: file.buffer,
+                            base64: bufferToBase64(file.buffer)
+                        });
+                    }
+                }
+            } else if (parsed.file_0) {
+                const fileCount = parseInt(parsed.fileCount || '0');
+                for (let i = 0; i < fileCount; i++) {
+                    const file = parsed[`file_${i}`];
+                    const fileName = parsed[`file_${i}_name`] || 'unknown';
+                    const fileType = parsed[`file_${i}_type`] || 'application/octet-stream';
+
+                    let base64Data;
+                    if (Buffer.isBuffer(file)) {
+                        base64Data = bufferToBase64(file);
+                    } else if (typeof file === 'string') {
+                        base64Data = file;
+                    } else {
+                        continue;
+                    }
+
+                    documents.push({
+                        name: fileName,
+                        type: fileType,
+                        base64: base64Data
+                    });
+                }
+            }
+        } else {
+            // Format JSON classique (rétrocompatibilité)
+            console.log('📦 Parsing JSON...');
+            let body;
+            try {
+                if (typeof req.body === 'string') {
+                    body = JSON.parse(req.body);
+                } else if (Buffer.isBuffer(req.body)) {
+                    body = JSON.parse(req.body.toString());
+                } else {
+                    body = req.body;
+                }
+            } catch (parseError) {
+                console.error('❌ Erreur de parsing du body:', parseError);
+                return res.status(400).json(createErrorResponse('Format de données invalide'));
+            }
+
+            documents = body.documents || [];
+        }
+
+        console.log('📊 Documents parsés:', {
+            documentsCount: documents.length,
+            isFormData: isFormData
+        });
+
+        if (!documents || documents.length === 0) {
+            return res.status(400).json(createErrorResponse('Documents requis'));
+        }
+
+        console.log(`📝 Extraction OCR de ${documents.length} document(s)...`);
+
+        // Extraire le texte de tous les documents (OCR uniquement)
+        const extractions = [];
+        for (let i = 0; i < documents.length; i++) {
+            const doc = documents[i];
+            console.log(`📄 Extraction OCR du document ${i + 1}/${documents.length}: ${doc.name || 'sans nom'} (type: ${doc.type})`);
+
+            try {
+                if (doc.type?.startsWith('image/') || doc.type === 'image') {
+                    const imageData = doc.base64 || doc.data;
+                    if (!imageData) {
+                        console.warn(`⚠️ Document ${i + 1} de type image mais sans données`);
+                        continue;
+                    }
+                    console.log(`🖼️ Extraction OCR de l'image ${i + 1}...`);
+                    const extractedText = await extractTextFromImage(imageData);
+                    
+                    // Analyser le texte extrait avec l'IA pour obtenir une analyse structurée
+                    console.log(`🤖 Analyse IA du texte extrait ${i + 1}...`);
+                    const analysis = await analyzeWithAI(extractedText);
+                    
+                    extractions.push({ 
+                        type: 'image', 
+                        fileName: doc.name, 
+                        extractedText,
+                        analysis 
+                    });
+                    console.log(`✅ Image ${i + 1} traitée avec succès (OCR + Analyse)`);
+                } else if (doc.type === 'application/pdf' || doc.type === 'pdf') {
+                    // Pour PDF, simuler une extraction (dans une vraie implémentation, utiliser OCR PDF)
+                    console.log(`📑 Traitement du PDF ${i + 1}...`);
+                    extractions.push({
+                        type: 'pdf',
+                        fileName: doc.name,
+                        extractedText: 'Contenu PDF extrait',
+                        analysis: { subject: 'Document PDF', topic: 'Contenu extrait', concepts: [], level: 'Primaire' }
+                    });
+                    console.log(`✅ PDF ${i + 1} traité`);
+                } else {
+                    console.warn(`⚠️ Type de document non supporté: ${doc.type}`);
+                }
+            } catch (docError) {
+                console.error(`❌ Erreur lors du traitement du document ${i + 1}:`, docError);
+                // Continuer avec les autres documents
+                continue;
+            }
+        }
+
+        if (extractions.length === 0) {
+            return res.status(400).json(createErrorResponse('Aucun document valide à traiter'));
+        }
+
+        console.log(`✅ ${extractions.length} extraction(s) complétée(s)`);
+
+        // Retourner les extractions avec analyses (sans générer le quiz)
+        return res.status(200).json(createResponse('Textes extraits avec succès', { 
+            extractions,
+            count: extractions.length
+        }));
+    } catch (error) {
+        console.error('❌ Erreur lors de l\'extraction OCR:', {
+            message: error.message,
+            stack: error.stack?.substring(0, 500),
+            name: error.name
+        });
+
+        return res.status(500).json(createErrorResponse('Erreur lors de l\'extraction OCR: ' + error.message));
+    }
+}
+
+/**
+ * Génère un quiz à partir d'analyses déjà effectuées (étape 2)
+ * Prend les analyses retournées par handleExtractTextFromDocuments
+ */
+async function handleGenerateQuizFromAnalyses(req, res) {
+    console.log('🎯 handleGenerateQuizFromAnalyses: Début (Génération quiz)');
+    try {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        const { extractions, childProfile, questionCount = 5 } = body;
+
+        if (!extractions || !Array.isArray(extractions) || extractions.length === 0) {
+            return res.status(400).json(createErrorResponse('Analyses requises'));
+        }
+
+        if (!childProfile) {
+            return res.status(400).json(createErrorResponse('Profil enfant requis'));
+        }
+
+        console.log(`🎯 Génération du quiz à partir de ${extractions.length} analyse(s)...`);
+
+        // Convertir les extractions au format attendu par generateQuizFromMultipleAnalyses
+        const analyses = extractions.map(extraction => ({
+            type: extraction.type,
+            fileName: extraction.fileName,
+            analysis: extraction.analysis
+        }));
+
+        // Générer le quiz basé sur toutes les analyses
+        const quiz = await generateQuizFromMultipleAnalyses(analyses, childProfile, questionCount);
+
+        console.log('✅ Quiz généré avec succès');
+        return res.status(200).json(createResponse('Quiz généré avec succès', { quiz }));
+    } catch (error) {
+        console.error('❌ Erreur lors de la génération du quiz depuis analyses:', {
             message: error.message,
             stack: error.stack?.substring(0, 500),
             name: error.name

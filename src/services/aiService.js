@@ -42,8 +42,74 @@ class AIService {
   }
 
   /**
+   * Extrait le texte des documents (OCR uniquement - étape 1)
+   * Retourne les textes extraits et les analyses
+   */
+  async extractTextFromDocuments (files) {
+    try {
+      // Utiliser FormData au lieu de JSON pour éviter les erreurs 413
+      const formData = new FormData()
+
+      // Ajouter les fichiers directement (plus efficace que base64)
+      files.forEach((file, index) => {
+        formData.append(`file_${index}`, file)
+        formData.append(`file_${index}_name`, file.name)
+        formData.append(`file_${index}_type`, file.type)
+      })
+
+      // Ajouter les métadonnées
+      formData.append('fileCount', files.length.toString())
+
+      const response = await apiService.request('/api/ai/extract-text-from-documents', {
+        method: 'POST',
+        body: formData
+      })
+
+      return response.data?.extractions || null
+    } catch (error) {
+      console.error('Erreur lors de l\'extraction OCR:', error)
+
+      // Message d'erreur plus explicite pour 413
+      if (error.message.includes('413') || error.message.includes('Content Too Large')) {
+        throw new Error('Les fichiers sont trop volumineux. Veuillez réduire la taille des images ou utiliser moins de fichiers.')
+      }
+
+      throw new Error('Impossible d\'extraire le texte des documents. Veuillez réessayer.')
+    }
+  }
+
+  /**
+   * Génère un quiz à partir d'analyses déjà effectuées (étape 2)
+   * Prend les extractions retournées par extractTextFromDocuments
+   */
+  async generateQuizFromAnalyses (extractions, childProfile, questionCount = 5) {
+    try {
+      const response = await apiService.request('/api/ai/generate-quiz-from-analyses', {
+        method: 'POST',
+        body: JSON.stringify({
+          extractions,
+          childProfile,
+          questionCount
+        })
+      })
+
+      return response.data?.quiz || null
+    } catch (error) {
+      console.error('Erreur lors de la génération du quiz depuis analyses:', error)
+
+      // Si tous les services IA ont échoué
+      if (error.message.includes('Tous les services IA ont échoué')) {
+        throw new Error('Impossible de générer le quiz. Tous les services d\'intelligence artificielle ont échoué. Veuillez réessayer plus tard.')
+      }
+
+      throw new Error('Impossible de générer le quiz. Veuillez réessayer.')
+    }
+  }
+
+  /**
    * Génère un quiz à partir de plusieurs documents (images et PDF) (via backend)
    * Utilise FormData pour éviter les erreurs 413 (Content Too Large)
+   * MÉTHODE LEGACY - Utilisez extractTextFromDocuments + generateQuizFromAnalyses pour éviter les timeouts
    */
   async generateQuizFromDocuments (files, childProfile, questionCount = 5) {
     try {

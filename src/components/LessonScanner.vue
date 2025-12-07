@@ -530,8 +530,8 @@ export default {
           )
         }
         
-        // Simuler l'analyse des documents et la génération du quiz
-        console.log('[LessonScanner] scanLesson() - Appel à generateQuizFromDocuments...')
+        // Étape 1 : Extraction OCR des documents
+        console.log('[LessonScanner] scanLesson() - Étape 1: Extraction OCR...')
         console.log('[LessonScanner] scanLesson() - Profil enfant:', {
           id: this.selectedChild.id,
           name: this.selectedChild.name,
@@ -539,19 +539,43 @@ export default {
           level: this.selectedChild.level
         })
         
-        this.processStatus = 'Génération du quiz en cours...'
         const aiService = new AIService()
         const startTime = Date.now()
         
-        const quiz = await aiService.generateQuizFromDocuments(
-          this.selectedFiles, 
-          this.selectedChild, 
+        // Étape 1 : Extraction OCR et analyse
+        this.processStatus = 'Extraction du texte des documents (OCR)...'
+        console.log('[LessonScanner] scanLesson() - Appel à extractTextFromDocuments...')
+        const extractions = await aiService.extractTextFromDocuments(this.selectedFiles)
+        
+        const ocrDuration = Date.now() - startTime
+        console.log('[LessonScanner] scanLesson() - OCR terminé:', {
+          duration: `${ocrDuration}ms`,
+          extractionsCount: extractions?.length || 0,
+          hasExtractions: !!extractions
+        })
+        
+        if (!extractions || extractions.length === 0) {
+          throw new Error('Aucun texte n\'a pu être extrait des documents')
+        }
+        
+        // Étape 2 : Génération du quiz à partir des analyses
+        this.processStatus = 'Génération du quiz avec l\'IA...'
+        console.log('[LessonScanner] scanLesson() - Étape 2: Génération du quiz...')
+        console.log('[LessonScanner] scanLesson() - Appel à generateQuizFromAnalyses...')
+        const quizStartTime = Date.now()
+        
+        const quiz = await aiService.generateQuizFromAnalyses(
+          extractions,
+          this.selectedChild,
           parseInt(this.questionCount)
         )
         
-        const duration = Date.now() - startTime
+        const quizDuration = Date.now() - quizStartTime
+        const totalDuration = Date.now() - startTime
         console.log('[LessonScanner] scanLesson() - Quiz généré avec succès:', {
-          duration: `${duration}ms`,
+          ocrDuration: `${ocrDuration}ms`,
+          quizDuration: `${quizDuration}ms`,
+          totalDuration: `${totalDuration}ms`,
           hasQuiz: !!quiz,
           quizTitle: quiz?.title,
           questionsCount: quiz?.questions?.length || 0,

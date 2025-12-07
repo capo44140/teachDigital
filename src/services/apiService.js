@@ -64,7 +64,11 @@ class ApiService {
     const isPublicEndpoint = publicEndpoints.includes(endpoint)
 
     // Endpoints qui nécessitent un timeout plus long
-    const longTimeoutEndpoints = ['/api/ai/generate-quiz-from-documents']
+    const longTimeoutEndpoints = [
+      '/api/ai/generate-quiz-from-documents',
+      '/api/ai/extract-text-from-documents',
+      '/api/ai/generate-quiz-from-analyses'
+    ]
     const isLongTimeoutEndpoint = longTimeoutEndpoints.includes(endpoint)
 
     // Timeout plus long pour le login (peut prendre du temps avec la vérification du PIN)
