@@ -10,6 +10,7 @@ const { createResponse, createErrorResponse } = require('../../lib/response.js')
 // Services
 const { analyzeImage } = require('./services/imageAnalysis.js');
 const { extractTextFromImage } = require('./services/ocr.js');
+const { extractTextFromImageWithLLM } = require('./services/ocrLLM.js');
 const { analyzeWithAI } = require('./services/aiProviders/index.js');
 const { generateQuizFromAnalysis, generateQuizFromMultipleAnalyses, generateQuizFromTextWithAI } = require('./services/quizGenerator.js');
 const { parseFormData, bufferToBase64 } = require('./middleware/formDataParser.js');
@@ -338,6 +339,7 @@ async function handleExtractTextFromDocuments(req, res) {
         const isFormData = contentType.includes('multipart/form-data');
 
         let documents = [];
+        let useLLMOCR = false; // Par défaut, utiliser Tesseract
 
         if (isFormData) {
             // Parser FormData
@@ -350,6 +352,10 @@ async function handleExtractTextFromDocuments(req, res) {
                 fieldsKeys: parsed.fields ? Object.keys(parsed.fields) : [],
                 filesCount: parsed.files ? parsed.files.length : 0
             });
+
+            // Vérifier si on doit utiliser LLM OCR
+            useLLMOCR = parsed.fields.useLLMOCR === 'true' || parsed.fields.useLLMOCR === true;
+            console.log(`🔍 Mode OCR: ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
 
             // Extraire les fichiers
             if (parsed.files && parsed.fields) {
@@ -411,6 +417,8 @@ async function handleExtractTextFromDocuments(req, res) {
             }
 
             documents = body.documents || [];
+            useLLMOCR = body.useLLMOCR === true || body.useLLMOCR === 'true';
+            console.log(`🔍 Mode OCR: ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
         }
 
         console.log('📊 Documents parsés:', {
@@ -437,8 +445,15 @@ async function handleExtractTextFromDocuments(req, res) {
                         console.warn(`⚠️ Document ${i + 1} de type image mais sans données`);
                         continue;
                     }
-                    console.log(`🖼️ Extraction OCR de l'image ${i + 1}...`);
-                    const extractedText = await extractTextFromImage(imageData);
+                    console.log(`🖼️ Extraction OCR de l'image ${i + 1}... (${useLLMOCR ? 'LLM Vision' : 'Tesseract'})`);
+                    
+                    // Utiliser LLM OCR ou Tesseract selon le paramètre
+                    let extractedText;
+                    if (useLLMOCR) {
+                        extractedText = await extractTextFromImageWithLLM(imageData);
+                    } else {
+                        extractedText = await extractTextFromImage(imageData);
+                    }
                     
                     // Analyser le texte extrait avec l'IA pour obtenir une analyse structurée
                     console.log(`🤖 Analyse IA du texte extrait ${i + 1}...`);

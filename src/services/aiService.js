@@ -44,8 +44,10 @@ class AIService {
   /**
    * Extrait le texte des documents (OCR uniquement - étape 1)
    * Retourne les textes extraits et les analyses
+   * @param {File[]} files - Fichiers à traiter
+   * @param {boolean} useLLMOCR - Si true, utilise LLM Vision au lieu de Tesseract
    */
-  async extractTextFromDocuments (files) {
+  async extractTextFromDocuments (files, useLLMOCR = false) {
     try {
       // Utiliser FormData au lieu de JSON pour éviter les erreurs 413
       const formData = new FormData()
@@ -59,6 +61,7 @@ class AIService {
 
       // Ajouter les métadonnées
       formData.append('fileCount', files.length.toString())
+      formData.append('useLLMOCR', useLLMOCR.toString())
 
       const response = await apiService.request('/api/ai/extract-text-from-documents', {
         method: 'POST',

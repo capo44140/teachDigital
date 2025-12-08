@@ -594,9 +594,9 @@ export default {
           })
           
           // Étape 1 : Extraction OCR et analyse
-          this.processStatus = 'Extraction du texte des documents (OCR)...'
-          console.log('[LessonScanner] scanLesson() - Appel à extractTextFromDocuments...')
-          const extractions = await aiService.extractTextFromDocuments(this.selectedFiles)
+          this.processStatus = this.skipOCR ? 'Extraction du texte avec le LLM (Vision)...' : 'Extraction du texte des documents (OCR Tesseract)...'
+          console.log('[LessonScanner] scanLesson() - Appel à extractTextFromDocuments...', { useLLMOCR: this.skipOCR })
+          const extractions = await aiService.extractTextFromDocuments(this.selectedFiles, this.skipOCR)
           
           const ocrDuration = Date.now() - startTime
           console.log('[LessonScanner] scanLesson() - OCR terminé:', {
