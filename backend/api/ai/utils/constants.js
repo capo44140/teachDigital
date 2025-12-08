@@ -15,7 +15,7 @@ const MISTRAL_BASE_URL = 'https://api.mistral.ai/v1';
 const API_TIMEOUT_MS = 90000;
 
 // Modèles par défaut
-const DEFAULT_LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'qwen/qwen3-vl-4b';
+const DEFAULT_LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'mistralai/ministral-3-14b-reasoning';
 const DEFAULT_OPENAI_MODEL = 'gpt-4o';
 const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';

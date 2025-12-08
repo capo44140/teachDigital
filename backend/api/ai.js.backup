@@ -693,7 +693,7 @@ async function analyzeImage(base64Image) {
 async function analyzeTextWithLocalLLM(extractedText) {
   console.log('🏠 analyzeTextWithLocalLLM: Début (texte: ' + extractedText.substring(0, 50) + '...)');
   const localLLMUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
-  const localLLMModel = process.env.LOCAL_LLM_MODEL || 'qwen/qwen3-vl-4b'; // Modèle par défaut
+  const localLLMModel = process.env.LOCAL_LLM_MODEL || 'mistralai/ministral-3-14b-reasoning'; // Modèle par défaut
 
   const response = await fetchWithTimeout(`${localLLMUrl}/chat/completions`, {
     method: 'POST',
@@ -1164,7 +1164,7 @@ async function generateQuizFromAnalysis(analysis, childProfile) {
 async function generateQuizWithLocalLLM(analysis, childProfile) {
   console.log('🏠 generateQuizWithLocalLLM: Début');
   const localLLMUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
-  const localLLMModel = process.env.LOCAL_LLM_MODEL || 'qwen/qwen3-vl-4b'; // Modèle par défaut
+  const localLLMModel = process.env.LOCAL_LLM_MODEL || 'mistralai/ministral-3-14b-reasoning'; // Modèle par défaut
 
   const response = await fetchWithTimeout(`${localLLMUrl}/chat/completions`, {
     method: 'POST',
