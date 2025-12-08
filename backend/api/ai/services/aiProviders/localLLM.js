@@ -99,6 +99,55 @@ ${extractedText}`
 
         return this.parseJSONResponse(responseText);
     }
+
+    /**
+     * Extrait le texte d'une image en utilisant la vision du LLM local
+     * Compatible avec Ollama et autres LLMs locaux supportant la vision (llava, bakllava, etc.)
+     * @param {string} base64Image - Image en base64
+     * @param {string} prompt - Prompt pour l'extraction
+     * @returns {Promise<string>} Texte extrait de l'image
+     */
+    async extractTextWithVision(base64Image, prompt) {
+        console.log('🏠 LocalLLM extractTextWithVision: Début');
+
+        const response = await fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: this.model,
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'text',
+                                text: prompt
+                            },
+                            {
+                                type: 'image_url',
+                                image_url: {
+                                    url: `data:image/jpeg;base64,${base64Image}`
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens: 4000,
+                temperature: 0.1
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Erreur LLM local Vision: ${response.status} - ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+
+        return content;
+    }
 }
 
 module.exports = LocalLLMProvider;

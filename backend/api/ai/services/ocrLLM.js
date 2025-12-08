@@ -43,34 +43,55 @@ async function extractTextFromImageWithLLM(base64Image) {
 
 /**
  * Extrait le texte d'une image en utilisant les APIs de vision des LLM
+ * Priorité: LocalLLM → OpenAI → Gemini
  * 
  * @param {string} base64Image - Image en base64
  * @param {string} prompt - Prompt pour l'extraction
  * @returns {Promise<string>} Texte extrait
  */
 async function extractTextWithVisionAPI(base64Image, prompt) {
-    // Essayer d'abord avec les providers disponibles
-    const providers = require('./aiProviders/index.js');
+    // 1. Essayer d'abord le LLM Local (priorité maximale)
+    const { getAvailableProviders } = require('./aiProviders/index.js');
+    const providers = getAvailableProviders();
     
-    // Essayer OpenAI Vision (GPT-4 Vision)
+    // Chercher le LocalLLM provider en premier
+    const localLLMProvider = providers.find(p => p.getName() === 'LocalLLM');
+    if (localLLMProvider && localLLMProvider.extractTextWithVision) {
+        try {
+            console.log('🏠 Tentative d\'extraction OCR avec LocalLLM Vision...');
+            const result = await localLLMProvider.extractTextWithVision(base64Image, prompt);
+            console.log('✅ Extraction OCR réussie avec LocalLLM Vision');
+            return result;
+        } catch (error) {
+            console.warn('⚠️ LocalLLM Vision échoué, tentative avec OpenAI:', error.message);
+        }
+    }
+    
+    // 2. Essayer OpenAI Vision (GPT-4 Vision)
     if (process.env.OPENAI_API_KEY) {
         try {
-            return await extractTextWithOpenAIVision(base64Image, prompt);
+            console.log('🔄 Tentative d\'extraction OCR avec OpenAI Vision...');
+            const result = await extractTextWithOpenAIVision(base64Image, prompt);
+            console.log('✅ Extraction OCR réussie avec OpenAI Vision');
+            return result;
         } catch (error) {
             console.warn('⚠️ OpenAI Vision échoué, tentative avec Gemini:', error.message);
         }
     }
     
-    // Essayer Gemini Vision
+    // 3. Essayer Gemini Vision
     if (process.env.GEMINI_API_KEY) {
         try {
-            return await extractTextWithGeminiVision(base64Image, prompt);
+            console.log('🔄 Tentative d\'extraction OCR avec Gemini Vision...');
+            const result = await extractTextWithGeminiVision(base64Image, prompt);
+            console.log('✅ Extraction OCR réussie avec Gemini Vision');
+            return result;
         } catch (error) {
             console.warn('⚠️ Gemini Vision échoué:', error.message);
         }
     }
     
-    throw new Error('Aucun provider de vision disponible (OpenAI ou Gemini requis)');
+    throw new Error('Aucun provider de vision disponible (LocalLLM, OpenAI ou Gemini requis)');
 }
 
 /**
