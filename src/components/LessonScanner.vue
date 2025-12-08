@@ -203,7 +203,32 @@
               </svg>
               <span>Traitement en cours...</span>
             </span>
-            <span v-else>Générer le quiz</span>
+            <span v-else>Générer le quiz (avec OCR)</span>
+          </button>
+          <button 
+            :disabled="selectedFiles.length === 0 || !selectedChild || isProcessing"
+            :class="[
+              'px-8 py-3 rounded-xl font-medium transition-all',
+              (selectedFiles.length === 0 || !selectedChild || isProcessing)
+                ? 'bg-white/5 text-white/40 cursor-not-allowed'
+                : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:shadow-lg hover:shadow-blue-500/50'
+            ]"
+            @click="scanLessonDirect"
+            title="Génère le quiz directement avec le LLM sans passer par l'OCR Tesseract"
+          >
+            <span v-if="isProcessing" class="flex items-center justify-center space-x-2">
+              <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Traitement en cours...</span>
+            </span>
+            <span v-else class="flex items-center space-x-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              <span>Générer directement (sans OCR)</span>
+            </span>
           </button>
         </div>
 
@@ -677,6 +702,184 @@ export default {
           quizData: JSON.stringify(this.generatedQuiz)
         }
       })
+    },
+    
+    async scanLessonDirect() {
+      console.log('[LessonScanner] scanLessonDirect() - Début de la génération de quiz direct (sans OCR)')
+      
+      if (this.selectedFiles.length === 0 || !this.selectedChild) {
+        console.warn('[LessonScanner] scanLessonDirect() - Validation échouée:', {
+          filesCount: this.selectedFiles.length,
+          hasChild: !!this.selectedChild
+        })
+        return
+      }
+      
+      // Vérifier que l'utilisateur est connecté
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        console.error('[LessonScanner] scanLessonDirect() - Pas de token d\'authentification')
+        this.errorMessage = 'Vous devez être connecté pour générer un quiz. Veuillez vous connecter avec votre code PIN.'
+        alert('Vous devez être connecté pour générer un quiz. Veuillez vous connecter avec votre code PIN.')
+        return
+      }
+      
+      console.log('[LessonScanner] scanLessonDirect() - Paramètres:', {
+        childId: this.selectedChild.id,
+        childName: this.selectedChild.name,
+        filesCount: this.selectedFiles.length,
+        fileNames: this.selectedFiles.map(f => f.name),
+        questionCount: this.questionCount,
+        hasToken: !!token
+      })
+      
+      this.isProcessing = true
+      this.generatedQuiz = null
+      this.successMessage = null
+      this.errorMessage = null
+      this.processStatus = 'Génération du quiz directement avec le LLM (sans OCR)...'
+
+      try {
+        // Vérifier le rate limiting
+        console.log('[LessonScanner] scanLessonDirect() - Vérification du rate limiting...')
+        const rateLimitCheck = rateLimitService.checkRateLimit(this.selectedChild.id, 'openai')
+        console.log('[LessonScanner] scanLessonDirect() - Rate limit check:', rateLimitCheck)
+        
+        if (!rateLimitCheck.allowed) {
+          console.warn('[LessonScanner] scanLessonDirect() - Rate limit atteint:', rateLimitCheck)
+          alert(`Limite de requêtes atteinte. Réessayez dans ${rateLimitCheck.retryAfter} secondes.`)
+          return
+        }
+        
+        // Enregistrer la requête dans le rate limiting
+        rateLimitService.recordRequest(this.selectedChild.id, 'openai')
+        console.log('[LessonScanner] scanLessonDirect() - Requête enregistrée dans le rate limiting')
+        
+        // Enregistrer le début de l'analyse dans les logs d'audit
+        if (this.auditLogService) {
+          console.log('[LessonScanner] scanLessonDirect() - Enregistrement du début dans les logs d\'audit...')
+          this.auditLogService.logApiUsage(
+            this.selectedChild.id,
+            'openai',
+            true,
+            {
+              action: 'QUIZ_GENERATION_START_DIRECT',
+              fileCount: this.selectedFiles.length,
+              questionCount: parseInt(this.questionCount),
+              fileNames: this.selectedFiles.map(f => f.name),
+              skipOCR: true
+            }
+          )
+        }
+        
+        const aiService = new AIService()
+        const startTime = Date.now()
+        
+        // Génération directe du quiz sans OCR
+        this.processStatus = 'Analyse des documents avec le LLM...'
+        console.log('[LessonScanner] scanLessonDirect() - Appel à generateQuizFromDocuments (sans OCR)...')
+        
+        const quiz = await aiService.generateQuizFromDocuments(
+          this.selectedFiles,
+          this.selectedChild,
+          parseInt(this.questionCount)
+        )
+        
+        const totalDuration = Date.now() - startTime
+        console.log('[LessonScanner] scanLessonDirect() - Quiz généré avec succès:', {
+          totalDuration: `${totalDuration}ms`,
+          hasQuiz: !!quiz,
+          quizTitle: quiz?.title,
+          questionsCount: quiz?.questions?.length || 0,
+          quizStructure: quiz ? Object.keys(quiz) : null
+        })
+        
+        this.generatedQuiz = quiz
+        
+        // Sauvegarder la leçon via le service de migration
+        console.log('[LessonScanner] scanLessonDirect() - Sauvegarde de la leçon...')
+        this.processStatus = 'Sauvegarde de la leçon...'
+        
+        const savedLesson = await migrationService.saveLesson(
+          quiz, 
+          this.selectedChild.id, 
+          this.selectedFiles
+        )
+        
+        console.log('[LessonScanner] scanLessonDirect() - Leçon sauvegardée:', {
+          lessonId: savedLesson?.id,
+          hasLesson: !!savedLesson
+        })
+        
+        // Ajouter l'ID de la leçon sauvegardée au quiz
+        this.generatedQuiz.lessonId = savedLesson.id
+        
+        // Enregistrer le succès de l'analyse
+        if (this.auditLogService) {
+          console.log('[LessonScanner] scanLessonDirect() - Enregistrement du succès dans les logs d\'audit...')
+          this.auditLogService.logApiUsage(
+            this.selectedChild.id,
+            'openai',
+            true,
+            {
+              action: 'QUIZ_GENERATION_SUCCESS_DIRECT',
+              quizQuestions: quiz.questions?.length || 0,
+              lessonId: savedLesson.id,
+              fileCount: this.selectedFiles.length,
+              skipOCR: true
+            }
+          )
+        }
+        
+        console.log('[LessonScanner] scanLessonDirect() - Redirection vers QuizGenerator...')
+        // Rediriger vers le quiz
+        this.$router.push({
+          name: 'QuizGenerator',
+          query: {
+            childId: this.selectedChild.id,
+            lessonId: savedLesson.id,
+            quizData: JSON.stringify(quiz)
+          }
+        })
+      } catch (error) {
+        console.error('[LessonScanner] scanLessonDirect() - ERREUR lors de la génération du quiz:', {
+          error: error,
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+          cause: error.cause,
+          response: error.response,
+          status: error.status,
+          statusText: error.statusText
+        })
+        
+        // Enregistrer l'échec de l'analyse
+        if (this.auditLogService) {
+          console.log('[LessonScanner] scanLessonDirect() - Enregistrement de l\'échec dans les logs d\'audit...')
+          this.auditLogService.logApiUsage(
+            this.selectedChild.id,
+            'openai',
+            false,
+            {
+              action: 'QUIZ_GENERATION_FAILED_DIRECT',
+              error: error.message,
+              errorName: error.name,
+              errorStack: error.stack?.substring(0, 500),
+              fileCount: this.selectedFiles.length,
+              fileNames: this.selectedFiles.map(f => f.name),
+              questionCount: this.questionCount,
+              skipOCR: true
+            }
+          )
+        }
+        
+        this.errorMessage = `Erreur lors de la génération du quiz: ${error.message}`
+        alert('Erreur lors de la génération du quiz. Veuillez réessayer.')
+      } finally {
+        console.log('[LessonScanner] scanLessonDirect() - Fin du traitement (finally)')
+        this.isProcessing = false
+        this.processStatus = ''
+      }
     }
   }
 }
