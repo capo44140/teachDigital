@@ -260,7 +260,8 @@ async function handleGenerateQuizFromDocuments(req, res) {
 
         console.log(`📝 Analyse de ${documents.length} document(s)...`);
 
-        // Analyser tous les documents
+        // Analyser tous les documents avec vision LLM directement (sans passer par Tesseract)
+        // Cette fonction est appelée quand skipOCR = true, donc on utilise directement la vision
         const analyses = [];
         for (let i = 0; i < documents.length; i++) {
             const doc = documents[i];
@@ -273,10 +274,23 @@ async function handleGenerateQuizFromDocuments(req, res) {
                         console.warn(`⚠️ Document ${i + 1} de type image mais sans données`);
                         continue;
                     }
-                    console.log(`🖼️ Analyse de l'image ${i + 1}...`);
-                    const analysis = await analyzeImage(imageData);
+                    console.log(`🖼️ Analyse de l'image ${i + 1} avec LLM Vision (sans Tesseract)...`);
+                    
+                    // Utiliser directement la vision LLM pour extraire le texte et analyser
+                    // Nettoyer le base64 si nécessaire
+                    let cleanBase64 = imageData;
+                    if (imageData.includes(',')) {
+                        cleanBase64 = imageData.split(',')[1];
+                    }
+                    
+                    // Extraire le texte avec LLM Vision
+                    const extractedText = await extractTextFromImageWithLLM(cleanBase64);
+                    
+                    // Analyser le texte extrait avec l'IA
+                    const analysis = await analyzeWithAI(extractedText);
+                    
                     analyses.push({ type: 'image', fileName: doc.name, analysis });
-                    console.log(`✅ Image ${i + 1} analysée avec succès`);
+                    console.log(`✅ Image ${i + 1} analysée avec succès (LLM Vision)`);
                 } else if (doc.type === 'application/pdf' || doc.type === 'pdf') {
                     // Pour PDF, simuler une analyse (dans une vraie implémentation, utiliser OCR)
                     console.log(`📑 Traitement du PDF ${i + 1}...`);
