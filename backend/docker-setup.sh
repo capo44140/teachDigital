@@ -98,6 +98,7 @@ GEMINI_API_KEY=
 DEEPSEEK_API_KEY=
 GROQ_API_KEY=
 MISTRAL_API_KEY=
+LOCAL_LLM_MODEL=mistralai/ministral-3-14b-reasoning
 
 # CORS et Frontend
 FRONTEND_URL=http://localhost:3000
@@ -142,6 +143,7 @@ GEMINI_API_KEY=
 DEEPSEEK_API_KEY=
 GROQ_API_KEY=
 MISTRAL_API_KEY=
+LOCAL_LLM_MODEL=mistralai/ministral-3-14b-reasoning
 
 # CORS et Frontend
 FRONTEND_URL=http://localhost:3000
