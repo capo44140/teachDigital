@@ -1,5 +1,5 @@
 const { default: sql } = require('../lib/database.js');
-const { handleError } = require('../lib/response.js');
+const { handleError, createErrorResponse } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
 
 // Handler des vidéos YouTube
@@ -69,7 +69,7 @@ async function handleYoutubeVideos(req, res) {
             });
 
         } else {
-            res.status(405).json({ error: 'Méthode non autorisée' });
+            res.status(405).json(createErrorResponse('Méthode non autorisée', 'METHOD_NOT_ALLOWED'));
         }
 
     } catch (error) {

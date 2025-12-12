@@ -1,13 +1,13 @@
 const { NativeHashService } = require('../lib/nativeHash.js');
 const { default: sql } = require('../lib/database.js');
 const { generateToken, createSession, deleteSession } = require('../lib/auth.js');
-const { handleError } = require('../lib/response.js');
+const { handleError, createErrorResponse } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
 
 // Handler de connexion
 async function handleLogin(req, res) {
     if (req.method !== 'POST') {
-        res.status(405).json({ error: 'Méthode non autorisée' });
+        res.status(405).json(createErrorResponse('Méthode non autorisée', 'METHOD_NOT_ALLOWED'));
         return;
     }
 
@@ -109,7 +109,7 @@ async function handleLogin(req, res) {
 // Handler de déconnexion
 async function handleLogout(req, res) {
     if (req.method !== 'POST') {
-        res.status(405).json({ error: 'Méthode non autorisée' });
+        res.status(405).json(createErrorResponse('Méthode non autorisée', 'METHOD_NOT_ALLOWED'));
         return;
     }
 

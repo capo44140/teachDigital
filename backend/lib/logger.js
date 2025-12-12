@@ -35,6 +35,10 @@ class Logger {
     
     // Activer/désactiver les logs détaillés
     this.enableDebug = process.env.LOG_DEBUG === 'true';
+
+    // Format de log: "text" (par défaut) ou "json"
+    // En production, "json" est recommandé (facile à parser / agréger)
+    this.logFormat = (process.env.LOG_FORMAT || 'text').toLowerCase();
     
     // Exposer les propriétés publiques
     this.logsDirectory = this.logsDir;
@@ -50,6 +54,37 @@ class Logger {
   }
 
   /**
+   * Formate un log en JSON (recommandé en production)
+   */
+  formatJson(level, message, data = null) {
+    const payload = {
+      timestamp: new Date().toISOString(),
+      level: String(level || 'INFO').toUpperCase(),
+      message: String(message || ''),
+      ...(data && typeof data === 'object' ? data : (data != null ? { data } : {}))
+    };
+    return JSON.stringify(payload);
+  }
+
+  /**
+   * Écrit un log sur stdout/stderr selon le niveau, en text ou json
+   */
+  writeToStd(level, message, data = null) {
+    const upper = String(level || 'INFO').toUpperCase();
+    const formatted = this.logFormat === 'json'
+      ? this.formatJson(upper, message, data)
+      : this.formatMessage(upper, message, data);
+
+    if (upper === 'ERROR') {
+      console.error(formatted);
+    } else if (upper === 'WARN') {
+      console.warn(formatted);
+    } else {
+      console.log(formatted);
+    }
+  }
+
+  /**
    * Écrit dans un fichier de log
    */
   writeToFile(level, message, data = null) {
@@ -57,7 +92,9 @@ class Logger {
 
     try {
       const logFile = path.join(this.logsDir, `${level}.log`);
-      const formattedMessage = this.formatMessage(level, message, data);
+      const formattedMessage = this.logFormat === 'json'
+        ? this.formatJson(level, message, data)
+        : this.formatMessage(level, message, data);
       
       // Vérifier la taille du fichier et faire une rotation si nécessaire
       if (fs.existsSync(logFile)) {
@@ -122,8 +159,7 @@ class Logger {
    * Log info
    */
   info(message, data = null) {
-    const formatted = this.formatMessage('INFO', message, data);
-    console.log(formatted);
+    this.writeToStd('INFO', message, data);
     this.writeToFile('info', message, data);
   }
 
@@ -131,13 +167,18 @@ class Logger {
    * Log error
    */
   error(message, error = null) {
-    const errorData = error ? {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    } : null;
-    const formatted = this.formatMessage('ERROR', message, errorData);
-    console.error(formatted);
+    const errorData = error
+      ? (typeof error === 'object'
+        ? {
+          errorMessage: error.message,
+          errorStack: error.stack,
+          errorName: error.name,
+          errorCode: error.code
+        }
+        : { error })
+      : null;
+
+    this.writeToStd('ERROR', message, errorData);
     this.writeToFile('error', message, errorData);
   }
 
@@ -145,8 +186,7 @@ class Logger {
    * Log warn
    */
   warn(message, data = null) {
-    const formatted = this.formatMessage('WARN', message, data);
-    console.warn(formatted);
+    this.writeToStd('WARN', message, data);
     this.writeToFile('warn', message, data);
   }
 
@@ -156,8 +196,7 @@ class Logger {
   debug(message, data = null) {
     if (!this.enableDebug) return;
     
-    const formatted = this.formatMessage('DEBUG', message, data);
-    console.log(formatted);
+    this.writeToStd('DEBUG', message, data);
     this.writeToFile('debug', message, data);
   }
 
@@ -165,9 +204,16 @@ class Logger {
    * Log avec niveau personnalisé
    */
   log(level, message, data = null) {
-    const formatted = this.formatMessage(level.toUpperCase(), message, data);
-    console.log(formatted);
+    this.writeToStd(level, message, data);
     this.writeToFile(level.toLowerCase(), message, data);
+  }
+
+  /**
+   * Log HTTP (requêtes entrantes) - format standardisé
+   */
+  http(message, data = null) {
+    this.writeToStd('INFO', message, { category: 'http', ...(data || {}) });
+    this.writeToFile('info', message, { category: 'http', ...(data || {}) });
   }
 }
 

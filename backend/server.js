@@ -7,6 +7,7 @@ const express = require('express');
 const handler = require('./api/index.js');
 const logger = require('./lib/logger.js');
 const { corsMiddleware } = require('./lib/cors.js');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -14,6 +15,36 @@ const PORT = process.env.PORT || 3001;
 // Configuration CORS - Utilisation du middleware centralisé
 // DOIT être défini AVANT tous les autres middlewares
 app.use(corsMiddleware);
+
+// Middleware requestId + logs HTTP (observabilité prod)
+app.use((req, res, next) => {
+  const startHrTime = process.hrtime.bigint();
+
+  // Récupérer un request id existant (proxy/load balancer) ou en générer un
+  const incomingRequestId = req.headers['x-request-id'];
+  const requestId = (typeof incomingRequestId === 'string' && incomingRequestId.trim())
+    ? incomingRequestId.trim()
+    : (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex'));
+
+  req.requestId = requestId;
+  res.setHeader('x-request-id', requestId);
+
+  // Log à la fin (status + durée)
+  res.on('finish', () => {
+    const durationMs = Number(process.hrtime.bigint() - startHrTime) / 1e6;
+    logger.http('HTTP request', {
+      requestId,
+      method: req.method,
+      path: req.originalUrl,
+      statusCode: res.statusCode,
+      durationMs: Math.round(durationMs * 100) / 100,
+      ip: req.headers['x-forwarded-for'] || req.socket?.remoteAddress,
+      userAgent: req.headers['user-agent']
+    });
+  });
+
+  next();
+});
 
 // Middleware pour parser FormData avec busboy AVANT les autres middlewares
 app.use(async (req, res, next) => {
@@ -49,7 +80,10 @@ app.use(async (req, res, next) => {
           });
         });
         file.on('error', (err) => {
-          logger.error('Erreur lors de la lecture du fichier', err);
+          logger.error('Erreur lors de la lecture du fichier', {
+            requestId: req.requestId,
+            error: err?.message || String(err)
+          });
         });
       });
 
@@ -72,7 +106,10 @@ app.use(async (req, res, next) => {
       });
 
       busboy.on('error', (err) => {
-        logger.error('Erreur lors du parsing FormData', err);
+        logger.error('Erreur lors du parsing FormData', {
+          requestId: req.requestId,
+          error: err?.message || String(err)
+        });
         return res.status(400).json({
           success: false,
           message: 'Erreur lors du parsing FormData: ' + err.message
@@ -105,7 +142,9 @@ app.use('/api', handler);
 app.use('/api/*', (req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Route API non trouvée'
+    message: 'Route API non trouvée',
+    code: 'NOT_FOUND',
+    data: null
   });
 });
 

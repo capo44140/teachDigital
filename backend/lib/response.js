@@ -1,23 +1,37 @@
 // Utilitaires pour les réponses API standardisées
 
+function buildErrorPayload(message, code = 'ERROR', data = null, extra = {}) {
+  return {
+    success: false,
+    message: message || 'Erreur interne du serveur',
+    code,
+    data,
+    ...extra
+  };
+}
+
+function buildSuccessPayload(message, data) {
+  return {
+    success: true,
+    message: message || 'Succès',
+    data
+  };
+}
+
 function successResponse(data, message = 'Succès', statusCode = 200) {
   return {
     statusCode,
     body: JSON.stringify({
-      success: true,
-      message,
-      data
+      ...buildSuccessPayload(message, data)
     })
   };
 }
 
-function errorResponse(message = 'Erreur interne du serveur', statusCode = 500, details = null) {
+function errorResponse(message = 'Erreur interne du serveur', statusCode = 500, details = null, code = 'ERROR') {
   return {
     statusCode,
     body: JSON.stringify({
-      success: false,
-      message,
-      ...(details && { details })
+      ...buildErrorPayload(message, code, null, details ? { details } : {})
     })
   };
 }
@@ -26,9 +40,7 @@ function validationErrorResponse(errors) {
   return {
     statusCode: 400,
     body: JSON.stringify({
-      success: false,
-      message: 'Erreur de validation',
-      errors
+      ...buildErrorPayload('Erreur de validation', 'VALIDATION_ERROR', null, { errors })
     })
   };
 }
@@ -37,8 +49,7 @@ function unauthorizedResponse(message = 'Non autorisé') {
   return {
     statusCode: 401,
     body: JSON.stringify({
-      success: false,
-      message
+      ...buildErrorPayload(message, 'UNAUTHORIZED')
     })
   };
 }
@@ -47,8 +58,7 @@ function forbiddenResponse(message = 'Accès refusé') {
   return {
     statusCode: 403,
     body: JSON.stringify({
-      success: false,
-      message
+      ...buildErrorPayload(message, 'FORBIDDEN')
     })
   };
 }
@@ -57,8 +67,7 @@ function notFoundResponse(message = 'Ressource non trouvée') {
   return {
     statusCode: 404,
     body: JSON.stringify({
-      success: false,
-      message
+      ...buildErrorPayload(message, 'NOT_FOUND')
     })
   };
 }
@@ -87,36 +96,33 @@ function handleError(error, defaultMessage = 'Erreur interne du serveur') {
     return errorResponse(
       error.message || defaultMessage,
       500,
-      error.detail || error.hint
+      error.detail || error.hint,
+      'DB_ERROR'
     );
   }
   
   // Gérer les erreurs de timeout
   if (error.message && error.message.includes('timeout') || error.message && error.message.includes('Timeout')) {
     console.error('Erreur de timeout:', error.message);
-    return errorResponse('La requête a pris trop de temps. Veuillez réessayer.', 504);
+    return errorResponse('La requête a pris trop de temps. Veuillez réessayer.', 504, null, 'GATEWAY_TIMEOUT');
   }
   
-  return errorResponse(defaultMessage);
+  return errorResponse(defaultMessage, 500, null, 'INTERNAL_ERROR');
 }
 
 // Fonctions helper pour les réponses (format simplifié)
 function createResponse(message, data) {
-  return {
-    success: true,
-    message,
-    data
-  };
+  return buildSuccessPayload(message, data);
 }
 
-function createErrorResponse(message) {
-  return {
-    success: false,
-    message
-  };
+function createErrorResponse(message, code = 'ERROR', extra = null) {
+  // backward-compatible: ancien usage createErrorResponse(message)
+  return buildErrorPayload(message, code, null, extra && typeof extra === 'object' ? extra : {});
 }
 
 module.exports = {
+  buildErrorPayload,
+  buildSuccessPayload,
   successResponse,
   errorResponse,
   validationErrorResponse,
