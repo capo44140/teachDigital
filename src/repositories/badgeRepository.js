@@ -1,7 +1,8 @@
-import sql from '../config/database.js'
+import { apiService } from '../services/apiService.js'
 
 /**
- * Repository pour la gestion des badges
+ * Proxy Repository pour la gestion des badges
+ * Utilise l'API backend au lieu d'accès direct à la base de données
  */
 export class BadgeRepository {
   /**
@@ -10,12 +11,10 @@ export class BadgeRepository {
    */
   async getAllBadges () {
     try {
-      const badges = await sql`
-        SELECT * FROM badges 
-        WHERE is_active = true
-        ORDER BY category, condition_value ASC
-      `
-      return badges
+      const response = await apiService.request('/api/badges')
+      // Filtrer pour ne garder que les badges actifs (si le backend ne le fait pas déjà)
+      const badges = response.data || []
+      return badges.filter(badge => badge.is_active !== false)
     } catch (error) {
       console.error('Erreur lors de la récupération des badges:', error)
       throw error
@@ -29,11 +28,8 @@ export class BadgeRepository {
    */
   async getBadgeById (badgeId) {
     try {
-      const result = await sql`
-        SELECT * FROM badges 
-        WHERE id = ${badgeId}
-      `
-      return result[0] || null
+      const response = await apiService.request(`/api/badges/${badgeId}`)
+      return response.data || null
     } catch (error) {
       console.error('Erreur lors de la récupération du badge:', error)
       throw error
@@ -47,14 +43,11 @@ export class BadgeRepository {
    */
   async createBadge (badgeData) {
     try {
-      const { name, description, icon, category, condition_type, condition_value, points, color } = badgeData
-
-      const result = await sql`
-        INSERT INTO badges (name, description, icon, category, condition_type, condition_value, points, color)
-        VALUES (${name}, ${description}, ${icon}, ${category}, ${condition_type}, ${condition_value}, ${points}, ${color})
-        RETURNING *
-      `
-      return result[0]
+      const response = await apiService.request('/api/badges', {
+        method: 'POST',
+        body: JSON.stringify(badgeData)
+      })
+      return response.data
     } catch (error) {
       console.error('Erreur lors de la création du badge:', error)
       throw error
@@ -69,25 +62,11 @@ export class BadgeRepository {
    */
   async updateBadge (badgeId, badgeData) {
     try {
-      const { name, description, icon, category, condition_type, condition_value, points, color, is_active } = badgeData
-
-      const result = await sql`
-        UPDATE badges 
-        SET 
-          name = ${name},
-          description = ${description},
-          icon = ${icon},
-          category = ${category},
-          condition_type = ${condition_type},
-          condition_value = ${condition_value},
-          points = ${points},
-          color = ${color},
-          is_active = ${is_active},
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${badgeId}
-        RETURNING *
-      `
-      return result[0]
+      const response = await apiService.request(`/api/badges/${badgeId}`, {
+        method: 'PUT',
+        body: JSON.stringify(badgeData)
+      })
+      return response.data
     } catch (error) {
       console.error('Erreur lors de la mise à jour du badge:', error)
       throw error
@@ -101,11 +80,10 @@ export class BadgeRepository {
    */
   async deleteBadge (badgeId) {
     try {
-      await sql`
-        DELETE FROM badges 
-        WHERE id = ${badgeId}
-      `
-      return true
+      const response = await apiService.request(`/api/badges/${badgeId}`, {
+        method: 'DELETE'
+      })
+      return response.success || false
     } catch (error) {
       console.error('Erreur lors de la suppression du badge:', error)
       throw error
@@ -119,21 +97,8 @@ export class BadgeRepository {
    */
   async getProfileBadges (profileId) {
     try {
-      const badges = await sql`
-        SELECT 
-          b.*,
-          COALESCE(pb.progress, 0) as progress,
-          COALESCE(pb.is_unlocked, false) as is_unlocked,
-          pb.unlocked_at
-        FROM badges b
-        LEFT JOIN profile_badges pb ON b.id = pb.badge_id AND pb.profile_id = ${profileId}
-        WHERE b.is_active = true
-        ORDER BY 
-          pb.is_unlocked DESC NULLS LAST,
-          b.category,
-          b.condition_value ASC
-      `
-      return badges
+      const response = await apiService.request(`/api/badges/profile/${profileId}`)
+      return response.data || []
     } catch (error) {
       console.error('Erreur lors de la récupération des badges du profil:', error)
       throw error
@@ -147,14 +112,8 @@ export class BadgeRepository {
    */
   async getUnlockedBadges (profileId) {
     try {
-      const badges = await sql`
-        SELECT b.*, pb.unlocked_at
-        FROM badges b
-        INNER JOIN profile_badges pb ON b.id = pb.badge_id
-        WHERE pb.profile_id = ${profileId} AND pb.is_unlocked = true
-        ORDER BY pb.unlocked_at DESC
-      `
-      return badges
+      const response = await apiService.request(`/api/badges/profile/${profileId}/unlocked`)
+      return response.data || []
     } catch (error) {
       console.error('Erreur lors de la récupération des badges débloqués:', error)
       throw error
@@ -163,6 +122,8 @@ export class BadgeRepository {
 
   /**
    * Mettre à jour la progression d'un badge pour un profil
+   * ATTENTION: Cette méthode nécessite un endpoint backend spécifique
+   * Pour l'instant, on utilise checkAndUnlockBadges qui gère automatiquement la progression
    * @param {number} profileId - ID du profil
    * @param {number} badgeId - ID du badge
    * @param {number} progress - Progression (0-100)
@@ -170,16 +131,18 @@ export class BadgeRepository {
    */
   async updateBadgeProgress (profileId, badgeId, progress) {
     try {
-      const result = await sql`
-        INSERT INTO profile_badges (profile_id, badge_id, progress, updated_at)
-        VALUES (${profileId}, ${badgeId}, ${progress}, CURRENT_TIMESTAMP)
-        ON CONFLICT (profile_id, badge_id) 
-        DO UPDATE SET 
-          progress = ${progress},
-          updated_at = CURRENT_TIMESTAMP
-        RETURNING *
-      `
-      return result[0]
+      // Utiliser l'endpoint check-unlock qui gère automatiquement la progression
+      const response = await apiService.request('/api/badges/check-unlock', {
+        method: 'POST',
+        body: JSON.stringify({
+          profileId,
+          actionType: 'progress_update',
+          actionData: { badgeId, progress }
+        })
+      })
+      // Retourner le badge mis à jour si disponible
+      const unlockedBadges = response.data?.unlockedBadges || []
+      return unlockedBadges.find(b => b.id === badgeId) || { profileId, badgeId, progress }
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la progression du badge:', error)
       throw error
@@ -188,24 +151,25 @@ export class BadgeRepository {
 
   /**
    * Débloquer un badge pour un profil
+   * ATTENTION: Cette méthode nécessite un endpoint backend spécifique
+   * Pour l'instant, on utilise checkAndUnlockBadges
    * @param {number} profileId - ID du profil
    * @param {number} badgeId - ID du badge
    * @returns {Promise<Object>} Badge débloqué
    */
   async unlockBadge (profileId, badgeId) {
     try {
-      const result = await sql`
-        INSERT INTO profile_badges (profile_id, badge_id, progress, is_unlocked, unlocked_at, updated_at)
-        VALUES (${profileId}, ${badgeId}, 100, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        ON CONFLICT (profile_id, badge_id) 
-        DO UPDATE SET 
-          progress = 100,
-          is_unlocked = true,
-          unlocked_at = CURRENT_TIMESTAMP,
-          updated_at = CURRENT_TIMESTAMP
-        RETURNING *
-      `
-      return result[0]
+      // Utiliser l'endpoint check-unlock qui gère automatiquement le déblocage
+      const response = await apiService.request('/api/badges/check-unlock', {
+        method: 'POST',
+        body: JSON.stringify({
+          profileId,
+          actionType: 'unlock',
+          actionData: { badgeId }
+        })
+      })
+      const unlockedBadges = response.data?.unlockedBadges || []
+      return unlockedBadges.find(b => b.id === badgeId) || null
     } catch (error) {
       console.error('Erreur lors du déblocage du badge:', error)
       throw error
@@ -219,25 +183,13 @@ export class BadgeRepository {
    */
   async getBadgeStats (profileId) {
     try {
-      const stats = await sql`
-        SELECT 
-          COUNT(DISTINCT b.id) as total_badges,
-          COUNT(DISTINCT CASE WHEN pb.is_unlocked = true THEN b.id END) as unlocked_badges,
-          COALESCE(SUM(CASE WHEN pb.is_unlocked = true THEN b.points ELSE 0 END), 0) as total_points
-        FROM badges b
-        LEFT JOIN profile_badges pb ON b.id = pb.badge_id AND pb.profile_id = ${profileId}
-        WHERE b.is_active = true
-      `
-
-      const result = stats[0]
-      return {
-        total: parseInt(result.total_badges) || 0,
-        unlocked: parseInt(result.unlocked_badges) || 0,
-        locked: (parseInt(result.total_badges) || 0) - (parseInt(result.unlocked_badges) || 0),
-        points: parseInt(result.total_points) || 0,
-        percentage: result.total_badges > 0
-          ? Math.round((result.unlocked_badges / result.total_badges) * 100)
-          : 0
+      const response = await apiService.request(`/api/badges/profile/${profileId}/stats`)
+      return response.data || {
+        total: 0,
+        unlocked: 0,
+        locked: 0,
+        points: 0,
+        percentage: 0
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des statistiques:', error)
@@ -252,12 +204,10 @@ export class BadgeRepository {
    */
   async getBadgesByCategory (category) {
     try {
-      const badges = await sql`
-        SELECT * FROM badges 
-        WHERE category = ${category} AND is_active = true
-        ORDER BY condition_value ASC
-      `
-      return badges
+      // Récupérer tous les badges et filtrer par catégorie côté client
+      // (ou utiliser un endpoint spécifique si disponible)
+      const badges = await this.getAllBadges()
+      return badges.filter(badge => badge.category === category && badge.is_active !== false)
     } catch (error) {
       console.error('Erreur lors de la récupération des badges par catégorie:', error)
       throw error
@@ -272,15 +222,8 @@ export class BadgeRepository {
    */
   async getRecentlyUnlockedBadges (profileId, limit = 5) {
     try {
-      const badges = await sql`
-        SELECT b.*, pb.unlocked_at
-        FROM badges b
-        INNER JOIN profile_badges pb ON b.id = pb.badge_id
-        WHERE pb.profile_id = ${profileId} AND pb.is_unlocked = true
-        ORDER BY pb.unlocked_at DESC
-        LIMIT ${limit}
-      `
-      return badges
+      const response = await apiService.request(`/api/badges/profile/${profileId}/recent?limit=${limit}`)
+      return response.data || []
     } catch (error) {
       console.error('Erreur lors de la récupération des badges récents:', error)
       throw error
