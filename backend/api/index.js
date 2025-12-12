@@ -12,14 +12,38 @@ const { handleInitPins } = require('../controllers/initController.js');
 const { handleAudit } = require('../controllers/auditController.js');
 const handleBadges = require('./badges.js');
 const handleAI = require('./ai/index.js');
+const { createRateLimiter, getClientIp } = require('../lib/rateLimit.js');
+
+// Rate limiting (stabilité prod)
+// Configurable via env:
+// - API_RATE_LIMIT_LOGIN_WINDOW_MS, API_RATE_LIMIT_LOGIN_MAX
+// - API_RATE_LIMIT_PIN_WINDOW_MS, API_RATE_LIMIT_PIN_MAX
+const loginRateLimiter = createRateLimiter({
+  windowMs: parseInt(process.env.API_RATE_LIMIT_LOGIN_WINDOW_MS || '60000', 10),
+  max: parseInt(process.env.API_RATE_LIMIT_LOGIN_MAX || '20', 10),
+  keyGenerator: (req) => `login:${getClientIp(req)}`,
+  message: 'Trop de tentatives de connexion. Veuillez réessayer.',
+  code: 'RATE_LIMIT_LOGIN'
+});
+
+const pinRateLimiter = createRateLimiter({
+  windowMs: parseInt(process.env.API_RATE_LIMIT_PIN_WINDOW_MS || '60000', 10),
+  max: parseInt(process.env.API_RATE_LIMIT_PIN_MAX || '30', 10),
+  keyGenerator: (req) => {
+    const profileId = req.params?.id || 'unknown';
+    return `pin:${getClientIp(req)}:${profileId}`;
+  },
+  message: 'Trop de tentatives de vérification du PIN. Veuillez réessayer.',
+  code: 'RATE_LIMIT_PIN'
+});
 
 // Routes d'authentification
-router.post('/auth/login', handleLogin);
+router.post('/auth/login', loginRateLimiter, handleLogin);
 router.post('/auth/logout', handleLogout);
 
 // Routes des profils
 router.get('/profiles/stats', handleProfileStats);
-router.post('/profiles/:id/pin', handlePin);
+router.post('/profiles/:id/pin', pinRateLimiter, handlePin);
 router.get('/profiles', handleProfiles);
 router.get('/profiles/:id', handleProfile);
 router.put('/profiles/:id', handleProfile);

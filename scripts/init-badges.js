@@ -2,10 +2,53 @@
 
 /**
  * Script d'initialisation des badges par défaut
- * Version frontend - utilise l'API backend
+ * Version Node - utilise l'API backend
  */
 
-import badgeApiService from '../src/services/badgeApiService.js';
+// Variables requises:
+// - API_URL (ex: http://localhost:3001)  [optionnel, défaut: http://localhost:3001]
+// - AUTH_TOKEN (token JWT admin)         [requis]
+
+function getConfig() {
+  const apiUrl = process.env.API_URL || 'http://localhost:3001';
+  const token = process.env.AUTH_TOKEN;
+  if (!token) {
+    throw new Error('AUTH_TOKEN manquant (JWT admin requis)');
+  }
+  return { apiUrl, token };
+}
+
+async function fetchBadges() {
+  const { apiUrl, token } = getConfig();
+  const resp = await fetch(`${apiUrl}/api/badges`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Erreur HTTP ${resp.status}: ${text.substring(0, 200)}`);
+  }
+  const json = await resp.json();
+  return json.data || [];
+}
+
+async function createBadge(badge) {
+  const { apiUrl, token } = getConfig();
+  const resp = await fetch(`${apiUrl}/api/badges`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(badge)
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Erreur HTTP ${resp.status}: ${text.substring(0, 200)}`);
+  }
+  const json = await resp.json();
+  return json.data || null;
+}
 
 // Badges par défaut à créer
 const defaultBadges = [
@@ -223,9 +266,11 @@ const defaultBadges = [
 async function initializeBadges() {
   try {
     console.log('🚀 Initialisation des badges par défaut via l\'API...');
+    const { apiUrl } = getConfig();
+    console.log(`📍 API_URL: ${apiUrl}`);
 
     // Vérifier si des badges existent déjà
-    const existingBadges = await badgeApiService.getAllBadges();
+    const existingBadges = await fetchBadges();
     
     if (existingBadges.length > 0) {
       console.log(`⚠️  ${existingBadges.length} badges existent déjà en base de données.`);
@@ -248,7 +293,7 @@ async function initializeBadges() {
         }
 
         // Créer le badge via l'API
-        await badgeApiService.createBadge(badge);
+        await createBadge(badge);
         console.log(`✅ Badge créé: "${badge.name}" (${badge.icon})`);
         createdCount++;
       } catch (error) {
@@ -262,7 +307,7 @@ async function initializeBadges() {
     console.log(`📝 Total badges par défaut: ${defaultBadges.length}`);
 
     // Afficher les statistiques finales
-    const finalBadges = await badgeApiService.getAllBadges();
+    const finalBadges = await fetchBadges();
     console.log(`🎯 Total badges en base: ${finalBadges.length}`);
 
     console.log('\n🎉 Initialisation terminée avec succès!');

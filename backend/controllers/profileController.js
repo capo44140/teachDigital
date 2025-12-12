@@ -97,14 +97,13 @@ async function handleProfiles(req, res) {
         }
 
     } catch (error) {
-        // Gestion spéciale des timeouts
-        if (error.message?.includes('timeout') || error.message?.includes('Query timeout')) {
+        // Uniformiser le timeout au format standard (success/message/code/data)
+        if (error?.isTimeout === true || error?.code === 'GATEWAY_TIMEOUT' || error.message?.includes('Query timeout')) {
             console.error('⏱️ Timeout lors de la récupération des profils:', error.message);
-            res.status(504).json({
-                success: false,
-                message: 'Timeout: La requête a pris trop de temps. Veuillez réessayer.',
-                error: 'GATEWAY_TIMEOUT'
-            });
+            res.status(504).json(createErrorResponse(
+                'La requête a pris trop de temps. Veuillez réessayer.',
+                'GATEWAY_TIMEOUT'
+            ));
             return;
         }
         const errorResponse = handleError(error, 'Erreur lors de la gestion des profils');

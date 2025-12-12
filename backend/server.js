@@ -12,6 +12,33 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Checks de configuration (stabilité prod)
+if (!process.env.JWT_SECRET || String(process.env.JWT_SECRET).length < 16) {
+  logger.error('Configuration invalide: JWT_SECRET manquant ou trop court', {
+    hint: 'Définissez JWT_SECRET (>= 16 caractères) dans votre environnement'
+  });
+  process.exit(1);
+}
+
+logger.info('Configuration runtime', {
+  nodeEnv: process.env.NODE_ENV || 'production',
+  port: PORT,
+  logFormat: process.env.LOG_FORMAT || 'text',
+  logDebug: process.env.LOG_DEBUG === 'true',
+  rateLimit: {
+    loginWindowMs: parseInt(process.env.API_RATE_LIMIT_LOGIN_WINDOW_MS || '60000', 10),
+    loginMax: parseInt(process.env.API_RATE_LIMIT_LOGIN_MAX || '20', 10),
+    pinWindowMs: parseInt(process.env.API_RATE_LIMIT_PIN_WINDOW_MS || '60000', 10),
+    pinMax: parseInt(process.env.API_RATE_LIMIT_PIN_MAX || '30', 10)
+  },
+  dbTimeouts: {
+    defaultMs: parseInt(process.env.API_DB_TIMEOUT_DEFAULT_MS || '7000', 10),
+    fastMs: parseInt(process.env.API_DB_TIMEOUT_FAST_MS || '3000', 10),
+    standardMs: parseInt(process.env.API_DB_TIMEOUT_STANDARD_MS || '5000', 10),
+    longMs: parseInt(process.env.API_DB_TIMEOUT_LONG_MS || '9000', 10)
+  }
+});
+
 // Configuration CORS - Utilisation du middleware centralisé
 // DOIT être défini AVANT tous les autres middlewares
 app.use(corsMiddleware);

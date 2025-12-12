@@ -4,16 +4,41 @@
  * Script de test pour vérifier la connexion à l'API badges
  */
 
-import badgeApiService from '../src/services/badgeApiService.js';
+// Ce script s'exécute en Node.js: ne pas importer les services frontend (localStorage, etc.)
+// Variables requises:
+// - API_URL (ex: http://localhost:3001)
+// - AUTH_TOKEN (token JWT admin)
 
 async function testBadgeApi() {
   try {
     console.log('🧪 Test de connexion à l\'API badges...');
-    console.log(`📍 URL de l'API: ${badgeApiService.baseURL}`);
+
+    const apiUrl = process.env.API_URL || 'http://localhost:3001';
+    const token = process.env.AUTH_TOKEN;
+
+    if (!token) {
+      console.error('❌ AUTH_TOKEN manquant (JWT admin requis)');
+      process.exit(1);
+    }
+
+    console.log(`📍 URL de l'API: ${apiUrl}`);
     
     // Test de récupération des badges
     console.log('📡 Tentative de récupération des badges...');
-    const badges = await badgeApiService.getAllBadges();
+    const response = await fetch(`${apiUrl}/api/badges`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Erreur HTTP ${response.status}: ${text.substring(0, 200)}`);
+    }
+
+    const json = await response.json();
+    const badges = json.data || [];
     
     console.log(`✅ Connexion réussie! ${badges.length} badges trouvés.`);
     

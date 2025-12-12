@@ -419,7 +419,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBadgeStore } from '../stores/badgeStore.js'
 import { useProfileStore } from '../stores/profileStore.js'
-import badgeApiService from '../services/badgeApiService.js'
+import badgeService from '../services/badgeService.js'
 
 export default {
   name: 'BadgeAdminManager',
@@ -586,7 +586,7 @@ export default {
       if (!badgeToDelete.value) return
       
       try {
-        await badgeApiService.deleteBadge(badgeToDelete.value.id)
+        await badgeService.deleteBadge(badgeToDelete.value.id)
         await loadBadges()
         showDeleteModal.value = false
         badgeToDelete.value = null
@@ -601,9 +601,10 @@ export default {
         saving.value = true
         
         if (editingBadge.value) {
-          await badgeApiService.updateBadge(editingBadge.value.id, badgeForm.value)
+          await badgeService.updateBadge(editingBadge.value.id, badgeForm.value)
         } else {
-          await badgeApiService.createBadge(badgeForm.value)
+          // BadgeService expose createCustomBadge (POST /api/badges)
+          await badgeService.createCustomBadge(badgeForm.value)
         }
         
         await loadBadges()

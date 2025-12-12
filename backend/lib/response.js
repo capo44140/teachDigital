@@ -102,7 +102,12 @@ function handleError(error, defaultMessage = 'Erreur interne du serveur') {
   }
   
   // Gérer les erreurs de timeout
-  if (error.message && error.message.includes('timeout') || error.message && error.message.includes('Timeout')) {
+  const isTimeout =
+    error?.isTimeout === true ||
+    error?.code === 'GATEWAY_TIMEOUT' ||
+    ((error?.message && error.message.includes('timeout')) || (error?.message && error.message.includes('Timeout')));
+
+  if (isTimeout) {
     console.error('Erreur de timeout:', error.message);
     return errorResponse('La requête a pris trop de temps. Veuillez réessayer.', 504, null, 'GATEWAY_TIMEOUT');
   }
