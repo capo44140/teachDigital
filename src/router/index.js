@@ -34,6 +34,7 @@ const ProgressTracking = () => import(/* webpackChunkName: "tracking-components"
 const ParentProgressTracking = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentProgressTracking.vue')
 const ParentQuizManagement = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentQuizManagement.vue')
 const ParentActivityManagement = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentActivityManagement.vue')
+const LessonDetails = () => import(/* webpackChunkName: "tracking-components" */ '../components/LessonDetails.vue')
 const BadgeManager = () => import(/* webpackChunkName: "tracking-components" */ '../components/BadgeManager.vue')
 const BadgeAdminManager = () => import(/* webpackChunkName: "tracking-components" */ '../components/BadgeAdminManager.vue')
 
@@ -149,6 +150,13 @@ const routes = [
     path: '/parent-quiz-management',
     name: 'ParentQuizManagement',
     component: ParentQuizManagement,
+    meta: { requiresAdmin: true }
+  },
+  {
+    path: '/lesson-details/:lessonId',
+    name: 'LessonDetails',
+    component: LessonDetails,
+    props: true,
     meta: { requiresAdmin: true }
   },
   {

@@ -515,11 +515,15 @@ export default {
     },
     
     viewLesson(lesson) {
-      // Rediriger vers la page de détails de la leçon
+      // Rediriger vers la page de détails de la leçon (aperçu interrogation)
+      // IMPORTANT: conserver les query params (profile/unlocked) pour passer le guard admin
       this.$router.push({
         name: 'LessonDetails',
         params: { lessonId: lesson.id },
-        query: { childId: this.selectedChild.id }
+        query: {
+          ...this.$route.query,
+          childId: this.selectedChild.id
+        }
       })
     },
     
