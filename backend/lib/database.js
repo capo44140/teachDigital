@@ -1,10 +1,10 @@
 const { Pool } = require('pg');
-const dotenv = require('dotenv');
 const fs = require('fs');
 const path = require('path');
+const { loadBackendEnv } = require('./loadEnv.js');
 
-// Charger les variables d'environnement
-dotenv.config();
+// Charger les variables d'environnement (prod: `.env` uniquement, dev: `.env` puis `env`)
+loadBackendEnv();
 
 // Configuration de la connexion PostgreSQL
 // Supporte deux méthodes : variables séparées ou DATABASE_URL

@@ -12,6 +12,13 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Normaliser les variables d'environnement (évite les \r des fichiers .env en CRLF)
+const envStr = (key, fallback = undefined) => {
+  const val = process.env[key];
+  if (val === undefined || val === null || val === '') return fallback;
+  return typeof val === 'string' ? val.trim() : val;
+};
+
 // Checks de configuration (stabilité prod)
 if (!process.env.JWT_SECRET || String(process.env.JWT_SECRET).length < 16) {
   logger.error('Configuration invalide: JWT_SECRET manquant ou trop court', {
@@ -23,8 +30,8 @@ if (!process.env.JWT_SECRET || String(process.env.JWT_SECRET).length < 16) {
 logger.info('Configuration runtime', {
   nodeEnv: process.env.NODE_ENV || 'production',
   port: PORT,
-  logFormat: process.env.LOG_FORMAT || 'text',
-  logDebug: process.env.LOG_DEBUG === 'true',
+  logFormat: envStr('LOG_FORMAT', 'text'),
+  logDebug: envStr('LOG_DEBUG') === 'true',
   rateLimit: {
     loginWindowMs: parseInt(process.env.API_RATE_LIMIT_LOGIN_WINDOW_MS || '60000', 10),
     loginMax: parseInt(process.env.API_RATE_LIMIT_LOGIN_MAX || '20', 10),

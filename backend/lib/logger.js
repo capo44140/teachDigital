@@ -5,40 +5,86 @@
 
 const fs = require('fs');
 const path = require('path');
+const { loadBackendEnv } = require('./loadEnv.js');
+
+// Charger l'environnement tôt (prod: `.env` uniquement, dev: `.env` puis `env`)
+loadBackendEnv();
 
 class Logger {
   constructor() {
+    // Normaliser les variables d'environnement (évite les \r des fichiers .env en CRLF)
+    const envStr = (key, fallback = undefined) => {
+      const val = process.env[key];
+      if (val === undefined || val === null || val === '') return fallback;
+      return typeof val === 'string' ? val.trim() : val;
+    };
+
+    const envInt = (key, fallback) => {
+      const raw = envStr(key, undefined);
+      const n = raw != null ? parseInt(String(raw), 10) : NaN;
+      return Number.isFinite(n) ? n : fallback;
+    };
+
     // Chemin du dossier logs - utiliser /logs en Docker par défaut
     // En développement, utiliser le dossier logs/ local
     // En Docker, utiliser un volume monté à /logs
-    const isDocker = process.env.DOCKER_ENV === 'true' || process.env.NODE_ENV === 'production';
-    this.logsDir = process.env.LOGS_DIR || (isDocker ? '/logs' : path.join(__dirname, '..', 'logs'));
+    const isDocker = envStr('DOCKER_ENV') === 'true' || envStr('NODE_ENV') === 'production';
+    const defaultLogsDir = isDocker ? '/logs' : path.join(__dirname, '..', 'logs');
+    this.logsDir = envStr('LOGS_DIR', defaultLogsDir);
+
+    // En dev local, éviter /logs (réservé au volume Docker) qui échoue souvent en permissions
+    if (!isDocker && this.logsDir === '/logs') {
+      this.logsDir = defaultLogsDir;
+    }
     
     // Créer le dossier logs s'il n'existe pas
-    if (!fs.existsSync(this.logsDir)) {
+    const ensureLogsDir = (dir) => {
+      if (!dir) return false;
       try {
-        fs.mkdirSync(this.logsDir, { recursive: true });
-        console.log(`📁 Dossier logs créé: ${this.logsDir}`);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+          console.log(`📁 Dossier logs créé: ${dir}`);
+        }
+        return true;
       } catch (error) {
         console.error('❌ Erreur lors de la création du dossier logs:', error);
-        // Continuer sans écriture fichier si on ne peut pas créer le dossier
-        this.logsDir = null;
+        return false;
+      }
+    };
+
+    // 1) Essayer le dossier configuré
+    let logsOk = ensureLogsDir(this.logsDir);
+
+    // 2) En dev, fallback automatique sur un dossier local si /logs n'est pas accessible
+    if (!logsOk && !isDocker) {
+      const fallbackDir = path.join(__dirname, '..', 'logs');
+      if (fallbackDir !== this.logsDir) {
+        logsOk = ensureLogsDir(fallbackDir);
+        if (logsOk) {
+          this.logsDir = fallbackDir;
+          console.warn(`⚠️  LOGS_DIR non accessible, fallback sur: ${this.logsDir}`);
+        }
       }
     }
 
+    // 3) Si on ne peut toujours pas, désactiver l'écriture fichier
+    if (!logsOk) {
+      this.logsDir = null;
+    }
+
     // Configuration de la rotation des logs
-    this.maxFileSize = parseInt(process.env.LOG_MAX_SIZE) || 10 * 1024 * 1024; // 10MB par défaut
-    this.maxFiles = parseInt(process.env.LOG_MAX_FILES) || 5; // 5 fichiers par défaut
+    this.maxFileSize = envInt('LOG_MAX_SIZE', 10 * 1024 * 1024); // 10MB par défaut
+    this.maxFiles = envInt('LOG_MAX_FILES', 5); // 5 fichiers par défaut
     
     // Activer/désactiver l'écriture fichier
-    this.enableFileLogging = process.env.LOG_ENABLE_FILE !== 'false' && this.logsDir !== null;
+    this.enableFileLogging = envStr('LOG_ENABLE_FILE') !== 'false' && this.logsDir !== null;
     
     // Activer/désactiver les logs détaillés
-    this.enableDebug = process.env.LOG_DEBUG === 'true';
+    this.enableDebug = envStr('LOG_DEBUG') === 'true';
 
     // Format de log: "text" (par défaut) ou "json"
     // En production, "json" est recommandé (facile à parser / agréger)
-    this.logFormat = (process.env.LOG_FORMAT || 'text').toLowerCase();
+    this.logFormat = String(envStr('LOG_FORMAT', 'text')).toLowerCase();
     
     // Exposer les propriétés publiques
     this.logsDirectory = this.logsDir;
