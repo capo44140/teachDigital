@@ -15,6 +15,7 @@ const { analyzeWithAI } = require('./services/aiProviders/index.js');
 const { generateQuizFromAnalysis, generateQuizFromMultipleAnalyses, generateQuizFromTextWithAI } = require('./services/quizGenerator.js');
 const { parseFormData, bufferToBase64 } = require('./middleware/formDataParser.js');
 const { validateApiKey, hasAtLeastOneValidKey } = require('./utils/validation.js');
+const { validateAndNormalizeQuiz } = require('./utils/quizFormat.js');
 
 // ==================== HANDLER PRINCIPAL ====================
 
@@ -124,8 +125,16 @@ async function handleGenerateQuizFromImage(req, res) {
         // Analyser l'image puis générer le quiz
         const analysis = await analyzeImage(imageBase64);
         const quiz = await generateQuizFromAnalysis(analysis, childProfile, questionCount);
+        const validated = validateAndNormalizeQuiz(quiz, { expectedQuestionCount: Number(questionCount) });
+        if (!validated.ok) {
+            return res.status(422).json(createErrorResponse(
+                'Quiz généré invalide (format attendu: title, questions[question, options(4), correctAnswer(0..3)]).',
+                'INVALID_QUIZ_FORMAT',
+                { errors: validated.errors, warnings: validated.warnings }
+            ));
+        }
 
-        return res.status(200).json(createResponse('Quiz généré avec succès', { quiz }));
+        return res.status(200).json(createResponse('Quiz généré avec succès', { quiz: validated.quiz, warnings: validated.warnings }));
     } catch (error) {
         console.error('Erreur lors de la génération du quiz depuis image:', error);
         return res.status(500).json(createErrorResponse('Erreur lors de la génération du quiz: ' + error.message));
@@ -318,9 +327,17 @@ async function handleGenerateQuizFromDocuments(req, res) {
 
         // Générer le quiz basé sur toutes les analyses
         const quiz = await generateQuizFromMultipleAnalyses(analyses, childProfile, questionCount);
+        const validated = validateAndNormalizeQuiz(quiz, { expectedQuestionCount: Number(questionCount) });
+        if (!validated.ok) {
+            return res.status(422).json(createErrorResponse(
+                'Quiz généré invalide (format attendu: title, questions[question, options(4), correctAnswer(0..3)]).',
+                'INVALID_QUIZ_FORMAT',
+                { errors: validated.errors, warnings: validated.warnings }
+            ));
+        }
 
         console.log('✅ Quiz généré avec succès');
-        return res.status(200).json(createResponse('Quiz généré avec succès', { quiz }));
+        return res.status(200).json(createResponse('Quiz généré avec succès', { quiz: validated.quiz, warnings: validated.warnings }));
     } catch (error) {
         console.error('❌ Erreur lors de la génération du quiz depuis documents:', {
             message: error.message,
@@ -551,9 +568,17 @@ async function handleGenerateQuizFromAnalyses(req, res) {
 
         // Générer le quiz basé sur toutes les analyses
         const quiz = await generateQuizFromMultipleAnalyses(analyses, childProfile, questionCount);
+        const validated = validateAndNormalizeQuiz(quiz, { expectedQuestionCount: Number(questionCount) });
+        if (!validated.ok) {
+            return res.status(422).json(createErrorResponse(
+                'Quiz généré invalide (format attendu: title, questions[question, options(4), correctAnswer(0..3)]).',
+                'INVALID_QUIZ_FORMAT',
+                { errors: validated.errors, warnings: validated.warnings }
+            ));
+        }
 
         console.log('✅ Quiz généré avec succès');
-        return res.status(200).json(createResponse('Quiz généré avec succès', { quiz }));
+        return res.status(200).json(createResponse('Quiz généré avec succès', { quiz: validated.quiz, warnings: validated.warnings }));
     } catch (error) {
         console.error('❌ Erreur lors de la génération du quiz depuis analyses:', {
             message: error.message,
@@ -586,8 +611,17 @@ async function handleGenerateQuizFromText(req, res) {
         }
 
         const quiz = await generateQuizFromTextWithAI(text, childProfile, options);
+        const expected = Number(options?.questionCount || 5);
+        const validated = validateAndNormalizeQuiz(quiz, { expectedQuestionCount: expected });
+        if (!validated.ok) {
+            return res.status(422).json(createErrorResponse(
+                'Quiz généré invalide (format attendu: title, questions[question, options(4), correctAnswer(0..3)]).',
+                'INVALID_QUIZ_FORMAT',
+                { errors: validated.errors, warnings: validated.warnings }
+            ));
+        }
 
-        return res.status(200).json(createResponse('Quiz généré avec succès', { quiz }));
+        return res.status(200).json(createResponse('Quiz généré avec succès', { quiz: validated.quiz, warnings: validated.warnings }));
     } catch (error) {
         console.error('Erreur lors de la génération du quiz depuis texte:', error);
 
