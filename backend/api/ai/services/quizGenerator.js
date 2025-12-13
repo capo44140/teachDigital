@@ -38,6 +38,18 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
         keyPoints: []
     };
 
+    const normalizeText = (text) => String(text || '')
+      .replace(/\r\n/g, '\n')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    const clip = (text, maxChars) => {
+      const t = normalizeText(text);
+      if (!t) return '';
+      return t.length > maxChars ? (t.slice(0, maxChars) + '…') : t;
+    };
+
     // Agréger les concepts et points clés de toutes les analyses
     for (const item of analyses) {
         const analysis = item.analysis;
@@ -52,6 +64,16 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
         }
         if (analysis.informations_importantes) {
             combinedAnalysis.keyPoints.push(...analysis.informations_importantes);
+        }
+
+        // IMPORTANT: utiliser aussi le texte OCR (source brute) pour la génération du quiz.
+        // Cela aide le LLM à garder les détails exacts présents dans le document.
+        if (item.extractedText) {
+            const name = item.fileName || item.type || 'document';
+            const snippet = clip(item.extractedText, 2000);
+            if (snippet) {
+                combinedAnalysis.keyPoints.push(`Texte OCR (${name}): ${snippet}`);
+            }
         }
     }
 

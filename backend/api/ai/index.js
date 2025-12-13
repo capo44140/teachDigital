@@ -563,7 +563,9 @@ async function handleGenerateQuizFromAnalyses(req, res) {
         const analyses = extractions.map(extraction => ({
             type: extraction.type,
             fileName: extraction.fileName,
-            analysis: extraction.analysis
+            analysis: extraction.analysis,
+            // Utiliser le texte OCR (source) pour enrichir la génération du quiz
+            extractedText: extraction.extractedText || extraction.text || extraction.ocrText || null
         }));
 
         // Générer le quiz basé sur toutes les analyses
