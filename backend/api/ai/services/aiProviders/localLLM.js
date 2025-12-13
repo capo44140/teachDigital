@@ -79,15 +79,47 @@ ${extractedText}`
                 messages: [
                     {
                         role: 'system',
-                        content: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. Créez des questions claires, éducatives et adaptées au niveau de l'enfant. L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}. Générez exactement ${questionCount} questions avec 4 options chacune.`
+                        content: `Tu es un enseignant expert qui crée des interrogations adaptées à l'âge des enfants.
+Objectif: produire un JSON STRICT pour TeachDigital.
+
+Contraintes OBLIGATOIRES:
+- Réponds UNIQUEMENT avec du JSON valide (sans backticks, sans markdown, sans texte avant/après).
+- Structure EXACTE:
+  {
+    "title": string,
+    "description": string,
+    "questions": [
+      {
+        "question": string,
+        "options": [string, string, string, string],
+        "correctAnswer": number, // index 0..3 (OBLIGATOIREMENT un entier)
+        "explanation": string
+      }
+    ]
+  }
+- "questions" doit contenir EXACTEMENT ${questionCount} éléments.
+- "options" doit contenir EXACTEMENT 4 chaînes non vides (idéalement uniques).
+- "correctAnswer" doit être un ENTIER 0..3 (PAS une lettre A-D, PAS le texte d'une option, PAS 1..4).
+- Pas de virgules finales, pas de NaN, pas de commentaires.
+
+Contexte enfant: âge=${childProfile.age || 8}, niveau="${childProfile.level || 'primaire'}".`
                     },
                     {
                         role: 'user',
-                        content: `Basé sur cette analyse de leçon: ${JSON.stringify(analysis)}, générez un quiz de ${questionCount} questions avec 4 options chacune. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
+                        content: `À partir de l'analyse suivante, génère un quiz.
+
+Analyse JSON:
+${JSON.stringify(analysis)}
+
+Rappel du format TeachDigital (STRICT):
+{"title":"...","description":"...","questions":[{"question":"...","options":["...","...","...","..."],"correctAnswer":0,"explanation":"..."}]}
+
+Exemple MINIMAL (ne pas recopier tel quel, c'est juste un exemple de structure):
+{"title":"Exemple","description":"...","questions":[{"question":"...","options":["A","B","C","D"],"correctAnswer":2,"explanation":"..."}]}`
                     }
                 ],
                 max_tokens: Math.max(1500, questionCount * 300),
-                temperature: DEFAULT_TEMPERATURE
+                temperature: 0.2
             })
         }, Number.isFinite(this.timeoutMs) ? this.timeoutMs : undefined);
 
