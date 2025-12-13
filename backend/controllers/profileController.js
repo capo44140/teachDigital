@@ -488,6 +488,138 @@ async function handleProfileStats(req, res) {
     }
 }
 
+// Handler des statistiques d'apprentissage d'un profil (leçons/quiz)
+// Utilisé par l'admin parent pour voir les interrogations éligibles et le compteur de quiz par enfant.
+async function handleProfileLearningStats(req, res) {
+    try {
+        if (req.method !== 'GET') {
+            res.status(405).json(createErrorResponse('Méthode non autorisée', 'METHOD_NOT_ALLOWED'));
+            return;
+        }
+
+        const id = req.params.id;
+        const profileIdNum = parseInt(id, 10);
+        if (!id || isNaN(profileIdNum)) {
+            res.status(400).json(createErrorResponse('ID de profil invalide', 'BAD_REQUEST'));
+            return;
+        }
+
+        const user = authenticateToken(req);
+        // Admin: accès à tous; sinon accès uniquement à son propre profil
+        if (!user?.isAdmin && user?.profileId !== profileIdNum) {
+            res.status(403).json(createErrorResponse('Accès refusé', 'FORBIDDEN'));
+            return;
+        }
+
+        const [totalLessonsRes, quizzesCountRes, avgScoreRes, lessonsRes, quizHistoryRes] = await Promise.all([
+            withQueryTimeout(
+                sql`SELECT COUNT(*)::int as total_lessons FROM lessons WHERE is_published = true`,
+                TIMEOUTS.STANDARD,
+                'stats (total lessons)'
+            ),
+            withQueryTimeout(
+                sql`SELECT COUNT(*)::int as total_quizzes_completed FROM quiz_results WHERE profile_id = ${profileIdNum}`,
+                TIMEOUTS.STANDARD,
+                'stats (total quizzes)'
+            ),
+            withQueryTimeout(
+                sql`SELECT COALESCE(AVG(percentage), 0)::float as average_score FROM quiz_results WHERE profile_id = ${profileIdNum}`,
+                TIMEOUTS.STANDARD,
+                'stats (average score)'
+            ),
+            withQueryTimeout(
+                sql`
+                    SELECT 
+                        l.id, l.title, l.description, l.subject, l.level,
+                        l.image_filename, l.is_published, l.created_at, l.updated_at,
+                        (COUNT(qr.id) > 0) as quiz_completed,
+                        COALESCE(MAX(qr.percentage), 0)::float as best_score,
+                        COUNT(qr.id)::int as total_attempts,
+                        MAX(qr.completed_at) as last_attempt
+                    FROM lessons l
+                    LEFT JOIN quiz_results qr
+                        ON qr.lesson_id = l.id
+                        AND qr.profile_id = ${profileIdNum}
+                    WHERE l.is_published = true
+                    GROUP BY l.id
+                    ORDER BY l.created_at DESC
+                    LIMIT 200
+                `,
+                TIMEOUTS.LONG,
+                'stats (lessons with completion)'
+            ),
+            withQueryTimeout(
+                sql`
+                    SELECT
+                        qr.id,
+                        qr.lesson_id,
+                        l.title as lesson_title,
+                        qr.score,
+                        qr.total_questions,
+                        qr.percentage,
+                        qr.completed_at
+                    FROM quiz_results qr
+                    JOIN lessons l ON l.id = qr.lesson_id
+                    WHERE qr.profile_id = ${profileIdNum}
+                    ORDER BY qr.completed_at DESC
+                    LIMIT 20
+                `,
+                TIMEOUTS.STANDARD,
+                'stats (quiz history)'
+            )
+        ]);
+
+        const stats = {
+            total_lessons: totalLessonsRes?.[0]?.total_lessons ?? 0,
+            total_quizzes_completed: quizzesCountRes?.[0]?.total_quizzes_completed ?? 0,
+            average_score: avgScoreRes?.[0]?.average_score ?? 0
+        };
+
+        // Format attendu par le frontend (camelCase + flags UI)
+        const detailedStats = {
+            totalLessons: stats.total_lessons,
+            totalQuizzes: stats.total_quizzes_completed,
+            averageScore: stats.average_score,
+            lessons: (lessonsRes || []).map(l => ({
+                id: l.id,
+                title: l.title,
+                description: l.description,
+                subject: l.subject,
+                level: l.level,
+                image_filename: l.image_filename,
+                is_published: l.is_published,
+                created_at: l.created_at,
+                updated_at: l.updated_at,
+                quizCompleted: !!l.quiz_completed,
+                bestScore: Number(l.best_score) || 0,
+                totalAttempts: Number(l.total_attempts) || 0,
+                lastAttempt: l.last_attempt
+            })),
+            quizHistory: (quizHistoryRes || []).map(q => ({
+                id: q.id,
+                lessonId: q.lesson_id,
+                lessonTitle: q.lesson_title,
+                correctAnswers: q.score,
+                totalQuestions: q.total_questions,
+                score: q.percentage,
+                completedAt: q.completed_at
+            }))
+        };
+
+        res.status(200).json({
+            success: true,
+            message: 'Statistiques d\'apprentissage récupérées avec succès',
+            data: {
+                stats,
+                detailedStats
+            }
+        });
+    } catch (error) {
+        const errorResponse = handleError(error, 'Erreur lors de la récupération des statistiques d\'apprentissage');
+        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+    }
+}
+
 // Handler des codes PIN (route directe)
 async function handlePin(req, res) {
     try {
@@ -678,5 +810,6 @@ module.exports = {
     handleProfile,
     handleProfileStats,
     handleProfilePin,
-    handlePin
+    handlePin,
+    handleProfileLearningStats
 };

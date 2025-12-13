@@ -3,8 +3,8 @@ const express = require('express');
 const router = express.Router();
 
 const { handleLogin, handleLogout } = require('../controllers/authController.js');
-const { handleProfiles, handleProfile, handleProfileStats, handleProfilePin, handlePin } = require('../controllers/profileController.js');
-const { handleLessons, handleLesson, handleQuizResults } = require('../controllers/lessonController.js');
+const { handleProfiles, handleProfile, handleProfileStats, handleProfilePin, handlePin, handleProfileLearningStats } = require('../controllers/profileController.js');
+const { handleLessons, handleLesson, handleQuizResults, handleGlobalLessonStats } = require('../controllers/lessonController.js');
 const { handleNotifications, handleNotification } = require('../controllers/notificationController.js');
 const { handleActivities } = require('../controllers/activityController.js');
 const { handleYoutubeVideos } = require('../controllers/youtubeController.js');
@@ -43,6 +43,8 @@ router.post('/auth/logout', handleLogout);
 
 // Routes des profils
 router.get('/profiles/stats', handleProfileStats);
+router.get('/profiles/:id/stats', handleProfileLearningStats);
+router.get('/profiles/:id/learning-stats', handleProfileLearningStats);
 router.post('/profiles/:id/pin', pinRateLimiter, handlePin);
 router.get('/profiles', handleProfiles);
 router.get('/profiles/:id', handleProfile);
@@ -58,6 +60,7 @@ router.delete('/profiles/:id', handleProfile);
 // Routes des leçons
 router.get('/lessons', handleLessons);
 router.post('/lessons', handleLessons); // Si handleLessons gère aussi POST
+router.get('/lessons/stats/global', handleGlobalLessonStats);
 router.all('/lessons/:id/quiz-results', handleQuizResults);
 router.all('/lessons/:id', handleLesson);
 

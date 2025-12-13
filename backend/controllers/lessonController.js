@@ -408,8 +408,60 @@ async function handleQuizResults(req, res) {
     }
 }
 
+// Statistiques globales (parent/admin)
+async function handleGlobalLessonStats(req, res) {
+    try {
+        if (req.method !== 'GET') {
+            res.status(405).json({ success: false, message: 'Méthode non autorisée' });
+            return;
+        }
+
+        // Authentification requise (stats globales)
+        const user = authenticateToken(req);
+        if (!user?.isAdmin) {
+            res.status(403).json({ success: false, message: 'Accès refusé' });
+            return;
+        }
+
+        const [lessonsCount, quizzesCount, avgScore] = await Promise.all([
+            withQueryTimeout(
+                sql`SELECT COUNT(*)::int as total_lessons FROM lessons WHERE is_published = true`,
+                TIMEOUTS.STANDARD,
+                'statistiques globales (total lessons)'
+            ),
+            withQueryTimeout(
+                sql`SELECT COUNT(*)::int as total_quizzes_completed FROM quiz_results`,
+                TIMEOUTS.STANDARD,
+                'statistiques globales (total quizzes)'
+            ),
+            withQueryTimeout(
+                sql`SELECT COALESCE(AVG(percentage), 0)::float as average_score FROM quiz_results`,
+                TIMEOUTS.STANDARD,
+                'statistiques globales (average score)'
+            )
+        ]);
+
+        const stats = {
+            total_lessons: lessonsCount?.[0]?.total_lessons ?? 0,
+            total_quizzes_completed: quizzesCount?.[0]?.total_quizzes_completed ?? 0,
+            average_score: avgScore?.[0]?.average_score ?? 0
+        };
+
+        res.status(200).json({
+            success: true,
+            message: 'Statistiques globales récupérées avec succès',
+            data: { stats }
+        });
+    } catch (error) {
+        console.error('❌ Erreur dans handleGlobalLessonStats:', error);
+        const errorResponse = handleError(error, 'Erreur lors de la récupération des statistiques globales');
+        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+    }
+}
+
 module.exports = {
     handleLessons,
     handleLesson,
-    handleQuizResults
+    handleQuizResults,
+    handleGlobalLessonStats
 };

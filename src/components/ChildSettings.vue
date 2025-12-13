@@ -491,47 +491,7 @@ export default {
 </script>
 
 <style scoped>
-/* Liquid Glass Design Styles */
-.glass-card-dashboard {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  padding: 2rem;
-}
-
-.glass-card-dashboard:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
-}
-
-/* Background blob animations */
-@keyframes blob {
-  0%, 100% { 
-    transform: translate(0, 0) scale(1); 
-  }
-  33% { 
-    transform: translate(30px, -50px) scale(1.1); 
-  }
-  66% { 
-    transform: translate(-20px, 20px) scale(0.9); 
-  }
-}
-
-.animate-blob {
-  animation: blob 7s infinite;
-}
-
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-
-.animation-delay-4000 {
-  animation-delay: 4s;
-}
+/* NOTE: .glass-card-dashboard / .animate-blob sont centralisés (src/styles/liquid-glass.css) */
 
 /* Button styles */
 button {
@@ -616,11 +576,6 @@ button:active {
 
 /* Responsive design */
 @media (max-width: 768px) {
-  .glass-card-dashboard {
-    padding: 1.5rem;
-    border-radius: 1.5rem;
-  }
-  
   .max-w-4xl {
     max-width: 100%;
     padding: 0 1rem;
@@ -633,11 +588,6 @@ button:active {
 }
 
 @media (max-width: 480px) {
-  .glass-card-dashboard {
-    padding: 1rem;
-    border-radius: 1rem;
-  }
-
   .grid-cols-3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.5rem;

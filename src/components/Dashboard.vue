@@ -523,19 +523,6 @@ export default {
 </script>
 
 <style scoped>
-/* Animations */
-@keyframes blob {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
-}
-
 @keyframes float {
   0%, 100% {
     transform: translateY(0px);
@@ -545,47 +532,8 @@ export default {
   }
 }
 
-.animate-blob {
-  animation: blob 7s infinite;
-}
-
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-
-.animation-delay-4000 {
-  animation-delay: 4s;
-}
-
-/* Glass Card Dashboard */
-.glass-card-dashboard {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1.5rem;
-  border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-.glass-card-dashboard:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
-  transform: translateY(-4px);
-}
-
 /* Responsive */
 @media (max-width: 640px) {
-  .glass-card-dashboard {
-    padding: 1rem;
-    border-radius: 1rem;
-  }
-
   h2 {
     font-size: 2rem;
   }
@@ -596,9 +544,6 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .glass-card-dashboard {
-    padding: 1.25rem;
-    border-radius: 1.25rem;
-  }
+  /* Styles spécifiques du dashboard uniquement */
 }
 </style>

@@ -177,9 +177,11 @@ export default defineConfig(({ mode }) => {
       // Proxy pour contourner CORS en développement
       proxy: {
         '/api': {
-          target: 'https://teach-digital.lespoires.ovh:3002',
+          // En dev local, on cible le backend local par défaut.
+          // Override possible via VITE_DEV_API_TARGET (ex: https://teach-digital.lespoires.ovh:3002)
+          target: env.VITE_DEV_API_TARGET || 'http://127.0.0.1:3001',
           changeOrigin: true,
-          secure: true,
+          secure: false,
           rewrite: (path) => path // Garder le chemin /api tel quel
         }
       }

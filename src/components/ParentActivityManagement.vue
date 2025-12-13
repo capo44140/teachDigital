@@ -30,7 +30,7 @@
             <button 
               :disabled="isLoading"
               class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
-              title="Actualiser"
+              title="Actualiser les données"
               @click="refreshData"
             >
               <svg class="w-5 h-5" :class="{ 'animate-spin': isLoading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -167,36 +167,58 @@
       </div>
 
       <!-- Liste des activités -->
-      <div class="bg-white rounded-xl shadow-lg p-6">
-        <div class="flex items-center justify-between mb-6">
-          <h3 class="text-xl font-semibold text-gray-800">
-            Activités ({{ filteredActivities.length }})
+      <div class="glass-card-dashboard">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+          <h3 class="text-xl font-bold text-white">
+            Activités <span class="text-white/60 font-medium">({{ filteredActivities.length }})</span>
           </h3>
-          <div class="flex items-center space-x-2">
-            <span class="text-sm text-gray-500">Trier par:</span>
-            <select 
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-white/60">Trier par :</span>
+            <select
               v-model="sortBy"
-              class="px-3 py-1 border border-gray-300 rounded text-sm"
+              class="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
             >
-              <option value="created_at">Date de création</option>
-              <option value="due_date">Date d'échéance</option>
-              <option value="title">Titre</option>
-              <option value="status">Statut</option>
+              <option value="created_at" class="bg-slate-900">Date de création</option>
+              <option value="due_date" class="bg-slate-900">Date d'échéance</option>
+              <option value="title" class="bg-slate-900">Titre</option>
+              <option value="status" class="bg-slate-900">Statut</option>
             </select>
           </div>
         </div>
 
+        <!-- État vide -->
+        <div v-if="filteredActivities.length === 0" class="text-center py-12">
+          <div class="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+          </div>
+          <h4 class="text-lg font-bold text-white mb-2">Aucune activité trouvée</h4>
+          <p class="text-white/60 mb-4">
+            {{ searchQuery || selectedChild || selectedStatus 
+              ? 'Aucune activité ne correspond à vos critères de recherche.' 
+              : 'Commencez par créer votre première activité pour vos enfants.' 
+            }}
+          </p>
+          <button 
+            class="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:shadow-lg hover:shadow-green-500/50 transition-all"
+            @click="showCreateActivityModal = true"
+          >
+            Créer une activité
+          </button>
+        </div>
+
         <!-- Vue grille -->
-        <div v-if="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div v-else-if="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div 
             v-for="activity in filteredActivities" 
             :key="activity.id"
-            class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+            class="border border-white/20 rounded-2xl p-6 hover:bg-white/10 transition-all"
           >
             <div class="flex items-start justify-between mb-4">
               <div class="flex-1">
-                <h4 class="font-semibold text-gray-800 mb-2">{{ activity.title }}</h4>
-                <p class="text-sm text-gray-600 mb-3">{{ activity.description }}</p>
+                <h4 class="font-bold text-white mb-2">{{ activity.title }}</h4>
+                <p class="text-sm text-white/70 mb-3">{{ activity.description }}</p>
                 <div class="flex items-center space-x-2 mb-3">
                   <span 
                     :class="[
@@ -206,14 +228,14 @@
                   >
                     {{ getStatusLabel(activity.status) }}
                   </span>
-                  <span class="text-xs text-gray-500">
+                  <span class="text-xs text-white/60">
                     {{ getChildName(activity.child_id) }}
                   </span>
                 </div>
               </div>
               <div class="flex space-x-1">
                 <button 
-                  class="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                  class="p-2 text-white/60 hover:text-white border border-white/15 hover:border-white/30 rounded-xl hover:bg-white/10 transition-all"
                   title="Modifier"
                   @click="editActivity(activity)"
                 >
@@ -222,7 +244,7 @@
                   </svg>
                 </button>
                 <button 
-                  class="p-1 text-red-600 hover:bg-red-50 rounded"
+                  class="p-2 text-red-300/80 hover:text-red-200 border border-red-400/20 hover:border-red-300/40 rounded-xl hover:bg-red-400/10 transition-all"
                   title="Supprimer"
                   @click="deleteActivity(activity)"
                 >
@@ -235,17 +257,17 @@
             
             <div class="space-y-2">
               <div class="flex items-center justify-between text-sm">
-                <span class="text-gray-500">Créée le:</span>
-                <span class="font-medium">{{ formatDate(activity.created_at) }}</span>
+                <span class="text-white/60">Créée le :</span>
+                <span class="font-medium text-white">{{ formatDate(activity.created_at) }}</span>
               </div>
               <div v-if="activity.due_date" class="flex items-center justify-between text-sm">
-                <span class="text-gray-500">Échéance:</span>
+                <span class="text-white/60">Échéance :</span>
                 <span class="font-medium" :class="getDueDateClass(activity.due_date)">
                   {{ formatDate(activity.due_date) }}
                 </span>
               </div>
               <div v-if="activity.priority" class="flex items-center justify-between text-sm">
-                <span class="text-gray-500">Priorité:</span>
+                <span class="text-white/60">Priorité :</span>
                 <span 
                   :class="[
                     'px-2 py-1 rounded text-xs font-medium',
@@ -257,21 +279,21 @@
               </div>
             </div>
 
-            <div class="mt-4 pt-4 border-t border-gray-200">
+            <div class="mt-4 pt-4 border-t border-white/15">
               <div class="flex items-center justify-between">
                 <button 
                   :class="[
-                    'px-3 py-1 rounded text-sm font-medium transition-colors',
+                    'px-3 py-2 rounded-xl text-sm font-medium transition-all border',
                     activity.status === 'active' 
-                      ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' 
-                      : 'bg-green-100 text-green-800 hover:bg-green-200'
+                      ? 'bg-yellow-500/20 text-yellow-200 border-yellow-400/20 hover:bg-yellow-500/30' 
+                      : 'bg-green-500/20 text-green-200 border-green-400/20 hover:bg-green-500/30'
                   ]"
                   @click="toggleActivityStatus(activity)"
                 >
                   {{ activity.status === 'active' ? 'Mettre en pause' : 'Activer' }}
                 </button>
                 <button 
-                  class="px-3 py-1 bg-blue-100 text-blue-800 rounded text-sm font-medium hover:bg-blue-200 transition-colors"
+                  class="px-3 py-2 bg-white/10 text-white rounded-xl text-sm font-medium border border-white/20 hover:bg-white/15 hover:border-white/30 transition-all"
                   @click="viewActivityDetails(activity)"
                 >
                   Voir détails
@@ -286,17 +308,17 @@
           <div 
             v-for="activity in filteredActivities" 
             :key="activity.id"
-            class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+            class="flex items-center justify-between p-4 border border-white/20 rounded-2xl hover:bg-white/10 transition-all"
           >
             <div class="flex items-center space-x-4 flex-1">
-              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/15">
+                <svg class="w-5 h-5 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                 </svg>
               </div>
               <div class="flex-1">
                 <div class="flex items-center space-x-3 mb-1">
-                  <h4 class="font-semibold text-gray-800">{{ activity.title }}</h4>
+                  <h4 class="font-semibold text-white">{{ activity.title }}</h4>
                   <span 
                     :class="[
                       'px-2 py-1 rounded-full text-xs font-medium',
@@ -306,8 +328,8 @@
                     {{ getStatusLabel(activity.status) }}
                   </span>
                 </div>
-                <p class="text-sm text-gray-600 mb-2">{{ activity.description }}</p>
-                <div class="flex items-center space-x-4 text-sm text-gray-500">
+                <p class="text-sm text-white/70 mb-2">{{ activity.description }}</p>
+                <div class="flex items-center space-x-4 text-sm text-white/60">
                   <span>{{ getChildName(activity.child_id) }}</span>
                   <span>•</span>
                   <span>Créée le {{ formatDate(activity.created_at) }}</span>
@@ -321,17 +343,17 @@
             <div class="flex items-center space-x-2">
               <button 
                 :class="[
-                  'px-3 py-1 rounded text-sm font-medium transition-colors',
+                  'px-3 py-2 rounded-xl text-sm font-medium transition-all border',
                   activity.status === 'active' 
-                    ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' 
-                    : 'bg-green-100 text-green-800 hover:bg-green-200'
+                    ? 'bg-yellow-500/20 text-yellow-200 border-yellow-400/20 hover:bg-yellow-500/30' 
+                    : 'bg-green-500/20 text-green-200 border-green-400/20 hover:bg-green-500/30'
                 ]"
                 @click="toggleActivityStatus(activity)"
               >
                 {{ activity.status === 'active' ? 'Pause' : 'Activer' }}
               </button>
               <button 
-                class="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                class="p-2 text-white/60 hover:text-white border border-white/15 hover:border-white/30 rounded-xl hover:bg-white/10 transition-all"
                 title="Modifier"
                 @click="editActivity(activity)"
               >
@@ -340,7 +362,7 @@
                 </svg>
               </button>
               <button 
-                class="p-2 text-red-600 hover:bg-red-50 rounded"
+                class="p-2 text-red-300/80 hover:text-red-200 border border-red-400/20 hover:border-red-300/40 rounded-xl hover:bg-red-400/10 transition-all"
                 title="Supprimer"
                 @click="deleteActivity(activity)"
               >
@@ -351,41 +373,19 @@
             </div>
           </div>
         </div>
-
-        <!-- État vide -->
-        <div v-if="filteredActivities.length === 0" class="text-center py-12">
-          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-            </svg>
-          </div>
-          <h4 class="text-lg font-medium text-gray-800 mb-2">Aucune activité trouvée</h4>
-          <p class="text-gray-500 mb-4">
-            {{ searchQuery || selectedChild || selectedStatus 
-              ? 'Aucune activité ne correspond à vos critères de recherche.' 
-              : 'Commencez par créer votre première activité pour vos enfants.' 
-            }}
-          </p>
-          <button 
-            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            @click="showCreateActivityModal = true"
-          >
-            Créer une activité
-          </button>
-        </div>
       </div>
     </main>
 
     <!-- Modal de création/modification d'activité -->
-    <div v-if="showCreateActivityModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="p-6 border-b border-gray-200">
+    <div v-if="showCreateActivityModal" class="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
+      <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-white/10 backdrop-blur-2xl shadow-2xl">
+        <div class="p-6 border-b border-white/10">
           <div class="flex items-center justify-between">
-            <h3 class="text-xl font-semibold text-gray-800">
+            <h3 class="text-xl font-bold text-white">
               {{ editingActivity ? 'Modifier l\'activité' : 'Nouvelle activité' }}
             </h3>
             <button 
-              class="p-2 text-gray-400 hover:text-gray-600 rounded-lg"
+              class="p-2 text-white/60 hover:text-white border border-white/15 hover:border-white/30 rounded-xl hover:bg-white/10 transition-all"
               @click="closeModal"
             >
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -397,74 +397,74 @@
         
         <form class="p-6 space-y-6" @submit.prevent="saveActivity">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Titre de l'activité</label>
+            <label class="block text-sm font-medium text-white/70 mb-2">Titre de l'activité</label>
             <input 
               v-model="activityForm.title"
               type="text" 
               required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
               placeholder="Ex: Devoirs de mathématiques"
             >
           </div>
           
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <label class="block text-sm font-medium text-white/70 mb-2">Description</label>
             <textarea 
               v-model="activityForm.description"
               rows="3"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              class="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
               placeholder="Décrivez l'activité en détail..."
             ></textarea>
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Enfant concerné</label>
+              <label class="block text-sm font-medium text-white/70 mb-2">Enfant concerné</label>
               <select 
                 v-model="activityForm.child_id"
                 required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
               >
-                <option value="">Sélectionner un enfant</option>
-                <option v-for="child in childrenStats" :key="child.id" :value="child.id">
+                <option value="" class="bg-slate-900">Sélectionner un enfant</option>
+                <option v-for="child in childrenStats" :key="child.id" :value="child.id" class="bg-slate-900">
                   {{ child.name }}
                 </option>
               </select>
             </div>
             
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Priorité</label>
+              <label class="block text-sm font-medium text-white/70 mb-2">Priorité</label>
               <select 
                 v-model="activityForm.priority"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
               >
-                <option value="low">Faible</option>
-                <option value="medium">Moyenne</option>
-                <option value="high">Élevée</option>
+                <option value="low" class="bg-slate-900">Faible</option>
+                <option value="medium" class="bg-slate-900">Moyenne</option>
+                <option value="high" class="bg-slate-900">Élevée</option>
               </select>
             </div>
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Date d'échéance</label>
+              <label class="block text-sm font-medium text-white/70 mb-2">Date d'échéance</label>
               <input 
                 v-model="activityForm.due_date"
                 type="datetime-local"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
               >
             </div>
             
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+              <label class="block text-sm font-medium text-white/70 mb-2">Statut</label>
               <select 
                 v-model="activityForm.status"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full px-4 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
               >
-                <option value="active">Active</option>
-                <option value="paused">En pause</option>
-                <option value="completed">Terminée</option>
-                <option value="cancelled">Annulée</option>
+                <option value="active" class="bg-slate-900">Active</option>
+                <option value="paused" class="bg-slate-900">En pause</option>
+                <option value="completed" class="bg-slate-900">Terminée</option>
+                <option value="cancelled" class="bg-slate-900">Annulée</option>
               </select>
             </div>
           </div>
@@ -472,7 +472,7 @@
           <div class="flex justify-end space-x-3 pt-4">
             <button 
               type="button"
-              class="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              class="px-4 py-2 text-white/80 bg-white/10 border border-white/20 rounded-xl hover:bg-white/15 hover:border-white/30 transition-all"
               @click="closeModal"
             >
               Annuler
@@ -480,7 +480,7 @@
             <button 
               type="submit"
               :disabled="isSaving"
-              class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              class="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl hover:shadow-lg hover:shadow-green-500/50 transition-all disabled:opacity-50"
             >
               {{ isSaving ? 'Sauvegarde...' : (editingActivity ? 'Modifier' : 'Créer') }}
             </button>
@@ -647,12 +647,12 @@ export default {
     
     getStatusClass(status) {
       const classes = {
-        'active': 'bg-green-100 text-green-800',
-        'completed': 'bg-blue-100 text-blue-800',
-        'paused': 'bg-yellow-100 text-yellow-800',
-        'cancelled': 'bg-red-100 text-red-800'
+        'active': 'bg-green-500/20 text-green-200 border border-green-400/20',
+        'completed': 'bg-blue-500/20 text-blue-200 border border-blue-400/20',
+        'paused': 'bg-yellow-500/20 text-yellow-200 border border-yellow-400/20',
+        'cancelled': 'bg-red-500/20 text-red-200 border border-red-400/20'
       }
-      return classes[status] || 'bg-gray-100 text-gray-800'
+      return classes[status] || 'bg-white/10 text-white/70 border border-white/20'
     },
     
     getPriorityLabel(priority) {
@@ -666,11 +666,11 @@ export default {
     
     getPriorityClass(priority) {
       const classes = {
-        'low': 'bg-gray-100 text-gray-800',
-        'medium': 'bg-yellow-100 text-yellow-800',
-        'high': 'bg-red-100 text-red-800'
+        'low': 'bg-white/10 text-white/70 border border-white/20',
+        'medium': 'bg-yellow-500/20 text-yellow-200 border border-yellow-400/20',
+        'high': 'bg-red-500/20 text-red-200 border border-red-400/20'
       }
-      return classes[priority] || 'bg-gray-100 text-gray-800'
+      return classes[priority] || 'bg-white/10 text-white/70 border border-white/20'
     },
     
     getDueDateClass(dueDate) {
@@ -678,10 +678,10 @@ export default {
       const due = new Date(dueDate)
       const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24))
       
-      if (diffDays < 0) return 'text-red-600 font-semibold'
-      if (diffDays === 0) return 'text-orange-600 font-semibold'
-      if (diffDays <= 2) return 'text-yellow-600 font-medium'
-      return 'text-gray-600'
+      if (diffDays < 0) return 'text-red-200 font-semibold'
+      if (diffDays === 0) return 'text-orange-200 font-semibold'
+      if (diffDays <= 2) return 'text-yellow-200 font-medium'
+      return 'text-white/70'
     },
     
     formatDate(dateString) {
@@ -786,77 +786,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-/* Animations */
-@keyframes blob {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
-}
-
-.animate-blob {
-  animation: blob 7s infinite;
-}
-
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-
-.animation-delay-4000 {
-  animation-delay: 4s;
-}
-
-/* Glass Cards */
-.glass-card-dashboard {
-  display: flex;
-  flex-direction: column;
-  padding: 1.5rem;
-  border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  width: 100%;
-}
-
-.glass-card-dashboard:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
-}
-
-.glass-card-stat {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
-  border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-.glass-card-stat:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
-  transform: translateY(-4px);
-}
-
-@media (max-width: 640px) {
-  .glass-card-dashboard {
-    padding: 1rem;
-    border-radius: 1rem;
-  }
-}
-</style>

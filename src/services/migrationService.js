@@ -121,7 +121,8 @@ class MigrationService {
   async getChildStats (childId) {
     if (this.useNewAPI) {
       try {
-        return await this.apiService.getProfileStats(childId)
+        const response = await this.apiService.request(`/api/profiles/${childId}/learning-stats`, { method: 'GET' })
+        return response?.data?.detailedStats || null
       } catch (error) {
         console.warn('⚠️ Erreur API, fallback vers l\'ancien service:', error)
         // Fallback vers l'ancien service si nécessaire
