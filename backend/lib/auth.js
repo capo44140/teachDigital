@@ -1,6 +1,14 @@
 const jwt = require('jsonwebtoken');
 const sql = require('./database.js').default;
 
+function getJwtSecret() {
+  const raw = process.env.JWT_SECRET;
+  if (raw === undefined || raw === null) return '';
+  if (typeof raw !== 'string') return String(raw);
+  // Protéger contre CRLF dans les fichiers env (ex: "secret\r")
+  return raw.replace(/\r/g, '').trim();
+}
+
 // Middleware d'authentification pour Vercel Functions
 function authenticateToken(req) {
   const authHeader = req.headers.authorization;
@@ -11,7 +19,7 @@ function authenticateToken(req) {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
     return decoded;
   } catch (error) {
     throw new Error('Token invalide');
@@ -20,7 +28,7 @@ function authenticateToken(req) {
 
 // Générer un token JWT
 function generateToken(payload) {
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: '24h' });
 }
 
 // Vérifier une session en base de données
@@ -81,7 +89,7 @@ async function authenticateUser(req) {
 
   // 1. Essayer JWT (rapide, synchrone)
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
     return decoded;
   } catch (jwtError) {
     // 2. Si JWT échoue, essayer Session Token (DB, asynchrone)

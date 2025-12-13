@@ -9,6 +9,10 @@ const logger = require('./lib/logger.js');
 const { corsMiddleware } = require('./lib/cors.js');
 const crypto = require('crypto');
 
+// Charger les variables d'environnement du backend (.env / env) avant tout accès à process.env
+const { loadBackendEnv } = require('./lib/loadEnv.js');
+loadBackendEnv();
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -20,7 +24,8 @@ const envStr = (key, fallback = undefined) => {
 };
 
 // Checks de configuration (stabilité prod)
-if (!process.env.JWT_SECRET || String(process.env.JWT_SECRET).length < 16) {
+const jwtSecret = envStr('JWT_SECRET', '');
+if (!jwtSecret || String(jwtSecret).length < 16) {
   logger.error('Configuration invalide: JWT_SECRET manquant ou trop court', {
     hint: 'Définissez JWT_SECRET (>= 16 caractères) dans votre environnement'
   });
