@@ -19,40 +19,45 @@ const { getDemoAnalysis, getDemoQuiz } = require('../../utils/validation.js');
 function getAvailableProviders() {
     const providers = [];
 
+    // Configuration optionnelle:
+    // - AI_PROVIDER=Localúscm (ex: "LocalLLM") => force un seul provider
+    // - AI_PROVIDERS_ORDER="LocalLLM,OpenAI,..." => définit l'ordre + filtre
+    // - AI_DISABLE_PROVIDERS="DeepSeek,OpenAI" => exclut certains providers
+    const normalizeName = (s) => String(s || '').trim().toLowerCase();
+    const forcedProvider = normalizeName(process.env.AI_PROVIDER);
+    const orderList = String(process.env.AI_PROVIDERS_ORDER || '').split(',').map(normalizeName).filter(Boolean);
+    const disabledSet = new Set(String(process.env.AI_DISABLE_PROVIDERS || '').split(',').map(normalizeName).filter(Boolean));
+
+    // Helper d'ajout conditionnel
+    const maybeAdd = (provider) => {
+        const name = normalizeName(provider.getName());
+        if (disabledSet.has(name)) return;
+        if (forcedProvider && forcedProvider !== name) return;
+        if (orderList.length > 0 && !orderList.includes(name)) return;
+        if (provider.isAvailable()) providers.push(provider);
+    };
+
     // 1. LLM Local (si disponible, priorité maximale pour économiser les coûts)
-    const localLLM = new LocalLLMProvider();
-    if (localLLM.isAvailable()) {
-        providers.push(localLLM);
-    }
+    maybeAdd(new LocalLLMProvider());
 
     // 2. OpenAI (haute qualité, bon fallback)
-    const openai = new OpenAIProvider();
-    if (openai.isAvailable()) {
-        providers.push(openai);
-    }
+    maybeAdd(new OpenAIProvider());
 
     // 3. Gemini (bonne alternative à OpenAI)
-    const gemini = new GeminiProvider();
-    if (gemini.isAvailable()) {
-        providers.push(gemini);
-    }
+    maybeAdd(new GeminiProvider());
 
     // 4. DeepSeek (bon rapport qualité/prix)
-    const deepseek = new DeepSeekProvider();
-    if (deepseek.isAvailable()) {
-        providers.push(deepseek);
-    }
+    maybeAdd(new DeepSeekProvider());
 
     // 5. Groq (très rapide avec Llama 3.3)
-    const groq = new GroqProvider();
-    if (groq.isAvailable()) {
-        providers.push(groq);
-    }
+    maybeAdd(new GroqProvider());
 
     // 6. Mistral (dernier fallback avant le mode démo)
-    const mistral = new MistralProvider();
-    if (mistral.isAvailable()) {
-        providers.push(mistral);
+    maybeAdd(new MistralProvider());
+
+    // Si un ordre est fourni, re-trier selon cet ordre
+    if (orderList.length > 0) {
+        providers.sort((a, b) => orderList.indexOf(normalizeName(a.getName())) - orderList.indexOf(normalizeName(b.getName())));
     }
 
     return providers;

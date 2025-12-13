@@ -11,8 +11,9 @@ const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const MISTRAL_BASE_URL = 'https://api.mistral.ai/v1';
 
-// Timeout pour les appels API externes (90s pour éviter timeout Vercel)
-const API_TIMEOUT_MS = 90000;
+// Timeout pour les appels API externes (90s par défaut)
+// Peut être ajusté via AI_TIMEOUT_MS (utile pour LLM local plus lent sur LAN)
+const API_TIMEOUT_MS = parseInt(process.env.AI_TIMEOUT_MS || '90000', 10);
 
 // Modèles par défaut
 const DEFAULT_LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'mistralai/ministral-3-14b-reasoning';

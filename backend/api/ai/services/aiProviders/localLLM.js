@@ -13,6 +13,7 @@ class LocalLLMProvider extends AIProviderBase {
         super('LocalLLM');
         this.baseUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
         this.model = process.env.LOCAL_LLM_MODEL || DEFAULT_LOCAL_LLM_MODEL;
+        this.timeoutMs = parseInt(process.env.LOCAL_LLM_TIMEOUT_MS || '', 10);
     }
 
     isAvailable() {
@@ -46,7 +47,7 @@ ${extractedText}`
                 max_tokens: DEFAULT_MAX_TOKENS,
                 temperature: DEFAULT_TEMPERATURE
             })
-        });
+        }, Number.isFinite(this.timeoutMs) ? this.timeoutMs : undefined);
 
         if (!response.ok) {
             throw new Error(`Erreur LLM local: ${response.status} - ${response.statusText}`);
@@ -88,7 +89,7 @@ ${extractedText}`
                 max_tokens: Math.max(1500, questionCount * 300),
                 temperature: DEFAULT_TEMPERATURE
             })
-        });
+        }, Number.isFinite(this.timeoutMs) ? this.timeoutMs : undefined);
 
         if (!response.ok) {
             throw new Error(`Erreur LLM local: ${response.status}`);
@@ -137,7 +138,7 @@ ${extractedText}`
                 max_tokens: 4000,
                 temperature: 0.1
             })
-        });
+        }, Number.isFinite(this.timeoutMs) ? this.timeoutMs : undefined);
 
         if (!response.ok) {
             throw new Error(`Erreur LLM local Vision: ${response.status} - ${response.statusText}`);
