@@ -12,8 +12,12 @@ const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const MISTRAL_BASE_URL = 'https://api.mistral.ai/v1';
 
 // Timeout pour les appels API externes (90s par défaut)
-// Peut être ajusté via AI_TIMEOUT_MS (utile pour LLM local plus lent sur LAN)
+// Peut être ajusté via AI_TIMEOUT_MS
 const API_TIMEOUT_MS = parseInt(process.env.AI_TIMEOUT_MS || '90000', 10);
+
+// Timeout spécifique pour le LLM local (LM Studio / Ollama) : 180s par défaut
+// Peut être ajusté via LOCAL_LLM_TIMEOUT_MS (recommandé si LM Studio est lent)
+const LOCAL_LLM_TIMEOUT_MS = parseInt(process.env.LOCAL_LLM_TIMEOUT_MS || '180000', 10);
 
 // Modèles par défaut
 const DEFAULT_LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'mistralai/ministral-3-14b-reasoning';
@@ -42,6 +46,7 @@ module.exports = {
 
     // Timeouts
     API_TIMEOUT_MS,
+    LOCAL_LLM_TIMEOUT_MS,
 
     // Modèles
     DEFAULT_LOCAL_LLM_MODEL,

@@ -6,7 +6,7 @@
 const AIProviderBase = require('./base.js');
 const { fetchWithTimeout } = require('../../utils/fetch.js');
 const { isLocalLLMAvailable } = require('../../utils/validation.js');
-const { LOCAL_LLM_BASE_URL, DEFAULT_LOCAL_LLM_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } = require('../../utils/constants.js');
+const { LOCAL_LLM_BASE_URL, DEFAULT_LOCAL_LLM_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, LOCAL_LLM_TIMEOUT_MS } = require('../../utils/constants.js');
 
 class LocalLLMProvider extends AIProviderBase {
     constructor() {
@@ -14,6 +14,9 @@ class LocalLLMProvider extends AIProviderBase {
         this.baseUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
         this.model = process.env.LOCAL_LLM_MODEL || DEFAULT_LOCAL_LLM_MODEL;
         this.timeoutMs = parseInt(process.env.LOCAL_LLM_TIMEOUT_MS || '', 10);
+        if (!Number.isFinite(this.timeoutMs)) {
+            this.timeoutMs = LOCAL_LLM_TIMEOUT_MS;
+        }
     }
 
     isAvailable() {
