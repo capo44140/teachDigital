@@ -119,6 +119,83 @@
           </div>
         </div>
       </div>
+
+      <!-- Modal: Demande de création de profil -->
+      <div
+        v-if="isRequestModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center p-6"
+      >
+        <div class="absolute inset-0 bg-black/60" @click="closeRequestModal"></div>
+        <div class="relative w-full max-w-lg backdrop-blur-2xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl p-6">
+          <div class="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h2 class="text-xl font-bold text-white">Demander un nouveau profil</h2>
+              <p class="text-white/60 text-sm mt-1">
+                Le parent recevra une notification pour valider la création.
+              </p>
+            </div>
+            <button
+              class="p-2 text-white/70 hover:text-white border border-white/20 hover:border-white/40 rounded-xl hover:bg-white/10 transition-all"
+              title="Fermer"
+              @click="closeRequestModal"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-white/80 text-sm font-medium mb-2">Nom du profil</label>
+              <input
+                v-model="requestedName"
+                type="text"
+                maxlength="40"
+                autocomplete="off"
+                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                placeholder="Ex: Lucas"
+                @keyup.enter="submitProfileRequest"
+              >
+            </div>
+
+            <div>
+              <label class="block text-white/80 text-sm font-medium mb-2">Type</label>
+              <select
+                v-model="requestedType"
+                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+              >
+                <option value="child" class="bg-slate-900">Enfant</option>
+                <option value="teen" class="bg-slate-900">Adolescent</option>
+              </select>
+            </div>
+
+            <div v-if="requestError" class="text-red-200 text-sm bg-red-500/10 border border-red-400/20 rounded-xl p-3">
+              {{ requestError }}
+            </div>
+            <div v-if="requestSuccess" class="text-green-200 text-sm bg-green-500/10 border border-green-400/20 rounded-xl p-3">
+              {{ requestSuccess }}
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+              <button
+                class="px-4 py-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl hover:bg-white/10 transition-all"
+                :disabled="isSubmittingRequest"
+                @click="closeRequestModal"
+              >
+                Annuler
+              </button>
+              <button
+                class="px-5 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg shadow-purple-500/25 disabled:opacity-60"
+                :disabled="isSubmittingRequest"
+                @click="submitProfileRequest"
+              >
+                {{ isSubmittingRequest ? 'Envoi…' : 'Envoyer la demande' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -127,6 +204,7 @@
 import { useProfileStore } from '../stores/profileStore.js'
 import sessionService from '../services/sessionService.js'
 import ProfileSkeleton from './ProfileSkeleton.vue'
+import { ProfileService } from '../services/profile/index.js'
 
 export default {
   name: 'ProfileSelector',
@@ -139,7 +217,13 @@ export default {
   },
   data() {
     return {
-      selectedProfile: null
+      selectedProfile: null,
+      isRequestModalOpen: false,
+      requestedName: '',
+      requestedType: 'child',
+      isSubmittingRequest: false,
+      requestError: '',
+      requestSuccess: ''
     }
   },
   computed: {
@@ -192,8 +276,49 @@ export default {
     },
     
     addProfile() {
-      console.log('Ajouter un nouveau profil')
-      this.$emit('add-profile')
+      this.requestError = ''
+      this.requestSuccess = ''
+      this.requestedName = ''
+      this.requestedType = 'child'
+      this.isRequestModalOpen = true
+    }
+    ,
+    closeRequestModal() {
+      if (this.isSubmittingRequest) return
+      this.isRequestModalOpen = false
+    },
+    async submitProfileRequest() {
+      if (this.isSubmittingRequest) return
+      this.requestError = ''
+      this.requestSuccess = ''
+
+      const name = (this.requestedName || '').trim()
+      if (!name || name.length < 2) {
+        this.requestError = 'Veuillez saisir un nom (au moins 2 caractères).'
+        return
+      }
+
+      this.isSubmittingRequest = true
+      try {
+        const response = await ProfileService.requestProfileCreation({
+          name,
+          type: this.requestedType
+        })
+        if (response?.success) {
+          this.requestSuccess = response.message || 'Demande envoyée.'
+          this.$emit('add-profile', { name, type: this.requestedType, requestId: response?.data?.requestId })
+          // Fermer après un court délai pour laisser le feedback
+          setTimeout(() => {
+            this.isRequestModalOpen = false
+          }, 900)
+        } else {
+          this.requestError = response?.message || 'Erreur lors de l’envoi de la demande.'
+        }
+      } catch (error) {
+        this.requestError = error?.message || 'Erreur lors de l’envoi de la demande.'
+      } finally {
+        this.isSubmittingRequest = false
+      }
     }
   }
 }

@@ -203,6 +203,23 @@ export class ProfileService {
     }
   }
 
+  /**
+   * Demander la création d'un nouveau profil (validation par un parent/admin)
+   * Endpoint public: /api/profiles/requests
+   */
+  static async requestProfileCreation ({ name, type = 'child' }) {
+    try {
+      const response = await apiService.request('/api/profiles/requests', {
+        method: 'POST',
+        body: JSON.stringify({ name, type })
+      })
+      return response
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de la demande de profil:', error)
+      throw error
+    }
+  }
+
   // Mettre à jour l'image d'un profil
   static async updateProfileImage (profileId, imageData, imageType) {
     try {

@@ -3,6 +3,7 @@ const { default: sql } = require('../lib/database.js');
 const { authenticateToken } = require('../lib/auth.js');
 const { handleError, createErrorResponse } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
+const crypto = require('crypto');
 
 // Handler des profils
 async function handleProfiles(req, res) {
@@ -805,11 +806,96 @@ async function handlePin(req, res) {
     }
 }
 
+// Demande publique de création de profil (pas d'auth) -> notification aux admins
+async function handleProfileCreationRequest(req, res) {
+    try {
+        if (req.method !== 'POST') {
+            res.status(405).json({
+                success: false,
+                message: 'Méthode non autorisée'
+            });
+            return;
+        }
+
+        const rawName = req.body?.name;
+        const rawType = req.body?.type;
+
+        const name = (typeof rawName === 'string' ? rawName : String(rawName || '')).replace(/\r/g, '').trim();
+        const type = (typeof rawType === 'string' ? rawType : 'child').replace(/\r/g, '').trim() || 'child';
+
+        // Validation simple (sécurité + UX)
+        if (!name || name.length < 2 || name.length > 40) {
+            res.status(400).json(createErrorResponse(
+                'Nom invalide (2 à 40 caractères requis).',
+                'INVALID_NAME'
+            ));
+            return;
+        }
+        // Autoriser lettres (unicode), chiffres, espace, tiret, apostrophe, underscore
+        if (!/^[\p{L}0-9 _'’-]{2,40}$/u.test(name)) {
+            res.status(400).json(createErrorResponse(
+                'Nom invalide (caractères non autorisés).',
+                'INVALID_NAME'
+            ));
+            return;
+        }
+
+        const allowedTypes = new Set(['child', 'teen']);
+        const safeType = allowedTypes.has(type) ? type : 'child';
+
+        const admins = await withQueryTimeout(
+            sql`SELECT id FROM profiles WHERE is_admin = true AND is_active = true ORDER BY id ASC`,
+            TIMEOUTS.STANDARD,
+            'récupération des admins'
+        );
+
+        if (!admins || admins.length === 0) {
+            res.status(500).json(createErrorResponse(
+                'Aucun profil parent/admin disponible pour validation.',
+                'NO_ADMIN_AVAILABLE'
+            ));
+            return;
+        }
+
+        const requestId = (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex'));
+        const nowIso = new Date().toISOString();
+
+        const title = 'Demande de création de profil';
+        const message = `Un nouveau profil "${name}" a été demandé. Validation requise.`;
+        const data = {
+            requestId,
+            requestedName: name,
+            requestedType: safeType,
+            createdAt: nowIso
+        };
+
+        // Créer une notification pour chaque admin
+        await Promise.all(admins.map((a) => withQueryTimeout(
+            sql`
+        INSERT INTO notifications (profile_id, type, title, message, data)
+        VALUES (${a.id}, ${'profile_request'}, ${title}, ${message}, ${JSON.stringify(data)}::jsonb)
+      `,
+            TIMEOUTS.STANDARD,
+            'création notification profile_request'
+        )));
+
+        res.status(201).json({
+            success: true,
+            message: 'Demande envoyée au profil parent pour validation',
+            data: { requestId }
+        });
+    } catch (error) {
+        const errorResponse = handleError(error, 'Erreur lors de l\'envoi de la demande de profil');
+        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+    }
+}
+
 module.exports = {
     handleProfiles,
     handleProfile,
     handleProfileStats,
     handleProfilePin,
     handlePin,
-    handleProfileLearningStats
+    handleProfileLearningStats,
+    handleProfileCreationRequest
 };

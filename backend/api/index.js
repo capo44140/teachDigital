@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 
 const { handleLogin, handleLogout } = require('../controllers/authController.js');
-const { handleProfiles, handleProfile, handleProfileStats, handleProfilePin, handlePin, handleProfileLearningStats } = require('../controllers/profileController.js');
+const { handleProfiles, handleProfile, handleProfileStats, handleProfilePin, handlePin, handleProfileLearningStats, handleProfileCreationRequest } = require('../controllers/profileController.js');
 const { handleLessons, handleLesson, handleQuizResults, handleGlobalLessonStats } = require('../controllers/lessonController.js');
 const { handleNotifications, handleNotification } = require('../controllers/notificationController.js');
 const { handleActivities } = require('../controllers/activityController.js');
@@ -37,12 +37,21 @@ const pinRateLimiter = createRateLimiter({
   code: 'RATE_LIMIT_PIN'
 });
 
+const profileRequestRateLimiter = createRateLimiter({
+  windowMs: parseInt(process.env.API_RATE_LIMIT_PROFILE_REQUEST_WINDOW_MS || String(10 * 60 * 1000), 10),
+  max: parseInt(process.env.API_RATE_LIMIT_PROFILE_REQUEST_MAX || '5', 10),
+  keyGenerator: (req) => `profile_request:${getClientIp(req)}`,
+  message: 'Trop de demandes de création. Veuillez réessayer plus tard.',
+  code: 'RATE_LIMIT_PROFILE_REQUEST'
+});
+
 // Routes d'authentification
 router.post('/auth/login', loginRateLimiter, handleLogin);
 router.post('/auth/logout', handleLogout);
 
 // Routes des profils
 router.get('/profiles/stats', handleProfileStats);
+router.post('/profiles/requests', profileRequestRateLimiter, handleProfileCreationRequest);
 router.get('/profiles/:id/stats', handleProfileLearningStats);
 router.get('/profiles/:id/learning-stats', handleProfileLearningStats);
 router.post('/profiles/:id/pin', pinRateLimiter, handlePin);
