@@ -38,8 +38,18 @@
           <div class="flex items-center space-x-4">
             <!-- Profil actuel -->
             <div v-if="currentProfile" class="flex items-center space-x-2 px-4 py-2 bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 hover:bg-white/10 transition-all">
-              <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-purple-400 to-pink-400">
-                <span class="text-white text-sm font-semibold">{{ currentProfile.initial }}</span>
+              <div class="w-8 h-8 rounded-lg overflow-hidden border border-white/20 bg-white/10 backdrop-blur-xl">
+                <img
+                  v-if="currentProfileImage"
+                  :src="currentProfileImage"
+                  :alt="`Photo de ${currentProfile.name}`"
+                  class="w-full h-full object-cover"
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                >
+                <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-400 to-pink-400">
+                  <span class="text-white text-sm font-semibold">{{ currentProfile.initial }}</span>
+                </div>
               </div>
               <span class="text-white font-medium text-sm hidden sm:inline">{{ currentProfile.name }}</span>
             </div>
@@ -338,6 +348,11 @@ export default {
     }
   },
   computed: {
+    currentProfileImage() {
+      if (!this.currentProfile) return null
+      // image_data est généralement un DataURL (data:image/...); image_url est un fallback éventuel
+      return this.currentProfile.image_data || this.currentProfile.image_url || null
+    },
     isLoadingProfile() {
       return !this.currentProfile
     }
