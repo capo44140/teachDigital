@@ -157,6 +157,7 @@ async function handleGenerateQuizFromDocuments(req, res) {
         let documents = [];
         let childProfile;
         let questionCount = 5;
+        let useLLMOCR = false; // Par défaut, utiliser Tesseract (OCR)
 
         if (isFormData) {
             // Parser FormData
@@ -169,6 +170,10 @@ async function handleGenerateQuizFromDocuments(req, res) {
                 fieldsKeys: parsed.fields ? Object.keys(parsed.fields) : [],
                 filesCount: parsed.files ? parsed.files.length : 0
             });
+
+            // Mode OCR (Tesseract par défaut, LLM Vision si demandé)
+            useLLMOCR = parsed.fields?.useLLMOCR === 'true' || parsed.fields?.useLLMOCR === true;
+            console.log(`🔍 Mode OCR: ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
 
             // Extraire les fichiers et métadonnées
             if (parsed.files && parsed.fields) {
@@ -250,6 +255,8 @@ async function handleGenerateQuizFromDocuments(req, res) {
             documents = bodyDocuments || [];
             childProfile = bodyChildProfile;
             questionCount = bodyQuestionCount || 5;
+            useLLMOCR = body.useLLMOCR === true || body.useLLMOCR === 'true';
+            console.log(`🔍 Mode OCR: ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
         }
 
         console.log('📊 Données parsées:', {
@@ -267,10 +274,9 @@ async function handleGenerateQuizFromDocuments(req, res) {
             return res.status(400).json(createErrorResponse('Profil enfant requis'));
         }
 
-        console.log(`📝 Analyse de ${documents.length} document(s)...`);
+        console.log(`📝 Extraction OCR + Analyse de ${documents.length} document(s)...`);
 
-        // Analyser tous les documents avec vision LLM directement (sans passer par Tesseract)
-        // Cette fonction est appelée quand skipOCR = true, donc on utilise directement la vision
+        // Extraire le texte (Tesseract par défaut) puis analyser le texte pour générer le quiz
         const analyses = [];
         for (let i = 0; i < documents.length; i++) {
             const doc = documents[i];
@@ -283,29 +289,33 @@ async function handleGenerateQuizFromDocuments(req, res) {
                         console.warn(`⚠️ Document ${i + 1} de type image mais sans données`);
                         continue;
                     }
-                    console.log(`🖼️ Analyse de l'image ${i + 1} avec LLM Vision (sans Tesseract)...`);
-                    
-                    // Utiliser directement la vision LLM pour extraire le texte et analyser
-                    // Nettoyer le base64 si nécessaire
-                    let cleanBase64 = imageData;
-                    if (imageData.includes(',')) {
-                        cleanBase64 = imageData.split(',')[1];
+
+                    console.log(`🖼️ Extraction OCR de l'image ${i + 1}... (${useLLMOCR ? 'LLM Vision' : 'Tesseract'})`);
+
+                    let extractedText;
+                    if (useLLMOCR) {
+                        // Nettoyer le base64 si nécessaire pour l'API Vision
+                        let cleanBase64 = imageData;
+                        if (typeof imageData === 'string' && imageData.includes(',')) {
+                            cleanBase64 = imageData.split(',')[1];
+                        }
+                        extractedText = await extractTextFromImageWithLLM(cleanBase64);
+                    } else {
+                        extractedText = await extractTextFromImage(imageData);
                     }
-                    
-                    // Extraire le texte avec LLM Vision
-                    const extractedText = await extractTextFromImageWithLLM(cleanBase64);
-                    
-                    // Analyser le texte extrait avec l'IA
+
+                    console.log(`🤖 Analyse IA du texte extrait ${i + 1}...`);
                     const analysis = await analyzeWithAI(extractedText);
-                    
-                    analyses.push({ type: 'image', fileName: doc.name, analysis });
-                    console.log(`✅ Image ${i + 1} analysée avec succès (LLM Vision)`);
+
+                    analyses.push({ type: 'image', fileName: doc.name, extractedText, analysis });
+                    console.log(`✅ Image ${i + 1} traitée avec succès (OCR + Analyse)`);
                 } else if (doc.type === 'application/pdf' || doc.type === 'pdf') {
                     // Pour PDF, simuler une analyse (dans une vraie implémentation, utiliser OCR)
                     console.log(`📑 Traitement du PDF ${i + 1}...`);
                     analyses.push({
                         type: 'pdf',
                         fileName: doc.name,
+                        extractedText: 'Contenu PDF extrait',
                         analysis: { subject: 'Document PDF', topic: 'Contenu extrait', concepts: [], level: 'Primaire' }
                     });
                     console.log(`✅ PDF ${i + 1} traité`);

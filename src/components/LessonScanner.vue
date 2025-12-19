@@ -84,24 +84,7 @@
           </select>
         </div>
 
-        <!-- Option pour passer l'OCR -->
-        <div class="mb-8">
-          <label class="flex items-center space-x-3 cursor-pointer group">
-            <input
-              type="checkbox"
-              v-model="skipOCR"
-              class="w-5 h-5 rounded border-white/30 bg-white/10 text-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-slate-900 cursor-pointer"
-            />
-            <div class="flex-1">
-              <span class="text-sm font-medium text-white/80 group-hover:text-white transition-colors">
-                Passer l'OCR Tesseract
-              </span>
-              <p class="text-xs text-white/60 mt-1">
-                Si coché, les documents seront envoyés directement au LLM sans extraction OCR préalable
-              </p>
-            </div>
-          </label>
-        </div>
+        <!-- OCR: géré côté backend -->
 
         <!-- Zone de téléchargement -->
         <div 
@@ -211,9 +194,7 @@
               'px-8 py-3 rounded-xl font-medium transition-all',
               (selectedFiles.length === 0 || !selectedChild || isProcessing)
                 ? 'bg-white/5 text-white/40 cursor-not-allowed'
-                : skipOCR
-                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:shadow-lg hover:shadow-blue-500/50'
-                  : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg hover:shadow-purple-500/50'
+                : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg hover:shadow-purple-500/50'
             ]"
             @click="scanLesson"
           >
@@ -225,10 +206,7 @@
               <span>Traitement en cours...</span>
             </span>
             <span v-else class="flex items-center space-x-2">
-              <svg v-if="skipOCR" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-              </svg>
-              <span>{{ skipOCR ? 'Générer directement (sans OCR)' : 'Générer le quiz (avec OCR)' }}</span>
+              <span>Générer le quiz</span>
             </span>
           </button>
         </div>
@@ -284,7 +262,6 @@ export default {
       validationErrors: [],
       validationWarnings: [],
       questionCount: 5,
-      skipOCR: false,
       auditLogService: null,
       successMessage: null,
       errorMessage: null,
@@ -490,7 +467,7 @@ export default {
     
     async scanLesson() {
       console.log('[LessonScanner] scanLesson() - Début de la génération de quiz', {
-        skipOCR: this.skipOCR
+        filesCount: this.selectedFiles.length
       })
       
       if (this.selectedFiles.length === 0 || !this.selectedChild) {
@@ -518,7 +495,6 @@ export default {
         fileSizes: this.selectedFiles.map(f => `${f.name}: ${this.formatFileSize(f.size)}`),
         fileTypes: this.selectedFiles.map(f => f.type),
         questionCount: this.questionCount,
-        skipOCR: this.skipOCR,
         hasToken: !!token
       })
       
@@ -526,7 +502,7 @@ export default {
       this.generatedQuiz = null
       this.successMessage = null
       this.errorMessage = null
-      this.processStatus = this.skipOCR ? 'Analyse des documents avec le LLM (sans OCR)...' : 'Analyse en cours...'
+      this.processStatus = 'Génération du quiz (OCR côté serveur)...'
 
       try {
         // Vérifier le rate limiting
@@ -552,87 +528,31 @@ export default {
             'openai',
             true,
             {
-              action: this.skipOCR ? 'QUIZ_GENERATION_START_DIRECT' : 'QUIZ_GENERATION_START',
+              action: 'QUIZ_GENERATION_START',
               fileCount: this.selectedFiles.length,
               questionCount: parseInt(this.questionCount),
-              fileNames: this.selectedFiles.map(f => f.name),
-              skipOCR: this.skipOCR
+              fileNames: this.selectedFiles.map(f => f.name)
             }
           )
         }
         
         const aiService = new AIService()
         const startTime = Date.now()
-        let quiz
-        
-        if (this.skipOCR) {
-          // Mode direct : envoyer directement au LLM sans OCR
-          console.log('[LessonScanner] scanLesson() - Mode DIRECT (sans OCR)')
-          this.processStatus = 'Analyse des documents avec le LLM...'
-          
-          quiz = await aiService.generateQuizFromDocuments(
-            this.selectedFiles,
-            this.selectedChild,
-            parseInt(this.questionCount)
-          )
-          
-          const totalDuration = Date.now() - startTime
-          console.log('[LessonScanner] scanLesson() - Quiz généré directement avec succès:', {
-            totalDuration: `${totalDuration}ms`,
-            hasQuiz: !!quiz,
-            quizTitle: quiz?.title,
-            questionsCount: quiz?.questions?.length || 0
-          })
-        } else {
-          // Mode avec OCR : extraction OCR puis génération
-          console.log('[LessonScanner] scanLesson() - Mode OCR')
-          console.log('[LessonScanner] scanLesson() - Profil enfant:', {
-            id: this.selectedChild.id,
-            name: this.selectedChild.name,
-            age: this.selectedChild.age,
-            level: this.selectedChild.level
-          })
-          
-          // Étape 1 : Extraction OCR et analyse
-          this.processStatus = this.skipOCR ? 'Extraction du texte avec le LLM (Vision)...' : 'Extraction du texte des documents (OCR Tesseract)...'
-          console.log('[LessonScanner] scanLesson() - Appel à extractTextFromDocuments...', { useLLMOCR: this.skipOCR })
-          const extractions = await aiService.extractTextFromDocuments(this.selectedFiles, this.skipOCR)
-          
-          const ocrDuration = Date.now() - startTime
-          console.log('[LessonScanner] scanLesson() - OCR terminé:', {
-            duration: `${ocrDuration}ms`,
-            extractionsCount: extractions?.length || 0,
-            hasExtractions: !!extractions
-          })
-          
-          if (!extractions || extractions.length === 0) {
-            throw new Error('Aucun texte n\'a pu être extrait des documents')
-          }
-          
-          // Étape 2 : Génération du quiz à partir des analyses
-          this.processStatus = 'Génération du quiz avec l\'IA...'
-          console.log('[LessonScanner] scanLesson() - Étape 2: Génération du quiz...')
-          console.log('[LessonScanner] scanLesson() - Appel à generateQuizFromAnalyses...')
-          const quizStartTime = Date.now()
-          
-          quiz = await aiService.generateQuizFromAnalyses(
-            extractions,
-            this.selectedChild,
-            parseInt(this.questionCount)
-          )
-          
-          const quizDuration = Date.now() - quizStartTime
-          const totalDuration = Date.now() - startTime
-          console.log('[LessonScanner] scanLesson() - Quiz généré avec succès:', {
-            ocrDuration: `${ocrDuration}ms`,
-            quizDuration: `${quizDuration}ms`,
-            totalDuration: `${totalDuration}ms`,
-            hasQuiz: !!quiz,
-            quizTitle: quiz?.title,
-            questionsCount: quiz?.questions?.length || 0,
-            quizStructure: quiz ? Object.keys(quiz) : null
-          })
-        }
+
+        // Un seul appel: OCR + analyse + génération sont gérés côté backend
+        const quiz = await aiService.generateQuizFromDocuments(
+          this.selectedFiles,
+          this.selectedChild,
+          parseInt(this.questionCount)
+        )
+
+        const totalDuration = Date.now() - startTime
+        console.log('[LessonScanner] scanLesson() - Quiz généré avec succès:', {
+          totalDuration: `${totalDuration}ms`,
+          hasQuiz: !!quiz,
+          quizTitle: quiz?.title,
+          questionsCount: quiz?.questions?.length || 0
+        })
         
         this.generatedQuiz = quiz
         
@@ -662,11 +582,10 @@ export default {
             'openai',
             true,
             {
-              action: this.skipOCR ? 'QUIZ_GENERATION_SUCCESS_DIRECT' : 'QUIZ_GENERATION_SUCCESS',
+              action: 'QUIZ_GENERATION_SUCCESS',
               quizQuestions: quiz.questions?.length || 0,
               lessonId: savedLesson.id,
-              fileCount: this.selectedFiles.length,
-              skipOCR: this.skipOCR
+              fileCount: this.selectedFiles.length
             }
           )
         }
@@ -690,8 +609,7 @@ export default {
           cause: error.cause,
           response: error.response,
           status: error.status,
-          statusText: error.statusText,
-          skipOCR: this.skipOCR
+          statusText: error.statusText
         })
         
         // Enregistrer l'échec de l'analyse
@@ -702,14 +620,13 @@ export default {
             'openai',
             false,
             {
-              action: this.skipOCR ? 'QUIZ_GENERATION_FAILED_DIRECT' : 'QUIZ_GENERATION_FAILED',
+              action: 'QUIZ_GENERATION_FAILED',
               error: error.message,
               errorName: error.name,
               errorStack: error.stack?.substring(0, 500),
               fileCount: this.selectedFiles.length,
               fileNames: this.selectedFiles.map(f => f.name),
-              questionCount: this.questionCount,
-              skipOCR: this.skipOCR
+              questionCount: this.questionCount
             }
           )
         }
