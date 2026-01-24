@@ -156,7 +156,7 @@ import { ProfileBusinessService } from '@/services/business/profileBusinessServi
 Les nouveaux stores sont automatiquement disponibles dans l'application Vue. Assurez-vous que Pinia est correctement configuré dans `main.js`.
 
 ### Repositories
-Les repositories utilisent la configuration de base de données existante dans `src/config/database.js`.
+Les repositories délèguent au backend via HTTP (via `apiService`) et n’utilisent plus de configuration DB côté `src/`.
 
 ## 📝 Prochaines Étapes
 

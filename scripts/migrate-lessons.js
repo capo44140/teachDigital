@@ -5,7 +5,9 @@
  * Exécute: node scripts/migrate-lessons.js
  */
 
-import sql from '../src/config/database.js'
+import db from '../backend/lib/database.js'
+
+const sql = db.sql || db.default
 
 async function migrateLessons() {
   try {

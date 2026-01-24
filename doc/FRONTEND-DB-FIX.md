@@ -35,7 +35,7 @@ Neon Database ✅ BON - Credentials sécurisés
 
 ### 1. Supprimer l'accès direct à la base de données depuis le frontend
 
-Le fichier `src/config/database.js` ne devrait PAS être utilisé côté frontend.
+Le module `src/config/database.js` a été **supprimé** : le frontend ne contient plus de couche d’accès DB.
 
 ### 2. Utiliser les repositories existants
 
@@ -48,8 +48,8 @@ import sql from '@/config/database.js'
 const profiles = await sql`SELECT * FROM profiles`
 
 // ✅ BON - Appel à l'API backend
-const response = await fetch('/api/profiles')
-const profiles = await response.json()
+import { apiService } from '@/services/apiService.js'
+const profiles = await apiService.getProfiles()
 ```
 
 ### 3. Configuration Vercel pour la Production

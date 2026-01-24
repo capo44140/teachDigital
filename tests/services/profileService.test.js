@@ -1,10 +1,24 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { ProfileService } from '../../src/services/profileService.js'
+import { ProfileService } from '../../src/services/profile/profileService.js'
 
-// Mock de la base de données
-const mockSql = vi.fn()
-vi.mock('../../src/config/database.js', () => ({
-  default: mockSql
+const mockApiService = vi.hoisted(() => ({
+  getProfiles: vi.fn(),
+  getProfile: vi.fn(),
+  createProfile: vi.fn(),
+  updateProfile: vi.fn(),
+  deleteProfile: vi.fn(),
+  getProfileStats: vi.fn()
+}))
+
+vi.mock('../../src/services/apiService.js', () => ({
+  apiService: mockApiService
+}))
+
+vi.mock('../../src/services/auditLogService.js', () => ({
+  auditLogService: {
+    logProfileChange: vi.fn(),
+    logSystemError: vi.fn()
+  }
 }))
 
 // Mock des services
@@ -22,13 +36,6 @@ vi.mock('../../src/services/encryptionService.js', () => ({
   }))
 }))
 
-vi.mock('../../src/services/auditLogService.js', () => ({
-  auditLogService: {
-    logProfileAction: vi.fn(),
-    logSecurityEvent: vi.fn()
-  }
-}))
-
 describe('ProfileService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -41,17 +48,17 @@ describe('ProfileService', () => {
         { id: 2, name: 'Test Profile 2', type: 'teen' }
       ]
       
-      mockSql.mockResolvedValue(mockProfiles)
+      mockApiService.getProfiles.mockResolvedValue(mockProfiles)
 
       const result = await ProfileService.getAllProfiles()
 
       expect(result).toEqual(mockProfiles)
-      expect(mockSql).toHaveBeenCalledWith(expect.any(String))
+      expect(mockApiService.getProfiles).toHaveBeenCalled()
     })
 
     it('should handle database errors', async () => {
       const error = new Error('Database connection failed')
-      mockSql.mockRejectedValue(error)
+      mockApiService.getProfiles.mockRejectedValue(error)
 
       await expect(ProfileService.getAllProfiles()).rejects.toThrow('Database connection failed')
     })
@@ -60,16 +67,16 @@ describe('ProfileService', () => {
   describe('getProfileById', () => {
     it('should return a profile by ID', async () => {
       const mockProfile = { id: 1, name: 'Test Profile', type: 'child' }
-      mockSql.mockResolvedValue([mockProfile])
+      mockApiService.getProfile.mockResolvedValue(mockProfile)
 
       const result = await ProfileService.getProfileById(1)
 
       expect(result).toEqual(mockProfile)
-      expect(mockSql).toHaveBeenCalledWith(expect.stringContaining('WHERE id ='))
+      expect(mockApiService.getProfile).toHaveBeenCalledWith(1)
     })
 
     it('should return null if profile not found', async () => {
-      mockSql.mockResolvedValue([])
+      mockApiService.getProfile.mockResolvedValue(null)
 
       const result = await ProfileService.getProfileById(999)
 
@@ -90,12 +97,12 @@ describe('ProfileService', () => {
       }
 
       const mockCreatedProfile = { id: 3, ...profileData }
-      mockSql.mockResolvedValue([mockCreatedProfile])
+      mockApiService.createProfile.mockResolvedValue(mockCreatedProfile)
 
       const result = await ProfileService.createProfile(profileData)
 
       expect(result).toEqual(mockCreatedProfile)
-      expect(mockSql).toHaveBeenCalled()
+      expect(mockApiService.createProfile).toHaveBeenCalled()
     })
 
     it('should validate required fields', async () => {
@@ -104,7 +111,9 @@ describe('ProfileService', () => {
         type: 'invalid_type'
       }
 
-      await expect(ProfileService.createProfile(invalidData)).rejects.toThrow()
+      // La validation métier est côté backend : on simule un rejet API
+      mockApiService.createProfile.mockRejectedValue(new Error('Validation failed'))
+      await expect(ProfileService.createProfile(invalidData)).rejects.toThrow('Validation failed')
     })
   })
 
@@ -117,35 +126,36 @@ describe('ProfileService', () => {
       }
 
       const mockUpdatedProfile = { id: profileId, ...updateData }
-      mockSql.mockResolvedValue([mockUpdatedProfile])
+      mockApiService.updateProfile.mockResolvedValue(mockUpdatedProfile)
 
       const result = await ProfileService.updateProfile(profileId, updateData)
 
       expect(result).toEqual(mockUpdatedProfile)
-      expect(mockSql).toHaveBeenCalledWith(expect.stringContaining('UPDATE profiles'))
+      expect(mockApiService.updateProfile).toHaveBeenCalledWith(profileId, expect.any(Object))
     })
 
     it('should handle profile not found', async () => {
-      mockSql.mockResolvedValue([])
+      mockApiService.updateProfile.mockResolvedValue(null)
 
-      await expect(ProfileService.updateProfile(999, { name: 'Test' })).rejects.toThrow('Profil non trouvé')
+      await expect(ProfileService.updateProfile(999, { name: 'Test' })).resolves.toBeNull()
     })
   })
 
   describe('deleteProfile', () => {
     it('should delete a profile successfully', async () => {
       const profileId = 1
-      mockSql.mockResolvedValue([{ id: profileId }])
+      mockApiService.deleteProfile.mockResolvedValue(true)
 
-      await ProfileService.deleteProfile(profileId)
+      const result = await ProfileService.deleteProfile(profileId)
 
-      expect(mockSql).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM profiles'))
+      expect(result).toBe(true)
+      expect(mockApiService.deleteProfile).toHaveBeenCalledWith(profileId)
     })
 
     it('should handle profile not found during deletion', async () => {
-      mockSql.mockResolvedValue([])
+      mockApiService.deleteProfile.mockResolvedValue(false)
 
-      await expect(ProfileService.deleteProfile(999)).rejects.toThrow('Profil non trouvé')
+      await expect(ProfileService.deleteProfile(999)).resolves.toBe(false)
     })
   })
 
@@ -159,7 +169,7 @@ describe('ProfileService', () => {
         admins: 1
       }
 
-      mockSql.mockResolvedValue([mockStats])
+      mockApiService.getProfileStats.mockResolvedValue(mockStats)
 
       const result = await ProfileService.getProfileStats()
 

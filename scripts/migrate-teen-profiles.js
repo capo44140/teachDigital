@@ -3,7 +3,9 @@
  * Utilise la base de données Neon pour mettre à jour les profils
  */
 
-import sql from '../src/config/database.js';
+import db from '../backend/lib/database.js'
+
+const sql = db.sql || db.default
 
 async function migrateTeenProfiles() {
   try {

@@ -13,7 +13,7 @@
     "init-db": "node scripts/init-db.js",
     "init-badges": "node scripts/init-badges.js",
     "db:init": "node scripts/init-db.js",
-    "db:test": "node -e \"import('./src/config/database.js').then(db => db.testConnection())\"",
+    "db:test": "node backend/scripts/test-connection.js",
     "migrate-pins": "node scripts/migrate-pins.js migrate",
     "check-pins": "node scripts/migrate-pins.js check",
     "update-parent-pin": "node scripts/update-parent-pin.js",

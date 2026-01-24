@@ -13,7 +13,9 @@
  */
 
 import { NotificationService } from '../src/services/notificationService.js';
-import { testConnection } from '../src/config/database.js';
+import db from '../backend/lib/database.js'
+
+const sql = db.sql || db.default
 
 // Couleurs pour la console
 const colors = {
@@ -46,7 +48,7 @@ function logResult(success, message, details = '') {
 // Test de connexion à la base de données
 async function testDatabaseConnection() {
   try {
-    await testConnection();
+    await sql`SELECT 1 as ok`
     logResult(true, 'Connexion à la base de données');
     return true;
   } catch (error) {
