@@ -541,11 +541,26 @@ export default {
     async deleteLesson(lesson) {
       if (confirm(`Êtes-vous sûr de vouloir supprimer la leçon "${lesson.title}" ?`)) {
         try {
+          // Sauvegarder l'ID de l'enfant sélectionné
+          const selectedChildId = this.selectedChild.id
+          
+          // Supprimer la leçon
           await LessonService.deleteLesson(lesson.id, this.selectedChild.id)
-          await this.loadData() // Recharger les données
+          
+          // Recharger toutes les données
+          await this.loadData()
+          
+          // Resélectionner l'enfant pour actualiser la vue
+          const updatedChild = this.childrenStats.find(child => child.id === selectedChildId)
+          if (updatedChild) {
+            this.selectedChild = updatedChild
+          }
+          
+          // Afficher une notification de succès
+          this.$toast?.success('Leçon supprimée avec succès!')
         } catch (error) {
           console.error('Erreur lors de la suppression:', error)
-          alert('Erreur lors de la suppression de la leçon')
+          this.$toast?.error('Erreur lors de la suppression de la leçon')
         }
       }
     },
