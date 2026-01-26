@@ -15,8 +15,23 @@ import mobileOptimizationService from './services/mobileOptimizationService.js'
 const originalConsoleWarn = console.warn
 const originalConsoleError = console.error
 
+function safeConsoleArgToString (arg) {
+  try {
+    if (typeof arg === 'string') return arg
+    if (arg instanceof Error) return arg.stack || arg.message || String(arg)
+    // Éviter la coercition implicite (peut throw sur certains proxys)
+    return JSON.stringify(arg)
+  } catch (_e) {
+    try {
+      return String(arg)
+    } catch (_e2) {
+      return Object.prototype.toString.call(arg)
+    }
+  }
+}
+
 console.warn = function (...args) {
-  const message = args.join(' ')
+  const message = args.map(safeConsoleArgToString).join(' ')
   // Ignorer les avertissements Radix UI concernant DialogContent/DialogTitle
   if (message.includes('DialogContent') ||
     message.includes('DialogTitle') ||
@@ -29,7 +44,7 @@ console.warn = function (...args) {
 }
 
 console.error = function (...args) {
-  const message = args.join(' ')
+  const message = args.map(safeConsoleArgToString).join(' ')
   // Ignorer les erreurs Radix UI concernant DialogContent/DialogTitle
   if (message.includes('DialogContent') ||
     message.includes('DialogTitle') ||

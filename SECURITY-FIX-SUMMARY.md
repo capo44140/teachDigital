@@ -11,7 +11,7 @@ Votre application avait une **fuite de sécurité critique** :
 
 ### 1. Suppression du fichier database.js du frontend
 - **Avant** : `src/config/database.js` tentait une connexion PostgreSQL directe depuis le navigateur
-- **Après** : Remplacé par un stub qui affiche une erreur critique si utilisé du frontend
+- **Après** : **Supprimé** (aucune couche DB dans `src/`). Les scripts Node utilisent `backend/lib/database.js`.
 
 ### 2. Restructuration des Stores Pinia
 - Suppression des imports de `Repository` dans les stores
@@ -36,7 +36,7 @@ Frontend → Base de Données directement ❌
 
 ## 📋 Fichiers Modifiés
 
-- `src/config/database.js` - Création d'un stub de sécurité
+- `src/config/database.js` - **Supprimé** (zéro DB côté frontend)
 - `src/stores/profileStore.js` - Suppression de ProfileRepository
 - `src/stores/lessonStore.js` - Suppression de LessonRepository/QuizRepository  
 - `src/stores/notificationStore.js` - Suppression de NotificationRepository

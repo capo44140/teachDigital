@@ -14,12 +14,12 @@ dotenv.config()
 
 // Configuration de la base de données PostgreSQL
 const config = {
-  connectionString: process.env.DATABASE_URL || process.env.VITE_DATABASE_URL,
-  host: process.env.DB_HOST || process.env.NEON_HOST || process.env.VITE_NEON_HOST,
-  database: process.env.DB_DATABASE || process.env.NEON_DATABASE || process.env.VITE_NEON_DATABASE,
-  username: process.env.DB_USERNAME || process.env.NEON_USERNAME || process.env.VITE_NEON_USERNAME,
-  password: process.env.DB_PASSWORD || process.env.NEON_PASSWORD || process.env.VITE_NEON_PASSWORD,
-  port: process.env.DB_PORT || process.env.NEON_PORT || process.env.VITE_NEON_PORT || 5432,
+  connectionString: process.env.DATABASE_URL,
+  host: process.env.DB_HOST || process.env.NEON_HOST,
+  database: process.env.DB_DATABASE || process.env.NEON_DATABASE,
+  username: process.env.DB_USERNAME || process.env.NEON_USERNAME,
+  password: process.env.DB_PASSWORD || process.env.NEON_PASSWORD,
+  port: process.env.DB_PORT || process.env.NEON_PORT || 5432,
   ssl: process.env.DB_SSL !== 'false'
 };
 

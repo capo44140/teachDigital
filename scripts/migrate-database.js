@@ -15,7 +15,7 @@ dotenv.config();
 
 // Configuration de la base de données PostgreSQL
 const config = {
-  connectionString: process.env.DATABASE_URL || process.env.VITE_DATABASE_URL,
+  connectionString: process.env.DATABASE_URL,
   host: process.env.DB_HOST,
   database: process.env.DB_DATABASE,
   username: process.env.DB_USERNAME,

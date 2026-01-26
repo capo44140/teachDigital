@@ -5,7 +5,9 @@
  * Exécute: node scripts/migrate-profile-level.js
  */
 
-import sql from '../src/config/database.js'
+import db from '../backend/lib/database.js'
+
+const sql = db.sql || db.default
 
 async function migrateProfileLevel() {
   try {

@@ -212,22 +212,73 @@
                 </div>
               </div>
 
-              <!-- Temps d'apprentissage -->
+              <!-- Série & niveau -->
               <div class="glass-stat-card">
                 <h4 class="text-lg font-bold text-white mb-4 flex items-center">
-                  <div class="w-8 h-8 bg-gradient-to-br from-purple-500/30 to-pink-500/30 rounded-lg flex items-center justify-center mr-3">
-                    <span class="text-purple-300">⏱️</span>
+                  <div class="w-8 h-8 bg-gradient-to-br from-orange-500/30 to-red-500/30 rounded-lg flex items-center justify-center mr-3">
+                    <span class="text-orange-300">🔥</span>
                   </div>
-                  Temps d'apprentissage
+                  Série & niveau
                 </h4>
                 <div class="grid grid-cols-2 gap-4">
                   <div class="text-center p-4 bg-white/5 rounded-xl">
-                    <div class="text-2xl font-bold text-white mb-1">{{ totalLearningTime }}</div>
-                    <div class="text-white/60 text-sm">Total</div>
+                    <div class="text-2xl font-bold text-white mb-1">{{ progressSummary?.streaks?.current || 0 }}</div>
+                    <div class="text-white/60 text-sm">Jours de suite</div>
                   </div>
                   <div class="text-center p-4 bg-white/5 rounded-xl">
-                    <div class="text-2xl font-bold text-white mb-1">{{ averageSessionTime }}</div>
-                    <div class="text-white/60 text-sm">Par session</div>
+                    <div class="text-2xl font-bold text-white mb-1">{{ progressSummary?.streaks?.best || 0 }}</div>
+                    <div class="text-white/60 text-sm">Meilleure série</div>
+                  </div>
+                </div>
+
+                <div class="mt-6 p-4 bg-white/5 rounded-xl">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="text-white font-bold">
+                      Niveau {{ progressSummary?.xp?.level || 1 }}
+                      <span class="text-white/60 font-medium ml-2">({{ progressSummary?.xp?.total || 0 }} XP)</span>
+                    </div>
+                    <div class="text-white/80 text-sm">
+                      {{ progressSummary?.xp?.xpInLevel || 0 }}/{{ progressSummary?.xp?.xpForNextLevel || 500 }}
+                    </div>
+                  </div>
+                  <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                    <div
+                      class="bg-gradient-to-r from-orange-500 to-red-500 h-full rounded-full transition-all duration-500"
+                      :style="{ width: (progressSummary?.xp?.levelProgressPercent || 0) + '%' }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Objectifs hebdo -->
+              <div class="glass-stat-card">
+                <h4 class="text-lg font-bold text-white mb-4 flex items-center">
+                  <div class="w-8 h-8 bg-gradient-to-br from-cyan-500/30 to-blue-500/30 rounded-lg flex items-center justify-center mr-3">
+                    <span class="text-cyan-300">🎯</span>
+                  </div>
+                  Objectifs de la semaine
+                </h4>
+                <div v-if="!progressSummary?.weeklyGoals || progressSummary.weeklyGoals.length === 0" class="text-white/60">
+                  Aucun objectif défini.
+                </div>
+                <div v-else class="space-y-4">
+                  <div v-for="goal in progressSummary.weeklyGoals" :key="goal.id" class="p-4 bg-white/5 rounded-xl">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <div class="text-white font-bold">{{ goal.title }}</div>
+                        <div class="text-white/60 text-sm">{{ goal.description }}</div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-white font-bold">{{ goal.current }}/{{ goal.target }}</div>
+                        <div class="text-white/60 text-xs">+{{ goal.rewardXp }} XP</div>
+                      </div>
+                    </div>
+                    <div class="mt-3 w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                      <div
+                        class="bg-gradient-to-r from-cyan-500 to-blue-500 h-full rounded-full transition-all duration-500"
+                        :style="{ width: (goal.progressPercent || 0) + '%' }"
+                      ></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -338,6 +389,7 @@
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
 import { LessonService } from '../services/lessonService.js'
+import { ProgressService } from '../services/progressService.js'
 
 export default {
   name: 'ProgressTracking',
@@ -357,7 +409,8 @@ export default {
       monthlyProgress: [],
       achievements: [],
       recommendedQuizzes: [],
-      improvementAreas: []
+      improvementAreas: [],
+      progressSummary: null
     }
   },
   computed: {
@@ -434,8 +487,22 @@ export default {
       if (!this.selectedChild) return
 
       try {
-        // Charger l'historique des quiz
-        this.quizHistory = await LessonService.getChildQuizHistory(this.selectedChild.id)
+        // Charger le résumé de progression (backend)
+        this.progressSummary = await ProgressService.getProfileProgressSummary(this.selectedChild.id)
+
+        // Historique des quiz (déjà prêt côté backend)
+        this.quizHistory = (this.progressSummary?.recentHistory || []).map(q => ({
+          id: q.id,
+          lessonId: q.lessonId,
+          lessonTitle: q.lessonTitle,
+          lessonSubject: q.lessonSubject,
+          score: q.score,
+          totalQuestions: q.totalQuestions,
+          percentage: q.percentage,
+          completedAt: q.completedAt,
+          duration: q.duration || 0,
+          answers: q.answers
+        }))
         this.filteredQuizHistory = [...this.quizHistory]
 
         // Charger les statistiques
@@ -455,49 +522,21 @@ export default {
     },
 
     async loadStatistics() {
-      // Score par type de quiz
-      this.scoreByType = [
-        { type: 'Mathématiques', averageScore: 85 },
-        { type: 'Français', averageScore: 78 },
-        { type: 'Sciences', averageScore: 92 },
-        { type: 'Histoire', averageScore: 88 }
-      ]
+      // Score par matière (backend)
+      this.scoreByType = (this.progressSummary?.skills || []).map(s => ({
+        type: s.subject,
+        averageScore: Math.round(Number(s.averageScore) || 0)
+      }))
 
-      // Progrès mensuel
-      this.monthlyProgress = [
-        { month: 'Janvier', quizCount: 12, averageScore: 82 },
-        { month: 'Février', quizCount: 15, averageScore: 85 },
-        { month: 'Mars', quizCount: 18, averageScore: 88 },
-        { month: 'Avril', quizCount: 14, averageScore: 90 }
-      ]
+      // Progrès mensuel (backend)
+      this.monthlyProgress = (this.progressSummary?.monthlyProgress || []).map(m => ({
+        month: m.monthKey,
+        quizCount: Number(m.quizCount) || 0,
+        averageScore: Math.round(Number(m.averageScore) || 0)
+      }))
 
-      // Récompenses
-      this.achievements = [
-        {
-          id: 1,
-          title: 'Premier quiz',
-          description: 'Complétez votre premier quiz',
-          icon: '🎯',
-          unlocked: this.totalQuizzesCompleted > 0,
-          progress: Math.min(100, (this.totalQuizzesCompleted / 1) * 100)
-        },
-        {
-          id: 2,
-          title: 'Quiz master',
-          description: 'Complétez 10 quiz',
-          icon: '🏆',
-          unlocked: this.totalQuizzesCompleted >= 10,
-          progress: Math.min(100, (this.totalQuizzesCompleted / 10) * 100)
-        },
-        {
-          id: 3,
-          title: 'Score parfait',
-          description: 'Obtenez 100% à un quiz',
-          icon: '⭐',
-          unlocked: this.quizHistory.some(quiz => quiz.percentage === 100),
-          progress: this.quizHistory.some(quiz => quiz.percentage === 100) ? 100 : 0
-        }
-      ]
+      // Récompenses (backend)
+      this.achievements = this.progressSummary?.achievements || []
     },
 
     async loadRecommendations() {

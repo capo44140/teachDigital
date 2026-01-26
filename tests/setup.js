@@ -46,7 +46,11 @@ Object.defineProperty(navigator, 'serviceWorker', {
 })
 
 // Mock des notifications
-Object.defineProperty(Notification, 'permission', {
+if (typeof globalThis.Notification === 'undefined') {
+  globalThis.Notification = function Notification() {}
+}
+
+Object.defineProperty(globalThis.Notification, 'permission', {
   writable: true,
   value: 'granted',
 })

@@ -8,7 +8,7 @@ config();
 
 // Configuration de la base de données PostgreSQL
 const dbConfig = {
-  connectionString: process.env.DATABASE_URL || process.env.VITE_DATABASE_URL,
+  connectionString: process.env.DATABASE_URL,
   host: process.env.DB_HOST || process.env.NEON_HOST,
   database: process.env.DB_DATABASE || process.env.NEON_DATABASE,
   username: process.env.DB_USERNAME || process.env.NEON_USERNAME,

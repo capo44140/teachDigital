@@ -3,7 +3,9 @@
  * Teste le filtrage par âge et la sécurité
  */
 
-import sql from '../src/config/database.js'
+import db from '../backend/lib/database.js'
+
+const sql = db.sql || db.default
 
 async function testYouTubeKidsViewer() {
   try {

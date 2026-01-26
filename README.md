@@ -166,9 +166,8 @@ Pour déployer sur Vercel, assurez-vous que les paramètres suivants sont config
    - Development Command : `vite`
 
 2. **Variables d'environnement** (à configurer dans Vercel) :
-   - `DATABASE_URL` - URL de connexion Neon Database
-   - `VITE_DATABASE_URL` - URL publique pour le client
-   - `NEON_HOST`, `NEON_DATABASE`, `NEON_USERNAME`, `NEON_PASSWORD`, `NEON_PORT`
+   - `DATABASE_URL` - URL de connexion PostgreSQL (backend uniquement)
+   - `NEON_HOST`, `NEON_DATABASE`, `NEON_USERNAME`, `NEON_PASSWORD`, `NEON_PORT` (si vous utilisez la config par variables séparées)
 
 3. **Activation des Overrides** :
    - Activez tous les toggles "Override" dans l'interface Vercel
