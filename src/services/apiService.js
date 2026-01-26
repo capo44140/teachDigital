@@ -10,7 +10,7 @@ class ApiService {
     // En production, utiliser l'URL complète du backend
     this.baseURL = isDevelopment
       ? (import.meta.env.VITE_API_URL || '') // Proxy Vite utilise des chemins relatifs
-      : (import.meta.env.VITE_API_URL_PROD || 'https://teach-digital.lespoires.ovh:3002')
+      : (import.meta.env.VITE_API_URL_PROD || 'https://www.teach-digital.fr:3002')
   }
 
   /**
