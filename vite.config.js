@@ -11,6 +11,9 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       VitePWA({
+        // Évite la génération/injection de /registerSW.js (ressource bloquante)
+        // On gère l'enregistrement du SW manuellement dans src/main.js
+        injectRegister: null,
         registerType: "autoUpdate",
         includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],
         manifest: {
@@ -126,12 +129,6 @@ export default defineConfig(({ mode }) => {
 
               // Toutes les autres dépendances
               return 'vendor'
-            }
-
-            // Regrouper TOUS les composants et services dans un seul chunk
-            // Cela évite les problèmes d'ordre d'initialisation entre chunks
-            if (id.includes('src/')) {
-              return 'app'
             }
           },
           // Configuration optimisée pour les noms de fichiers

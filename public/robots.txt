@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# Sitemap (si tu ajoutes/maintiens un sitemap)
+Sitemap: https://www.teach-digital.fr/sitemap.xml
+

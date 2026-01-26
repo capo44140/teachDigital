@@ -1,6 +1,8 @@
 <template>
   <div id="app">
-    <router-view />
+    <main id="main-content" role="main">
+      <router-view />
+    </main>
     
     <!-- Popup de mise à jour globale -->
     <UpdateNotification

@@ -118,6 +118,7 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
 
       <!-- Modal: Demande de création de profil -->
