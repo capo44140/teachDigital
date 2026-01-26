@@ -4,7 +4,7 @@
  */
 
 // URLs des APIs externes
-const LOCAL_LLM_BASE_URL = process.env.LOCAL_LLM_URL || 'http://192.168.1.128:1234/v1';
+const LOCAL_LLM_BASE_URL = process.env.LOCAL_LLM_URL || 'http://192.168.1.:1234/v1';
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
@@ -13,7 +13,7 @@ const MISTRAL_BASE_URL = 'https://api.mistral.ai/v1';
 
 // Timeout pour les appels API externes (90s par défaut)
 // Peut être ajusté via AI_TIMEOUT_MS
-const API_TIMEOUT_MS = parseInt(process.env.AI_TIMEOUT_MS || '90000', 10);
+const API_TIMEOUT_MS = parseInt(process.env.AI_TIMEOUT_MS || '180000', 10);
 
 // Timeout spécifique pour le LLM local (LM Studio / Ollama) : 180s par défaut
 // Peut être ajusté via LOCAL_LLM_TIMEOUT_MS (recommandé si LM Studio est lent)
