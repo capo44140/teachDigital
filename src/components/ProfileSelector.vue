@@ -90,7 +90,7 @@
 
             <!-- Informations du profil -->
             <div class="profile-info-glass">
-              <h3 class="profile-name-glass">{{ profile.name }}</h3>
+              <p class="profile-name-glass">{{ profile.name }}</p>
               <div v-if="profile.is_admin" class="admin-badge-glass">
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
@@ -114,7 +114,7 @@
               </div>
             </div>
             <div class="profile-info-glass">
-              <h3 class="profile-name-glass text-white/60">Ajouter</h3>
+              <p class="profile-name-glass text-white/60">Ajouter</p>
             </div>
           </div>
         </div>
