@@ -2,6 +2,13 @@
 @import "./styles/liquid-glass.css";
 
 /* Styles personnalisés */
+html,
+body {
+  height: 100%;
+  background-color: #0F172A; /* fallback */
+  background-image: linear-gradient(135deg, #0F172A, #4C1D95, #0F172A);
+}
+
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
