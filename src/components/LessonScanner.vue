@@ -244,6 +244,7 @@ import { useProfileStore } from '../stores/profileStore.js'
 import { AIService } from '../services/aiService.js'
 import { rateLimitService } from '../services/rateLimitService.js'
 import { ImageValidationService } from '../services/imageValidationService.js'
+import imageOptimizationService from '../services/imageOptimizationService.js'
 // Import dynamique pour éviter les problèmes d'initialisation
 import { LessonService } from '../services/lessonService.js'
 import { migrationService } from '../services/migrationService.js'
@@ -296,6 +297,57 @@ export default {
     })
   },
   methods: {
+    isCompressibleImage(file) {
+      return file?.type === 'image/jpeg' || file?.type === 'image/png'
+    },
+
+    revokePreviewUrl(previewUrl) {
+      if (typeof previewUrl === 'string' && previewUrl.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(previewUrl)
+        } catch (_e) {
+          // no-op
+        }
+      }
+    },
+
+    async maybeCompressImage(file) {
+      if (!this.isCompressibleImage(file)) return { file, didCompress: false }
+
+      const originalSize = file.size
+      const preferredFormat = file.type === 'image/png' ? 'png' : 'jpeg'
+
+      const result = await imageOptimizationService.optimizeImage(file, {
+        quality: 'medium',
+        maxWidth: 1920,
+        maxHeight: 1920,
+        format: preferredFormat,
+        progressive: true
+      })
+
+      if (!result?.success || !result.blob) {
+        return { file, didCompress: false }
+      }
+
+      // Garder le fichier original si pas de gain
+      if (result.blob.size >= originalSize) {
+        return { file, didCompress: false }
+      }
+
+      const optimizedFile = new File([result.blob], file.name, {
+        type: result.format || file.type,
+        lastModified: Date.now()
+      })
+
+      return {
+        file: optimizedFile,
+        didCompress: true,
+        originalSize,
+        optimizedSize: optimizedFile.size,
+        compressionRatio: result.compressionRatio
+      }
+    },
+
     goBack() {
       this.$router.push('/dashboard')
     },
@@ -355,6 +407,8 @@ export default {
           continue
         }
         
+        let finalFile = file
+
         // Valider l'image côté serveur (pour les images uniquement)
         if (file.type.startsWith('image/')) {
           try {
@@ -380,6 +434,28 @@ export default {
             
             this.validationErrors = []
             this.validationWarnings = validation.warnings
+
+            // Compression côté client (PNG/JPG) avant upload
+            try {
+              const compression = await this.maybeCompressImage(file)
+              finalFile = compression.file
+
+              if (compression.didCompress) {
+                console.log('[LessonScanner] handleFiles() - Image compressée:', {
+                  fileName: file.name,
+                  originalSize: this.formatFileSize(compression.originalSize),
+                  optimizedSize: this.formatFileSize(compression.optimizedSize),
+                  compressionRatio: `${compression.compressionRatio}%`
+                })
+              }
+            } catch (compressError) {
+              // On ne bloque pas l'upload si la compression échoue
+              console.warn('[LessonScanner] handleFiles() - Compression impossible, utilisation du fichier original:', {
+                fileName: file.name,
+                message: compressError?.message
+              })
+              finalFile = file
+            }
             
             // Enregistrer l'upload d'image dans les logs d'audit (sans métadonnées volumineuses)
             if (this.auditLogService) {
@@ -390,7 +466,7 @@ export default {
                 'IMAGE_UPLOADED',
                 {
                   fileName: file.name,
-                  fileSize: file.size,
+                  fileSize: finalFile.size,
                   fileType: file.type
                   // Ne pas stocker validation.metadata (contient dimensions, etc. - trop volumineux)
                 }
@@ -415,18 +491,14 @@ export default {
           }
         }
         
-        validFiles.push(file)
+        validFiles.push(finalFile)
         console.log('[LessonScanner] handleFiles() - Fichier ajouté à la liste valide:', file.name)
         
         // Créer un aperçu pour les images
-        if (file.type.startsWith('image/')) {
-          const reader = new FileReader()
-          reader.onload = (e) => {
-            validPreviews.push(e.target.result)
-            this.filePreviews = [...validPreviews]
-            console.log('[LessonScanner] handleFiles() - Aperçu créé pour:', file.name)
-          }
-          reader.readAsDataURL(file)
+        if (finalFile.type.startsWith('image/')) {
+          const previewUrl = URL.createObjectURL(finalFile)
+          validPreviews.push(previewUrl)
+          console.log('[LessonScanner] handleFiles() - Aperçu créé pour:', finalFile.name)
         } else {
           // Pour les PDF, on n'affiche pas d'aperçu
           validPreviews.push(null)
@@ -446,12 +518,14 @@ export default {
     },
     
     removeFile(index) {
+      this.revokePreviewUrl(this.filePreviews[index])
       this.selectedFiles.splice(index, 1)
       this.filePreviews.splice(index, 1)
       this.generatedQuiz = null
     },
     
     removeAllFiles() {
+      this.filePreviews.forEach((url) => this.revokePreviewUrl(url))
       this.selectedFiles = []
       this.filePreviews = []
       this.generatedQuiz = null
