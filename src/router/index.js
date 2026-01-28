@@ -54,6 +54,7 @@ const ApiDashboard = () => import(/* webpackChunkName: "api-components" */ '../c
 // Composants de paramètres (chunk: settings-components)
 const ParentSettings = () => import(/* webpackChunkName: "settings-components" */ '../components/ParentSettings.vue')
 const ChildSettings = () => import(/* webpackChunkName: "settings-components" */ '../components/ChildSettings.vue')
+const PWASettings = () => import(/* webpackChunkName: "settings-components" */ '../components/PWASettings.vue')
 
 const routes = [
   {
@@ -241,6 +242,12 @@ const routes = [
     path: '/liquid-glass-test',
     name: 'LiquidGlassTest',
     component: LiquidGlassTest
+  },
+  {
+    path: '/settings/pwa',
+    name: 'PWASettings',
+    component: PWASettings,
+    meta: { requiresAdmin: true }
   }
 ]
 
