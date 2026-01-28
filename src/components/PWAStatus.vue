@@ -80,7 +80,7 @@
         </div>
         <div v-if="installPrompt" class="status-item">
           <span class="label">Prompt disponible:</span>
-          <span class="value" class="success">Oui</span>
+          <span class="value success">Oui</span>
         </div>
       </div>
     </div>
