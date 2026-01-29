@@ -2,20 +2,19 @@ const { default: sql, pool } = require('../lib/database.js');
 const { authenticateToken } = require('../lib/auth.js');
 const { handleError } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
+const logger = require('../lib/logger.js');
 
 // Handler des leçons
 async function handleLessons(req, res) {
     try {
         if (req.method === 'GET') {
-            // Parser les query parameters depuis l'URL
-            const url = new URL(req.url, `http://${req.headers.host}`);
-            const profileId = url.searchParams.get('profileId');
-            const published = url.searchParams.get('published');
+            // Parser les query parameters
+            const { profileId, published } = req.query || {};
 
-            console.log(`🔍 Récupération des leçons - profileId: ${profileId}, published: ${published}`);
+            logger.info(`🔍 Récupération des leçons - profileId: ${profileId}, published: ${published}`);
             const startTime = Date.now();
 
-            console.log('🦄 DEBUG: handleLessons GET start - v2');
+            logger.debug('handleLessons GET start - v2');
             // Construire la requête dynamiquement (méthode robuste)
             let queryText = 'SELECT id, title, description, subject, level, image_filename, is_published, created_at, updated_at, profile_id FROM lessons';
             const params = [];
@@ -43,18 +42,18 @@ async function handleLessons(req, res) {
 
             queryText += ' ORDER BY created_at DESC LIMIT 100';
 
-            console.log('🔍 DEBUG SQL:', queryText);
-            console.log('🔍 DEBUG PARAMS:', params);
+            logger.debug('🔍 SQL:', { query: queryText });
+            logger.debug('🔍 PARAMS:', { params });
 
             // Utilisation directe de pool.query pour éviter les problèmes avec le tag sql
-            lessons = await withQueryTimeout(
+            const lessons = await withQueryTimeout(
                 pool.query(queryText, params).then(res => res.rows),
                 TIMEOUTS.STANDARD,
                 'récupération des leçons'
             );
 
             const totalTime = Date.now() - startTime;
-            console.log(`✅ Leçons récupérées: ${lessons.length} résultat(s) en ${totalTime}ms`);
+            logger.info(`✅ Leçons récupérées: ${lessons.length} résultat(s) en ${totalTime}ms`);
 
             res.status(200).json({
                 success: true,

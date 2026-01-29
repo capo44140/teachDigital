@@ -75,10 +75,6 @@
   },
   "dependencies": {
     "@iconify/vue": "^5.0.0",
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.2",
-    "pg": "^8.11.3",
     "pinia": "^3.0.3",
     "vue": "^3.4.0",
     "vue-router": "^4.2.0"
