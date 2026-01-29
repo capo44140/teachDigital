@@ -1,6 +1,6 @@
 const { NativeHashService } = require('../lib/nativeHash.js');
 const { default: sql } = require('../lib/database.js');
-const { generateToken, createSession, deleteSession } = require('../lib/auth.js');
+const { generateToken, createSession, deleteSession, authenticateToken } = require('../lib/auth.js');
 const { handleError, createErrorResponse } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
 
@@ -106,6 +106,116 @@ async function handleLogin(req, res) {
     }
 }
 
+// Handler du code d'entrée familial (Option B - code dédié)
+async function handleFamilyGate(req, res) {
+    if (req.method === 'POST') {
+        // POST : vérifier le code familial
+        try {
+            const { pin } = req.body;
+            if (!pin) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Code familial requis'
+                });
+                return;
+            }
+            const row = await withQueryTimeout(
+                sql`SELECT pin_hash FROM family_gate WHERE id = 1`,
+                TIMEOUTS.STANDARD,
+                'family_gate'
+            );
+            if (!row[0]) {
+                res.status(503).json({
+                    success: false,
+                    message: 'Code d\'entrée familial non configuré'
+                });
+                return;
+            }
+            const isValid = await NativeHashService.verifyPin(pin, row[0].pin_hash);
+            if (!isValid) {
+                res.status(401).json({
+                    success: false,
+                    message: 'Code incorrect'
+                });
+                return;
+            }
+            res.status(200).json({
+                success: true,
+                message: 'Code valide',
+                data: { valid: true }
+            });
+        } catch (error) {
+            const errorResponse = handleError(error, 'Erreur vérification code familial');
+            res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+        }
+        return;
+    }
+    if (req.method === 'PUT') {
+        // PUT : définir ou mettre à jour le code familial (admin uniquement)
+        try {
+            const user = authenticateToken(req);
+            if (!user.isAdmin) {
+                res.status(403).json({
+                    success: false,
+                    message: 'Accès refusé - Admin requis'
+                });
+                return;
+            }
+            const { newPin, currentPin } = req.body;
+            if (!newPin || newPin.length < 4 || newPin.length > 8) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Nouveau code requis (4 à 8 caractères)'
+                });
+                return;
+            }
+            const row = await withQueryTimeout(
+                sql`SELECT pin_hash FROM family_gate WHERE id = 1`,
+                TIMEOUTS.STANDARD,
+                'family_gate'
+            );
+            if (row[0]) {
+                if (!currentPin) {
+                    res.status(400).json({
+                        success: false,
+                        message: 'Code actuel requis pour modifier'
+                    });
+                    return;
+                }
+                const validCurrent = await NativeHashService.verifyPin(currentPin, row[0].pin_hash);
+                if (!validCurrent) {
+                    res.status(401).json({
+                        success: false,
+                        message: 'Code actuel incorrect'
+                    });
+                    return;
+                }
+            }
+            const hashedPin = await NativeHashService.hashPin(newPin);
+            await withQueryTimeout(
+                sql`
+                INSERT INTO family_gate (id, pin_hash, updated_at)
+                VALUES (1, ${hashedPin}, CURRENT_TIMESTAMP)
+                ON CONFLICT (id) DO UPDATE SET
+                  pin_hash = EXCLUDED.pin_hash,
+                  updated_at = CURRENT_TIMESTAMP
+                `,
+                TIMEOUTS.STANDARD,
+                'family_gate update'
+            );
+            res.status(200).json({
+                success: true,
+                message: 'Code d\'entrée familial mis à jour'
+            });
+        } catch (error) {
+            const errorResponse = handleError(error, 'Erreur mise à jour code familial');
+            res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+        }
+        return;
+    }
+    res.status(405).json(createErrorResponse('Méthode non autorisée', 'METHOD_NOT_ALLOWED'));
+}
+
 // Handler de déconnexion
 async function handleLogout(req, res) {
     if (req.method !== 'POST') {
@@ -134,5 +244,6 @@ async function handleLogout(req, res) {
 
 module.exports = {
     handleLogin,
-    handleLogout
+    handleLogout,
+    handleFamilyGate
 };

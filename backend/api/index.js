@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { handleLogin, handleLogout } = require('../controllers/authController.js');
+const { handleLogin, handleLogout, handleFamilyGate } = require('../controllers/authController.js');
 const { handleProfiles, handleProfile, handleProfileStats, handleProfilePin, handlePin, handleProfileLearningStats, handleProfileCreationRequest } = require('../controllers/profileController.js');
 const { handleLessons, handleLesson, handleQuizResults, handleGlobalLessonStats } = require('../controllers/lessonController.js');
 const { handleNotifications, handleNotification } = require('../controllers/notificationController.js');
@@ -46,9 +46,19 @@ const profileRequestRateLimiter = createRateLimiter({
   code: 'RATE_LIMIT_PROFILE_REQUEST'
 });
 
+const familyGateRateLimiter = createRateLimiter({
+  windowMs: parseInt(process.env.API_RATE_LIMIT_FAMILY_GATE_WINDOW_MS || '60000', 10),
+  max: parseInt(process.env.API_RATE_LIMIT_FAMILY_GATE_MAX || '20', 10),
+  keyGenerator: (req) => `family_gate:${getClientIp(req)}`,
+  message: 'Trop de tentatives. Veuillez réessayer.',
+  code: 'RATE_LIMIT_FAMILY_GATE'
+});
+
 // Routes d'authentification
 router.post('/auth/login', loginRateLimiter, handleLogin);
 router.post('/auth/logout', handleLogout);
+router.post('/auth/family-gate', familyGateRateLimiter, handleFamilyGate);
+router.put('/auth/family-gate', handleFamilyGate);
 
 // Routes des profils
 router.get('/profiles/stats', handleProfileStats);

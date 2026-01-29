@@ -12,6 +12,7 @@
     "deploy:synology:skip-build": "powershell -ExecutionPolicy Bypass -File ./deploy-synology.ps1 -SkipBuild",
     "setup:env": "node scripts/setup-env.js",
     "init-badges": "node scripts/init-badges.js",
+    "init-family-gate": "node scripts/init-family-gate.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"

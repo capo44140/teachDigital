@@ -2,9 +2,11 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useProfileStore } from '../stores/profileStore.js'
 import { useApiStore } from '../stores/apiStore.js'
 import sessionService from '../services/sessionService.js'
+import familyGateService from '../services/familyGateService.js'
 
 // Imports dynamiques optimisés avec chunking intelligent
 // Composants critiques (chargés immédiatement)
+const FamilyGate = () => import('../components/FamilyGate.vue')
 const ProfileSelector = () => import('../components/ProfileSelector.vue')
 const Dashboard = () => import('../components/Dashboard.vue')
 const UserDashboard = () => import('../components/UserDashboard.vue')
@@ -53,10 +55,16 @@ const ApiDashboard = () => import(/* webpackChunkName: "api-components" */ '../c
 
 // Composants de paramètres (chunk: settings-components)
 const ParentSettings = () => import(/* webpackChunkName: "settings-components" */ '../components/ParentSettings.vue')
+const FamilyGateSettings = () => import(/* webpackChunkName: "settings-components" */ '../components/FamilyGateSettings.vue')
 const ChildSettings = () => import(/* webpackChunkName: "settings-components" */ '../components/ChildSettings.vue')
 const PWASettings = () => import(/* webpackChunkName: "settings-components" */ '../components/PWASettings.vue')
 
 const routes = [
+  {
+    path: '/family-gate',
+    name: 'FamilyGate',
+    component: FamilyGate
+  },
   {
     path: '/',
     name: 'ProfileSelector',
@@ -191,6 +199,12 @@ const routes = [
     meta: { requiresAdmin: true }
   },
   {
+    path: '/family-gate-settings',
+    name: 'FamilyGateSettings',
+    component: FamilyGateSettings,
+    meta: { requiresAdmin: true }
+  },
+  {
     path: '/child-settings',
     name: 'ChildSettings',
     component: ChildSettings,
@@ -261,6 +275,16 @@ router.beforeEach(async (to, from, next) => {
   // Éviter les boucles infinies en vérifiant si on est déjà en train de rediriger
   if (to.path === from.path) {
     next()
+    return
+  }
+
+  // Code d'entrée familial : accès à / (sélection de profils) uniquement si session famille valide
+  if (to.path === '/family-gate') {
+    next()
+    return
+  }
+  if (to.path === '/' && !familyGateService.hasValidFamilySession()) {
+    next({ path: '/family-gate' })
     return
   }
 

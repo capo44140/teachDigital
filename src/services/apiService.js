@@ -60,7 +60,8 @@ class ApiService {
     const token = this.getToken()
 
     // Endpoints qui ne nécessitent pas de token
-    const publicEndpoints = ['/api/auth/login', '/api/auth/logout']
+    // POST /api/auth/family-gate ne nécessite pas de token ; PUT (config) si (admin)
+const publicEndpoints = ['/api/auth/login', '/api/auth/logout']
     const isPublicEndpoint = publicEndpoints.includes(endpoint)
 
     // Endpoints qui nécessitent un timeout plus long
@@ -106,8 +107,11 @@ class ApiService {
       // Gérer les erreurs HTTP
       if (!response.ok) {
         if (response.status === 401) {
+          // Code familial incorrect (pas de logout)
+          if (endpoint === '/api/auth/family-gate') {
+            throw new Error('Code incorrect')
+          }
           // Token expiré ou invalide (pour les autres endpoints)
-          // Supprimer le token du localStorage (session expirée / invalide)
           localStorage.removeItem('auth_token')
           this.logout()
           throw new Error('Session expirée - Veuillez vous reconnecter')
