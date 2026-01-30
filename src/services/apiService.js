@@ -61,8 +61,11 @@ class ApiService {
 
     // Endpoints qui ne nécessitent pas de token
     // POST /api/auth/family-gate ne nécessite pas de token ; PUT (config) si (admin)
-const publicEndpoints = ['/api/auth/login', '/api/auth/logout']
-    const isPublicEndpoint = publicEndpoints.includes(endpoint)
+    const method = String(options.method || 'GET').toUpperCase()
+    const publicEndpoints = ['/api/auth/login', '/api/auth/logout']
+    const isPublicEndpoint =
+      publicEndpoints.includes(endpoint) ||
+      (endpoint === '/api/auth/family-gate' && method === 'POST')
 
     // Endpoints qui nécessitent un timeout plus long
     const longTimeoutEndpoints = [
