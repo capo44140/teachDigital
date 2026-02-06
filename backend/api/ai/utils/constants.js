@@ -4,7 +4,7 @@
  */
 
 // URLs des APIs externes
-const LOCAL_LLM_BASE_URL = process.env.LOCAL_LLM_URL || 'http://192.168.1.:1234/v1';
+const LOCAL_LLM_BASE_URL = process.env.LOCAL_LLM_URL || 'http://192.168.1.9:1234/v1';
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
