@@ -4,7 +4,20 @@
  */
 
 const express = require('express');
-const handler = require('./api/index.js');
+// #region agent log
+let _handlerLoadError = null;
+let handler;
+try {
+  handler = require('./api/index.js');
+  fetch('http://127.0.0.1:7242/ingest/58a332b7-4bd9-4fad-a986-8bd2b3c5169b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server.js:IMPORT',message:'handler loaded OK',data:{handlerType:typeof handler,isFunction:typeof handler==='function',hasStack:!!handler?.stack},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+  console.log('[DEBUG-A] handler loaded OK, type:', typeof handler, 'isFunction:', typeof handler === 'function');
+} catch(e) {
+  _handlerLoadError = e;
+  fetch('http://127.0.0.1:7242/ingest/58a332b7-4bd9-4fad-a986-8bd2b3c5169b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server.js:IMPORT',message:'handler LOAD FAILED',data:{error:e.message,stack:e.stack?.substring(0,500)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+  console.error('[DEBUG-A] handler LOAD FAILED:', e.message, e.stack);
+  handler = require('express').Router(); // fallback empty router
+}
+// #endregion
 const logger = require('./lib/logger.js');
 const { corsMiddleware } = require('./lib/cors.js');
 const crypto = require('crypto');
@@ -67,6 +80,11 @@ app.use((req, res, next) => {
 
   req.requestId = requestId;
   res.setHeader('x-request-id', requestId);
+
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/58a332b7-4bd9-4fad-a986-8bd2b3c5169b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server.js:REQUEST',message:'incoming request',data:{method:req.method,url:req.url,originalUrl:req.originalUrl,path:req.path,baseUrl:req.baseUrl,hostname:req.hostname},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+  console.log('[DEBUG-B] Incoming request:', req.method, req.originalUrl, '| url:', req.url, '| path:', req.path);
+  // #endregion
 
   // Log à la fin (status + durée)
   res.on('finish', () => {
@@ -174,8 +192,23 @@ app.use(async (req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+
 // Utilisation du routeur API
+// /api : accès direct au backend (ex. santé, tests)
+// / : nginx Synology transmet sans le préfixe /api (proxy_pass .../), donc /auth/family-gate etc.
 app.use('/api', handler);
+app.use('/', handler);
+
+// #region agent log
+if (handler && handler.stack) {
+  const routes = handler.stack.filter(r => r.route).map(r => ({method: Object.keys(r.route.methods).join(','), path: r.route.path}));
+  fetch('http://127.0.0.1:7242/ingest/58a332b7-4bd9-4fad-a986-8bd2b3c5169b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server.js:ROUTES',message:'registered routes',data:{routeCount:routes.length,routes:routes.slice(0,30),handlerLoadError:_handlerLoadError?.message||null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+  console.log('[DEBUG-A] Registered routes:', routes.length, JSON.stringify(routes.slice(0,10)));
+} else {
+  fetch('http://127.0.0.1:7242/ingest/58a332b7-4bd9-4fad-a986-8bd2b3c5169b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server.js:ROUTES',message:'NO routes found on handler',data:{handlerType:typeof handler,handlerKeys:handler?Object.keys(handler):[]},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+  console.log('[DEBUG-A] NO routes found on handler. type:', typeof handler);
+}
+// #endregion
 
 // Gestion des erreurs 404 pour les routes API non trouvées
 app.use('/api/*', (req, res) => {

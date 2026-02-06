@@ -7,6 +7,10 @@ const crypto = require('crypto');
 
 // Handler des profils
 async function handleProfiles(req, res) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/58a332b7-4bd9-4fad-a986-8bd2b3c5169b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'profileController.js:handleProfiles',message:'handleProfiles CALLED',data:{method:req.method,url:req.url,originalUrl:req.originalUrl,path:req.path},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+    console.log('[DEBUG-B] handleProfiles CALLED:', req.method, req.originalUrl);
+    // #endregion
     try {
         if (req.method === 'GET') {
             // GET est public - récupérer tous les profils
