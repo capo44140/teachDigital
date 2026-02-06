@@ -211,12 +211,79 @@
           </button>
         </div>
 
-        <!-- Indicateur de progression -->
-        <div v-if="isProcessing" class="mt-6 bg-white/10 backdrop-blur-xl rounded-xl p-4">
-          <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
-            <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full animate-pulse" style="width: 65%"></div>
+        <!-- Indicateur de progression multi-étapes -->
+        <div v-if="isProcessing || stepperVisible" class="mt-6 bg-white/10 backdrop-blur-xl rounded-2xl p-6">
+          <!-- Barre de progression globale -->
+          <div class="mb-5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-white/80">Progression globale</span>
+              <span class="text-sm font-bold text-purple-300">{{ progressPercent }}%</span>
+            </div>
+            <div class="w-full bg-white/10 rounded-full h-2.5 overflow-hidden">
+              <div 
+                class="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full transition-all duration-700 ease-out"
+                :style="{ width: progressPercent + '%' }"
+              ></div>
+            </div>
           </div>
-          <p class="text-white/60 text-sm mt-2 text-center">{{ processStatus }}</p>
+
+          <!-- Liste des étapes -->
+          <div class="space-y-3">
+            <div 
+              v-for="(step, index) in steps" 
+              :key="step.id"
+              :class="[
+                'flex items-start gap-3 px-4 py-3 rounded-xl transition-all duration-500',
+                step.status === 'active' ? 'bg-purple-500/15 border border-purple-400/30' : '',
+                step.status === 'done' ? 'bg-green-500/10' : '',
+                step.status === 'error' ? 'bg-red-500/10' : '',
+                step.status === 'pending' ? 'opacity-40' : ''
+              ]"
+            >
+              <!-- Icône de statut -->
+              <div class="flex-shrink-0 mt-0.5">
+                <!-- Pending -->
+                <div v-if="step.status === 'pending'" class="w-6 h-6 rounded-full border-2 border-white/20"></div>
+                <!-- Active (spinner) -->
+                <svg v-else-if="step.status === 'active'" class="w-6 h-6 text-purple-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <!-- Done (check) -->
+                <div v-else-if="step.status === 'done'" class="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <!-- Error (cross) -->
+                <div v-else-if="step.status === 'error'" class="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
+                  <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Contenu de l'étape -->
+              <div class="flex-1 min-w-0">
+                <p :class="[
+                  'text-sm font-medium',
+                  step.status === 'active' ? 'text-white' : '',
+                  step.status === 'done' ? 'text-green-300' : '',
+                  step.status === 'error' ? 'text-red-300' : '',
+                  step.status === 'pending' ? 'text-white/60' : ''
+                ]">{{ step.label }}</p>
+                <p v-if="step.detail" :class="[
+                  'text-xs mt-0.5',
+                  step.status === 'error' ? 'text-red-200/70' : 'text-white/40'
+                ]">{{ step.detail }}</p>
+              </div>
+
+              <!-- Durée -->
+              <span v-if="step.duration" class="text-xs text-white/30 flex-shrink-0 mt-0.5">
+                {{ step.duration }}
+              </span>
+            </div>
+          </div>
         </div>
 
         <!-- Message de succès -->
@@ -266,7 +333,10 @@ export default {
       auditLogService: null,
       successMessage: null,
       errorMessage: null,
-      processStatus: 'Analyse en cours...'
+      // Stepper de progression
+      steps: [],
+      progressPercent: 0,
+      stepperVisible: false
     }
   },
   computed: {
@@ -539,132 +609,228 @@ export default {
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
     },
     
+    // --- Gestion du stepper de progression ---
+    initSteps() {
+      const totalFiles = this.selectedFiles.length
+      const steps = [
+        { id: 'preparation', label: 'Préparation des fichiers', status: 'pending', detail: null, duration: null }
+      ]
+      for (let i = 0; i < totalFiles; i++) {
+        steps.push({
+          id: `ocr_${i}`,
+          label: `Extraction OCR et analyse - Document ${i + 1}/${totalFiles}`,
+          status: 'pending',
+          detail: this.selectedFiles[i].name,
+          duration: null
+        })
+      }
+      steps.push(
+        { id: 'generation', label: 'Génération du quiz par l\'IA', status: 'pending', detail: null, duration: null },
+        { id: 'validation', label: 'Validation du quiz', status: 'pending', detail: null, duration: null },
+        { id: 'save', label: 'Sauvegarde de la leçon', status: 'pending', detail: null, duration: null },
+        { id: 'done', label: 'Terminé', status: 'pending', detail: null, duration: null }
+      )
+      this.steps = steps
+      this.progressPercent = 0
+      this.stepperVisible = true
+    },
+
+    setStepActive(stepId) {
+      const step = this.steps.find(s => s.id === stepId)
+      if (step) step.status = 'active'
+    },
+
+    setStepDone(stepId, detail, durationMs) {
+      const step = this.steps.find(s => s.id === stepId)
+      if (step) {
+        step.status = 'done'
+        if (detail) step.detail = detail
+        if (durationMs !== undefined) step.duration = this.formatDuration(durationMs)
+      }
+    },
+
+    setStepError(stepId, errorDetail) {
+      const step = this.steps.find(s => s.id === stepId)
+      if (step) {
+        step.status = 'error'
+        if (errorDetail) step.detail = errorDetail
+      }
+    },
+
+    updateProgress(percent) {
+      this.progressPercent = Math.min(100, Math.round(percent))
+    },
+
+    formatDuration(ms) {
+      if (ms < 1000) return `${ms}ms`
+      return `${(ms / 1000).toFixed(1)}s`
+    },
+
+    // --- Logique principale multi-étapes ---
     async scanLesson() {
       console.log('[LessonScanner] scanLesson() - Début de la génération de quiz', {
         filesCount: this.selectedFiles.length
       })
       
       if (this.selectedFiles.length === 0 || !this.selectedChild) {
-        console.warn('[LessonScanner] scanLesson() - Validation échouée:', {
-          filesCount: this.selectedFiles.length,
-          hasChild: !!this.selectedChild
-        })
         return
       }
       
       // Vérifier que l'utilisateur est connecté
       const token = localStorage.getItem('auth_token')
       if (!token) {
-        console.error('[LessonScanner] scanLesson() - Pas de token d\'authentification')
         this.errorMessage = 'Vous devez être connecté pour générer un quiz. Veuillez vous connecter avec votre code PIN.'
-        alert('Vous devez être connecté pour générer un quiz. Veuillez vous connecter avec votre code PIN.')
         return
       }
-      
-      console.log('[LessonScanner] scanLesson() - Paramètres:', {
-        childId: this.selectedChild.id,
-        childName: this.selectedChild.name,
-        filesCount: this.selectedFiles.length,
-        fileNames: this.selectedFiles.map(f => f.name),
-        fileSizes: this.selectedFiles.map(f => `${f.name}: ${this.formatFileSize(f.size)}`),
-        fileTypes: this.selectedFiles.map(f => f.type),
-        questionCount: this.questionCount,
-        hasToken: !!token
-      })
       
       this.isProcessing = true
       this.generatedQuiz = null
       this.successMessage = null
       this.errorMessage = null
-      this.processStatus = 'Génération du quiz (OCR côté serveur)...'
+
+      // Initialiser le stepper
+      this.initSteps()
+      const totalFiles = this.selectedFiles.length
+      // Poids: Préparation=5%, OCR=60% (réparti), Génération=25%, Validation=2%, Sauvegarde=8%
+      const WEIGHT_PREP = 5
+      const WEIGHT_OCR = 60
+      const WEIGHT_GEN = 25
+      const WEIGHT_VALID = 2
+      const WEIGHT_SAVE = 8
 
       try {
-        // Vérifier le rate limiting
-        console.log('[LessonScanner] scanLesson() - Vérification du rate limiting...')
+        // ---- Étape 1 : Préparation ----
+        this.setStepActive('preparation')
+        const prepStart = Date.now()
+
+        // Rate limiting
         const rateLimitCheck = rateLimitService.checkRateLimit(this.selectedChild.id, 'openai')
-        console.log('[LessonScanner] scanLesson() - Rate limit check:', rateLimitCheck)
-        
         if (!rateLimitCheck.allowed) {
-          console.warn('[LessonScanner] scanLesson() - Rate limit atteint:', rateLimitCheck)
-          alert(`Limite de requêtes atteinte. Réessayez dans ${rateLimitCheck.retryAfter} secondes.`)
+          this.setStepError('preparation', `Limite atteinte, réessayez dans ${rateLimitCheck.retryAfter}s`)
+          this.errorMessage = `Limite de requêtes atteinte. Réessayez dans ${rateLimitCheck.retryAfter} secondes.`
           return
         }
-        
-        // Enregistrer la requête dans le rate limiting
         rateLimitService.recordRequest(this.selectedChild.id, 'openai')
-        console.log('[LessonScanner] scanLesson() - Requête enregistrée dans le rate limiting')
-        
-        // Enregistrer le début de l'analyse dans les logs d'audit
-        if (this.auditLogService) {
-          console.log('[LessonScanner] scanLesson() - Enregistrement du début dans les logs d\'audit...')
-          this.auditLogService.logApiUsage(
-            this.selectedChild.id,
-            'openai',
-            true,
-            {
-              action: 'QUIZ_GENERATION_START',
-              fileCount: this.selectedFiles.length,
-              questionCount: parseInt(this.questionCount),
-              fileNames: this.selectedFiles.map(f => f.name)
-            }
-          )
-        }
-        
-        const aiService = new AIService()
-        const startTime = Date.now()
 
-        // Un seul appel: OCR + analyse + génération sont gérés côté backend
-        const quiz = await aiService.generateQuizFromDocuments(
-          this.selectedFiles,
+        // Audit log
+        if (this.auditLogService) {
+          this.auditLogService.logApiUsage(this.selectedChild.id, 'openai', true, {
+            action: 'QUIZ_GENERATION_START',
+            fileCount: totalFiles,
+            questionCount: parseInt(this.questionCount),
+            fileNames: this.selectedFiles.map(f => f.name)
+          })
+        }
+
+        this.setStepDone('preparation', `${totalFiles} fichier${totalFiles > 1 ? 's' : ''} prêt${totalFiles > 1 ? 's' : ''}`, Date.now() - prepStart)
+        this.updateProgress(WEIGHT_PREP)
+
+        // ---- Étape 2 : Extraction OCR par document ----
+        const aiService = new AIService()
+        const allExtractions = []
+        let ocrWarnings = []
+
+        for (let i = 0; i < totalFiles; i++) {
+          const stepId = `ocr_${i}`
+          const file = this.selectedFiles[i]
+          this.setStepActive(stepId)
+          const ocrStart = Date.now()
+
+          try {
+            const extractions = await aiService.extractTextFromDocuments([file])
+            const ocrDuration = Date.now() - ocrStart
+
+            if (extractions && extractions.length > 0) {
+              allExtractions.push(...extractions)
+              this.setStepDone(stepId, `${file.name} - texte extrait`, ocrDuration)
+            } else {
+              // Extraction vide mais pas d'erreur
+              ocrWarnings.push(file.name)
+              this.setStepDone(stepId, `${file.name} - aucun texte détecté`, ocrDuration)
+            }
+          } catch (ocrError) {
+            const ocrDuration = Date.now() - ocrStart
+            console.error(`[LessonScanner] OCR échoué pour ${file.name}:`, ocrError.message)
+            ocrWarnings.push(file.name)
+            this.setStepError(stepId, `${file.name} - ${ocrError.message}`)
+
+            // Continuer avec les autres documents
+          }
+
+          // Mise à jour de la progression : prep + proportion OCR faite
+          this.updateProgress(WEIGHT_PREP + (WEIGHT_OCR * (i + 1) / totalFiles))
+        }
+
+        // Vérifier qu'on a au moins une extraction
+        if (allExtractions.length === 0) {
+          this.setStepError('generation', 'Aucun texte extrait des documents')
+          this.errorMessage = 'Aucun texte n\'a pu être extrait des documents. Vérifiez la qualité des images.'
+          return
+        }
+
+        // ---- Étape 3 : Génération du quiz ----
+        this.setStepActive('generation')
+        const genStart = Date.now()
+
+        const quiz = await aiService.generateQuizFromAnalyses(
+          allExtractions,
           this.selectedChild,
           parseInt(this.questionCount)
         )
 
-        const totalDuration = Date.now() - startTime
-        console.log('[LessonScanner] scanLesson() - Quiz généré avec succès:', {
-          totalDuration: `${totalDuration}ms`,
-          hasQuiz: !!quiz,
-          quizTitle: quiz?.title,
-          questionsCount: quiz?.questions?.length || 0
-        })
-        
+        const genDuration = Date.now() - genStart
+        this.setStepDone('generation', `${quiz?.questions?.length || 0} questions générées`, genDuration)
+        this.updateProgress(WEIGHT_PREP + WEIGHT_OCR + WEIGHT_GEN)
+
+        // ---- Étape 4 : Validation ----
+        this.setStepActive('validation')
+        const validStart = Date.now()
+
+        if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+          this.setStepError('validation', 'Quiz invalide ou vide')
+          this.errorMessage = 'Le quiz généré est invalide. Veuillez réessayer avec des documents différents.'
+          return
+        }
+
         this.generatedQuiz = quiz
-        
-        // Sauvegarder la leçon via le service de migration
-        console.log('[LessonScanner] scanLesson() - Sauvegarde de la leçon...')
-        this.processStatus = 'Sauvegarde de la leçon...'
-        
+        this.setStepDone('validation', `${quiz.questions.length} questions valides`, Date.now() - validStart)
+        this.updateProgress(WEIGHT_PREP + WEIGHT_OCR + WEIGHT_GEN + WEIGHT_VALID)
+
+        // ---- Étape 5 : Sauvegarde ----
+        this.setStepActive('save')
+        const saveStart = Date.now()
+
         const savedLesson = await migrationService.saveLesson(
-          quiz, 
-          this.selectedChild.id, 
+          quiz,
+          this.selectedChild.id,
           this.selectedFiles
         )
-        
-        console.log('[LessonScanner] scanLesson() - Leçon sauvegardée:', {
-          lessonId: savedLesson?.id,
-          hasLesson: !!savedLesson
-        })
-        
-        // Ajouter l'ID de la leçon sauvegardée au quiz
+
         this.generatedQuiz.lessonId = savedLesson.id
-        
-        // Enregistrer le succès de l'analyse
+        this.setStepDone('save', `Leçon #${savedLesson.id} créée`, Date.now() - saveStart)
+        this.updateProgress(WEIGHT_PREP + WEIGHT_OCR + WEIGHT_GEN + WEIGHT_VALID + WEIGHT_SAVE)
+
+        // ---- Étape 6 : Terminé ----
+        this.setStepActive('done')
+        const warningText = ocrWarnings.length > 0
+          ? `(${ocrWarnings.length} document${ocrWarnings.length > 1 ? 's' : ''} avec avertissement)`
+          : null
+        this.setStepDone('done', warningText || 'Redirection vers le quiz...')
+        this.updateProgress(100)
+
+        // Audit log succès
         if (this.auditLogService) {
-          console.log('[LessonScanner] scanLesson() - Enregistrement du succès dans les logs d\'audit...')
-          this.auditLogService.logApiUsage(
-            this.selectedChild.id,
-            'openai',
-            true,
-            {
-              action: 'QUIZ_GENERATION_SUCCESS',
-              quizQuestions: quiz.questions?.length || 0,
-              lessonId: savedLesson.id,
-              fileCount: this.selectedFiles.length
-            }
-          )
+          this.auditLogService.logApiUsage(this.selectedChild.id, 'openai', true, {
+            action: 'QUIZ_GENERATION_SUCCESS',
+            quizQuestions: quiz.questions?.length || 0,
+            lessonId: savedLesson.id,
+            fileCount: totalFiles
+          })
         }
-        
-        console.log('[LessonScanner] scanLesson() - Redirection vers QuizGenerator...')
+
+        // Petite pause pour que l'utilisateur voie le "Terminé"
+        await new Promise(resolve => setTimeout(resolve, 800))
+
         // Rediriger vers le quiz
         this.$router.push({
           name: 'QuizGenerator',
@@ -675,42 +841,26 @@ export default {
           }
         })
       } catch (error) {
-        console.error('[LessonScanner] scanLesson() - ERREUR lors de la génération du quiz:', {
-          error: error,
-          message: error.message,
-          stack: error.stack,
-          name: error.name,
-          cause: error.cause,
-          response: error.response,
-          status: error.status,
-          statusText: error.statusText
-        })
+        console.error('[LessonScanner] scanLesson() - ERREUR:', error.message)
+
+        // Marquer l'étape active comme erreur
+        const activeStep = this.steps.find(s => s.status === 'active')
+        if (activeStep) {
+          this.setStepError(activeStep.id, error.message)
+        }
         
-        // Enregistrer l'échec de l'analyse
+        // Audit log échec
         if (this.auditLogService) {
-          console.log('[LessonScanner] scanLesson() - Enregistrement de l\'échec dans les logs d\'audit...')
-          this.auditLogService.logApiUsage(
-            this.selectedChild.id,
-            'openai',
-            false,
-            {
-              action: 'QUIZ_GENERATION_FAILED',
-              error: error.message,
-              errorName: error.name,
-              errorStack: error.stack?.substring(0, 500),
-              fileCount: this.selectedFiles.length,
-              fileNames: this.selectedFiles.map(f => f.name),
-              questionCount: this.questionCount
-            }
-          )
+          this.auditLogService.logApiUsage(this.selectedChild.id, 'openai', false, {
+            action: 'QUIZ_GENERATION_FAILED',
+            error: error.message,
+            fileCount: this.selectedFiles.length
+          })
         }
         
         this.errorMessage = `Erreur lors de la génération du quiz: ${error.message}`
-        alert('Erreur lors de la génération du quiz. Veuillez réessayer.')
       } finally {
-        console.log('[LessonScanner] scanLesson() - Fin du traitement (finally)')
         this.isProcessing = false
-        this.processStatus = ''
       }
     },
     
