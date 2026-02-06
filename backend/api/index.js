@@ -2,27 +2,8 @@
 const express = require('express');
 const router = express.Router();
 
-// #region agent log
-let _profileCtrlLoaded = false;
-let _profileCtrlError = null;
-// #endregion
-
 const { handleLogin, handleLogout, handleFamilyGate } = require('../controllers/authController.js');
-let _profileExports;
-try {
-  _profileExports = require('../controllers/profileController.js');
-  _profileCtrlLoaded = true;
-} catch(e) {
-  _profileCtrlError = e;
-  console.error('[DEBUG-A] profileController LOAD FAILED:', e.message, e.stack);
-  _profileExports = {};
-}
-const { handleProfiles, handleProfile, handleProfileStats, handleProfilePin, handlePin, handleProfileLearningStats, handleProfileCreationRequest } = _profileExports;
-
-// #region agent log
-fetch('http://127.0.0.1:7242/ingest/58a332b7-4bd9-4fad-a986-8bd2b3c5169b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/index.js:IMPORTS',message:'controller imports status',data:{profileCtrlLoaded:_profileCtrlLoaded,profileCtrlError:_profileCtrlError?.message||null,handleProfilesType:typeof handleProfiles,handleProfileType:typeof handleProfile},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-console.log('[DEBUG-A] profileController loaded:', _profileCtrlLoaded, '| handleProfiles type:', typeof handleProfiles, '| error:', _profileCtrlError?.message || 'none');
-// #endregion
+const { handleProfiles, handleProfile, handleProfileStats, handleProfilePin, handlePin, handleProfileLearningStats, handleProfileCreationRequest } = require('../controllers/profileController.js');
 const { handleLessons, handleLesson, handleQuizResults, handleGlobalLessonStats } = require('../controllers/lessonController.js');
 const { handleNotifications, handleNotification } = require('../controllers/notificationController.js');
 const { handleActivities } = require('../controllers/activityController.js');
