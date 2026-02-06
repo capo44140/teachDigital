@@ -47,7 +47,7 @@ class AIService {
    * @param {File[]} files - Fichiers à traiter
    * @param {boolean} useLLMOCR - Si true, utilise LLM Vision au lieu de Tesseract
    */
-  async extractTextFromDocuments (files, useLLMOCR = false) {
+  async extractTextFromDocuments (files, useLLMOCR = true) {
     try {
       // Utiliser FormData au lieu de JSON pour éviter les erreurs 413
       const formData = new FormData()

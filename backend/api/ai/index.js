@@ -157,7 +157,7 @@ async function handleGenerateQuizFromDocuments(req, res) {
         let documents = [];
         let childProfile;
         let questionCount = 5;
-        let useLLMOCR = false; // Par défaut, utiliser Tesseract (OCR)
+        let useLLMOCR = true; // Par défaut, utiliser LLM Vision (meilleure qualité)
 
         if (isFormData) {
             // Parser FormData
@@ -171,8 +171,10 @@ async function handleGenerateQuizFromDocuments(req, res) {
                 filesCount: parsed.files ? parsed.files.length : 0
             });
 
-            // Mode OCR (Tesseract par défaut, LLM Vision si demandé)
-            useLLMOCR = parsed.fields?.useLLMOCR === 'true' || parsed.fields?.useLLMOCR === true;
+            // Mode OCR (LLM Vision par défaut, Tesseract si explicitement demandé)
+            if (parsed.fields?.useLLMOCR !== undefined) {
+                useLLMOCR = parsed.fields.useLLMOCR === 'true' || parsed.fields.useLLMOCR === true;
+            }
             console.log(`🔍 Mode OCR: ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
 
             // Extraire les fichiers et métadonnées
@@ -255,7 +257,9 @@ async function handleGenerateQuizFromDocuments(req, res) {
             documents = bodyDocuments || [];
             childProfile = bodyChildProfile;
             questionCount = bodyQuestionCount || 5;
-            useLLMOCR = body.useLLMOCR === true || body.useLLMOCR === 'true';
+            if (body.useLLMOCR !== undefined) {
+                useLLMOCR = body.useLLMOCR === true || body.useLLMOCR === 'true';
+            }
             console.log(`🔍 Mode OCR: ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
         }
 
@@ -380,7 +384,7 @@ async function handleExtractTextFromDocuments(req, res) {
         const isFormData = contentType.includes('multipart/form-data');
 
         let documents = [];
-        let useLLMOCR = false; // Par défaut, utiliser Tesseract
+        let useLLMOCR = true; // Par défaut, utiliser LLM Vision (meilleure qualité)
 
         if (isFormData) {
             // Parser FormData
@@ -394,8 +398,10 @@ async function handleExtractTextFromDocuments(req, res) {
                 filesCount: parsed.files ? parsed.files.length : 0
             });
 
-            // Vérifier si on doit utiliser LLM OCR
-            useLLMOCR = parsed.fields.useLLMOCR === 'true' || parsed.fields.useLLMOCR === true;
+            // Mode OCR (LLM Vision par défaut, Tesseract si explicitement demandé)
+            if (parsed.fields.useLLMOCR !== undefined) {
+                useLLMOCR = parsed.fields.useLLMOCR === 'true' || parsed.fields.useLLMOCR === true;
+            }
             console.log(`🔍 Mode OCR: ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
 
             // Extraire les fichiers
@@ -458,7 +464,9 @@ async function handleExtractTextFromDocuments(req, res) {
             }
 
             documents = body.documents || [];
-            useLLMOCR = body.useLLMOCR === true || body.useLLMOCR === 'true';
+            if (body.useLLMOCR !== undefined) {
+                useLLMOCR = body.useLLMOCR === true || body.useLLMOCR === 'true';
+            }
             console.log(`🔍 Mode OCR: ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
         }
 
