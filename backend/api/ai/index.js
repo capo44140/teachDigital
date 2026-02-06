@@ -17,6 +17,19 @@ const { parseFormData, bufferToBase64 } = require('./middleware/formDataParser.j
 const { validateApiKey, hasAtLeastOneValidKey } = require('./utils/validation.js');
 const { validateAndNormalizeQuiz } = require('./utils/quizFormat.js');
 
+// ==================== CONFIGURATION OCR ====================
+
+/**
+ * Détermine le mode OCR à utiliser.
+ * Variable d'env OCR_MODE : "llm" (défaut) ou "tesseract"
+ * Si OCR_MODE=llm, utilise LLM Vision (GPT-4o, Gemini, LocalLLM)
+ * Si OCR_MODE=tesseract, utilise Tesseract.js
+ */
+function getDefaultOCRMode() {
+    const mode = (process.env.OCR_MODE || 'llm').toLowerCase().trim();
+    return mode !== 'tesseract';
+}
+
 // ==================== HANDLER PRINCIPAL ====================
 
 /**
@@ -157,7 +170,7 @@ async function handleGenerateQuizFromDocuments(req, res) {
         let documents = [];
         let childProfile;
         let questionCount = 5;
-        let useLLMOCR = true; // Par défaut, utiliser LLM Vision (meilleure qualité)
+        let useLLMOCR = getDefaultOCRMode();
 
         if (isFormData) {
             // Parser FormData
@@ -171,11 +184,7 @@ async function handleGenerateQuizFromDocuments(req, res) {
                 filesCount: parsed.files ? parsed.files.length : 0
             });
 
-            // Mode OCR (LLM Vision par défaut, Tesseract si explicitement demandé)
-            if (parsed.fields?.useLLMOCR !== undefined) {
-                useLLMOCR = parsed.fields.useLLMOCR === 'true' || parsed.fields.useLLMOCR === true;
-            }
-            console.log(`🔍 Mode OCR: ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
+            console.log(`🔍 Mode OCR (via env OCR_MODE): ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
 
             // Extraire les fichiers et métadonnées
             if (parsed.files && parsed.fields) {
@@ -257,10 +266,7 @@ async function handleGenerateQuizFromDocuments(req, res) {
             documents = bodyDocuments || [];
             childProfile = bodyChildProfile;
             questionCount = bodyQuestionCount || 5;
-            if (body.useLLMOCR !== undefined) {
-                useLLMOCR = body.useLLMOCR === true || body.useLLMOCR === 'true';
-            }
-            console.log(`🔍 Mode OCR: ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
+            console.log(`🔍 Mode OCR (via env OCR_MODE): ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
         }
 
         console.log('📊 Données parsées:', {
@@ -384,7 +390,7 @@ async function handleExtractTextFromDocuments(req, res) {
         const isFormData = contentType.includes('multipart/form-data');
 
         let documents = [];
-        let useLLMOCR = true; // Par défaut, utiliser LLM Vision (meilleure qualité)
+        let useLLMOCR = getDefaultOCRMode();
 
         if (isFormData) {
             // Parser FormData
@@ -398,11 +404,7 @@ async function handleExtractTextFromDocuments(req, res) {
                 filesCount: parsed.files ? parsed.files.length : 0
             });
 
-            // Mode OCR (LLM Vision par défaut, Tesseract si explicitement demandé)
-            if (parsed.fields.useLLMOCR !== undefined) {
-                useLLMOCR = parsed.fields.useLLMOCR === 'true' || parsed.fields.useLLMOCR === true;
-            }
-            console.log(`🔍 Mode OCR: ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
+            console.log(`🔍 Mode OCR (via env OCR_MODE): ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
 
             // Extraire les fichiers
             if (parsed.files && parsed.fields) {
@@ -464,10 +466,7 @@ async function handleExtractTextFromDocuments(req, res) {
             }
 
             documents = body.documents || [];
-            if (body.useLLMOCR !== undefined) {
-                useLLMOCR = body.useLLMOCR === true || body.useLLMOCR === 'true';
-            }
-            console.log(`🔍 Mode OCR: ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
+            console.log(`🔍 Mode OCR (via env OCR_MODE): ${useLLMOCR ? 'LLM Vision' : 'Tesseract'}`);
         }
 
         console.log('📊 Documents parsés:', {
