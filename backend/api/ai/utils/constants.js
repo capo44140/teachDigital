@@ -17,7 +17,7 @@ const API_TIMEOUT_MS = parseInt(process.env.AI_TIMEOUT_MS || '180000', 10);
 
 // Timeout spécifique pour le LLM local (LM Studio / Ollama) : 180s par défaut
 // Peut être ajusté via LOCAL_LLM_TIMEOUT_MS (recommandé si LM Studio est lent)
-const LOCAL_LLM_TIMEOUT_MS = parseInt(process.env.LOCAL_LLM_TIMEOUT_MS || '180000', 10);
+const LOCAL_LLM_TIMEOUT_MS = parseInt(process.env.LOCAL_LLM_TIMEOUT_MS || '360000', 10);
 
 // Modèles par défaut
 const DEFAULT_LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'mistralai/ministral-3-14b-reasoning';
