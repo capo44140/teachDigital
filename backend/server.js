@@ -214,16 +214,14 @@ async function runAutoMigrations() {
     if (checkResult.rows.length === 0) {
       logger.info('🔄 Migration: ajout colonne target_profile_id à la table lessons...');
       
-      // Ajouter la colonne
+      // Ajouter la colonne (NULL = quiz visible par tous les enfants, pour rétrocompatibilité)
       await pool.query(`
         ALTER TABLE lessons
         ADD COLUMN target_profile_id INTEGER REFERENCES profiles(id) ON DELETE SET NULL
       `);
       
-      // Remplir les valeurs existantes : target = créateur (rétrocompatibilité)
-      await pool.query(`
-        UPDATE lessons SET target_profile_id = profile_id WHERE target_profile_id IS NULL
-      `);
+      // Les anciens quiz restent avec target_profile_id = NULL (visibles par tous)
+      // Seuls les nouveaux quiz auront un target_profile_id défini
       
       // Créer un index pour les recherches par enfant ciblé
       await pool.query(`

@@ -21,6 +21,7 @@ async function handleLessons(req, res) {
             const conditions = [];
 
             // targetProfileId : filtre par enfant ciblé (prioritaire pour le dashboard enfant)
+            // NULL = quiz non ciblé (ancien quiz), visible par tous les enfants
             if (targetProfileId) {
                 const targetIdNum = parseInt(targetProfileId, 10);
                 if (isNaN(targetIdNum)) {
@@ -28,7 +29,7 @@ async function handleLessons(req, res) {
                     return;
                 }
                 params.push(targetIdNum);
-                conditions.push(`target_profile_id = $${params.length}`);
+                conditions.push(`(target_profile_id = $${params.length} OR target_profile_id IS NULL)`);
             } else if (profileId) {
                 const profileIdNum = parseInt(profileId, 10);
                 if (isNaN(profileIdNum)) {
