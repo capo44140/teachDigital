@@ -9,25 +9,34 @@ async function handleLessons(req, res) {
     try {
         if (req.method === 'GET') {
             // Parser les query parameters
-            const { profileId, published } = req.query || {};
+            const { profileId, targetProfileId, published } = req.query || {};
 
-            logger.info(`🔍 Récupération des leçons - profileId: ${profileId}, published: ${published}`);
+            logger.info(`🔍 Récupération des leçons - profileId: ${profileId}, targetProfileId: ${targetProfileId}, published: ${published}`);
             const startTime = Date.now();
 
             logger.debug('handleLessons GET start - v2');
             // Construire la requête dynamiquement (méthode robuste)
-            let queryText = 'SELECT id, title, description, subject, level, image_filename, is_published, created_at, updated_at, profile_id FROM lessons';
+            let queryText = 'SELECT id, title, description, subject, level, image_filename, is_published, created_at, updated_at, profile_id, target_profile_id FROM lessons';
             const params = [];
             const conditions = [];
 
-            if (profileId) {
+            // targetProfileId : filtre par enfant ciblé (prioritaire pour le dashboard enfant)
+            if (targetProfileId) {
+                const targetIdNum = parseInt(targetProfileId, 10);
+                if (isNaN(targetIdNum)) {
+                    res.status(400).json({ success: false, message: 'ID de profil cible invalide' });
+                    return;
+                }
+                params.push(targetIdNum);
+                conditions.push(`target_profile_id = $${params.length}`);
+            } else if (profileId) {
                 const profileIdNum = parseInt(profileId, 10);
                 if (isNaN(profileIdNum)) {
                     res.status(400).json({ success: false, message: 'ID de profil invalide' });
                     return;
                 }
                 params.push(profileIdNum);
-                conditions.push(`profile_id = $${params.length}`);
+                conditions.push(`(profile_id = $${params.length} OR target_profile_id = $${params.length})`);
             }
 
             if (published !== null && published !== undefined) {
@@ -67,7 +76,8 @@ async function handleLessons(req, res) {
 
             const {
                 title, description, subject, level,
-                imageFilename, imageData, quizData, isPublished = true
+                imageFilename, imageData, quizData, isPublished = true,
+                targetProfileId
             } = req.body;
 
             if (!title || !quizData) {
@@ -100,14 +110,17 @@ async function handleLessons(req, res) {
             })() : null;
 
             const safeIsPublished = isPublished !== undefined ? isPublished : true;
+            
+            // target_profile_id = enfant ciblé (si fourni), sinon le créateur
+            const safeTargetProfileId = targetProfileId ? parseInt(targetProfileId, 10) : user.profileId;
 
             // Requête INSERT avec template literal
-            console.log(`📝 Création leçon pour profil ${user.profileId}: ${title}`);
+            console.log(`📝 Création leçon par profil ${user.profileId} pour profil cible ${safeTargetProfileId}: ${title}`);
             
             let result;
             try {
                 result = await withQueryTimeout(
-                    sql`INSERT INTO lessons (profile_id, title, description, subject, level, image_filename, quiz_data, is_published) VALUES (${user.profileId}, ${title}, ${safeDescription}, ${safeSubject}, ${safeLevel}, ${safeImageFilename}, ${safeQuizData}::jsonb, ${safeIsPublished}) RETURNING *`,
+                    sql`INSERT INTO lessons (profile_id, title, description, subject, level, image_filename, quiz_data, is_published, target_profile_id) VALUES (${user.profileId}, ${title}, ${safeDescription}, ${safeSubject}, ${safeLevel}, ${safeImageFilename}, ${safeQuizData}::jsonb, ${safeIsPublished}, ${safeTargetProfileId}) RETURNING *`,
                     TIMEOUTS.STANDARD,
                     'création de la leçon'
                 );
@@ -135,7 +148,7 @@ async function handleLessons(req, res) {
                         
                         // Réessayer l'insertion
                         result = await withQueryTimeout(
-                            sql`INSERT INTO lessons (profile_id, title, description, subject, level, image_filename, quiz_data, is_published) VALUES (${user.profileId}, ${title}, ${safeDescription}, ${safeSubject}, ${safeLevel}, ${safeImageFilename}, ${safeQuizData}::jsonb, ${safeIsPublished}) RETURNING *`,
+                            sql`INSERT INTO lessons (profile_id, title, description, subject, level, image_filename, quiz_data, is_published, target_profile_id) VALUES (${user.profileId}, ${title}, ${safeDescription}, ${safeSubject}, ${safeLevel}, ${safeImageFilename}, ${safeQuizData}::jsonb, ${safeIsPublished}, ${safeTargetProfileId}) RETURNING *`,
                             TIMEOUTS.STANDARD,
                             'création de la leçon (après correction)'
                         );

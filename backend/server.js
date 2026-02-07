@@ -200,14 +200,54 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Migration automatique au démarrage : ajout colonne target_profile_id si absente
+async function runAutoMigrations() {
+  try {
+    const { pool } = require('./lib/database.js');
+    
+    // Vérifier si la colonne target_profile_id existe déjà
+    const checkResult = await pool.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'lessons' AND column_name = 'target_profile_id'
+    `);
+    
+    if (checkResult.rows.length === 0) {
+      logger.info('🔄 Migration: ajout colonne target_profile_id à la table lessons...');
+      
+      // Ajouter la colonne
+      await pool.query(`
+        ALTER TABLE lessons
+        ADD COLUMN target_profile_id INTEGER REFERENCES profiles(id) ON DELETE SET NULL
+      `);
+      
+      // Remplir les valeurs existantes : target = créateur (rétrocompatibilité)
+      await pool.query(`
+        UPDATE lessons SET target_profile_id = profile_id WHERE target_profile_id IS NULL
+      `);
+      
+      // Créer un index pour les recherches par enfant ciblé
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS idx_lessons_target_profile_id ON lessons(target_profile_id)
+      `);
+      
+      logger.info('✅ Migration target_profile_id terminée avec succès');
+    }
+  } catch (error) {
+    logger.warn('⚠️ Migration auto-migration (non bloquant):', error.message);
+  }
+}
+
 // Démarrage du serveur
-const server = app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', async () => {
   logger.info(`Serveur TeachDigital démarré sur le port ${PORT}`);
   logger.info(`Mode: ${process.env.NODE_ENV || 'production'}`);
   logger.info(`URL: http://0.0.0.0:${PORT}`);
   if (logger.enableFileLogging) {
     logger.info(`Logs écrits dans: ${logger.logsDirectory}`);
   }
+  
+  // Exécuter les migrations automatiques après le démarrage
+  await runAutoMigrations();
 });
 
 // Configuration des timeouts pour les opérations IA longues

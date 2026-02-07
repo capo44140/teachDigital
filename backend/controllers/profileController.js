@@ -514,7 +514,7 @@ async function handleProfileLearningStats(req, res) {
 
         const [totalLessonsRes, quizzesCountRes, avgScoreRes, lessonsRes, quizHistoryRes] = await Promise.all([
             withQueryTimeout(
-                sql`SELECT COUNT(*)::int as total_lessons FROM lessons WHERE is_published = true`,
+                sql`SELECT COUNT(*)::int as total_lessons FROM lessons WHERE is_published = true AND (target_profile_id = ${profileIdNum} OR target_profile_id IS NULL)`,
                 TIMEOUTS.STANDARD,
                 'stats (total lessons)'
             ),
@@ -542,6 +542,7 @@ async function handleProfileLearningStats(req, res) {
                         ON qr.lesson_id = l.id
                         AND qr.profile_id = ${profileIdNum}
                     WHERE l.is_published = true
+                        AND (l.target_profile_id = ${profileIdNum} OR l.target_profile_id IS NULL)
                     GROUP BY l.id
                     ORDER BY l.created_at DESC
                     LIMIT 200

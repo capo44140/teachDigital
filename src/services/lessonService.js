@@ -78,8 +78,9 @@ export class LessonService {
    */
   static async getLessonsByProfile (profileId) {
     try {
+      // Utiliser targetProfileId pour récupérer les quiz destinés à ce profil
       const lessons = await apiService.getLessons({
-        profileId,
+        targetProfileId: profileId,
         published: true
       })
 

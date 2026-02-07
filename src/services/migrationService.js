@@ -100,8 +100,10 @@ class MigrationService {
   async saveLesson (lessonData, profileId, files = null) {
     if (this.useNewAPI) {
       try {
-        const response = await this.apiService.createLesson(lessonData)
-        return response.data.lesson
+        // Transmettre l'ID du profil cible (enfant) pour que le quiz lui soit attribué
+        const dataWithTarget = { ...lessonData, targetProfileId: profileId }
+        const lesson = await this.apiService.createLesson(dataWithTarget)
+        return lesson
       } catch (error) {
         console.warn('⚠️ Erreur API, fallback vers l\'ancien service:', error)
         // Fallback vers l'ancien service si nécessaire
