@@ -195,6 +195,54 @@ class AIService {
       return false
     }
   }
+
+  // ==================== LM Studio / LocalLLM ====================
+
+  /**
+   * Récupère la liste des modèles disponibles dans LM Studio
+   * @returns {Promise<Object>} { connected, baseUrl, activeModel, activeModelSource, envModel, models }
+   */
+  async getLocalLLMModels () {
+    try {
+      const response = await apiService.request('/api/ai/local-llm/models')
+      return response.data || null
+    } catch (error) {
+      console.error('Erreur lors de la récupération des modèles LM Studio:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Récupère le statut de connexion à LM Studio
+   * @returns {Promise<Object>} { connected, baseUrl, activeModel, activeModelSource, envModel, ocrMode }
+   */
+  async getLocalLLMStatus () {
+    try {
+      const response = await apiService.request('/api/ai/local-llm/status')
+      return response.data || null
+    } catch (error) {
+      console.error('Erreur lors de la récupération du statut LM Studio:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Change le modèle actif du LLM local
+   * @param {string|null} modelId - ID du modèle, ou null pour restaurer le défaut
+   * @returns {Promise<Object>} { activeModel, activeModelSource }
+   */
+  async setLocalLLMModel (modelId) {
+    try {
+      const response = await apiService.request('/api/ai/local-llm/model', {
+        method: 'POST',
+        body: JSON.stringify({ modelId })
+      })
+      return response.data || null
+    } catch (error) {
+      console.error('Erreur lors du changement de modèle:', error)
+      throw error
+    }
+  }
 }
 
 export { AIService }

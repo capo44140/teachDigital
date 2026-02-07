@@ -58,6 +58,7 @@ const ParentSettings = () => import(/* webpackChunkName: "settings-components" *
 const FamilyGateSettings = () => import(/* webpackChunkName: "settings-components" */ '../components/FamilyGateSettings.vue')
 const ChildSettings = () => import(/* webpackChunkName: "settings-components" */ '../components/ChildSettings.vue')
 const PWASettings = () => import(/* webpackChunkName: "settings-components" */ '../components/PWASettings.vue')
+const AISettings = () => import(/* webpackChunkName: "settings-components" */ '../components/AISettings.vue')
 
 const routes = [
   {
@@ -261,6 +262,12 @@ const routes = [
     path: '/settings/pwa',
     name: 'PWASettings',
     component: PWASettings,
+    meta: { requiresAdmin: true }
+  },
+  {
+    path: '/ai-settings',
+    name: 'AISettings',
+    component: AISettings,
     meta: { requiresAdmin: true }
   }
 ]

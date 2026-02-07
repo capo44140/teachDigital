@@ -16,6 +16,7 @@ const { generateQuizFromAnalysis, generateQuizFromMultipleAnalyses, generateQuiz
 const { parseFormData, bufferToBase64 } = require('./middleware/formDataParser.js');
 const { validateApiKey, hasAtLeastOneValidKey } = require('./utils/validation.js');
 const { validateAndNormalizeQuiz } = require('./utils/quizFormat.js');
+const localLLMConfig = require('./services/aiProviders/localLLMConfig.js');
 
 // ==================== CONFIGURATION OCR ====================
 
@@ -87,6 +88,19 @@ module.exports = async function handler(req, res) {
 
         if (pathname === '/has-valid-key' && method === 'GET') {
             return await handleHasValidKey(req, res);
+        }
+
+        // Routes LM Studio / LocalLLM
+        if (pathname === '/local-llm/models' && method === 'GET') {
+            return await handleGetLocalLLMModels(req, res);
+        }
+
+        if (pathname === '/local-llm/status' && method === 'GET') {
+            return await handleGetLocalLLMStatus(req, res);
+        }
+
+        if (pathname === '/local-llm/model' && method === 'POST') {
+            return await handleSetLocalLLMModel(req, res);
         }
 
         // Route non trouvée
@@ -685,5 +699,126 @@ async function handleHasValidKey(req, res) {
     } catch (error) {
         console.error('Erreur lors de la vérification des clés API:', error);
         return res.status(500).json(createErrorResponse('Erreur lors de la vérification'));
+    }
+}
+
+// ==================== HANDLERS LM STUDIO / LOCAL LLM ====================
+
+/**
+ * Récupère la liste des modèles disponibles dans LM Studio
+ */
+async function handleGetLocalLLMModels(req, res) {
+    console.log('🏠 handleGetLocalLLMModels: Début');
+    try {
+        const baseUrl = localLLMConfig.getBaseUrl();
+        const activeModel = localLLMConfig.getActiveModel();
+        const source = localLLMConfig.getActiveModelSource();
+
+        // Appeler l'endpoint /models de LM Studio (compatible OpenAI)
+        let models = [];
+        let connected = false;
+
+        try {
+            const { fetchWithTimeout } = require('./utils/fetch.js');
+            const response = await fetchWithTimeout(`${baseUrl}/models`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            }, 10000); // timeout court de 10s
+
+            if (response.ok) {
+                const data = await response.json();
+                models = (data.data || []).map(m => ({
+                    id: m.id,
+                    object: m.object || 'model',
+                    owned_by: m.owned_by || 'local'
+                }));
+                connected = true;
+            }
+        } catch (fetchError) {
+            console.warn('⚠️ LM Studio non joignable:', fetchError.message);
+            connected = false;
+        }
+
+        return res.status(200).json(createResponse('Modèles récupérés', {
+            connected,
+            baseUrl,
+            activeModel,
+            activeModelSource: source,
+            envModel: localLLMConfig.getEnvModel(),
+            models
+        }));
+    } catch (error) {
+        console.error('❌ Erreur lors de la récupération des modèles:', error);
+        return res.status(500).json(createErrorResponse('Erreur lors de la récupération des modèles: ' + error.message));
+    }
+}
+
+/**
+ * Retourne le statut de connexion à LM Studio
+ */
+async function handleGetLocalLLMStatus(req, res) {
+    console.log('🏠 handleGetLocalLLMStatus: Début');
+    try {
+        const baseUrl = localLLMConfig.getBaseUrl();
+        const activeModel = localLLMConfig.getActiveModel();
+        const source = localLLMConfig.getActiveModelSource();
+        let connected = false;
+
+        try {
+            const { fetchWithTimeout } = require('./utils/fetch.js');
+            const response = await fetchWithTimeout(`${baseUrl}/models`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            }, 5000);
+            connected = response.ok;
+        } catch (_e) {
+            connected = false;
+        }
+
+        return res.status(200).json(createResponse('Statut LM Studio', {
+            connected,
+            baseUrl,
+            activeModel,
+            activeModelSource: source,
+            envModel: localLLMConfig.getEnvModel(),
+            ocrMode: (process.env.OCR_MODE || 'llm').toLowerCase().trim()
+        }));
+    } catch (error) {
+        console.error('❌ Erreur lors de la vérification du statut:', error);
+        return res.status(500).json(createErrorResponse('Erreur lors de la vérification du statut'));
+    }
+}
+
+/**
+ * Change le modèle actif du LLM local
+ */
+async function handleSetLocalLLMModel(req, res) {
+    console.log('🏠 handleSetLocalLLMModel: Début');
+    try {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        const { modelId } = body;
+
+        if (modelId === null || modelId === undefined) {
+            // Restaurer le défaut du .env
+            localLLMConfig.setActiveModel(null);
+            return res.status(200).json(createResponse('Modèle restauré au défaut', {
+                activeModel: localLLMConfig.getActiveModel(),
+                activeModelSource: 'env'
+            }));
+        }
+
+        if (typeof modelId !== 'string' || modelId.trim().length === 0) {
+            return res.status(400).json(createErrorResponse('modelId requis (string non vide ou null pour restaurer)'));
+        }
+
+        localLLMConfig.setActiveModel(modelId.trim());
+
+        return res.status(200).json(createResponse('Modèle changé avec succès', {
+            activeModel: localLLMConfig.getActiveModel(),
+            activeModelSource: 'ui'
+        }));
+    } catch (error) {
+        console.error('❌ Erreur lors du changement de modèle:', error);
+        return res.status(500).json(createErrorResponse('Erreur lors du changement de modèle: ' + error.message));
     }
 }
