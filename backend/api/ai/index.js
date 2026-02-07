@@ -837,7 +837,7 @@ async function handleGetProviders(req, res) {
     try {
         const { fetchWithTimeout } = require('./utils/fetch.js');
         const { isLocalLLMAvailable } = require('./utils/validation.js');
-        const { LOCAL_LLM_BASE_URL, OPENAI_BASE_URL, GEMINI_BASE_URL, DEEPSEEK_BASE_URL, GROQ_BASE_URL, MISTRAL_BASE_URL } = require('./utils/constants.js');
+        const { LOCAL_LLM_BASE_URL, OPENAI_BASE_URL, GEMINI_BASE_URL, DEEPSEEK_BASE_URL, GROQ_BASE_URL, MISTRAL_BASE_URL, KIMI_BASE_URL } = require('./utils/constants.js');
 
         // Définition des providers avec leur check
         const providerDefs = [
@@ -891,6 +891,15 @@ async function handleGetProviders(req, res) {
                 model: 'mistral-large-latest',
                 checkUrl: `${MISTRAL_BASE_URL}/models`,
                 checkHeaders: { 'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}` },
+                timeout: 10000
+            },
+            {
+                name: 'Kimi',
+                label: 'Kimi (Moonshot)',
+                keyConfigured: !!(process.env.KIMI_API_KEY && process.env.KIMI_API_KEY.startsWith('sk-') && process.env.KIMI_API_KEY.length > 20),
+                model: 'moonshot-v1-8k',
+                checkUrl: `${KIMI_BASE_URL}/models`,
+                checkHeaders: { 'Authorization': `Bearer ${process.env.KIMI_API_KEY}` },
                 timeout: 10000
             }
         ];

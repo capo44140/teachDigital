@@ -9,6 +9,7 @@ const GeminiProvider = require('./gemini.js');
 const DeepSeekProvider = require('./deepseek.js');
 const GroqProvider = require('./groq.js');
 const MistralProvider = require('./mistral.js');
+const KimiProvider = require('./kimi.js');
 const { getDemoAnalysis, getDemoQuiz } = require('../../utils/validation.js');
 
 /**
@@ -54,6 +55,9 @@ function getAvailableProviders() {
 
     // 6. Mistral (dernier fallback avant le mode démo)
     maybeAdd(new MistralProvider());
+
+    // 7. Kimi / Moonshot (API compatible OpenAI)
+    maybeAdd(new KimiProvider());
 
     // Si un ordre est fourni, re-trier selon cet ordre
     if (orderList.length > 0) {

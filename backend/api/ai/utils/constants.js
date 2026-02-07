@@ -10,6 +10,7 @@ const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const MISTRAL_BASE_URL = 'https://api.mistral.ai/v1';
+const KIMI_BASE_URL = 'https://api.moonshot.cn/v1';
 
 // Timeout pour les appels API externes (90s par défaut)
 // Peut être ajusté via AI_TIMEOUT_MS
@@ -26,6 +27,7 @@ const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash';
 const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
 const DEFAULT_DEEPSEEK_MODEL = 'deepseek-chat';
 const DEFAULT_MISTRAL_MODEL = 'mistral-large-latest';
+const DEFAULT_KIMI_MODEL = 'moonshot-v1-8k';
 
 // Paramètres de génération
 const DEFAULT_MAX_TOKENS = 1000;
@@ -43,6 +45,7 @@ module.exports = {
     DEEPSEEK_BASE_URL,
     GROQ_BASE_URL,
     MISTRAL_BASE_URL,
+    KIMI_BASE_URL,
 
     // Timeouts
     API_TIMEOUT_MS,
@@ -55,6 +58,7 @@ module.exports = {
     DEFAULT_GROQ_MODEL,
     DEFAULT_DEEPSEEK_MODEL,
     DEFAULT_MISTRAL_MODEL,
+    DEFAULT_KIMI_MODEL,
 
     // Paramètres
     DEFAULT_MAX_TOKENS,

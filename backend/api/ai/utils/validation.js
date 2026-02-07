@@ -63,6 +63,18 @@ function isValidMistralKey(apiKey) {
 }
 
 /**
+ * Vérifie si une clé API Kimi (Moonshot) est valide
+ * @param {string} apiKey - Clé API à valider
+ * @returns {boolean} True si la clé est valide
+ */
+function isValidKimiKey(apiKey) {
+    return apiKey &&
+        apiKey !== 'your-kimi-api-key-here' &&
+        apiKey.startsWith('sk-') &&
+        apiKey.length > 20;
+}
+
+/**
  * Vérifie si le LLM local est disponible
  * @returns {boolean} True si le LLM local est disponible
  */
@@ -97,6 +109,9 @@ async function validateApiKey(apiType) {
         case 'mistral':
             apiKey = process.env.MISTRAL_API_KEY;
             return isValidMistralKey(apiKey);
+        case 'kimi':
+            apiKey = process.env.KIMI_API_KEY;
+            return isValidKimiKey(apiKey);
         default:
             return false;
     }
@@ -113,8 +128,9 @@ async function hasAtLeastOneValidKey() {
     const deepseekValid = await validateApiKey('deepseek');
     const groqValid = await validateApiKey('groq');
     const mistralValid = await validateApiKey('mistral');
+    const kimiValid = await validateApiKey('kimi');
 
-    return openaiValid || geminiValid || deepseekValid || groqValid || mistralValid;
+    return openaiValid || geminiValid || deepseekValid || groqValid || mistralValid || kimiValid;
 }
 
 /**
@@ -212,6 +228,7 @@ module.exports = {
     isValidGroqKey,
     isValidDeepSeekKey,
     isValidMistralKey,
+    isValidKimiKey,
     isLocalLLMAvailable,
     validateApiKey,
     hasAtLeastOneValidKey,
