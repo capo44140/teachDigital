@@ -243,6 +243,20 @@ class AIService {
       throw error
     }
   }
+
+  /**
+   * Récupère le statut de tous les providers IA (clé configurée + joignable)
+   * @returns {Promise<Array>} Liste des providers avec leur statut
+   */
+  async getProvidersStatus () {
+    try {
+      const response = await apiService.request('/api/ai/providers')
+      return response.data?.providers || []
+    } catch (error) {
+      console.error('Erreur lors de la récupération des providers:', error)
+      throw error
+    }
+  }
 }
 
 export { AIService }

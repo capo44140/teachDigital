@@ -103,6 +103,10 @@ module.exports = async function handler(req, res) {
             return await handleSetLocalLLMModel(req, res);
         }
 
+        if (pathname === '/providers' && method === 'GET') {
+            return await handleGetProviders(req, res);
+        }
+
         // Route non trouvée
         return res.status(404).json(createErrorResponse('Endpoint non trouvé'));
 
@@ -820,5 +824,106 @@ async function handleSetLocalLLMModel(req, res) {
     } catch (error) {
         console.error('❌ Erreur lors du changement de modèle:', error);
         return res.status(500).json(createErrorResponse('Erreur lors du changement de modèle: ' + error.message));
+    }
+}
+
+// ==================== HANDLER PROVIDERS STATUS ====================
+
+/**
+ * Retourne le statut de tous les providers IA (clé configurée + joignable)
+ */
+async function handleGetProviders(req, res) {
+    console.log('🔌 handleGetProviders: Début');
+    try {
+        const { fetchWithTimeout } = require('./utils/fetch.js');
+        const { isLocalLLMAvailable } = require('./utils/validation.js');
+        const { LOCAL_LLM_BASE_URL, OPENAI_BASE_URL, GEMINI_BASE_URL, DEEPSEEK_BASE_URL, GROQ_BASE_URL, MISTRAL_BASE_URL } = require('./utils/constants.js');
+
+        // Définition des providers avec leur check
+        const providerDefs = [
+            {
+                name: 'LocalLLM',
+                label: 'LM Studio',
+                keyConfigured: isLocalLLMAvailable(),
+                model: localLLMConfig.getActiveModel(),
+                checkUrl: `${localLLMConfig.getBaseUrl()}/models`,
+                timeout: 5000
+            },
+            {
+                name: 'OpenAI',
+                label: 'OpenAI',
+                keyConfigured: !!(process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-') && process.env.OPENAI_API_KEY.length > 20),
+                model: 'gpt-4o',
+                checkUrl: `${OPENAI_BASE_URL}/models`,
+                checkHeaders: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
+                timeout: 8000
+            },
+            {
+                name: 'Gemini',
+                label: 'Google Gemini',
+                keyConfigured: !!(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 20),
+                model: 'gemini-3.5-flash',
+                checkUrl: `${GEMINI_BASE_URL}/models?key=${process.env.GEMINI_API_KEY || ''}`,
+                timeout: 8000
+            },
+            {
+                name: 'DeepSeek',
+                label: 'DeepSeek',
+                keyConfigured: !!(process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY.startsWith('sk-') && process.env.DEEPSEEK_API_KEY.length > 20),
+                model: 'deepseek-chat',
+                checkUrl: `${DEEPSEEK_BASE_URL}/models`,
+                checkHeaders: { 'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}` },
+                timeout: 8000
+            },
+            {
+                name: 'Groq',
+                label: 'Groq',
+                keyConfigured: !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.length > 20),
+                model: 'llama-3.3-70b-versatile',
+                checkUrl: `${GROQ_BASE_URL}/models`,
+                checkHeaders: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
+                timeout: 8000
+            },
+            {
+                name: 'Mistral',
+                label: 'Mistral',
+                keyConfigured: !!(process.env.MISTRAL_API_KEY && process.env.MISTRAL_API_KEY.length > 20),
+                model: 'mistral-large-latest',
+                checkUrl: `${MISTRAL_BASE_URL}/models`,
+                checkHeaders: { 'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}` },
+                timeout: 8000
+            }
+        ];
+
+        // Vérifier la connectivité en parallèle pour chaque provider configuré
+        const providers = await Promise.all(providerDefs.map(async (def) => {
+            let reachable = false;
+
+            if (def.keyConfigured) {
+                try {
+                    const opts = {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json', ...(def.checkHeaders || {}) }
+                    };
+                    const response = await fetchWithTimeout(def.checkUrl, opts, def.timeout);
+                    reachable = response.ok;
+                } catch (_e) {
+                    reachable = false;
+                }
+            }
+
+            return {
+                name: def.name,
+                label: def.label,
+                keyConfigured: def.keyConfigured,
+                reachable,
+                model: def.model
+            };
+        }));
+
+        return res.status(200).json(createResponse('Providers IA', { providers }));
+    } catch (error) {
+        console.error('❌ Erreur lors de la récupération des providers:', error);
+        return res.status(500).json(createErrorResponse('Erreur lors de la récupération des providers: ' + error.message));
     }
 }

@@ -198,6 +198,57 @@
           </div>
         </div>
 
+        <!-- Section Providers IA -->
+        <div class="glass-card-dashboard">
+          <h2 class="text-xl font-bold text-white mb-6 flex items-center">
+            <svg class="w-6 h-6 text-amber-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            Providers IA
+          </h2>
+
+          <!-- Chargement providers -->
+          <div v-if="loadingProviders" class="flex items-center justify-center py-6">
+            <svg class="animate-spin w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="ml-3 text-white/60 text-sm">Vérification des providers...</span>
+          </div>
+
+          <!-- Liste des providers -->
+          <div v-else class="space-y-3">
+            <div
+              v-for="provider in providers"
+              :key="provider.name"
+              class="flex items-center justify-between p-4 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20"
+            >
+              <div class="flex items-center space-x-3">
+                <div :class="[
+                  'w-3 h-3 rounded-full flex-shrink-0',
+                  !provider.keyConfigured ? 'bg-slate-500' : (provider.reachable ? 'bg-green-400 shadow-lg shadow-green-400/50' : 'bg-red-400 shadow-lg shadow-red-400/50')
+                ]"></div>
+                <div>
+                  <p class="text-sm font-medium text-white">{{ provider.label }}</p>
+                  <p class="text-xs text-white/30">{{ provider.model }}</p>
+                </div>
+              </div>
+              <span :class="[
+                'text-xs px-3 py-1 rounded-full font-medium',
+                !provider.keyConfigured 
+                  ? 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+                  : (provider.reachable 
+                    ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                    : 'bg-red-500/20 text-red-300 border border-red-500/30')
+              ]">
+                {{ !provider.keyConfigured ? 'Non configuré' : (provider.reachable ? 'En ligne' : 'Hors ligne') }}
+              </span>
+            </div>
+          </div>
+
+          <p class="text-xs text-white/20 mt-4">Ordre de priorité : LocalLLM, OpenAI, Gemini, DeepSeek, Groq, Mistral</p>
+        </div>
+
         <!-- Section Mode OCR -->
         <div class="glass-card-dashboard">
           <h2 class="text-xl font-bold text-white mb-4 flex items-center">
@@ -253,6 +304,7 @@ export default {
     return {
       loading: false,
       applying: false,
+      loadingProviders: false,
       error: null,
       successMessage: null,
       status: {
@@ -264,7 +316,8 @@ export default {
         ocrMode: 'llm'
       },
       models: [],
-      selectedModel: null
+      selectedModel: null,
+      providers: []
     }
   },
   async mounted() {
@@ -273,11 +326,13 @@ export default {
   methods: {
     async loadData() {
       this.loading = true
+      this.loadingProviders = true
       this.error = null
       this.successMessage = null
 
+      const aiService = new AIService()
+
       try {
-        const aiService = new AIService()
         const data = await aiService.getLocalLLMModels()
 
         if (data) {
@@ -306,6 +361,15 @@ export default {
         this.error = 'Impossible de charger les informations LM Studio: ' + (err.message || 'erreur inconnue')
       } finally {
         this.loading = false
+      }
+
+      // Charger les providers en parallèle (peut prendre quelques secondes)
+      try {
+        this.providers = await aiService.getProvidersStatus()
+      } catch (_e) {
+        // Pas bloquant
+      } finally {
+        this.loadingProviders = false
       }
     },
 
