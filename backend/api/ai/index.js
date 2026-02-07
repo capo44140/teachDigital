@@ -847,7 +847,7 @@ async function handleGetProviders(req, res) {
                 keyConfigured: isLocalLLMAvailable(),
                 model: localLLMConfig.getActiveModel(),
                 checkUrl: `${localLLMConfig.getBaseUrl()}/models`,
-                timeout: 5000
+                timeout: 380000
             },
             {
                 name: 'OpenAI',
@@ -856,15 +856,15 @@ async function handleGetProviders(req, res) {
                 model: 'gpt-4o',
                 checkUrl: `${OPENAI_BASE_URL}/models`,
                 checkHeaders: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
-                timeout: 8000
+                timeout: 10000
             },
             {
                 name: 'Gemini',
                 label: 'Google Gemini',
                 keyConfigured: !!(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 20),
-                model: 'gemini-3.5-flash',
+                model: 'gemini-flash-latest',
                 checkUrl: `${GEMINI_BASE_URL}/models?key=${process.env.GEMINI_API_KEY || ''}`,
-                timeout: 8000
+                timeout: 10000
             },
             {
                 name: 'DeepSeek',
@@ -873,7 +873,7 @@ async function handleGetProviders(req, res) {
                 model: 'deepseek-chat',
                 checkUrl: `${DEEPSEEK_BASE_URL}/models`,
                 checkHeaders: { 'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}` },
-                timeout: 8000
+                timeout: 10000
             },
             {
                 name: 'Groq',
@@ -882,7 +882,7 @@ async function handleGetProviders(req, res) {
                 model: 'llama-3.3-70b-versatile',
                 checkUrl: `${GROQ_BASE_URL}/models`,
                 checkHeaders: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
-                timeout: 8000
+                timeout: 10000
             },
             {
                 name: 'Mistral',
@@ -891,7 +891,7 @@ async function handleGetProviders(req, res) {
                 model: 'mistral-large-latest',
                 checkUrl: `${MISTRAL_BASE_URL}/models`,
                 checkHeaders: { 'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}` },
-                timeout: 8000
+                timeout: 10000
             }
         ];
 
