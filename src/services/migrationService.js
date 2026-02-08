@@ -100,9 +100,29 @@ class MigrationService {
   async saveLesson (lessonData, profileId, files = null) {
     if (this.useNewAPI) {
       try {
-        // Transmettre l'ID du profil cible (enfant) pour que le quiz lui soit attribué
-        const dataWithTarget = { ...lessonData, targetProfileId: profileId }
-        const lesson = await this.apiService.createLesson(dataWithTarget)
+        // Extraire le nom du premier fichier image si fourni
+        let imageFilename = null
+        if (files) {
+          if (Array.isArray(files)) {
+            const firstImage = files.find(f => f.type && f.type.startsWith('image/'))
+            if (firstImage) imageFilename = firstImage.name
+          } else {
+            imageFilename = files.name
+          }
+        }
+
+        // Structurer les données comme le backend l'attend
+        const formattedData = {
+          title: lessonData.title || 'Quiz sans titre',
+          description: lessonData.description || '',
+          subject: lessonData.subject || '',
+          level: lessonData.level || '',
+          imageFilename,
+          quizData: lessonData,
+          isPublished: true,
+          targetProfileId: profileId
+        }
+        const lesson = await this.apiService.createLesson(formattedData)
         return lesson
       } catch (error) {
         console.warn('⚠️ Erreur API, fallback vers l\'ancien service:', error)
