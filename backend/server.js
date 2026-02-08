@@ -214,14 +214,11 @@ async function runAutoMigrations() {
     if (checkResult.rows.length === 0) {
       logger.info('🔄 Migration: ajout colonne target_profile_id à la table lessons...');
       
-      // Ajouter la colonne (NULL = quiz visible par tous les enfants, pour rétrocompatibilité)
+      // Ajouter la colonne (NULL = quiz visible par tous les enfants)
       await pool.query(`
         ALTER TABLE lessons
         ADD COLUMN target_profile_id INTEGER REFERENCES profiles(id) ON DELETE SET NULL
       `);
-      
-      // Les anciens quiz restent avec target_profile_id = NULL (visibles par tous)
-      // Seuls les nouveaux quiz auront un target_profile_id défini
       
       // Créer un index pour les recherches par enfant ciblé
       await pool.query(`
@@ -229,6 +226,19 @@ async function runAutoMigrations() {
       `);
       
       logger.info('✅ Migration target_profile_id terminée avec succès');
+    } else {
+      // Correction : si l'ancienne migration a mis target_profile_id = profile_id (l'ID du parent),
+      // on remet à NULL pour que les anciens quiz soient visibles par tous les enfants.
+      // On détecte ça en cherchant les leçons où target = creator (parent) et le profil est admin.
+      const fixResult = await pool.query(`
+        UPDATE lessons l
+        SET target_profile_id = NULL
+        WHERE l.target_profile_id = l.profile_id
+          AND EXISTS (SELECT 1 FROM profiles p WHERE p.id = l.profile_id AND p.is_admin = true)
+      `);
+      if (fixResult.rowCount > 0) {
+        logger.info(`🔧 Correction: ${fixResult.rowCount} leçon(s) remises à target_profile_id=NULL (ancienne migration)`);
+      }
     }
   } catch (error) {
     logger.warn('⚠️ Migration auto-migration (non bloquant):', error.message);
