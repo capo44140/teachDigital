@@ -320,8 +320,9 @@ router.beforeEach(async (to, from, next) => {
     // Si l'accès est déverrouillé (après vérification du PIN), vérifier qu'une session valide existe
     if (isUnlocked) {
       // Vérifier qu'une session valide existe pour ce profil
+      // Comparaison souple (string vs number) avec == au lieu de ===
       const session = sessionService.getValidSession()
-      if (session && session.profileId === profileId && session.isUnlocked) {
+      if (session && String(session.profileId) === String(profileId) && session.isUnlocked) {
         console.log('Accès autorisé après vérification du PIN avec session valide')
         next()
         return
@@ -341,7 +342,7 @@ router.beforeEach(async (to, from, next) => {
 
     // Vérifier si une session valide existe
     const session = sessionService.getValidSession()
-    if (session && sessionService.isUnlocked(profileId)) {
+    if (session && String(session.profileId) === String(profileId) && session.isUnlocked) {
       console.log('Accès autorisé par session valide pour:', session.profileName)
       // Prolonger la session
       sessionService.extendSession()
@@ -353,7 +354,8 @@ router.beforeEach(async (to, from, next) => {
       try {
         const profileStore = useProfileStore()
         await profileStore.loadProfiles()
-        currentProfile = profileStore.getProfileById(profileId)
+        // Comparer avec les deux types (string et number) pour getProfileById
+        currentProfile = profileStore.getProfileById(profileId) || profileStore.getProfileById(Number(profileId))
       } catch (error) {
         console.error('Erreur lors du chargement du profil:', error)
       }

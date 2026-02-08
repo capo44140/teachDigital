@@ -63,7 +63,7 @@ class SessionService {
    */
   isUnlocked (profileId) {
     const session = this.getValidSession()
-    return session && session.profileId === profileId && session.isUnlocked
+    return session && String(session.profileId) === String(profileId) && session.isUnlocked
   }
 
   /**
