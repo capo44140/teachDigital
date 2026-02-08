@@ -146,6 +146,7 @@ export class LessonService {
 
       console.log('🗄️ [SERVICE] Exécution de la requête API...')
       const result = await apiService.saveQuizResult(lessonId, {
+        profileId,
         score: results.score,
         totalQuestions: results.totalQuestions,
         percentage: results.percentage,
