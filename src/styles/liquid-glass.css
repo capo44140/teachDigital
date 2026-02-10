@@ -323,7 +323,7 @@
   .lg-z-bg { z-index: 0; }
   .lg-z-blobs { z-index: 1; }
   .lg-z-content { z-index: 10; }
-  .lg-z-header { z-index: 20; }
+  .lg-z-header { z-index: 20; padding-top: env(safe-area-inset-top, 0px); }
   .lg-z-modal { z-index: 30; }
 
   /* Textes avec transparence */

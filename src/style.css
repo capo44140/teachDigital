@@ -20,4 +20,28 @@ body {
   --primary-color: #3b82f6;
   --secondary-color: #1e40af;
   --accent-color: #f59e0b;
+
+  /* Safe area insets pour iPhone (Dynamic Island, notch, barre d'accueil) */
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
+/* ===========================================
+   SAFE AREA - Support Dynamic Island / Notch
+   =========================================== */
+
+/* Tous les headers de l'app : ajouter le padding-top safe area
+   pour ne pas être masqués par la status bar iOS */
+header {
+  padding-top: var(--sat);
+}
+
+/* Conteneur principal : ajouter les safe areas latérales et en bas
+   pour les iPhones en mode paysage et la barre d'accueil */
+#app {
+  padding-bottom: var(--sab);
+  padding-left: var(--sal);
+  padding-right: var(--sar);
 }
