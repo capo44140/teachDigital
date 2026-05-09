@@ -5,7 +5,13 @@
         <router-view />
       </main>
     </PullToRefresh>
-    
+
+    <!-- Toasts globaux (notifications transitoires) -->
+    <ToastContainer />
+
+    <!-- Onboarding 1er login enfant/ado -->
+    <OnboardingTour />
+
     <!-- Popup de mise à jour globale -->
     <UpdateNotification
       :show="updateService.state.showNotification"
@@ -20,17 +26,36 @@
 <script>
 import { inject } from 'vue'
 import PullToRefresh from './components/PullToRefresh.vue'
+import ToastContainer from './components/ToastContainer.vue'
+import OnboardingTour from './components/OnboardingTour.vue'
+import { useApiStore } from './stores/apiStore.js'
+import { useOnboardingStore } from './stores/onboardingStore.js'
 
 export default {
   name: 'App',
   components: {
-    PullToRefresh
+    PullToRefresh,
+    ToastContainer,
+    OnboardingTour
   },
   setup() {
     const updateService = inject('updateService')
-    
+    const apiStore = useApiStore()
+    const onboardingStore = useOnboardingStore()
+
     return {
-      updateService
+      updateService,
+      apiStore,
+      onboardingStore
+    }
+  },
+  watch: {
+    // Déclenche l'onboarding au login (ou au reload si user déjà persisté)
+    'apiStore.user': {
+      handler(profile) {
+        if (profile) this.onboardingStore.startForProfileIfNeeded(profile)
+      },
+      immediate: true
     }
   },
   methods: {

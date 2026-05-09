@@ -101,9 +101,11 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useApiStore } from '../stores/apiStore.js';
+import { useToast } from '../stores/toastStore.js';
 
 const router = useRouter();
 const apiStore = useApiStore();
+const toast = useToast();
 
 // État du composant
 const selectedProfileId = ref('');
@@ -141,11 +143,12 @@ const handleLogin = async () => {
 
   try {
     await apiStore.login(parseInt(selectedProfileId.value), pin.value);
-    
-    // Redirection vers le dashboard
+    toast.success('Connexion réussie');
     router.push('/dashboard');
   } catch (err) {
-    error.value = err.message || 'Erreur de connexion';
+    const msg = err.message || 'Erreur de connexion';
+    error.value = msg;
+    toast.error(msg);
   } finally {
     loading.value = false;
   }

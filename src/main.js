@@ -11,6 +11,7 @@ import { useApiStore } from './stores/apiStore.js'
 import installService from './services/installService.js'
 import mobileOptimizationService from './services/mobileOptimizationService.js'
 import { safeHtmlDirective } from './utils/sanitizeHtml.js'
+import { useToastStore } from './stores/toastStore.js'
 
 // Filtrer les avertissements Radix UI/Dialog de la console
 const originalConsoleWarn = console.warn
@@ -132,6 +133,26 @@ app.provide('installService', installService)
 app.provide('mobileOptimizationService', mobileOptimizationService)
 
 app.use(pinia).use(router)
+
+// Exposer $toast globalement pour les composants Options API
+// Usage : this.$toast.success('Profil créé') / this.$toast.error('Échec')
+const toastStore = useToastStore(pinia)
+app.config.globalProperties.$toast = {
+  show:    (msg, opts) => toastStore.show(msg, 'info', opts),
+  success: (msg, opts) => toastStore.success(msg, opts),
+  info:    (msg, opts) => toastStore.info(msg, opts),
+  warning: (msg, opts) => toastStore.warning(msg, opts),
+  error:   (msg, opts) => toastStore.error(msg, opts),
+  dismiss: (id) => toastStore.dismiss(id),
+  clear:   () => toastStore.clear()
+}
+
+// Capter les erreurs Vue non gérées et les afficher en toast (filet de sécurité)
+app.config.errorHandler = (err, _instance, info) => {
+  console.error('[Vue error]', info, err)
+  const msg = err?.message || 'Une erreur inattendue est survenue'
+  toastStore.error(msg)
+}
 
 // Monter l'app immédiatement pour un affichage rapide
 app.mount('#app')
