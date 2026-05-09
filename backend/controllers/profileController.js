@@ -356,6 +356,13 @@ async function handleProfilePin(req, res, profileId) {
                 return;
             }
 
+            // Migration transparente bcrypt (non-bloquant)
+            if (NativeHashService.needsRehash(existingPin[0].pin_code)) {
+                NativeHashService.hashPin(pin)
+                    .then(newHash => sql`UPDATE pin_codes SET pin_code = ${newHash} WHERE profile_id = ${profileId}`)
+                    .catch(err => console.error('⚠️ Migration bcrypt PIN échouée (non-bloquant):', err?.message || err));
+            }
+
             res.status(200).json({
                 success: true,
                 message: 'Code PIN vérifié avec succès'
@@ -699,6 +706,13 @@ async function handlePin(req, res) {
             }
 
             const isValidPin = await NativeHashService.verifyPin(pin, pinData[0].pin_code);
+
+            // Migration transparente bcrypt (non-bloquant) si valide et legacy
+            if (isValidPin && NativeHashService.needsRehash(pinData[0].pin_code)) {
+                NativeHashService.hashPin(pin)
+                    .then(newHash => sql`UPDATE pin_codes SET pin_code = ${newHash} WHERE profile_id = ${profileIdNum}`)
+                    .catch(err => console.error('⚠️ Migration bcrypt PIN échouée (non-bloquant):', err?.message || err));
+            }
 
             res.status(200).json({
                 success: true,

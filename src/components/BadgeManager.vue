@@ -197,8 +197,8 @@
     <transition name="modal">
       <div v-if="selectedBadge" class="fixed inset-0 bg-black/50 backdrop-blur-xl flex items-center justify-center z-50 p-4" @click="selectedBadge = null">
         <div class="glass-modal-content max-w-md w-full" @click.stop>
-          <button class="absolute top-4 right-4 p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-300" @click="selectedBadge = null">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button class="absolute top-4 right-4 p-3 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-300" aria-label="Fermer" @click="selectedBadge = null">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>

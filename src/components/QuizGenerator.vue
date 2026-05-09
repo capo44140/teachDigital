@@ -285,104 +285,52 @@ export default {
     },
 
     async initializeQuiz() {
-      console.log('🚀 [QUIZ] Initialisation du quiz')
-      console.log('📋 [QUIZ] Paramètres de route reçus:', this.$route.query)
-      
       // Récupérer les données du quiz depuis les paramètres de route
       const quizData = this.$route.query.quizData
       const childId = this.$route.query.childId
       const lessonId = this.$route.query.lessonId
       
-      console.log('🔍 [QUIZ] Données extraites:', {
-        hasQuizData: !!quizData,
-        hasChildId: !!childId,
-        hasLessonId: !!lessonId,
-        childId,
-        lessonId
-      })
-      
       if (lessonId && childId) {
-        console.log('📚 [QUIZ] Mode leçon - Chargement depuis la base de données')
         // Charger une leçon depuis la base de données
         try {
           const lesson = await LessonService.getLessonById(lessonId)
           this.quiz = lesson.quiz_data
           this.quiz.lessonId = lesson.id
-          console.log('✅ [QUIZ] Leçon chargée:', {
-            lessonId: lesson.id,
-            title: lesson.title,
-            quizLessonId: this.quiz.lessonId
-          })
           this.loadChildProfile(childId)
         } catch (error) {
-          console.error('❌ [QUIZ] Erreur lors du chargement de la leçon:', error)
           this.goBack()
           return
         }
       } else if (quizData) {
-        console.log('🎮 [QUIZ] Mode génération - Chargement depuis les paramètres')
         // Charger les données du quiz depuis les paramètres (mode génération)
         try {
           this.quiz = JSON.parse(quizData)
-          console.log('✅ [QUIZ] Quiz chargé depuis les paramètres:', {
-            title: this.quiz?.title,
-            hasLessonId: !!this.quiz?.lessonId,
-            lessonId: this.quiz?.lessonId
-          })
         } catch (error) {
-          console.error('❌ [QUIZ] Erreur lors du parsing des données du quiz:', error)
           this.goBack()
           return
         }
       } else {
-        console.warn('⚠️ [QUIZ] Aucune donnée de quiz trouvée')
+        // Aucune donnée de quiz trouvée
       }
       
       if (childId) {
-        console.log('👤 [QUIZ] Chargement du profil enfant...')
         await this.loadChildProfile(childId)
       } else {
-        console.warn('⚠️ [QUIZ] Aucun childId fourni dans les paramètres de route')
+        // Aucun childId fourni
       }
-      
-      console.log('🏁 [QUIZ] Initialisation terminée')
-      console.log('🔍 [QUIZ] État final:', {
-        hasQuiz: !!this.quiz,
-        hasSelectedChild: !!this.selectedChild,
-        quizLessonId: this.quiz?.lessonId,
-        selectedChildId: this.selectedChild?.id
-      })
     },
     
     async loadChildProfile(childId) {
-      console.log('👤 [QUIZ] Chargement du profil enfant:', childId)
-      console.log('🔍 [QUIZ] Type de childId:', typeof childId)
-      
       const store = useProfileStore()
       await store.loadProfiles()
-      
-      console.log('📊 [QUIZ] Tous les profils chargés:', store.profiles?.length || 0)
-      console.log('🔍 [QUIZ] Profils disponibles:', store.profiles?.map(p => ({ id: p.id, name: p.name, type: p.type })) || [])
-      
+
       // Convertir childId en nombre car les paramètres de route sont des strings
       const numericChildId = parseInt(childId, 10)
-      console.log('🔢 [QUIZ] Conversion childId:', { original: childId, converted: numericChildId })
-      
+
       this.selectedChild = store.getProfileById(numericChildId)
-      
-      if (this.selectedChild) {
-        console.log('✅ [QUIZ] Profil enfant chargé:', {
-          id: this.selectedChild.id,
-          name: this.selectedChild.name,
-          type: this.selectedChild.type
-        })
-      } else {
-        console.error('❌ [QUIZ] Profil enfant non trouvé!', {
-          originalChildId: childId,
-          numericChildId: numericChildId,
-          availableIds: store.profiles?.map(p => p.id) || [],
-          availableNames: store.profiles?.map(p => p.name) || []
-        })
+
+      if (!this.selectedChild) {
+        // Profil enfant non trouvé
       }
     },
     
@@ -459,23 +407,6 @@ export default {
     },
     
     async finishQuiz() {
-      console.log('🎯 [QUIZ] Début de la finalisation du quiz')
-      console.log('📊 [QUIZ] Données du quiz:', {
-        lessonId: this.quiz?.lessonId,
-        childId: this.selectedChild?.id,
-        childName: this.selectedChild?.name,
-        totalQuestions: this.quiz?.questions?.length || 0
-      })
-      
-      console.log('🔍 [QUIZ] État détaillé:', {
-        quiz: !!this.quiz,
-        selectedChild: !!this.selectedChild,
-        quizLessonId: this.quiz?.lessonId,
-        selectedChildId: this.selectedChild?.id,
-        selectedChildName: this.selectedChild?.name,
-        selectedChildType: this.selectedChild?.type
-      })
-      
       // Calculer le score
       this.correctAnswers = 0
       if (this.quiz?.questions) {
@@ -486,15 +417,8 @@ export default {
         })
       }
       
-      console.log('📈 [QUIZ] Score calculé:', {
-        correctAnswers: this.correctAnswers,
-        totalQuestions: this.quiz?.questions?.length || 0,
-        percentage: this.quiz?.questions?.length ? Math.round((this.correctAnswers / this.quiz.questions.length) * 100) : 0
-      })
-      
       // Sauvegarder les résultats en base de données si une leçon est associée
       if (this.quiz?.lessonId && this.selectedChild) {
-        console.log('💾 [QUIZ] Sauvegarde des résultats en cours...')
         try {
           const results = {
             score: this.correctAnswers,
@@ -503,41 +427,19 @@ export default {
             answers: this.userAnswers
           }
           
-          console.log('📝 [QUIZ] Données à sauvegarder:', {
-            lessonId: this.quiz.lessonId,
-            profileId: this.selectedChild.id,
-            results: results
-          })
-          
           const savedResult = await LessonService.saveQuizResults(
             this.quiz.lessonId,
             this.selectedChild.id,
             results
           )
           
-          console.log('✅ [QUIZ] Résultats sauvegardés avec succès!')
-          console.log('📊 [QUIZ] Résultat sauvegardé:', savedResult)
-          console.log('🎉 [QUIZ] Quiz terminé par', this.selectedChild.name, 'avec', results.percentage + '%')
-          
         } catch (error) {
-          console.error('❌ [QUIZ] Erreur lors de la sauvegarde des résultats:', error)
-          console.error('🔍 [QUIZ] Détails de l\'erreur:', {
-            message: error.message,
-            stack: error.stack,
-            lessonId: this.quiz?.lessonId,
-            profileId: this.selectedChild?.id
-          })
+          console.error('Erreur lors de la sauvegarde des résultats:', error)
         }
       } else {
-        console.warn('⚠️ [QUIZ] Impossible de sauvegarder - données manquantes:', {
-          hasLessonId: !!this.quiz?.lessonId,
-          hasSelectedChild: !!this.selectedChild,
-          lessonId: this.quiz?.lessonId,
-          childId: this.selectedChild?.id
-        })
+        // Impossible de sauvegarder - données manquantes
       }
       
-      console.log('🏁 [QUIZ] Quiz marqué comme terminé')
       this.quizCompleted = true
     },
     

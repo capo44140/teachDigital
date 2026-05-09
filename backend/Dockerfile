@@ -1,7 +1,9 @@
 FROM node:22-alpine
 
-# Installer pnpm globalement
-RUN npm install -g pnpm
+# Pin pnpm sur la version 9.15 — pnpm 10+ a un nouveau comportement strict qui
+# transforme [ERR_PNPM_IGNORED_BUILDS] en erreur fatale (tesseract.js) malgré
+# --config.enable-pre-post-scripts. La 9.15 est aussi celle utilisée en local.
+RUN npm install -g pnpm@9.15
 
 WORKDIR /app
 

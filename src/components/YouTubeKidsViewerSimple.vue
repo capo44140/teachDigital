@@ -132,7 +132,6 @@ import { migrationService } from '../services/migrationService.js'
 export default {
   name: 'YouTubeKidsViewerSimple',
   setup() {
-    console.log('🎥 YouTubeKidsViewerSimple component loaded')
     const profileStore = useProfileStore()
     
     const videos = ref([])
@@ -142,15 +141,12 @@ export default {
     const loadVideos = async () => {
       try {
         isLoading.value = true
-        console.log('📺 Loading videos from database...')
-        
+
         // Charger les vidéos via le service de migration
         const data = await migrationService.getYouTubeVideos()
         videos.value = data.filter(video => video.is_active)
-        
-        console.log('📺 Videos loaded:', videos.value.length)
       } catch (error) {
-        console.error('❌ Error loading videos:', error)
+        console.error('Erreur lors du chargement des vidéos:', error)
         // Fallback vers des données de démonstration
         videos.value = [
           {
@@ -184,7 +180,6 @@ export default {
     }
     
     const playVideo = (video) => {
-      console.log('Playing video:', video.title)
       // Ouvrir la vidéo dans un nouvel onglet
       window.open(video.url, '_blank')
     }

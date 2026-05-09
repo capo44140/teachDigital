@@ -23,10 +23,9 @@ async function loadCurrentVersion() {
     }
     const versionInfo = await response.json()
     updateState.currentVersion = versionInfo.version
-    console.log('📦 Version actuelle chargée:', versionInfo.version)
     return versionInfo.version
   } catch (error) {
-    console.error('❌ Erreur chargement version:', error)
+    console.error('Erreur chargement version:', error)
     // Fallback sur une version par défaut
     updateState.currentVersion = '1.0.0'
     return '1.0.0'
@@ -65,7 +64,6 @@ export const updateService = {
       updateState.newVersion = newVersion
       updateState.isUpdateAvailable = true
       updateState.showNotification = true
-      console.log(`🔔 Mise à jour disponible: ${currentVersion} → ${newVersion}`)
     }
   },
 
@@ -77,7 +75,6 @@ export const updateService = {
   // Forcer la mise à jour
   forceUpdate() {
     updateState.showNotification = false
-    console.log('🔄 Rechargement de l\'application...')
     window.location.reload()
   },
 
@@ -88,24 +85,21 @@ export const updateService = {
     setTimeout(() => {
       if (updateState.isUpdateAvailable) {
         updateState.showNotification = true
-        console.log('🔔 Rappel: Mise à jour disponible')
       }
     }, 30 * 60 * 1000)
   },
 
   // Vérifier les mises à jour
   async checkForUpdates() {
-    console.log('🔍 Vérification des mises à jour...')
 
     if ('serviceWorker' in navigator) {
       try {
         const registration = await navigator.serviceWorker.getRegistration()
         if (registration) {
           await registration.update()
-          console.log('✅ Vérification Service Worker terminée')
         }
       } catch (error) {
-        console.error('❌ Erreur vérification mises à jour:', error)
+        console.error('Erreur vérification mises à jour:', error)
       }
     }
 
@@ -121,7 +115,7 @@ export const updateService = {
         }
       }
     } catch (error) {
-      console.error('❌ Erreur vérification version serveur:', error)
+      console.error('Erreur vérification version serveur:', error)
     }
   }
 }

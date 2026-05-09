@@ -322,10 +322,6 @@ export default {
       try {
         await this.loadChildrenStats()
         await this.loadQuizHistory()
-        console.log('📊 [PARENT-PROGRESS] Données chargées:', {
-          childrenCount: this.childrenStats.length,
-          totalQuizzes: this.totalQuizzesCompleted
-        })
       } catch (error) {
         console.error('❌ [PARENT-PROGRESS] Erreur lors du chargement:', error)
       } finally {

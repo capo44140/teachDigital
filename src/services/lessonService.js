@@ -137,14 +137,6 @@ export class LessonService {
    */
   static async saveQuizResults (lessonId, profileId, results) {
     try {
-      console.log('💾 [SERVICE] Début de la sauvegarde des résultats de quiz')
-      console.log('📊 [SERVICE] Paramètres reçus:', {
-        lessonId,
-        profileId,
-        results
-      })
-
-      console.log('🗄️ [SERVICE] Exécution de la requête API...')
       const result = await apiService.saveQuizResult(lessonId, {
         profileId,
         score: results.score,
@@ -153,10 +145,7 @@ export class LessonService {
         answers: results.answers
       })
 
-      console.log('✅ [SERVICE] Résultats insérés:', result)
-
       // Enregistrer les résultats dans les logs d'audit
-      console.log('📝 [SERVICE] Enregistrement des logs d\'audit...')
       auditLogService.logDataAccess(
         profileId,
         'quiz_completion',
@@ -169,12 +158,7 @@ export class LessonService {
       )
 
       // Récupérer les informations de la leçon pour la notification
-      console.log('📚 [SERVICE] Récupération des informations de la leçon...')
       const lesson = await this.getLessonById(lessonId)
-      console.log('📖 [SERVICE] Leçon récupérée:', lesson?.title)
-
-      // Créer une notification de quiz terminé
-      console.log('🔔 [SERVICE] Création de la notification...')
       await NotificationService.createQuizCompletionNotification(profileId, {
         score: results.score,
         totalQuestions: results.totalQuestions,
@@ -182,17 +166,9 @@ export class LessonService {
         lessonTitle: lesson?.title || 'Quiz'
       })
 
-      console.log('🎉 [SERVICE] Sauvegarde complète réussie!')
       return result
     } catch (error) {
-      console.error('❌ [SERVICE] Erreur lors de la sauvegarde des résultats:', error)
-      console.error('🔍 [SERVICE] Détails de l\'erreur:', {
-        message: error.message,
-        stack: error.stack,
-        lessonId,
-        profileId,
-        results
-      })
+      console.error('Erreur lors de la sauvegarde des résultats:', error)
       throw error
     }
   }
@@ -251,8 +227,6 @@ export class LessonService {
    */
   static async getChildQuizHistory (profileId) {
     try {
-      console.log('📚 [SERVICE] Récupération de l\'historique des quiz pour le profil:', profileId)
-
       const allLessons = await this.getAllAvailableLessons()
       const quizHistory = []
 
@@ -279,11 +253,9 @@ export class LessonService {
       // Trier par date décroissante
       quizHistory.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
 
-      console.log('📈 [SERVICE] Historique des quiz récupéré:', quizHistory?.length || 0)
-
       return quizHistory
     } catch (error) {
-      console.error('❌ [SERVICE] Erreur lors de la récupération de l\'historique des quiz:', error)
+      console.error('Erreur lors de la récupération de l\'historique des quiz:', error)
       throw error
     }
   }

@@ -161,7 +161,7 @@
                 :class="profile.avatar_class"
                 class="w-16 h-16 rounded-xl flex items-center justify-center shadow-lg"
               >
-                <div class="w-full h-full flex items-center justify-center" v-html="profile.avatar_content"></div>
+                <div class="w-full h-full flex items-center justify-center" v-safe-html="profile.avatar_content"></div>
               </div>
               
               <!-- Badges de statut -->
@@ -557,7 +557,6 @@ export default {
         this.profiles[index].image_data = imageData.imageData
         this.profiles[index].image_type = imageData.imageType
       }
-      console.log('✅ Image mise à jour avec succès')
     },
     onImageRemoved() {
       // Supprimer l'image du profil dans la liste
@@ -566,10 +565,9 @@ export default {
         this.profiles[index].image_data = null
         this.profiles[index].image_type = null
       }
-      console.log('✅ Image supprimée avec succès')
     },
     onUploadError(error) {
-      console.error('❌ Erreur lors de l\'upload:', error)
+      console.error('Erreur lors de l\'upload:', error)
     },
     formatDate(date) {
       return new Intl.DateTimeFormat('fr-FR', {

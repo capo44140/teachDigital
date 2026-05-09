@@ -14,6 +14,14 @@ const { handleProfileProgressSummary } = require('../controllers/progressControl
 const handleBadges = require('./badges.js');
 const handleAI = require('./ai/index.js');
 const { createRateLimiter, getClientIp } = require('../lib/rateLimit.js');
+const { validate } = require('../lib/validation.js');
+const {
+    loginSchema,
+    familyGateCheckSchema,
+    familyGateUpdateSchema,
+    pinVerifySchema,
+    profileCreationRequestSchema
+} = require('../lib/schemas.js');
 
 // Rate limiting (stabilité prod)
 // Configurable via env:
@@ -29,7 +37,7 @@ const loginRateLimiter = createRateLimiter({
 
 const pinRateLimiter = createRateLimiter({
   windowMs: parseInt(process.env.API_RATE_LIMIT_PIN_WINDOW_MS || '60000', 10),
-  max: parseInt(process.env.API_RATE_LIMIT_PIN_MAX || '30', 10),
+  max: parseInt(process.env.API_RATE_LIMIT_PIN_MAX || '5', 10),
   keyGenerator: (req) => {
     const profileId = req.params?.id || 'unknown';
     return `pin:${getClientIp(req)}:${profileId}`;
@@ -55,18 +63,18 @@ const familyGateRateLimiter = createRateLimiter({
 });
 
 // Routes d'authentification
-router.post('/auth/login', loginRateLimiter, handleLogin);
+router.post('/auth/login', loginRateLimiter, validate(loginSchema), handleLogin);
 router.post('/auth/logout', handleLogout);
-router.post('/auth/family-gate', familyGateRateLimiter, handleFamilyGate);
-router.put('/auth/family-gate', handleFamilyGate);
+router.post('/auth/family-gate', familyGateRateLimiter, validate(familyGateCheckSchema), handleFamilyGate);
+router.put('/auth/family-gate', validate(familyGateUpdateSchema), handleFamilyGate);
 
 // Routes des profils
 router.get('/profiles/stats', handleProfileStats);
-router.post('/profiles/requests', profileRequestRateLimiter, handleProfileCreationRequest);
+router.post('/profiles/requests', profileRequestRateLimiter, validate(profileCreationRequestSchema), handleProfileCreationRequest);
 router.get('/profiles/:id/stats', handleProfileLearningStats);
 router.get('/profiles/:id/learning-stats', handleProfileLearningStats);
 router.get('/profiles/:id/progress-summary', handleProfileProgressSummary);
-router.post('/profiles/:id/pin', pinRateLimiter, handlePin);
+router.post('/profiles/:id/pin', pinRateLimiter, validate(pinVerifySchema), handlePin);
 router.get('/profiles', handleProfiles);
 router.get('/profiles/:id', handleProfile);
 router.put('/profiles/:id', handleProfile);

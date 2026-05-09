@@ -20,7 +20,7 @@ export const useProfileStore = defineStore('profile', {
     // Protection contre les appels multiples simultanés
     loadingPromise: null,
     lastLoadTime: null,
-    loadCacheTimeout: 5000 // Cache de 5 secondes
+    loadCacheTimeout: 60000 // Cache de 60 secondes
   }),
 
   getters: {
@@ -60,12 +60,11 @@ export const useProfileStore = defineStore('profile', {
         return this.loadingPromise
       }
 
-      // Vérifier le cache : si les profils ont été chargés récemment, ne pas recharger
-      const now = Date.now()
-      if (!force && this.lastLoadTime && (now - this.lastLoadTime) < this.loadCacheTimeout && this.profiles.length > 0) {
-        console.log('✅ Utilisation du cache des profils (chargés il y a moins de 5 secondes)')
-        return Promise.resolve(this.profiles)
-      }
+       // Vérifier le cache : si les profils ont été chargés récemment, ne pas recharger
+       const now = Date.now()
+       if (!force && this.lastLoadTime && (now - this.lastLoadTime) < this.loadCacheTimeout && this.profiles.length > 0) {
+         return Promise.resolve(this.profiles)
+       }
 
       this.isLoading = true
       this.error = null
@@ -78,11 +77,10 @@ export const useProfileStore = defineStore('profile', {
 
           await this.loadStats()
           this.lastLoadTime = Date.now()
-          console.log('✅ Profils chargés avec succès')
           return this.profiles
         } catch (error) {
           this.error = error.message
-          console.error('❌ Erreur lors du chargement des profils:', error)
+          console.error('Erreur lors du chargement des profils:', error)
           throw error
         } finally {
           this.isLoading = false
@@ -107,7 +105,7 @@ export const useProfileStore = defineStore('profile', {
           }
         }
       } catch (error) {
-        console.error('❌ Erreur lors du chargement des statistiques:', error)
+        console.error('Erreur lors du chargement des statistiques:', error)
       }
     },
 
@@ -123,14 +121,12 @@ export const useProfileStore = defineStore('profile', {
         // Essayer d'abord de charger depuis le store local (plus rapide)
         const localProfile = this.getProfileById(profileId)
         if (localProfile) {
-          console.log('✅ Profil trouvé dans le store local')
           this.currentProfile = localProfile
           this.isLoading = false
           return localProfile
         }
 
         // Si pas dans le store, charger depuis l'API
-        console.log(`🔍 Chargement du profil ${profileId} depuis l'API...`)
         this.currentProfile = await ProfileService.getProfileById(profileId)
 
         if (!this.currentProfile) {
@@ -138,17 +134,15 @@ export const useProfileStore = defineStore('profile', {
           const fallbackProfile = this.getProfileById(String(profileId)) ||
                                   this.getProfileById(Number(profileId))
           if (fallbackProfile) {
-            console.log('✅ Profil trouvé dans le store avec format alternatif')
             this.currentProfile = fallbackProfile
             return fallbackProfile
           }
           throw new Error('Profil non trouvé')
         }
-        console.log('✅ Profil chargé avec succès depuis l\'API')
         return this.currentProfile
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors du chargement du profil:', error)
+        console.error('Erreur lors du chargement du profil:', error)
 
         // Fallback : essayer de trouver dans le store local même en cas d'erreur API
         const profileId = typeof id === 'string' ? parseInt(id, 10) : id
@@ -156,7 +150,6 @@ export const useProfileStore = defineStore('profile', {
                                 this.getProfileById(String(profileId)) ||
                                 this.getProfileById(Number(profileId))
         if (fallbackProfile) {
-          console.log('⚠️ Utilisation du profil du store local en fallback')
           this.currentProfile = fallbackProfile
           return fallbackProfile
         }
@@ -177,11 +170,10 @@ export const useProfileStore = defineStore('profile', {
         this.profiles.unshift(newProfile)
 
         await this.loadStats()
-        console.log('✅ Profil créé avec succès')
         return newProfile
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la création du profil:', error)
+        console.error('Erreur lors de la création du profil:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -208,11 +200,10 @@ export const useProfileStore = defineStore('profile', {
         }
 
         await this.loadStats()
-        console.log('✅ Profil mis à jour avec succès')
         return updatedProfile
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la mise à jour du profil:', error)
+        console.error('Erreur lors de la mise à jour du profil:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -236,10 +227,9 @@ export const useProfileStore = defineStore('profile', {
         }
 
         await this.loadStats()
-        console.log('✅ Profil supprimé avec succès')
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la suppression du profil:', error)
+        console.error('Erreur lors de la suppression du profil:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -258,11 +248,10 @@ export const useProfileStore = defineStore('profile', {
         }
 
         await this.loadStats()
-        console.log('✅ Statut du profil basculé avec succès')
         return updatedProfile
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors du basculement du statut:', error)
+        console.error('Erreur lors du basculement du statut:', error)
         throw error
       }
     },
@@ -278,11 +267,10 @@ export const useProfileStore = defineStore('profile', {
           this.profiles[index] = updatedProfile
         }
 
-        console.log('✅ Verrouillage du profil basculé avec succès')
         return updatedProfile
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors du basculement du verrouillage:', error)
+        console.error('Erreur lors du basculement du verrouillage:', error)
         throw error
       }
     },
@@ -291,11 +279,10 @@ export const useProfileStore = defineStore('profile', {
     async verifyPin (profileId, pin) {
       try {
         const isValid = await PinService.verifyPin(profileId, pin)
-        console.log(isValid ? '✅ Code PIN valide' : '❌ Code PIN invalide')
         return isValid
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la vérification du code PIN:', error)
+        console.error('Erreur lors de la vérification du code PIN:', error)
         return false
       }
     },
@@ -310,10 +297,9 @@ export const useProfileStore = defineStore('profile', {
         }
 
         await PinService.updatePin(profileId, newPin)
-        console.log('✅ Code PIN mis à jour avec succès')
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la mise à jour du code PIN:', error)
+        console.error('Erreur lors de la mise à jour du code PIN:', error)
         throw error
       }
     },
@@ -338,7 +324,7 @@ export const useProfileStore = defineStore('profile', {
       try {
         return await PinService.getDefaultPin()
       } catch (error) {
-        console.error('❌ Erreur lors de la récupération du code PIN par défaut:', error)
+        console.error('Erreur lors de la récupération du code PIN par défaut:', error)
         return '1234'
       }
     },
@@ -372,9 +358,8 @@ export const useProfileStore = defineStore('profile', {
         // Forcer le rechargement en ignorant le cache
         await this.loadProfiles(true)
 
-        console.log('✅ Profils rechargés')
       } catch (error) {
-        console.error('❌ Erreur lors du rechargement des profils:', error)
+        console.error('Erreur lors du rechargement des profils:', error)
         throw error
       }
     }

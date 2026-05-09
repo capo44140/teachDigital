@@ -10,6 +10,7 @@ import { useApiStore } from './stores/apiStore.js'
 // Services PWA avancés
 import installService from './services/installService.js'
 import mobileOptimizationService from './services/mobileOptimizationService.js'
+import { safeHtmlDirective } from './utils/sanitizeHtml.js'
 
 // Filtrer les avertissements Radix UI/Dialog de la console
 const originalConsoleWarn = console.warn
@@ -65,6 +66,9 @@ const app = createApp(App)
 // Enregistrer le composant global
 app.component('UpdateNotification', UpdateNotification)
 
+// Directive globale de sanitisation HTML (XSS protection pour avatars)
+app.directive('safe-html', safeHtmlDirective)
+
 // Enregistrement du Service Worker pour PWA avec gestion des mises à jour
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -72,8 +76,6 @@ if ('serviceWorker' in navigator) {
       updateViaCache: 'none' // Forcer la vérification des mises à jour
     })
       .then(async (registration) => {
-        console.log('✅ Service Worker enregistré avec succès:', registration.scope)
-
         // Initialiser le service de mise à jour
         await updateService.initialize()
 
@@ -89,12 +91,9 @@ if ('serviceWorker' in navigator) {
 
         // Écouter les mises à jour disponibles du Service Worker
         registration.addEventListener('updatefound', () => {
-          console.log('🔄 Service Worker: Mise à jour disponible')
-
           const newWorker = registration.installing
           newWorker.addEventListener('statechange', async () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('🆕 Service Worker: Nouvelle version installée')
 
               // Récupérer les versions réelles
               try {
@@ -115,14 +114,13 @@ if ('serviceWorker' in navigator) {
         })
       })
       .catch((error) => {
-        console.log('❌ Échec de l\'enregistrement du Service Worker:', error)
+        // Échec de l'enregistrement du Service Worker
       })
   })
 
   // Vérifier les mises à jour quand l'app redevient visible
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
-      console.log('👁️ App visible, vérification des mises à jour...')
       updateService.checkForUpdates()
     }
   })
@@ -152,8 +150,6 @@ scheduleIdleTask(() => {
  * Optimise le chemin critique en différant les requêtes non essentielles
  */
 async function initializeServicesAsync() {
-  console.log('🚀 Initialisation asynchrone des services...')
-
   // Étape 1 : Initialiser l'apiStore depuis le cache local (rapide)
   const apiStore = useApiStore()
   apiStore.initialize()
@@ -174,8 +170,6 @@ async function initializePWAServices() {
     { name: 'Installation', init: () => installService.checkInstallationStatus() }
   ]
 
-  console.log('🔧 Initialisation des services PWA...')
-
   const results = await Promise.allSettled(
     services.map(service => service.init())
   )
@@ -184,13 +178,12 @@ async function initializePWAServices() {
   const failed = results.filter(result => result.status === 'rejected').length
 
   if (failed > 0) {
-    console.warn(`⚠️ Initialisation PWA partielle: ${successful} réussis, ${failed} échoués`)
     results.forEach((result, index) => {
       if (result.status === 'rejected') {
-        console.warn(`❌ Échec de l'initialisation ${services[index].name}:`, result.reason)
+        console.warn(`Échec de l'initialisation ${services[index].name}:`, result.reason)
       }
     })
   } else {
-    console.log('✅ Services PWA initialisés avec succès')
+    // Services PWA initialisés
   }
 }

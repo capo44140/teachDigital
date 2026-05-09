@@ -373,48 +373,27 @@ router.beforeEach(async (to, from, next) => {
     const profileId = to.query.profile
     let currentProfile = null
 
-    console.log('🔍 [ROUTER] Vérification des permissions enfant/adolescent pour:', to.path)
-    console.log('🔍 [ROUTER] Profile ID:', profileId)
-
     if (profileId) {
       try {
         const profileStore = useProfileStore()
-        console.log('🔍 [ROUTER] Chargement des profils...')
         await profileStore.loadProfiles()
-        console.log('🔍 [ROUTER] Tous les profils:', profileStore.profiles)
-        console.log('🔍 [ROUTER] Recherche du profil ID:', profileId, 'Type:', typeof profileId)
 
         // Essayer avec l'ID comme string et comme number
         currentProfile = profileStore.getProfileById(profileId)
         if (!currentProfile) {
-          console.log('🔍 [ROUTER] Tentative avec ID converti en number...')
           currentProfile = profileStore.getProfileById(parseInt(profileId))
         }
         if (!currentProfile) {
-          console.log('🔍 [ROUTER] Tentative avec ID converti en string...')
           currentProfile = profileStore.getProfileById(String(profileId))
         }
-
-        console.log('🔍 [ROUTER] Profil trouvé:', currentProfile)
-        console.log('🔍 [ROUTER] is_child:', currentProfile?.is_child)
-        console.log('🔍 [ROUTER] is_teen:', currentProfile?.is_teen)
       } catch (error) {
-        console.error('❌ [ROUTER] Erreur lors du chargement du profil:', error)
+        console.error('Erreur lors du chargement du profil:', error)
       }
-    } else {
-      console.warn('⚠️ [ROUTER] Aucun profileId fourni dans l\'URL')
     }
 
     if (!currentProfile || (!currentProfile.is_child && !currentProfile.is_teen)) {
-      console.warn('❌ [ROUTER] Accès refusé à la page enfant/adolescent:', to.path)
-      console.warn('❌ [ROUTER] Profil:', currentProfile)
-      console.warn('❌ [ROUTER] is_child:', currentProfile?.is_child)
-      console.warn('❌ [ROUTER] is_teen:', currentProfile?.is_teen)
-
       // Solution temporaire : créer un profil par défaut si aucun profil n'est trouvé
       if (to.path === '/user-dashboard') {
-        console.log('⚠️ [ROUTER] Création d\'un profil par défaut pour le dashboard utilisateur')
-        // Le UserDashboard créera son propre profil par défaut
         next()
         return
       }
@@ -422,8 +401,6 @@ router.beforeEach(async (to, from, next) => {
       next({ path: '/' })
       return
     }
-
-    console.log('✅ [ROUTER] Accès autorisé pour:', to.path)
   }
 
   // Pour toutes les autres pages, permettre l'accès

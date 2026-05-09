@@ -229,7 +229,8 @@
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-semibold">Aperçu de l'image optimisée</h3>
           <button
-            class="text-gray-500 hover:text-gray-700"
+            class="p-3 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label="Fermer l'aperçu"
             @click="closePreview"
           >
             <Icon name="mdi:close" class="w-6 h-6" />

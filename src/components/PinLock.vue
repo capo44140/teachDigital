@@ -19,12 +19,13 @@
     <div class="relative z-10 w-full max-w-md">
       <!-- Bouton de fermeture -->
       <div class="flex justify-end mb-8">
-        <button 
-          class="p-2 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
+        <button
+          class="p-3 text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl backdrop-blur-xl hover:bg-white/10 transition-all"
           title="Retour"
+          aria-label="Retour"
           @click="goBack"
         >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
@@ -128,12 +129,17 @@ export default {
       errorMessage: '',
       attempts: 0,
       maxAttempts: PIN_CONFIG.MAX_ATTEMPTS,
-      isLocked: false
+      isLocked: false,
+      lockoutLevel: 0,
+      lockoutTimer: null,
+      lockoutRemaining: 0
     }
   },
   mounted() {
-    // Focus sur le premier champ au chargement
     this.focusFirstField()
+  },
+  beforeUnmount() {
+    if (this.lockoutTimer) clearInterval(this.lockoutTimer)
   },
   methods: {
     addDigit(digit) {
@@ -168,18 +174,12 @@ export default {
         
         // Vérifier le PIN pour le profil cible
         const isValid = await this.profileStore.verifyPin(targetProfileIdNum, enteredPin)
-        console.log('🔐 Résultat de la vérification du PIN:', isValid ? '✅ VALIDE' : '❌ INVALIDE')
-        
         if (isValid) {
           // PIN correct - obtenir le token JWT via login
-          console.log('PIN correct, connexion pour obtenir le token JWT pour le profil:', targetProfileIdNum)
-          
           try {
             // Appeler login pour obtenir le token JWT et le stocker dans localStorage
             await apiService.login(targetProfileIdNum, enteredPin)
-            console.log('✅ Token JWT obtenu et stocké dans localStorage')
           } catch (loginError) {
-            console.error('❌ Erreur lors de la connexion après vérification du PIN:', loginError)
             // Continuer quand même avec la session locale si le login échoue
             // (pour ne pas bloquer l'utilisateur si l'API est temporairement indisponible)
           }
@@ -213,12 +213,24 @@ export default {
               this.resetPin()
             }, 1000)
           } else {
-            // Trop de tentatives - verrouiller temporairement
             this.isLocked = true
-            this.errorMessage = PIN_CONFIG.MESSAGES.TOO_MANY_ATTEMPTS + ' Veuillez réessayer plus tard.'
-            // Ne pas rediriger automatiquement - rester sur la page PIN
-            // L'utilisateur peut utiliser le bouton de retour s'il le souhaite
-            console.log('⚠️ Trop de tentatives - accès verrouillé temporairement')
+            const durations = [30, 60, 120]
+            this.lockoutRemaining = durations[this.lockoutLevel] || 120
+            this.errorMessage = `Trop de tentatives. Réessayez dans ${this.lockoutRemaining}s.`
+            this.lockoutTimer = setInterval(() => {
+              this.lockoutRemaining--
+              if (this.lockoutRemaining <= 0) {
+                clearInterval(this.lockoutTimer)
+                this.lockoutTimer = null
+                this.lockoutLevel++
+                this.attempts = 0
+                this.isLocked = false
+                this.errorMessage = ''
+                this.resetPin()
+              } else {
+                this.errorMessage = `Trop de tentatives. Réessayez dans ${this.lockoutRemaining}s.`
+              }
+            }, 1000)
           }
         }
       } catch (error) {

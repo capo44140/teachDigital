@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs wc *)",
+      "Bash(grep -r \"sql\\\\`\\\\|sql\\\\\\(\" /c/Users/camille/IdeaProjects/teachDigital/backend --include=\"*.js\")",
+      "Bash(grep -r \"sql\\\\`\" /c/Users/camille/IdeaProjects/teachDigital/backend --include=\"*.js\")",
+      "Bash(awk '/^<template>/{start=1} /^<\\\\/template>/{if\\(start\\){print NR; start=0}}' \"c:/Users/camille/IdeaProjects/teachDigital/src/components/LessonScanner.vue\")"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "context7"
+  ],
+  "enableAllProjectMcpServers": true
+}

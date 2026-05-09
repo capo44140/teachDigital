@@ -20,7 +20,6 @@ class MigrationService {
         const response = await this.apiService.getProfiles()
         return response.data.profiles
       } catch (error) {
-        console.warn('⚠️ Erreur API, fallback vers l\'ancien service:', error)
         // Fallback vers l'ancien service si nécessaire
         const { ProfileService } = await import('./profile/profileService.js')
         return await ProfileService.getAllProfiles()
@@ -203,7 +202,6 @@ class MigrationService {
    */
   setUseNewAPI (useNew) {
     this.useNewAPI = useNew
-    console.log(`🔄 Migration Service: ${useNew ? 'Nouvelles APIs activées' : 'Ancien service activé'}`)
   }
 
   /**

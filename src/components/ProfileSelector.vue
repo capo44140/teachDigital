@@ -62,7 +62,7 @@
                 >
               </div>
               <div v-else class="absolute inset-0 flex items-center justify-center">
-                <div v-html="profile.avatar_content"></div>
+                <div v-safe-html="profile.avatar_content"></div>
               </div>
               
               <!-- Badges de statut -->
@@ -237,8 +237,7 @@ export default {
   async mounted() {
     const session = sessionService.getValidSession()
     if (session) {
-      console.log('Session valide trouvée, redirection automatique vers le dashboard')
-      this.$router.push({ 
+      this.$router.push({
         path: '/dashboard', 
         query: { 
           profile: session.profileId,
@@ -253,8 +252,7 @@ export default {
   methods: {
     selectProfile(profile) {
       this.selectedProfile = profile
-      console.log('Profil sélectionné:', profile)
-      
+
       localStorage.setItem('selectedProfile', JSON.stringify(profile))
       this.$emit('profile-selected', profile)
       

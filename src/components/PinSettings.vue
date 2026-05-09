@@ -4,11 +4,12 @@
       <!-- Header avec navigation -->
       <div class="flex items-center justify-between mb-8">
         <div class="flex items-center space-x-4">
-          <button 
-            class="p-2 text-white hover:bg-gray-800 rounded-lg transition-colors"
+          <button
+            class="p-3 text-white hover:bg-gray-800 rounded-lg transition-colors"
+            aria-label="Retour"
             @click="goBack"
           >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
           </button>

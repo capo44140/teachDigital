@@ -511,13 +511,8 @@ export default {
         // Charger les recommandations
         await this.loadRecommendations()
 
-        console.log('📊 [PROGRESS] Données de progrès chargées:', {
-          childId: this.selectedChild.id,
-          quizCount: this.quizHistory.length,
-          averageScore: this.averageScore
-        })
       } catch (error) {
-        console.error('❌ [PROGRESS] Erreur lors du chargement des données:', error)
+        console.error('Erreur lors du chargement des données:', error)
       }
     },
 

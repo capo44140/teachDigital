@@ -21,7 +21,6 @@ class SessionService {
     }
 
     localStorage.setItem(this.SESSION_KEY, JSON.stringify(sessionData))
-    console.log('✅ Session créée pour le profil:', profileName)
   }
 
   /**
@@ -42,15 +41,13 @@ class SessionService {
 
       // Vérifier si la session n'a pas expiré
       if (sessionAge > this.SESSION_DURATION) {
-        console.log('⏰ Session expirée, suppression...')
         this.clearSession()
         return null
       }
 
-      console.log('✅ Session valide trouvée pour:', session.profileName)
       return session
     } catch (error) {
-      console.error('❌ Erreur lors de la lecture de la session:', error)
+      console.error('Erreur lors de la lecture de la session:', error)
       this.clearSession()
       return null
     }
@@ -74,7 +71,6 @@ class SessionService {
     if (session) {
       session.timestamp = Date.now()
       localStorage.setItem(this.SESSION_KEY, JSON.stringify(session))
-      console.log('⏰ Session prolongée')
     }
   }
 
@@ -83,7 +79,6 @@ class SessionService {
    */
   clearSession () {
     localStorage.removeItem(this.SESSION_KEY)
-    console.log('🚪 Session effacée')
   }
 
   /**

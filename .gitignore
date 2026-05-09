@@ -29,7 +29,8 @@ dist-ssr
 .env.development.local
 .env.test.local
 .env.production.local
-backend/env
+backend/.env
+backend/.env.local
 
 # Synology deployment config
 .synology-deploy.json

@@ -45,3 +45,34 @@ header {
   padding-left: var(--sal);
   padding-right: var(--sar);
 }
+
+/* ===========================================
+   ACCESSIBILITÉ - Reduced motion
+   =========================================== */
+
+/* Respecter la préférence système : utilisateurs avec sensibilité vestibulaire,
+   TDAH, ou simplement qui préfèrent moins d'animations.
+   Cible enfant : important pour le confort cognitif. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ===========================================
+   ACCESSIBILITÉ - Focus visible global
+   =========================================== */
+
+/* Filet de sécurité : si un élément interactif n'a pas de focus ring custom,
+   on garantit un anneau visible pour la navigation clavier.
+   Les composants peuvent surcharger via focus:ring-* (Tailwind). */
+:focus-visible {
+  outline: 2px solid #a78bfa; /* purple-400 */
+  outline-offset: 2px;
+  border-radius: 4px;
+}

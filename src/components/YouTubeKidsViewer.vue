@@ -180,7 +180,6 @@ import { useProfileStore } from '../stores/profileStore.js'
 export default {
   name: 'YouTubeKidsViewer',
   setup() {
-    console.log('🎥 YouTubeKidsViewer component loaded')
     const profileStore = useProfileStore()
     
     // État réactif
@@ -312,9 +311,8 @@ export default {
             updated_at: new Date('2024-01-10').toISOString()
           }
         ]
-        console.log('📺 Vidéos chargées pour les enfants:', videos.value.length)
       } catch (error) {
-        console.error('❌ Erreur lors du chargement des vidéos:', error)
+        console.error('Erreur lors du chargement des vidéos:', error)
         videos.value = []
       } finally {
         isLoading.value = false

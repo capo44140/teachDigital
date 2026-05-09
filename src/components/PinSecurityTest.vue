@@ -308,7 +308,6 @@ export default {
       try {
         await navigator.clipboard.writeText(text);
         // Optionnel: afficher une notification de succès
-        console.log('Code PIN copié dans le presse-papiers');
       } catch (error) {
         console.error('Erreur lors de la copie:', error);
       }

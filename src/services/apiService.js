@@ -93,18 +93,15 @@ class ApiService {
     // Ajouter le token d'authentification si disponible
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
-      console.log('✅ Token d\'authentification ajouté à la requête:', endpoint)
-      console.log('   - Token (premiers 20 caractères):', token.substring(0, 20) + '...')
     } else if (!isPublicEndpoint) {
-      // Afficher un avertissement uniquement pour les endpoints qui nécessitent un token
-      console.warn('⚠️ Aucun token d\'authentification trouvé pour:', endpoint)
-      console.warn('   - localStorage.getItem("auth_token"):', localStorage.getItem('auth_token'))
-      console.warn('   - Vous devez vous connecter avant d\'accéder à cette ressource')
+      // Afficher un avertissement uniquement en développement
+      if (import.meta.env.DEV) {
+        console.warn('⚠️ Aucun token d\'authentification trouvé pour:', endpoint)
+      }
       // Ne pas bloquer la requête, laisser le backend gérer l'erreur 401
     }
 
     try {
-      console.log(`🌐 Requête vers: ${endpoint} (timeout: ${timeout}ms)`)
       const response = await this.fetchWithTimeout(url, config, timeout)
 
       // Gérer les erreurs HTTP

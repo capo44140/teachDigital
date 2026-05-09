@@ -428,7 +428,6 @@ export default {
     selectTheme(theme) {
       this.settings.selectedTheme = theme.id
       // Appliquer le thème immédiatement (effet visuel)
-      console.log('Thème sélectionné:', theme.name)
     },
     
     saveSettings() {
@@ -442,9 +441,8 @@ export default {
         this.showConfirmation = false
       }, 3000)
       
-      console.log('Paramètres sauvegardés:', this.settings)
     },
-    
+
     resetSettings() {
       // Réinitialiser les paramètres par défaut
       this.settings = {
@@ -461,9 +459,8 @@ export default {
       // Sauvegarder les paramètres réinitialisés
       this.saveSettings()
       
-      console.log('Paramètres réinitialisés')
     },
-    
+
     goBack() {
       this.$router.push({ 
         path: '/user-dashboard',
@@ -484,7 +481,6 @@ export default {
     
     contactParent() {
       alert('🤝 Demande envoyée !\n\nUn parent sera notifié de ta demande d\'aide.')
-      console.log('Demande d\'aide envoyée')
     }
   }
 }

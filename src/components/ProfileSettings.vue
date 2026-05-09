@@ -45,7 +45,7 @@
                 :class="profile.avatarClass"
                 class="w-12 h-12 rounded-lg flex items-center justify-center"
               >
-                <div v-html="profile.avatarContent"></div>
+                <div v-safe-html="profile.avatarContent"></div>
               </div>
               <div>
                 <h3 class="text-lg font-semibold text-black">{{ profile.name }}</h3>
@@ -212,7 +212,6 @@ export default {
       // Charger les données du profil depuis l'URL ou le store
       const profileId = this.$route.params.id
       if (profileId) {
-        console.log('Chargement des paramètres du profil:', profileId)
       }
     },
     
@@ -241,23 +240,19 @@ export default {
     },
     
     toggleProfileLock() {
-      console.log('Verrouillage du profil:', this.profile.isLocked)
       // Ici, vous pourriez sauvegarder le statut de verrouillage
     },
     
     goToPrivacySettings() {
       // Rediriger vers les paramètres de confidentialité
-      console.log('Redirection vers les paramètres de confidentialité')
     },
     
     goToNotificationSettings() {
       // Rediriger vers les paramètres de notifications
-      console.log('Redirection vers les paramètres de notifications')
     },
     
     goToAppSettings() {
       // Rediriger vers les paramètres de l'application
-      console.log('Redirection vers les paramètres de l\'application')
     }
   }
 }

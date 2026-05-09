@@ -4,6 +4,7 @@
  */
 
 const express = require('express');
+const helmet = require('helmet');
 const handler = require('./api/index.js');
 const logger = require('./lib/logger.js');
 const { corsMiddleware } = require('./lib/cors.js');
@@ -50,6 +51,15 @@ logger.info('Configuration runtime', {
     longMs: parseInt(process.env.API_DB_TIMEOUT_LONG_MS || '9000', 10)
   }
 });
+
+// Headers de sécurité (CSP, HSTS, X-Frame-Options, etc.)
+// CSP désactivée ici car servie côté frontend (PWA gère sa propre policy via meta).
+// Active HSTS, noSniff, frameguard (DENY), referrerPolicy, etc. par défaut.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 
 // Configuration CORS - Utilisation du middleware centralisé
 // DOIT être défini AVANT tous les autres middlewares

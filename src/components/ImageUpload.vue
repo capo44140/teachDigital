@@ -188,10 +188,9 @@ export default {
           fileName: file.name
         })
 
-        console.log('✅ Image uploadée avec succès')
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de l\'upload:', error)
+        console.error('Erreur lors de l\'upload:', error)
         this.$emit('upload-error', error)
       } finally {
         this.isUploading = false
@@ -206,10 +205,9 @@ export default {
         // Émettre l'événement de suppression
         this.$emit('image-removed')
         
-        console.log('✅ Image supprimée avec succès')
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la suppression:', error)
+        console.error('Erreur lors de la suppression:', error)
       }
     },
 

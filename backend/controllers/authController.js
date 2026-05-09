@@ -65,6 +65,14 @@ async function handleLogin(req, res) {
             return;
         }
 
+        // Migration transparente : re-hash bcrypt si l'ancien format SHA-256 est détecté.
+        // Non-bloquant pour la réponse au client.
+        if (NativeHashService.needsRehash(pinData[0].pin_code)) {
+            NativeHashService.hashPin(pin)
+                .then(newHash => sql`UPDATE pin_codes SET pin_code = ${newHash} WHERE profile_id = ${profileIdNum}`)
+                .catch(err => console.error('⚠️ Migration bcrypt PIN échouée (non-bloquant):', err?.message || err));
+        }
+
         // Génération des tokens (rapide)
         const tokenPayload = {
             profileId: profile[0].id,
@@ -138,6 +146,12 @@ async function handleFamilyGate(req, res) {
                     message: 'Code incorrect'
                 });
                 return;
+            }
+            // Migration transparente bcrypt (non-bloquant)
+            if (NativeHashService.needsRehash(row[0].pin_hash)) {
+                NativeHashService.hashPin(pin)
+                    .then(newHash => sql`UPDATE family_gate SET pin_hash = ${newHash}, updated_at = CURRENT_TIMESTAMP WHERE id = 1`)
+                    .catch(err => console.error('⚠️ Migration bcrypt family_gate échouée (non-bloquant):', err?.message || err));
             }
             res.status(200).json({
                 success: true,

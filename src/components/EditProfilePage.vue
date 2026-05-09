@@ -45,7 +45,7 @@
               :class="profile.avatar_class"
               class="w-24 h-24 rounded-lg flex items-center justify-center relative"
             >
-              <div v-html="profile.avatar_content"></div>
+              <div v-safe-html="profile.avatar_content"></div>
               
               <!-- Badge de type de profil -->
                   <div 
@@ -177,7 +177,7 @@
                 :class="profile.avatar_class"
                 class="w-12 h-12 rounded-lg flex items-center justify-center"
               >
-                <div v-html="profile.avatar_content"></div>
+                <div v-safe-html="profile.avatar_content"></div>
               </div>
               <div>
                 <h3 class="text-lg font-semibold text-black">{{ profile.name }}</h3>
@@ -250,7 +250,7 @@
             ]"
             @click="selectAvatar(avatar)"
           >
-            <div v-html="avatar.content"></div>
+            <div v-safe-html="avatar.content"></div>
           </button>
         </div>
 

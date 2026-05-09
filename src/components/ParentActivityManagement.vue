@@ -758,7 +758,6 @@ export default {
     
     viewActivityDetails(activity) {
       // Rediriger vers une page de détails ou ouvrir un modal
-      console.log('Voir détails de l\'activité:', activity)
     },
     
     closeModal() {

@@ -62,7 +62,6 @@ export const useAuthStore = defineStore('auth', {
         if (isValid) {
           this.pinAttempts = 0
           this.isLocked = false
-          console.log('✅ Code PIN vérifié avec succès')
         } else {
           this.pinAttempts++
           if (this.pinAttempts >= this.maxPinAttempts) {
@@ -75,7 +74,7 @@ export const useAuthStore = defineStore('auth', {
         return isValid
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la vérification du code PIN:', error)
+        console.error('Erreur lors de la vérification du code PIN:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -99,10 +98,9 @@ export const useAuthStore = defineStore('auth', {
         }
 
         await PinService.updatePin(profileId, newPin)
-        console.log('✅ Code PIN mis à jour avec succès')
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la mise à jour du code PIN:', error)
+        console.error('Erreur lors de la mise à jour du code PIN:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -135,10 +133,9 @@ export const useAuthStore = defineStore('auth', {
         sessionStorage.setItem('authToken', sessionToken)
         sessionStorage.setItem('profileId', profileId.toString())
 
-        console.log('✅ Session créée avec succès')
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la création de la session:', error)
+        console.error('Erreur lors de la création de la session:', error)
         throw error
       }
     },
@@ -165,13 +162,12 @@ export const useAuthStore = defineStore('auth', {
           }
           this.isAuthenticated = true
           this.sessionToken = token
-          console.log('✅ Session vérifiée avec succès')
         } else {
           this.logout()
         }
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la vérification de la session:', error)
+        console.error('Erreur lors de la vérification de la session:', error)
         this.logout()
       } finally {
         this.isLoading = false
@@ -187,7 +183,7 @@ export const useAuthStore = defineStore('auth', {
           await SessionService.deleteSession(this.sessionToken)
         }
       } catch (error) {
-        console.error('❌ Erreur lors de la suppression de la session:', error)
+        console.error('Erreur lors de la suppression de la session:', error)
       } finally {
         // Nettoyer l'état local
         this.currentProfile = null
@@ -200,8 +196,6 @@ export const useAuthStore = defineStore('auth', {
         // Nettoyer le sessionStorage
         sessionStorage.removeItem('authToken')
         sessionStorage.removeItem('profileId')
-
-        console.log('✅ Déconnexion réussie')
       }
     },
 
@@ -233,7 +227,6 @@ export const useAuthStore = defineStore('auth', {
     unlockAccount () {
       this.isLocked = false
       this.pinAttempts = 0
-      console.log('✅ Compte déverrouillé')
     },
 
     /**

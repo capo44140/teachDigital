@@ -310,7 +310,7 @@
     <!-- Modal de lecture vidéo -->
     <div v-if="showVideoModal" class="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4" @click="showVideoModal = false">
       <div class="w-full max-w-4xl" @click.stop>
-        <button class="mb-4 text-white hover:text-white/80 transition-colors" @click="showVideoModal = false">
+        <button class="mb-4 p-3 text-white hover:text-white/80 hover:bg-white/10 rounded-lg transition-colors" aria-label="Fermer la vidéo" @click="showVideoModal = false">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>

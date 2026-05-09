@@ -437,7 +437,6 @@ export default {
       this.isLoadingLessons = true
       try {
         this.userLessons = await LessonService.getLessonsByProfile(profileId)
-        console.log('Leçons chargées:', this.userLessons)
       } catch (error) {
         console.error('Erreur lors du chargement des leçons:', error)
       } finally {
@@ -455,12 +454,10 @@ export default {
     },
     
     startCourse(course) {
-      console.log('Démarrage du cours:', course.title)
       alert(`Démarrage du cours: ${course.title}`)
     },
     
     startLesson(lesson) {
-      console.log('Démarrer la leçon:', lesson)
       this.$router.push({
         name: 'QuizGenerator',
         query: {
@@ -480,7 +477,6 @@ export default {
     },
     
     showSettings() {
-      console.log('Affichage des paramètres')
       this.$router.push({
         name: 'ChildSettings',
         query: {
@@ -489,7 +485,6 @@ export default {
       })
     },
     showHelp() {
-      console.log('Affichage de l\'aide')
       this.$router.push({
         name: 'ChildHelp',
         query: {
@@ -498,7 +493,6 @@ export default {
       })
     },
     viewProgress() {
-      console.log('Accès au suivi des progrès')
       this.$router.push({
         name: 'ProgressTracking',
         query: {
@@ -508,7 +502,6 @@ export default {
     },
     
     viewBadges() {
-      console.log('Accès aux badges')
       this.$router.push({
         name: 'BadgeManager',
         query: {
@@ -518,8 +511,6 @@ export default {
     },
     
     openYouTubeViewer() {
-      console.log('Ouverture du visualiseur YouTube')
-      
       if (!this.currentProfile?.id) {
         console.error('Aucun profil chargé')
         alert('Erreur: Aucun profil chargé. Veuillez vous reconnecter.')

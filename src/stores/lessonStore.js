@@ -83,10 +83,9 @@ export const useLessonStore = defineStore('lesson', {
 
       try {
         this.lessons = await this.lessonRepository.findAvailableLessons()
-        console.log('✅ Leçons chargées avec succès')
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors du chargement des leçons:', error)
+        console.error('Erreur lors du chargement des leçons:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -103,10 +102,9 @@ export const useLessonStore = defineStore('lesson', {
 
       try {
         this.lessons = await this.lessonRepository.findByProfileId(profileId)
-        console.log('✅ Leçons du profil chargées avec succès')
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors du chargement des leçons du profil:', error)
+        console.error('Erreur lors du chargement des leçons du profil:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -126,10 +124,9 @@ export const useLessonStore = defineStore('lesson', {
         if (!this.currentLesson) {
           throw new Error('Leçon non trouvée')
         }
-        console.log('✅ Leçon chargée avec succès')
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors du chargement de la leçon:', error)
+        console.error('Erreur lors du chargement de la leçon:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -163,11 +160,10 @@ export const useLessonStore = defineStore('lesson', {
         )
 
         this.lessons.unshift(newLesson)
-        console.log('✅ Leçon créée avec succès')
         return newLesson
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la création de la leçon:', error)
+        console.error('Erreur lors de la création de la leçon:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -191,13 +187,12 @@ export const useLessonStore = defineStore('lesson', {
           if (this.currentLesson && this.currentLesson.id === lessonId) {
             this.currentLesson = null
           }
-          console.log('✅ Leçon supprimée avec succès')
         } else {
           throw new Error('Leçon non trouvée ou non autorisée')
         }
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la suppression de la leçon:', error)
+        console.error('Erreur lors de la suppression de la leçon:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -227,11 +222,10 @@ export const useLessonStore = defineStore('lesson', {
         // Recharger les statistiques
         await this.loadStats(profileId)
 
-        console.log('✅ Résultats de quiz sauvegardés avec succès')
         return savedResults
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la sauvegarde des résultats:', error)
+        console.error('Erreur lors de la sauvegarde des résultats:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -248,10 +242,9 @@ export const useLessonStore = defineStore('lesson', {
 
       try {
         this.quizHistory = await this.quizRepository.getChildQuizHistory(profileId)
-        console.log('✅ Historique des quiz chargé avec succès')
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors du chargement de l\'historique:', error)
+        console.error('Erreur lors du chargement de l\'historique:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -265,9 +258,8 @@ export const useLessonStore = defineStore('lesson', {
     async loadStats (profileId) {
       try {
         this.stats = await this.quizRepository.getProfileStats(profileId)
-        console.log('✅ Statistiques chargées avec succès')
       } catch (error) {
-        console.error('❌ Erreur lors du chargement des statistiques:', error)
+        console.error('Erreur lors du chargement des statistiques:', error)
       }
     },
 
@@ -277,9 +269,8 @@ export const useLessonStore = defineStore('lesson', {
     async loadGlobalStats () {
       try {
         this.stats = await this.quizRepository.getGlobalStats()
-        console.log('✅ Statistiques globales chargées avec succès')
       } catch (error) {
-        console.error('❌ Erreur lors du chargement des statistiques globales:', error)
+        console.error('Erreur lors du chargement des statistiques globales:', error)
       }
     },
 
@@ -293,10 +284,9 @@ export const useLessonStore = defineStore('lesson', {
 
       try {
         this.lessons = await this.lessonRepository.searchLessons(searchTerm)
-        console.log('✅ Recherche de leçons terminée')
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors de la recherche:', error)
+        console.error('Erreur lors de la recherche:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -313,10 +303,9 @@ export const useLessonStore = defineStore('lesson', {
 
       try {
         this.lessons = await this.lessonRepository.findBySubject(subject)
-        console.log('✅ Filtrage par sujet terminé')
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors du filtrage:', error)
+        console.error('Erreur lors du filtrage:', error)
         throw error
       } finally {
         this.isLoading = false
@@ -333,10 +322,9 @@ export const useLessonStore = defineStore('lesson', {
 
       try {
         this.lessons = await this.lessonRepository.findByLevel(level)
-        console.log('✅ Filtrage par niveau terminé')
       } catch (error) {
         this.error = error.message
-        console.error('❌ Erreur lors du filtrage:', error)
+        console.error('Erreur lors du filtrage:', error)
         throw error
       } finally {
         this.isLoading = false

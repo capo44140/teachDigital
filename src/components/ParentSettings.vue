@@ -268,7 +268,6 @@ export default {
         message: 'Paramètres sauvegardés avec succès !'
       })
       
-      console.log('Paramètres sauvegardés:', this.settings)
     },
     
     resetSettings() {
@@ -282,7 +281,6 @@ export default {
       // Sauvegarder les paramètres réinitialisés
       this.saveSettings()
       
-      console.log('Paramètres réinitialisés')
     },
     
     goBack() {
