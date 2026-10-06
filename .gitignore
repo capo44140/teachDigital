@@ -47,3 +47,6 @@ blob-report/
 # Coverage reports
 coverage/
 *.lcov
+
+# Claude Code agent worktrees
+.claude/worktrees/
