@@ -2,8 +2,10 @@
 // Version dynamique basée sur la date de build
 const BUILD_VERSION = 'teachdigital-v' + new Date().getTime();
 const CACHE_NAME = BUILD_VERSION;
-const STATIC_CACHE = 'teachdigital-static-v2';
-const DYNAMIC_CACHE = 'teachdigital-dynamic-v2';
+// v3 : purge les caches v2, qui contiennent des réponses API figées
+// (l'ancien test de ressource statique attrapait toutes les requêtes GET)
+const STATIC_CACHE = 'teachdigital-static-v3';
+const DYNAMIC_CACHE = 'teachdigital-dynamic-v3';
 const CRITICAL_DATA_CACHE = 'teachdigital-critical-v1';
 const API_CACHE = 'teachdigital-api-v1';
 
@@ -98,17 +100,22 @@ self.addEventListener('fetch', (event) => {
   
   // Stratégie différente selon le type de ressource
   if (request.method === 'GET') {
-    // Pour les ressources statiques (HTML, CSS, JS, images)
-    if (urlsToCache.some(cachedUrl => request.url.includes(cachedUrl.split('/').pop()))) {
-      event.respondWith(handleStaticResource(request));
-    }
     // Pour les données critiques (API)
-    else if (criticalUrls.some(criticalUrl => url.pathname.startsWith(criticalUrl))) {
+    if (criticalUrls.some(criticalUrl => url.pathname.startsWith(criticalUrl))) {
       event.respondWith(handleCriticalData(request));
     }
     // Pour les autres ressources API
     else if (url.pathname.startsWith('/api/')) {
       event.respondWith(handleApiRequest(request));
+    }
+    // Pour les pages de l'application : réseau d'abord, pour charger la dernière version
+    else if (request.mode === 'navigate') {
+      event.respondWith(handleDynamicResource(request));
+    }
+    // Pour les ressources statiques listées (comparaison exacte du chemin :
+    // '/' donnait includes('') et attrapait toutes les requêtes, API comprises)
+    else if (urlsToCache.includes(url.pathname)) {
+      event.respondWith(handleStaticResource(request));
     }
     // Pour les autres ressources
     else {
