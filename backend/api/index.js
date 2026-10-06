@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { handleLogin, handleLogout, handleFamilyGate } = require('../controllers/authController.js');
+const { handleLogin, handleLogout, handleVerify, handleFamilyGate } = require('../controllers/authController.js');
 const { handleProfiles, handleProfile, handleProfileStats, handleProfilePin, handlePin, handleProfileLearningStats, handleProfileCreationRequest } = require('../controllers/profileController.js');
 const { handleLessons, handleLesson, handleQuizResults, handleGlobalLessonStats } = require('../controllers/lessonController.js');
 const { handleCoursePages, handleCoursePage } = require('../controllers/coursePageController.js');
@@ -68,6 +68,7 @@ const familyGateRateLimiter = createRateLimiter({
 // Routes d'authentification
 router.post('/auth/login', loginRateLimiter, validate(loginSchema), handleLogin);
 router.post('/auth/logout', handleLogout);
+router.get('/auth/verify', handleVerify);
 router.post('/auth/family-gate', familyGateRateLimiter, validate(familyGateCheckSchema), handleFamilyGate);
 router.put('/auth/family-gate', validate(familyGateUpdateSchema), handleFamilyGate);
 

@@ -256,8 +256,33 @@ async function handleLogout(req, res) {
     }
 }
 
+// Handler de vérification du token (appelé au démarrage de l'application)
+// 200 si le token est valide, 401 sinon (le frontend supprime alors le token)
+async function handleVerify(req, res) {
+    try {
+        const user = authenticateToken(req);
+
+        res.status(200).json({
+            success: true,
+            message: 'Token valide',
+            data: {
+                user: {
+                    id: user.profileId,
+                    name: user.name,
+                    type: user.type,
+                    isAdmin: user.isAdmin
+                }
+            }
+        });
+    } catch (error) {
+        const errorResponse = handleError(error, 'Erreur lors de la vérification du token');
+        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+    }
+}
+
 module.exports = {
     handleLogin,
     handleLogout,
+    handleVerify,
     handleFamilyGate
 };
