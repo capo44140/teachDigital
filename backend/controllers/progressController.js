@@ -228,9 +228,10 @@ async function handleProfileProgressSummary(req, res) {
           SELECT 
             COUNT(*)::int as quizzes_this_week,
             COUNT(*) FILTER (WHERE percentage = 100)::int as perfect_this_week,
-            COUNT(DISTINCT NULLIF(TRIM(l.subject), ''))::int as subjects_this_week
+            COUNT(DISTINCT NULLIF(TRIM(COALESCE(l.subject, cp.subject)), ''))::int as subjects_this_week
           FROM quiz_results qr
-          JOIN lessons l ON l.id = qr.lesson_id
+          LEFT JOIN lessons l ON l.id = qr.lesson_id
+          LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
           WHERE qr.profile_id = ${profileIdNum}
             AND qr.completed_at >= ${weekStartIso}::timestamptz
             AND qr.completed_at < (${weekStartIso}::timestamptz + interval '7 days')
@@ -241,12 +242,13 @@ async function handleProfileProgressSummary(req, res) {
       withQueryTimeout(
         sql`
           SELECT 
-            COALESCE(NULLIF(TRIM(l.subject), ''), 'Autres') as subject,
+            COALESCE(NULLIF(TRIM(COALESCE(l.subject, cp.subject)), ''), 'Autres') as subject,
             COUNT(*)::int as quizzes,
             COALESCE(AVG(qr.percentage), 0)::float as average_score,
             MAX(qr.completed_at) as last_attempt
           FROM quiz_results qr
-          JOIN lessons l ON l.id = qr.lesson_id
+          LEFT JOIN lessons l ON l.id = qr.lesson_id
+          LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
           WHERE qr.profile_id = ${profileIdNum}
           GROUP BY 1
           ORDER BY quizzes DESC, average_score DESC
@@ -275,14 +277,16 @@ async function handleProfileProgressSummary(req, res) {
           SELECT
             qr.id,
             qr.lesson_id,
-            l.title as lesson_title,
-            COALESCE(NULLIF(TRIM(l.subject), ''), 'Autres') as subject,
+            qr.course_page_id,
+            COALESCE(l.title, cp.title) as lesson_title,
+            COALESCE(NULLIF(TRIM(COALESCE(l.subject, cp.subject)), ''), 'Autres') as subject,
             qr.score,
             qr.total_questions,
             qr.percentage,
             qr.completed_at
           FROM quiz_results qr
-          JOIN lessons l ON l.id = qr.lesson_id
+          LEFT JOIN lessons l ON l.id = qr.lesson_id
+          LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
           WHERE qr.profile_id = ${profileIdNum}
           ORDER BY qr.completed_at DESC
           LIMIT 50
@@ -340,6 +344,8 @@ async function handleProfileProgressSummary(req, res) {
       recentHistory: (recentHistoryRes || []).map(q => ({
         id: q.id,
         lessonId: q.lesson_id,
+        coursePageId: q.course_page_id,
+        source: q.course_page_id ? 'course_page' : 'lesson',
         lessonTitle: q.lesson_title,
         lessonSubject: q.subject,
         score: q.score,

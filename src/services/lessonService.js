@@ -226,6 +226,30 @@ export class LessonService {
    * @returns {Promise<Array>} Historique des quiz
    */
   static async getChildQuizHistory (profileId) {
+    // Le résumé de progression contient les quiz de leçons et les sessions sur les pages de cours
+    try {
+      const response = await apiService.request(`/api/profiles/${profileId}/progress-summary`)
+      const history = response?.data?.summary?.recentHistory
+      if (Array.isArray(history)) {
+        return history.map(q => ({
+          id: q.id,
+          lessonId: q.lessonId,
+          coursePageId: q.coursePageId,
+          source: q.source,
+          lessonTitle: q.lessonTitle,
+          lessonSubject: q.lessonSubject,
+          score: q.score,
+          totalQuestions: q.totalQuestions,
+          percentage: q.percentage,
+          completedAt: q.completedAt,
+          duration: 0,
+          answers: q.answers
+        }))
+      }
+    } catch (error) {
+      console.warn('Résumé de progression indisponible, reconstruction depuis les leçons:', error.message)
+    }
+
     try {
       const allLessons = await this.getAllAvailableLessons()
       const quizHistory = []

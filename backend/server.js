@@ -278,6 +278,15 @@ async function ensureCoursePagesTable() {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_course_pages_target_published ON course_pages(target_profile_id, is_published)
     `);
+    // Les sessions de révision sur une page de cours sont stockées dans quiz_results
+    // (lesson_id NULL, course_page_id renseigné) : stats, badges et historique les voient.
+    await pool.query(`
+      ALTER TABLE quiz_results
+      ADD COLUMN IF NOT EXISTS course_page_id INTEGER REFERENCES course_pages(id) ON DELETE CASCADE
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_quiz_results_course_page ON quiz_results(course_page_id)
+    `);
   } catch (error) {
     logger.warn('⚠️ Migration course_pages (non bloquant):', error.message);
   }

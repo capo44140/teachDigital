@@ -234,10 +234,11 @@ async function calculateScoreStreakProgress(profileId) {
 async function calculateSubjectsVarietyProgress(profileId) {
     const result = await withQueryTimeout(
         sql`
-      SELECT COUNT(DISTINCT l.subject) as count
+      SELECT COUNT(DISTINCT COALESCE(l.subject, cp.subject)) as count
       FROM quiz_results qr
-      JOIN lessons l ON qr.lesson_id = l.id
-      WHERE qr.profile_id = ${profileId} AND l.subject IS NOT NULL
+      LEFT JOIN lessons l ON qr.lesson_id = l.id
+      LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
+      WHERE qr.profile_id = ${profileId} AND COALESCE(l.subject, cp.subject) IS NOT NULL
     `,
         TIMEOUTS.STANDARD,
         'calcul variété de matières'
@@ -264,8 +265,9 @@ async function calculateSubjectSpecificProgress(profileId, subject) {
         sql`
       SELECT COUNT(*) as count
       FROM quiz_results qr
-      JOIN lessons l ON qr.lesson_id = l.id
-      WHERE qr.profile_id = ${profileId} AND LOWER(l.subject) = LOWER(${subject})
+      LEFT JOIN lessons l ON qr.lesson_id = l.id
+      LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
+      WHERE qr.profile_id = ${profileId} AND LOWER(COALESCE(l.subject, cp.subject)) = LOWER(${subject})
     `,
         TIMEOUTS.STANDARD,
         'calcul quiz par matière'

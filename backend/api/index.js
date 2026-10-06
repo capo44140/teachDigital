@@ -5,7 +5,7 @@ const router = express.Router();
 const { handleLogin, handleLogout, handleVerify, handleFamilyGate } = require('../controllers/authController.js');
 const { handleProfiles, handleProfile, handleProfileStats, handleProfilePin, handlePin, handleProfileLearningStats, handleProfileCreationRequest } = require('../controllers/profileController.js');
 const { handleLessons, handleLesson, handleQuizResults, handleGlobalLessonStats } = require('../controllers/lessonController.js');
-const { handleCoursePages, handleCoursePage } = require('../controllers/coursePageController.js');
+const { handleCoursePages, handleCoursePage, handleCoursePageResults } = require('../controllers/coursePageController.js');
 const { handleNotifications, handleNotification } = require('../controllers/notificationController.js');
 const { handleActivities } = require('../controllers/activityController.js');
 const { handleYoutubeVideos } = require('../controllers/youtubeController.js');
@@ -100,6 +100,8 @@ router.all('/lessons/:id', handleLesson);
 // Routes des pages de cours HTML (publiées par un parent pour un enfant)
 router.get('/course-pages', handleCoursePages);
 router.post('/course-pages', validate(coursePageCreateSchema), handleCoursePages);
+router.post('/course-pages/:id/results', handleCoursePageResults);
+router.put('/course-pages/:id/results/:resultId', handleCoursePageResults);
 router.get('/course-pages/:id', handleCoursePage);
 router.put('/course-pages/:id', validate(coursePageUpdateSchema), handleCoursePage);
 router.delete('/course-pages/:id', handleCoursePage);

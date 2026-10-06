@@ -30,7 +30,10 @@
       >
         <div class="flex items-center justify-between mb-4">
           <div class="flex-1">
-            <h4 class="text-lg font-bold text-white mb-1">{{ quiz.lessonTitle || 'Quiz' }}</h4>
+            <h4 class="text-lg font-bold text-white mb-1">
+              {{ quiz.lessonTitle || 'Quiz' }}
+              <span v-if="quiz.source === 'course_page'" class="ml-2 align-middle text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200">Page de cours</span>
+            </h4>
             <p class="text-white/60 text-sm">{{ formatDate(quiz.completedAt) }}</p>
           </div>
           <div class="text-right">

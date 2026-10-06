@@ -407,6 +407,30 @@ class ApiService {
   }
 
   /**
+   * Enregistrer une session de révision sur une page de cours (première sauvegarde)
+   */
+  async saveCoursePageResult(coursePageId, resultData) {
+    const response = await this.request(`/api/course-pages/${coursePageId}/results`, {
+      method: 'POST',
+      body: JSON.stringify(resultData)
+    })
+    return response.success ? response.data : null
+  }
+
+  /**
+   * Mettre à jour une session de révision en cours.
+   * keepalive : la requête part même si la page se ferme.
+   */
+  async updateCoursePageResult(coursePageId, resultId, resultData, { keepalive = false } = {}) {
+    const response = await this.request(`/api/course-pages/${coursePageId}/results/${resultId}`, {
+      method: 'PUT',
+      body: JSON.stringify(resultData),
+      keepalive
+    })
+    return response.success ? response.data : null
+  }
+
+  /**
    * Supprimer une page de cours
    */
   async deleteCoursePage(id) {

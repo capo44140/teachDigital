@@ -11,9 +11,15 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
           </svg>
         </button>
-        <div class="min-w-0">
+        <div class="min-w-0 flex-1">
           <h1 class="text-lg font-bold text-white truncate">{{ coursePage?.title || 'Mon cours' }}</h1>
           <p v-if="coursePage?.subject" class="text-xs text-white/60 truncate">{{ coursePage.subject }}</p>
+        </div>
+        <!-- Score de la session, remonté par le quiz de la page -->
+        <div v-if="progress.total > 0" class="flex items-center gap-2 text-sm flex-shrink-0" aria-live="polite">
+          <span class="px-3 py-1 rounded-full bg-white/10 text-white font-bold tabular-nums">{{ progress.ok }}/{{ progress.total }}</span>
+          <span v-if="progress.streak >= 2" class="px-2 py-1 rounded-full bg-orange-500/30 text-orange-200 text-xs font-bold" title="Bonnes réponses d'affilée">🔥 {{ progress.streak }}</span>
+          <span v-if="resultId" class="text-xs text-white/50 hidden sm:inline" title="Cette session compte dans tes progrès">Enregistré</span>
         </div>
       </nav>
     </header>
@@ -29,7 +35,7 @@
           Retour à mon espace
         </button>
       </div>
-      <CoursePageFrame v-else :html="coursePage.html_content" :title="coursePage.title" />
+      <CoursePageFrame v-else :html="coursePage.html_content" :title="coursePage.title" @progress="onProgress" />
     </main>
   </div>
 </template>
@@ -37,6 +43,11 @@
 <script>
 import { apiService } from '../services/apiService.js'
 import CoursePageFrame from './CoursePageFrame.vue'
+
+// Une session compte comme un quiz à partir de 5 réponses ; ensuite on sauvegarde
+// toutes les 5 réponses, et à la sortie de la page.
+const MIN_ANSWERS = 5
+const SAVE_EVERY = 5
 
 export default {
   name: 'CoursePageViewer',
@@ -51,7 +62,19 @@ export default {
     return {
       coursePage: null,
       isLoading: true,
-      errorMessage: null
+      errorMessage: null,
+      progress: { ok: 0, total: 0, streak: 0, bestStreak: 0 },
+      resultId: null,
+      savedTotal: 0,
+      saving: null
+    }
+  },
+  computed: {
+    profileId() {
+      return this.$route.query.profile
+    },
+    hasUnsavedProgress() {
+      return this.progress.total >= MIN_ANSWERS && this.progress.total > this.savedTotal
     }
   },
   async created() {
@@ -67,12 +90,59 @@ export default {
       this.isLoading = false
     }
   },
+  mounted() {
+    // Fermeture de l'onglet ou retour à l'écran d'accueil sur mobile
+    this.onPageHide = () => this.saveProgress({ keepalive: true })
+    window.addEventListener('pagehide', this.onPageHide)
+  },
+  beforeUnmount() {
+    window.removeEventListener('pagehide', this.onPageHide)
+  },
+  beforeRouteLeave() {
+    this.saveProgress({ keepalive: true })
+  },
   methods: {
     goBack() {
       this.$router.push({
         name: 'UserDashboard',
-        query: { profile: this.$route.query.profile }
+        query: { profile: this.profileId }
       })
+    },
+
+    onProgress({ ok, total, streak }) {
+      this.progress = { ok, total, streak, bestStreak: Math.max(this.progress.bestStreak, streak) }
+      const dueForSave = this.resultId ? total - this.savedTotal >= SAVE_EVERY : total >= MIN_ANSWERS
+      if (dueForSave) this.saveProgress()
+    },
+
+    async saveProgress({ keepalive = false } = {}) {
+      if (!this.hasUnsavedProgress || !this.profileId || this.saving) return
+      const { ok, total, bestStreak } = this.progress
+      const payload = {
+        profileId: this.profileId,
+        score: ok,
+        totalQuestions: total,
+        answers: { source: 'course_page', bestStreak }
+      }
+
+      this.saving = (async () => {
+        try {
+          const data = this.resultId
+            ? await apiService.updateCoursePageResult(this.id, this.resultId, payload, { keepalive })
+            : await apiService.saveCoursePageResult(this.id, payload)
+          if (!data) return
+          this.resultId = this.resultId || data.result?.id || null
+          this.savedTotal = total
+          for (const badge of data.unlockedBadges || []) {
+            this.$toast?.success(`${badge.icon || '🏅'} Badge débloqué : ${badge.name}`, { duration: 6000 })
+          }
+        } catch (error) {
+          console.error('Erreur lors de la sauvegarde de la session:', error)
+        } finally {
+          this.saving = null
+        }
+      })()
+      return this.saving
     }
   }
 }

@@ -172,7 +172,8 @@ export default {
       return Math.round(total / this.quizHistory.length) || 0
     },
     totalLessonsCompleted() {
-      return new Set(this.quizHistory.map(quiz => quiz.lessonId)).size
+      // Une page de cours compte comme une leçon distincte
+      return new Set(this.quizHistory.map(quiz => quiz.lessonId ?? `page-${quiz.coursePageId}`)).size
     }
   },
   async created() {
@@ -211,6 +212,8 @@ export default {
           lessonId: q.lessonId,
           lessonTitle: q.lessonTitle,
           lessonSubject: q.lessonSubject,
+          source: q.source,
+          coursePageId: q.coursePageId,
           score: q.score,
           totalQuestions: q.totalQuestions,
           percentage: q.percentage,

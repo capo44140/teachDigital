@@ -65,6 +65,46 @@ export function extractCoursePageMetadata (html, fileName = '') {
   }
 }
 
+export const PROGRESS_MESSAGE_TYPE = 'teachdigital:quiz-progress'
+
+// Script injecté dans la page isolée : remonte le score du quiz à l'application.
+// Deux sources : les compteurs #sOk / #sTot / #sStreak des pages générées,
+// ou un appel explicite à window.TeachDigital.report(ok, total, streak).
+const PROGRESS_BRIDGE = `<script>(function(){
+if(window.parent===window)return;
+var last=null;
+function num(id){var el=document.getElementById(id);if(!el)return null;var v=parseInt(el.textContent,10);return isNaN(v)?null:v}
+function send(ok,total,streak){if(!(total>0)||!(ok>=0)||ok>total)return;var key=ok+'/'+total;if(key===last)return;last=key;
+window.parent.postMessage({type:'${PROGRESS_MESSAGE_TYPE}',ok:ok,total:total,streak:streak>0?streak:0},'*')}
+window.TeachDigital={report:function(ok,total,streak){send(+ok,+total,+streak)}};
+function fromDom(){var ok=num('sOk'),total=num('sTot');if(ok!==null&&total!==null)send(ok,total,num('sStreak')||0)}
+function watch(){var el=document.getElementById('sTot');if(!el)return false;
+new MutationObserver(fromDom).observe(el,{childList:true,characterData:true,subtree:true});return true}
+if(!watch())document.addEventListener('DOMContentLoaded',watch);
+})();</script>`
+
+/**
+ * Ajoute le pont de progression à une page de cours (avant </body> si présent)
+ */
+export function withProgressBridge (html) {
+  const match = /<\/body\s*>/i.exec(html)
+  if (!match) return html + PROGRESS_BRIDGE
+  return html.slice(0, match.index) + PROGRESS_BRIDGE + html.slice(match.index)
+}
+
+/**
+ * Valide un message de progression reçu de la page isolée
+ * @returns {{ok:number,total:number,streak:number}|null}
+ */
+export function parseProgressMessage (data) {
+  if (!data || data.type !== PROGRESS_MESSAGE_TYPE) return null
+  const ok = Number(data.ok)
+  const total = Number(data.total)
+  const streak = Number(data.streak) || 0
+  if (!Number.isInteger(ok) || !Number.isInteger(total) || total < 1 || ok < 0 || ok > total) return null
+  return { ok, total, streak: Math.max(0, streak) }
+}
+
 /**
  * Lit un fichier .html déposé par le parent
  * @param {File} file

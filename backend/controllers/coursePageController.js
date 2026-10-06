@@ -244,7 +244,115 @@ async function handleCoursePage(req, res) {
     }
 }
 
+// Résultats d'une session de révision sur une page de cours.
+// Une session = une ligne de quiz_results, créée à la première sauvegarde (POST)
+// puis mise à jour au fil des réponses (PUT), comme le ferait un quiz classique.
+function parseResultBody(body) {
+    const profileId = parseId(body?.profileId);
+    const score = Number(body?.score);
+    const totalQuestions = Number(body?.totalQuestions);
+    if (!profileId || !Number.isInteger(score) || !Number.isInteger(totalQuestions)
+        || totalQuestions < 1 || score < 0 || score > totalQuestions) {
+        return null;
+    }
+    const answers = body?.answers && typeof body.answers === 'object' ? body.answers : {};
+    return { profileId, score, totalQuestions, percentage: Math.round((score / totalQuestions) * 100), answers };
+}
+
+async function unlockBadges(profileId, coursePage, data) {
+    try {
+        const badgeService = require('../lib/badgeService.js');
+        return await badgeService.checkAndUnlockBadges(profileId, 'quiz_completed', {
+            coursePageId: coursePage.id,
+            score: data.score,
+            totalQuestions: data.totalQuestions,
+            percentage: data.percentage,
+            subject: coursePage.subject
+        });
+    } catch (badgeError) {
+        // Ne pas bloquer la sauvegarde si la vérification des badges échoue
+        console.error('⚠️  Erreur lors de la vérification des badges (non bloquant):', badgeError.message);
+        return [];
+    }
+}
+
+// POST /course-pages/:id/results — PUT /course-pages/:id/results/:resultId
+async function handleCoursePageResults(req, res) {
+    try {
+        const coursePageId = parseId(req.params?.id);
+        if (!coursePageId) {
+            res.status(400).json({ success: false, message: 'ID de page invalide' });
+            return;
+        }
+        if (req.method !== 'POST' && req.method !== 'PUT') {
+            res.status(405).json({ success: false, message: 'Méthode non autorisée' });
+            return;
+        }
+
+        const data = parseResultBody(req.body);
+        if (!data) {
+            res.status(400).json({ success: false, message: 'Données de résultat invalides' });
+            return;
+        }
+
+        // La page doit exister, être visible et destinée à cet enfant
+        const pages = await query(
+            'SELECT id, subject FROM course_pages WHERE id = $1 AND is_published = true AND target_profile_id = $2',
+            [coursePageId, data.profileId],
+            'vérification de la page de cours'
+        );
+        const coursePage = pages[0];
+        if (!coursePage) {
+            res.status(404).json({ success: false, message: 'Page de cours non trouvée' });
+            return;
+        }
+
+        let rows;
+        if (req.method === 'POST') {
+            rows = await query(
+                `INSERT INTO quiz_results (course_page_id, profile_id, score, total_questions, percentage, answers, completed_at)
+                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, NOW())
+                 RETURNING *`,
+                [coursePageId, data.profileId, data.score, data.totalQuestions, data.percentage, JSON.stringify(data.answers)],
+                'sauvegarde du résultat de page de cours'
+            );
+        } else {
+            const resultId = parseId(req.params?.resultId);
+            if (!resultId) {
+                res.status(400).json({ success: false, message: 'ID de résultat invalide' });
+                return;
+            }
+            rows = await query(
+                `UPDATE quiz_results
+                 SET score = $1, total_questions = $2, percentage = $3, answers = $4::jsonb, completed_at = NOW()
+                 WHERE id = $5 AND course_page_id = $6 AND profile_id = $7
+                 RETURNING *`,
+                [data.score, data.totalQuestions, data.percentage, JSON.stringify(data.answers), resultId, coursePageId, data.profileId],
+                'mise à jour du résultat de page de cours'
+            );
+            if (!rows[0]) {
+                res.status(404).json({ success: false, message: 'Résultat non trouvé' });
+                return;
+            }
+        }
+
+        const unlockedBadges = await unlockBadges(data.profileId, coursePage, data);
+
+        res.status(req.method === 'POST' ? 201 : 200).json({
+            success: true,
+            message: 'Résultat sauvegardé avec succès',
+            data: {
+                result: rows[0],
+                unlockedBadges: unlockedBadges.length > 0 ? unlockedBadges : undefined
+            }
+        });
+    } catch (error) {
+        sendError(res, error, 'Erreur lors de la sauvegarde du résultat');
+    }
+}
+
 module.exports = {
     handleCoursePages,
-    handleCoursePage
+    handleCoursePage,
+    handleCoursePageResults
 };

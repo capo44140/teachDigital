@@ -562,13 +562,15 @@ async function handleProfileLearningStats(req, res) {
                     SELECT
                         qr.id,
                         qr.lesson_id,
-                        l.title as lesson_title,
+                        qr.course_page_id,
+                        COALESCE(l.title, cp.title) as lesson_title,
                         qr.score,
                         qr.total_questions,
                         qr.percentage,
                         qr.completed_at
                     FROM quiz_results qr
-                    JOIN lessons l ON l.id = qr.lesson_id
+                    LEFT JOIN lessons l ON l.id = qr.lesson_id
+                    LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
                     WHERE qr.profile_id = ${profileIdNum}
                     ORDER BY qr.completed_at DESC
                     LIMIT 20
@@ -607,6 +609,8 @@ async function handleProfileLearningStats(req, res) {
             quizHistory: (quizHistoryRes || []).map(q => ({
                 id: q.id,
                 lessonId: q.lesson_id,
+                coursePageId: q.course_page_id,
+                source: q.course_page_id ? 'course_page' : 'lesson',
                 lessonTitle: q.lesson_title,
                 correctAnswers: q.score,
                 totalQuestions: q.total_questions,
