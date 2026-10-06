@@ -2,6 +2,15 @@ const { default: sql } = require('../lib/database.js');
 const { authenticateToken } = require('../lib/auth.js');
 const { handleError } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
+const { getClientIp } = require('../lib/rateLimit.js');
+
+// Valeurs autorisées (whitelist) pour les logs d'audit
+const ALLOWED_AUDIT_LEVELS = new Set(['info', 'warning', 'error', 'critical']);
+const ALLOWED_AUDIT_CATEGORIES = new Set([
+    'authentication', 'authorization', 'data_access', 'security', 'api_usage', 'system'
+]);
+const MAX_ACTION_LEN = 100;
+const MAX_DETAILS_LEN = 4000; // taille max du JSON sérialisé
 
 // Handler des logs d'audit
 async function handleAudit(req, res) {
@@ -10,15 +19,46 @@ async function handleAudit(req, res) {
         const pathname = url.pathname;
 
         // POST /logs - Créer un log d'audit
+        // Endpoint volontairement non authentifié : il doit pouvoir tracer des
+        // événements pré-authentification (ex. LOGIN_FAILED). Durci pour empêcher
+        // la forge de champs : ip/user-agent dérivés du serveur, valeurs whitelistées.
         if (pathname === '/logs' && req.method === 'POST') {
-            const { action, userId, category, level = 'info', details = {}, ipAddress, userAgent } = req.body;
+            const { action, userId, category, level = 'info', details = {} } = req.body;
 
-            if (!action || !category) {
+            // action : chaîne non vide, bornée
+            if (!action || typeof action !== 'string' || !action.trim()) {
                 res.status(400).json({
                     success: false,
-                    message: 'Action et category sont requis'
+                    message: 'Action requise'
                 });
                 return;
+            }
+            const safeAction = action.trim().slice(0, MAX_ACTION_LEN);
+
+            // category : doit appartenir à la whitelist
+            if (!category || !ALLOWED_AUDIT_CATEGORIES.has(category)) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Category invalide'
+                });
+                return;
+            }
+            const safeCategory = category;
+
+            // level : whitelist, fallback sur 'info' si invalide
+            const safeLevel = ALLOWED_AUDIT_LEVELS.has(level) ? level : 'info';
+
+            // details : objet sérialisable et borné en taille
+            let safeDetailsJson = '{}';
+            try {
+                const serialized = JSON.stringify(details ?? {});
+                if (serialized && serialized.length <= MAX_DETAILS_LEN) {
+                    safeDetailsJson = serialized;
+                } else {
+                    safeDetailsJson = JSON.stringify({ truncated: true });
+                }
+            } catch (_e) {
+                safeDetailsJson = '{}';
             }
 
             // Convertir userId en entier ou NULL si c'est "system" ou une chaîne non numérique
@@ -38,14 +78,21 @@ async function handleAudit(req, res) {
                 }
             }
 
+            // ip_address / user_agent : toujours dérivés de la requête (jamais du body)
+            const safeIpAddress = getClientIp(req);
+            const rawUserAgent = req.headers['user-agent'];
+            const safeUserAgent = (typeof rawUserAgent === 'string' && rawUserAgent)
+                ? rawUserAgent.slice(0, 512)
+                : null;
+
             const result = await withQueryTimeout(
                 sql`
           INSERT INTO audit_logs (
             action, user_id, category, level, details, ip_address, user_agent, created_at
           )
           VALUES (
-            ${action}, ${safeUserId}, ${category}, ${level}, 
-            ${JSON.stringify(details)}::jsonb, ${ipAddress || null}, ${userAgent || null}, 
+            ${safeAction}, ${safeUserId}, ${safeCategory}, ${safeLevel},
+            ${safeDetailsJson}::jsonb, ${safeIpAddress || null}, ${safeUserAgent},
             CURRENT_TIMESTAMP
           )
           RETURNING *

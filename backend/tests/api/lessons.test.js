@@ -103,8 +103,12 @@ describe('API Endpoints - Leçons', () => {
   });
 
   describe('POST /api/lessons', () => {
+    // La création de leçons est réservée aux admins (parents).
+    // On réutilise l'ID réel de testProfile mais avec le flag admin dans le token.
+    const adminProfile = () => ({ ...testProfile, is_admin: true });
+
     it('devrait créer une nouvelle leçon', async () => {
-      const token = generateTestToken(testProfile);
+      const token = generateTestToken(adminProfile());
       const req = createMockRequest('POST', '/api/lessons', {
         title: 'New Test Lesson',
         description: 'Description de test',
@@ -149,8 +153,24 @@ describe('API Endpoints - Leçons', () => {
       expect(res.statusCode).toBe(401);
     });
 
+    it('devrait refuser la création à un profil non-admin', async () => {
+      const token = generateTestToken(testProfile); // testProfile = enfant (is_admin: false)
+      const req = createMockRequest('POST', '/api/lessons', {
+        title: 'Lesson by non-admin',
+        quizData: { questions: [] }
+      }, {
+        authorization: `Bearer ${token}`
+      });
+      const res = createMockResponse();
+
+      await handleLessons(req, res);
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.success).toBe(false);
+    });
+
     it('devrait refuser la création sans titre', async () => {
-      const token = generateTestToken(testProfile);
+      const token = generateTestToken(adminProfile());
       const req = createMockRequest('POST', '/api/lessons', {
         quizData: {}
       }, {
@@ -165,7 +185,7 @@ describe('API Endpoints - Leçons', () => {
     });
 
     it('devrait refuser la création sans quizData', async () => {
-      const token = generateTestToken(testProfile);
+      const token = generateTestToken(adminProfile());
       const req = createMockRequest('POST', '/api/lessons', {
         title: 'Lesson without quiz'
       }, {

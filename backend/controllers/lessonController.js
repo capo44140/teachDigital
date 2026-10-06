@@ -72,8 +72,13 @@ async function handleLessons(req, res) {
             });
 
         } else if (req.method === 'POST') {
-            // Authentification requise pour POST
+            // Authentification + contrôle admin requis pour POST
+            // (création de leçons/quiz : réservé aux parents/admins)
             const user = authenticateToken(req);
+            if (!user.isAdmin) {
+                res.status(403).json({ success: false, message: 'Accès refusé - Admin requis', code: 'FORBIDDEN', data: null });
+                return;
+            }
 
             const {
                 title, description, subject, level,

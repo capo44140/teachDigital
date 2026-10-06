@@ -1,4 +1,5 @@
 const { default: sql } = require('../lib/database.js');
+const { authenticateToken } = require('../lib/auth.js');
 const { handleError, createErrorResponse } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
 
@@ -28,6 +29,14 @@ async function handleYoutubeVideos(req, res) {
             });
 
         } else if (req.method === 'POST') {
+            // Authentification + contrôle admin requis pour ajouter une vidéo
+            // (contenu affiché aux enfants : réservé aux parents/admins)
+            const user = authenticateToken(req);
+            if (!user.isAdmin) {
+                res.status(403).json(createErrorResponse('Accès refusé - Admin requis', 'FORBIDDEN'));
+                return;
+            }
+
             const {
                 url,
                 video_id,
