@@ -104,30 +104,40 @@
         </div>
       </div>
 
-      <!-- Mes cours disponibles -->
+      <!-- Mes cours disponibles (pages HTML publiées par un parent) -->
       <div class="mb-16">
         <h3 class="text-3xl font-bold text-white mb-8 text-center">Mes cours disponibles 📚</h3>
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="course in (currentProfile?.courses || [])" :key="course.id" 
-               class="glass-card-user group cursor-pointer"
-               @click="startCourse(course)">
+        <div v-if="isLoadingCoursePages" class="text-center py-12">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-white/20 border-t-white/80 mb-4"></div>
+          <p class="text-white/60">Chargement des cours...</p>
+        </div>
+        <p v-else-if="coursePages.length === 0" class="text-white/60 text-center text-lg">
+          Pas encore de cours ici. Ils apparaîtront dès qu'ils seront publiés pour toi !
+        </p>
+        <div v-else class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <button
+            v-for="page in coursePages"
+            :key="page.id"
+            type="button"
+            class="glass-card-user group cursor-pointer text-left w-full"
+            @click="openCoursePage(page)"
+          >
             <div class="flex items-start space-x-4">
-              <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
-                   :class="course.color">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-400 to-sky-400 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C6.5 6.253 2 10.998 2 17.5 2 21.08 4.905 24 8.5 24m0-13c5.5 0 10 4.745 10 10.5 0 3.582-2.905 6.5-6.5 6.5m0-13v13m0 0c3.595 0 6.5-2.918 6.5-6.5 0-5.755-4.5-10.5-10-10.5"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                 </svg>
               </div>
               <div class="flex-1 min-w-0">
-                <h4 class="text-lg font-bold text-white mb-1 truncate">{{ course.title }}</h4>
-                <p class="text-white/60 text-sm mb-3 line-clamp-2">{{ course.description }}</p>
+                <h4 class="text-lg font-bold text-white mb-1 truncate">{{ page.title }}</h4>
+                <p class="text-white/60 text-sm mb-3 line-clamp-2">{{ page.description || 'Révise ton cours et entraîne-toi.' }}</p>
                 <div class="flex items-center justify-between pt-2 border-t border-white/10">
-                  <span class="text-xs text-white/50">⏱️ {{ course.duration }}</span>
+                  <span class="text-xs px-2 py-1 rounded-full bg-indigo-500/30 text-indigo-200">{{ page.subject || 'Cours' }}</span>
                   <span class="text-xs px-2 py-1 rounded-full bg-white/10 text-white/80">Commencer →</span>
                 </div>
               </div>
             </div>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -288,6 +298,7 @@
 import { useProfileStore } from '../stores/profileStore.js'
 import { useBadgeStore } from '../stores/badgeStore.js'
 import { LessonService } from '../services/lessonService.js'
+import { apiService } from '../services/apiService.js'
 
 export default {
   name: 'UserDashboard',
@@ -299,6 +310,8 @@ export default {
   data() {
     return {
       currentProfile: null,
+      coursePages: [],
+      isLoadingCoursePages: false,
       userLessons: [],
       isLoadingLessons: false,
       badgeStats: {
@@ -365,6 +378,8 @@ export default {
         if (profileId) {
           await this.profileStore.loadProfile(profileId)
           this.currentProfile = this.profileStore.currentProfile
+          // Charger les pages de cours publiées pour ce profil
+          await this.loadCoursePages(profileId)
           // Charger les leçons du profil
           await this.loadUserLessons(profileId)
           // Charger les badges du profil
@@ -378,33 +393,7 @@ export default {
             bgColor: 'bg-purple-500',
             is_child: true,
             is_teen: false,
-            welcomeMessage: 'Découvre de nouveaux cours passionnants !',
-            courses: [
-              {
-                id: 1,
-                title: 'Programmation créative',
-                description: 'Apprends à créer des animations et des jeux',
-                duration: '2h',
-                color: 'bg-purple-500',
-                icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4'
-              },
-              {
-                id: 2,
-                title: 'Design numérique',
-                description: 'Crée des designs modernes et attrayants',
-                duration: '1h30',
-                color: 'bg-pink-500',
-                icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z'
-              },
-              {
-                id: 3,
-                title: 'Mathématiques amusantes',
-                description: 'Apprends les maths en jouant',
-                duration: '45 min',
-                color: 'bg-blue-500',
-                icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z'
-              }
-            ]
+            welcomeMessage: 'Découvre de nouveaux cours passionnants !'
           }
         }
       } catch (error) {
@@ -417,8 +406,7 @@ export default {
           bgColor: 'bg-gray-500',
           is_child: true,
           is_teen: false,
-          welcomeMessage: 'Bienvenue !',
-          courses: []
+          welcomeMessage: 'Bienvenue !'
         }
       }
     },
@@ -433,6 +421,20 @@ export default {
       }
     },
     
+    async loadCoursePages(profileId) {
+      this.isLoadingCoursePages = true
+      try {
+        this.coursePages = await apiService.getCoursePages({
+          targetProfileId: profileId,
+          published: true
+        })
+      } catch (error) {
+        console.error('Erreur lors du chargement des pages de cours:', error)
+      } finally {
+        this.isLoadingCoursePages = false
+      }
+    },
+
     async loadUserLessons(profileId) {
       this.isLoadingLessons = true
       try {
@@ -453,8 +455,12 @@ export default {
       this.$router.push('/')
     },
     
-    startCourse(course) {
-      alert(`Démarrage du cours: ${course.title}`)
+    openCoursePage(page) {
+      this.$router.push({
+        name: 'CoursePageViewer',
+        params: { id: page.id },
+        query: { profile: this.currentProfile.id }
+      })
     },
     
     startLesson(lesson) {

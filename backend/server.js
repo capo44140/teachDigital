@@ -253,6 +253,34 @@ async function runAutoMigrations() {
   } catch (error) {
     logger.warn('⚠️ Migration auto-migration (non bloquant):', error.message);
   }
+
+  await ensureCoursePagesTable();
+}
+
+// Migration automatique : table des pages de cours HTML publiées pour un enfant
+async function ensureCoursePagesTable() {
+  try {
+    const { pool } = require('./lib/database.js');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS course_pages (
+        id SERIAL PRIMARY KEY,
+        profile_id INTEGER REFERENCES profiles(id) ON DELETE SET NULL,
+        target_profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        subject VARCHAR(100),
+        description TEXT,
+        html_content TEXT NOT NULL,
+        is_published BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_course_pages_target_published ON course_pages(target_profile_id, is_published)
+    `);
+  } catch (error) {
+    logger.warn('⚠️ Migration course_pages (non bloquant):', error.message);
+  }
 }
 
 // Démarrage du serveur

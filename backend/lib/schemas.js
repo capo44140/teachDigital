@@ -53,6 +53,23 @@ const profileCreationRequestSchema = z.object({
   requesterEmail: z.string().email().optional().nullable()
 }).passthrough();
 
+// Pages de cours HTML (révision + quiz intégrés), publiées par un parent pour un enfant
+const MAX_COURSE_PAGE_HTML_LENGTH = 5 * 1024 * 1024;
+
+const coursePageCreateSchema = z.object({
+  title: z.string().trim().min(1, 'Le titre est requis').max(255),
+  subject: z.string().trim().max(100).optional().nullable(),
+  description: z.string().trim().max(2000).optional().nullable(),
+  htmlContent: z.string()
+    .min(1, 'Le contenu HTML est requis')
+    .max(MAX_COURSE_PAGE_HTML_LENGTH, 'La page HTML est trop volumineuse (5 Mo maximum)'),
+  targetProfileId: numericIdSchema,
+  isPublished: z.boolean().optional()
+});
+
+// PUT /course-pages/:id : tous les champs sont optionnels (mise à jour partielle)
+const coursePageUpdateSchema = coursePageCreateSchema.partial();
+
 module.exports = {
   pinSchema,
   loginSchema,
@@ -60,5 +77,8 @@ module.exports = {
   familyGateUpdateSchema,
   pinVerifySchema,
   pinUpdateSchema,
-  profileCreationRequestSchema
+  profileCreationRequestSchema,
+  coursePageCreateSchema,
+  coursePageUpdateSchema,
+  MAX_COURSE_PAGE_HTML_LENGTH
 };

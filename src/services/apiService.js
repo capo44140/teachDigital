@@ -361,6 +361,62 @@ class ApiService {
   }
 
   /**
+   * Récupérer les pages de cours HTML (sans leur contenu)
+   */
+  async getCoursePages(filters = {}) {
+    const params = new URLSearchParams()
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        params.append(key, value)
+      }
+    })
+
+    const endpoint = params.toString() ? `/api/course-pages?${params}` : '/api/course-pages'
+    const response = await this.request(endpoint)
+    return response.success ? response.data.coursePages : []
+  }
+
+  /**
+   * Récupérer une page de cours avec son contenu HTML
+   */
+  async getCoursePage(id) {
+    const response = await this.request(`/api/course-pages/${id}`)
+    return response.success ? response.data.coursePage : null
+  }
+
+  /**
+   * Publier une page de cours pour un enfant
+   */
+  async createCoursePage(coursePageData) {
+    const response = await this.request('/api/course-pages', {
+      method: 'POST',
+      body: JSON.stringify(coursePageData)
+    })
+    return response.success ? response.data.coursePage : null
+  }
+
+  /**
+   * Modifier une page de cours (titre, contenu, visibilité...)
+   */
+  async updateCoursePage(id, coursePageData) {
+    const response = await this.request(`/api/course-pages/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(coursePageData)
+    })
+    return response.success ? response.data.coursePage : null
+  }
+
+  /**
+   * Supprimer une page de cours
+   */
+  async deleteCoursePage(id) {
+    const response = await this.request(`/api/course-pages/${id}`, {
+      method: 'DELETE'
+    })
+    return response.success
+  }
+
+  /**
    * Récupérer les notifications
    */
   async getNotifications(filters = {}) {

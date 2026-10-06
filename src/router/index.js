@@ -37,6 +37,8 @@ const ParentProgressTracking = () => import(/* webpackChunkName: "tracking-compo
 const ParentQuizManagement = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentQuizManagement.vue')
 const ParentActivityManagement = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentActivityManagement.vue')
 const LessonDetails = () => import(/* webpackChunkName: "tracking-components" */ '../components/LessonDetails.vue')
+const CoursePageManager = () => import(/* webpackChunkName: "course-pages" */ '../components/CoursePageManager.vue')
+const CoursePageViewer = () => import(/* webpackChunkName: "course-pages" */ '../components/CoursePageViewer.vue')
 const BadgeManager = () => import(/* webpackChunkName: "tracking-components" */ '../components/BadgeManager.vue')
 const BadgeAdminManager = () => import(/* webpackChunkName: "tracking-components" */ '../components/BadgeAdminManager.vue')
 
@@ -168,6 +170,19 @@ const routes = [
     component: LessonDetails,
     props: true,
     meta: { requiresAdmin: true }
+  },
+  {
+    path: '/course-page-manager',
+    name: 'CoursePageManager',
+    component: CoursePageManager,
+    meta: { requiresAdmin: true }
+  },
+  {
+    path: '/course-page/:id',
+    name: 'CoursePageViewer',
+    component: CoursePageViewer,
+    props: true,
+    meta: { requiresChildOrTeen: true }
   },
   {
     path: '/parent-activity-management',
