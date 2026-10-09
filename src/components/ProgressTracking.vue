@@ -130,7 +130,7 @@
 
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
-import { ProgressService } from '../services/progressService.js'
+import { ProgressService, MAX_HISTORY_LIMIT } from '../services/progressService.js'
 import { formatPercentage, getChildTypeLabel } from '../utils/progressFormatters.js'
 import ProgressHistoryTab from './progress/ProgressHistoryTab.vue'
 import ProgressStatsTab from './progress/ProgressStatsTab.vue'
@@ -205,7 +205,10 @@ export default {
       if (!this.selectedChild) return
 
       try {
-        this.progressSummary = await ProgressService.getProfileProgressSummary(this.selectedChild.id)
+        // Historique complet (vues « année » / « tout ») : 500 entrées maximum côté serveur
+        this.progressSummary = await ProgressService.getProfileProgressSummary(this.selectedChild.id, {
+          historyLimit: MAX_HISTORY_LIMIT
+        })
 
         this.quizHistory = (this.progressSummary?.recentHistory || []).map(q => ({
           id: q.id,

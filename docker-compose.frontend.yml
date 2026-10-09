@@ -1,20 +1,25 @@
 version: '3.8'
 
+# Stack frontend déployée sur le Synology par deploy.ps1 / deploy-frontend.ps1.
+# Sur le NAS, ce fichier est renommé en docker-compose.yml ; le Dockerfile garde son nom.
+# Utilisable aussi en local : pnpm run build && docker compose -f docker-compose.frontend.yml up -d --build
 services:
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.frontend.prebuilt
     container_name: teachdigital-frontend
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # Hôte 3000 (cible du reverse proxy DSM) -> nginx du conteneur sur 80
+      - "3000:80"
     environment:
       - NODE_ENV=production
     healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000" ]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:80/" ]
       interval: 30s
       timeout: 10s
       retries: 3
     extra_hosts:
+      # nginx-frontend.conf relaie /api/ vers le backend publié sur le port 3001 de l'hôte
       - "host.docker.internal:host-gateway"

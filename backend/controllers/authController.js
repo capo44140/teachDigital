@@ -1,6 +1,7 @@
 const { NativeHashService } = require('../lib/nativeHash.js');
 const { default: sql } = require('../lib/database.js');
-const { generateToken, createSession, deleteSession, authenticateToken } = require('../lib/auth.js');
+const { generateToken, generateFamilyToken, authenticateToken } = require('../lib/auth.js');
+const { pinFailures, familyGateFailures } = require('../lib/bruteForce.js');
 const { handleError, createErrorResponse } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
 
@@ -33,6 +34,12 @@ async function handleLogin(req, res) {
             return;
         }
 
+        // Verrouillage par profil après trop d'échecs (indépendant de l'IP)
+        const lockKey = `profile:${profileIdNum}`;
+        if (pinFailures.rejectIfLocked(lockKey, res)) {
+            return;
+        }
+
         // Timeout réduit pour les requêtes SQL (laisser du temps pour les autres opérations)
         const [profile, pinData] = await Promise.all([
             withQueryTimeout(
@@ -58,12 +65,14 @@ async function handleLogin(req, res) {
         // Vérification du PIN (peut être lente avec les logs)
         const isValidPin = await NativeHashService.verifyPin(pin, pinData[0].pin_code);
         if (!isValidPin) {
+            pinFailures.recordFailure(lockKey);
             res.status(401).json({
                 success: false,
                 message: 'Code PIN incorrect'
             });
             return;
         }
+        pinFailures.recordSuccess(lockKey);
 
         // Migration transparente : re-hash bcrypt si l'ancien format SHA-256 est détecté.
         // Non-bloquant pour la réponse au client.
@@ -82,15 +91,6 @@ async function handleLogin(req, res) {
         };
 
         const token = generateToken(tokenPayload);
-        const sessionToken = generateToken({ profileId: profile[0].id });
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-        // Création de session en arrière-plan (non-bloquant) pour éviter le timeout
-        // On ne bloque pas la réponse sur cette opération
-        createSession(profile[0].id, sessionToken, expiresAt).catch(err => {
-            console.error('⚠️ Erreur lors de la création de session (non-bloquant):', err);
-            // On continue même si la session n'a pas pu être créée
-        });
 
         res.status(200).json({
             success: true,
@@ -127,6 +127,9 @@ async function handleFamilyGate(req, res) {
                 });
                 return;
             }
+            if (familyGateFailures.rejectIfLocked('family', res)) {
+                return;
+            }
             const row = await withQueryTimeout(
                 sql`SELECT pin_hash FROM family_gate WHERE id = 1`,
                 TIMEOUTS.STANDARD,
@@ -141,22 +144,26 @@ async function handleFamilyGate(req, res) {
             }
             const isValid = await NativeHashService.verifyPin(pin, row[0].pin_hash);
             if (!isValid) {
+                familyGateFailures.recordFailure('family');
                 res.status(401).json({
                     success: false,
                     message: 'Code incorrect'
                 });
                 return;
             }
+            familyGateFailures.recordSuccess('family');
             // Migration transparente bcrypt (non-bloquant)
             if (NativeHashService.needsRehash(row[0].pin_hash)) {
                 NativeHashService.hashPin(pin)
                     .then(newHash => sql`UPDATE family_gate SET pin_hash = ${newHash}, updated_at = CURRENT_TIMESTAMP WHERE id = 1`)
                     .catch(err => console.error('⚠️ Migration bcrypt family_gate échouée (non-bloquant):', err?.message || err));
             }
+            // Jeton « famille » : donne l'accès enfant à l'API (pas les droits parent)
+            const { token, expiresAt } = generateFamilyToken();
             res.status(200).json({
                 success: true,
                 message: 'Code valide',
-                data: { valid: true }
+                data: { valid: true, token, expiresAt }
             });
         } catch (error) {
             const errorResponse = handleError(error, 'Erreur vérification code familial');
@@ -167,14 +174,7 @@ async function handleFamilyGate(req, res) {
     if (req.method === 'PUT') {
         // PUT : définir ou mettre à jour le code familial (admin uniquement)
         try {
-            const user = authenticateToken(req);
-            if (!user.isAdmin) {
-                res.status(403).json({
-                    success: false,
-                    message: 'Accès refusé - Admin requis'
-                });
-                return;
-            }
+            // requireAdmin est appliqué par le routeur (api/index.js)
             const { newPin, currentPin } = req.body;
             if (!newPin || newPin.length < 4 || newPin.length > 8) {
                 res.status(400).json({
@@ -238,13 +238,8 @@ async function handleLogout(req, res) {
     }
 
     try {
-        const authHeader = req.headers.authorization;
-        const token = authHeader && authHeader.split(' ')[1];
-
-        if (token) {
-            await deleteSession(token);
-        }
-
+        // Jetons JWT sans état : la déconnexion consiste à supprimer le jeton côté client.
+        // Les droits admin sont revérifiés en base à chaque requête parent (requireAdmin).
         res.status(200).json({
             success: true,
             message: 'Déconnexion réussie'
@@ -266,12 +261,13 @@ async function handleVerify(req, res) {
             success: true,
             message: 'Token valide',
             data: {
-                user: {
+                scope: user.scope,
+                user: user.profileId ? {
                     id: user.profileId,
                     name: user.name,
                     type: user.type,
-                    isAdmin: user.isAdmin
-                }
+                    isAdmin: user.isAdmin === true
+                } : null
             }
         });
     } catch (error) {

@@ -139,8 +139,8 @@ else {
 # Renommer les fichiers sur le serveur
 if ($transferSuccess) {
     Write-Info "   Configuration des fichiers Docker..."
-    ssh $sshAlias "mv $DeployPath/docker-compose.frontend.yml $DeployPath/docker-compose.yml" 2>&1 | Out-Null
-    ssh $sshAlias "mv $DeployPath/Dockerfile.frontend.prebuilt $DeployPath/Dockerfile" 2>&1 | Out-Null
+    # Seul le compose est renomme : il reference directement Dockerfile.frontend.prebuilt
+    ssh $sshAlias "mv -f $DeployPath/docker-compose.frontend.yml $DeployPath/docker-compose.yml" 2>&1 | Out-Null
 }
 
 Write-Info ""

@@ -1,0 +1,6 @@
+# Ignore spécifique à Dockerfile.frontend.prebuilt (prioritaire sur .dockerignore avec BuildKit) :
+# l'image n'a besoin que du dist/ déjà construit et de la conf nginx.
+*
+!dist
+!dist/**
+!nginx-frontend.conf

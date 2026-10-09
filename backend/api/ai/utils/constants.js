@@ -4,7 +4,9 @@
  */
 
 // URLs des APIs externes
-const LOCAL_LLM_BASE_URL = process.env.LOCAL_LLM_URL || 'http://192.168.1.9:1234/v1';
+// LLM local (LM Studio / Ollama) : désactivé tant que LOCAL_LLM_URL n'est pas défini
+// (ex: LOCAL_LLM_URL=http://<ip-du-pc>:1234/v1)
+const LOCAL_LLM_BASE_URL = process.env.LOCAL_LLM_URL || '';
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
@@ -12,13 +14,17 @@ const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const MISTRAL_BASE_URL = 'https://api.mistral.ai/v1';
 const KIMI_BASE_URL = 'https://api.moonshot.cn/v1';
 
-// Timeout pour les appels API externes (90s par défaut)
-// Peut être ajusté via AI_TIMEOUT_MS
-const API_TIMEOUT_MS = parseInt(process.env.AI_TIMEOUT_MS || '180000', 10);
+// Le serveur coupe toute requête après 180s (server.timeout) : un appel IA plus long
+// ne peut de toute façon pas aboutir. On borne donc les timeouts juste en dessous.
+const SERVER_REQUEST_TIMEOUT_MS = 180000;
+const MAX_AI_TIMEOUT_MS = SERVER_REQUEST_TIMEOUT_MS - 10000;
+const boundedTimeout = (value, fallback) => Math.min(parseInt(value || String(fallback), 10) || fallback, MAX_AI_TIMEOUT_MS);
 
-// Timeout spécifique pour le LLM local (LM Studio / Ollama) : 180s par défaut
-// Peut être ajusté via LOCAL_LLM_TIMEOUT_MS (recommandé si LM Studio est lent)
-const LOCAL_LLM_TIMEOUT_MS = parseInt(process.env.LOCAL_LLM_TIMEOUT_MS || '360000', 10);
+// Timeout pour les appels API externes. Peut être ajusté via AI_TIMEOUT_MS
+const API_TIMEOUT_MS = boundedTimeout(process.env.AI_TIMEOUT_MS, MAX_AI_TIMEOUT_MS);
+
+// Timeout spécifique pour le LLM local (LM Studio / Ollama). Peut être ajusté via LOCAL_LLM_TIMEOUT_MS
+const LOCAL_LLM_TIMEOUT_MS = boundedTimeout(process.env.LOCAL_LLM_TIMEOUT_MS, MAX_AI_TIMEOUT_MS);
 
 // Modèles par défaut
 const DEFAULT_LOCAL_LLM_MODEL = process.env.LOCAL_LLM_MODEL || 'mistralai/ministral-3-14b-reasoning';

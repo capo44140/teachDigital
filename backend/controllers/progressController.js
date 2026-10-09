@@ -1,7 +1,10 @@
 const { default: sql } = require('../lib/database.js')
-const { authenticateToken } = require('../lib/auth.js')
+const { canActForProfile } = require('../lib/auth.js')
 const { handleError, createErrorResponse } = require('../lib/response.js')
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js')
+
+const DEFAULT_HISTORY_LIMIT = 50
+const MAX_HISTORY_LIMIT = 500
 
 function startOfWeekMonday(date = new Date()) {
   const d = new Date(date)
@@ -184,11 +187,16 @@ async function handleProfileProgressSummary(req, res) {
       return
     }
 
-    const user = authenticateToken(req)
-    if (!user?.isAdmin && user?.profileId !== profileIdNum) {
+    if (!canActForProfile(req.user, profileIdNum)) {
       res.status(403).json(createErrorResponse('Accès refusé', 'FORBIDDEN'))
       return
     }
+
+    // Historique : 50 par défaut, jusqu'à 500 pour les vues « année » / « tout »
+    const requestedLimit = parseInt(req.query?.historyLimit, 10)
+    const historyLimit = Number.isInteger(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, MAX_HISTORY_LIMIT)
+      : DEFAULT_HISTORY_LIMIT
 
     const weekStart = startOfWeekMonday(new Date())
     const weekStartIso = weekStart.toISOString()
@@ -208,7 +216,7 @@ async function handleProfileProgressSummary(req, res) {
         'progress summary (totals)'
       ),
       withQueryTimeout(
-        sql`SELECT COUNT(*)::int as perfect_count FROM quiz_results WHERE profile_id = ${profileIdNum} AND percentage = 100`,
+        sql`SELECT COUNT(*)::int as perfect_count FROM quiz_results WHERE profile_id = ${profileIdNum} AND percentage = 100 AND is_completed IS NOT FALSE`,
         TIMEOUTS.STANDARD,
         'progress summary (perfect)'
       ),
@@ -227,7 +235,7 @@ async function handleProfileProgressSummary(req, res) {
         sql`
           SELECT 
             COUNT(*)::int as quizzes_this_week,
-            COUNT(*) FILTER (WHERE percentage = 100)::int as perfect_this_week,
+            COUNT(*) FILTER (WHERE percentage = 100 AND is_completed IS NOT FALSE)::int as perfect_this_week,
             COUNT(DISTINCT NULLIF(TRIM(COALESCE(l.subject, cp.subject)), ''))::int as subjects_this_week
           FROM quiz_results qr
           LEFT JOIN lessons l ON l.id = qr.lesson_id
@@ -283,13 +291,15 @@ async function handleProfileProgressSummary(req, res) {
             qr.score,
             qr.total_questions,
             qr.percentage,
+            qr.answers,
+            qr.is_completed,
             qr.completed_at
           FROM quiz_results qr
           LEFT JOIN lessons l ON l.id = qr.lesson_id
           LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
           WHERE qr.profile_id = ${profileIdNum}
           ORDER BY qr.completed_at DESC
-          LIMIT 50
+          LIMIT ${historyLimit}
         `,
         TIMEOUTS.STANDARD,
         'progress summary (recent history)'
@@ -351,6 +361,8 @@ async function handleProfileProgressSummary(req, res) {
         score: q.score,
         totalQuestions: q.total_questions,
         percentage: q.percentage,
+        answers: q.answers,
+        isCompleted: q.is_completed !== false,
         completedAt: q.completed_at
       }))
     }

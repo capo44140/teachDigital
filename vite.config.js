@@ -1,6 +1,39 @@
 import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
-import { VitePWA } from "vite-plugin-pwa";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { resolve } from "node:path";
+
+// Version de build : injectée dans le bundle (__APP_VERSION__) ET écrite dans dist/version.json.
+// L'application compare la version qu'elle exécute à celle du serveur pour proposer la mise à jour.
+const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
+const buildTimestamp = Date.now();
+const APP_VERSION = `${pkg.version}-${buildTimestamp}`;
+
+/**
+ * Écrit dist/version.json avec la même version que celle injectée dans le bundle.
+ * (remplace la copie de public/version.json, qui ne sert qu'en développement)
+ * scripts/generate-sw.js relit ce fichier pour versionner le Service Worker.
+ */
+function versionJsonPlugin () {
+  let outDir = resolve(process.cwd(), "dist");
+  return {
+    name: "teachdigital-version-json",
+    apply: "build",
+    configResolved (config) {
+      outDir = resolve(config.root, config.build.outDir);
+    },
+    closeBundle () {
+      mkdirSync(outDir, { recursive: true });
+      const versionInfo = {
+        version: pkg.version,
+        build: APP_VERSION,
+        buildDate: new Date(buildTimestamp).toISOString(),
+        buildNumber: buildTimestamp
+      };
+      writeFileSync(resolve(outDir, "version.json"), JSON.stringify(versionInfo, null, 2) + "\n");
+    }
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -8,49 +41,18 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
 
   return {
+    // Un seul Service Worker : public/sw.js, versionné par scripts/generate-sw.js
+    // (enregistré manuellement dans src/main.js). Le manifest est public/manifest.json.
+    // vite-plugin-pwa n'est plus utilisé : il générait un second sw.js (Workbox) concurrent.
     plugins: [
       vue(),
-      VitePWA({
-        // Évite la génération/injection de /registerSW.js (ressource bloquante)
-        // On gère l'enregistrement du SW manuellement dans src/main.js
-        injectRegister: null,
-        registerType: "autoUpdate",
-        includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],
-        manifest: {
-          name: "TeachDigital",
-          short_name: "TeachDigital",
-          description: "Application d'apprentissage numérique pour enfants et adolescents",
-          theme_color: "#6366f1",
-          background_color: "#ffffff",
-          icons: [
-            {
-              src: "icons/icon-192x192.png",
-              sizes: "192x192",
-              type: "image/png",
-            },
-            {
-              src: "icons/icon-512x512.png",
-              sizes: "512x512",
-              type: "image/png",
-            },
-            {
-              src: "icons/icon-512x512.png",
-              sizes: "512x512",
-              type: "image/png",
-              purpose: "any maskable",
-            },
-          ],
-        },
-      }),
+      versionJsonPlugin()
     ],
     optimizeDeps: {
       include: [
         "vue",
         "vue-router",
         "pinia"
-      ],
-      exclude: [
-        "vite-plugin-pwa"
       ],
       esbuildOptions: {
         target: 'es2020',
@@ -188,6 +190,7 @@ export default defineConfig(({ mode }) => {
       // ATTENTION: Les variables de base de données ne doivent JAMAIS être exposées au frontend
       // Elles sont gérées uniquement par le backend pour des raisons de sécurité
       // Seules les variables préfixées par VITE_ sont accessibles au frontend
+      __APP_VERSION__: JSON.stringify(APP_VERSION)
     }
   };
 });

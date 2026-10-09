@@ -46,6 +46,7 @@
           <div class="flex space-x-4 text-white/60 text-sm">
             <span>{{ quiz.score }}/{{ quiz.totalQuestions }} questions</span>
             <span>{{ formatDuration(quiz.duration) }}</span>
+            <span v-if="getBestStreak(quiz.answers) >= 2" title="Meilleure série de bonnes réponses">🔥 Série max : {{ getBestStreak(quiz.answers) }}</span>
           </div>
         </div>
         <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
@@ -60,7 +61,7 @@
 </template>
 
 <script>
-import { formatDate, formatDuration, formatPercentage, getScoreClass, filterHistoryByPeriod } from '../../utils/progressFormatters.js'
+import { formatDate, formatDuration, formatPercentage, getScoreClass, filterHistoryByPeriod, getBestStreak } from '../../utils/progressFormatters.js'
 
 export default {
   name: 'ProgressHistoryTab',
@@ -75,6 +76,7 @@ export default {
     }
   },
   methods: {
+    getBestStreak,
     formatDate,
     formatDuration,
     formatPercentage,

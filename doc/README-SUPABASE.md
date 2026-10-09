@@ -1,11 +1,14 @@
-# 🚀 Installation Supabase sur Synology
+# 🚀 Installation Supabase sur Synology (optionnel)
+
+> ℹ️ Cette stack est **optionnelle et non utilisée par l'application** TeachDigital
+> (qui tourne avec `backend/docker-compose.yml` + `docker-compose.frontend.yml`, cf. `deploy.ps1`).
 
 Ce guide vous explique comment installer et configurer Supabase sur votre Synology avec Docker Compose.
 
 ## 📋 Prérequis
 
 - Docker et Docker Compose installés sur votre Synology
-- Ports disponibles : 5432, 8000, 8080, 3001, 8081, 9999
+- Ports disponibles **sur 127.0.0.1** : 5432, 8000, 8443, 8080, 3005, 8081, 9999
 
 ## 🔧 Installation
 
@@ -13,72 +16,96 @@ Ce guide vous explique comment installer et configurer Supabase sur votre Synolo
 
 Placez les fichiers suivants dans un dossier sur votre Synology (par exemple `/docker/supabase/`) :
 - `docker-compose.yml`
-- `kong.yml`
+- `kong.yml` (non fourni dans ce dépôt)
 - `init-supabase.sql`
+- `.env` (à créer, **jamais commité**) :
+
+```env
+POSTGRES_PASSWORD=<generate-with: openssl rand -hex 24>
+AUTHENTICATOR_PASSWORD=<generate-with: openssl rand -hex 24>
+SUPABASE_JWT_SECRET=<generate-with: openssl rand -hex 32>
+# JWT signés (HS256) avec SUPABASE_JWT_SECRET, claims role=anon / role=service_role
+SUPABASE_ANON_KEY=<jwt-anon-signe-avec-SUPABASE_JWT_SECRET>
+SUPABASE_SERVICE_KEY=<jwt-service_role-signe-avec-SUPABASE_JWT_SECRET>
+```
+
+`docker compose` refuse de démarrer tant que ces variables ne sont pas définies.
 
 ### 2. Initialiser la base de données
 
-Avant de démarrer les conteneurs, vous devez initialiser la base de données avec les rôles Supabase :
+Avant d'utiliser PostgREST, initialisez les rôles Supabase (le mot de passe du rôle
+`authenticator` est passé en variable psql, il n'est jamais écrit dans le script) :
 
 ```bash
-# Option 1 : Via Docker (recommandé)
+# Charger les variables du .env dans le shell courant
+set -a; . ./.env; set +a
+
+# Option 1 : Via Docker
 docker run --rm -it \
-  -e PGPASSWORD=5WZqggz2CrD1vyLA \
+  -e PGPASSWORD="$POSTGRES_PASSWORD" \
   -v $(pwd)/init-supabase.sql:/init-supabase.sql \
   --network host \
   postgres:15 \
-  psql -h localhost -U postgres -d postgres -f /init-supabase.sql
+  psql -h localhost -U postgres -d postgres \
+       -v authenticator_password="$AUTHENTICATOR_PASSWORD" -f /init-supabase.sql
 
 # Option 2 : Attendre que le conteneur db soit démarré, puis :
-docker exec -i supabase-db psql -U postgres -d postgres < init-supabase.sql
+docker exec -i supabase-db psql -U postgres -d postgres \
+  -v authenticator_password="$AUTHENTICATOR_PASSWORD" < init-supabase.sql
 ```
 
 ### 3. Démarrer les services
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 4. Vérifier les services
 
 ```bash
 # Vérifier que tous les conteneurs sont en cours d'exécution
-docker-compose ps
+docker compose ps
 
 # Vérifier les logs
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ## 🌐 Accès aux services
 
-Une fois démarrés, vous pouvez accéder à :
+Tous les ports sont liés à `127.0.0.1` (Studio et postgres-meta n'ont aucune authentification).
+Depuis votre poste, passez par un tunnel SSH, par exemple :
 
-- **Supabase Studio** : http://votre-synology-ip:8080
-- **API REST** : http://votre-synology-ip:8000/rest/v1/
-- **API Auth** : http://votre-synology-ip:8000/auth/v1/
+```bash
+ssh -L 8080:127.0.0.1:8080 -L 8000:127.0.0.1:8000 <utilisateur>@<votre-nas>
+```
+
+- **Supabase Studio** : http://localhost:8080
+- **API REST** : http://localhost:8000/rest/v1/
+- **API Auth** : http://localhost:8000/auth/v1/
 - **PostgreSQL** : `localhost:5432` (depuis votre Synology)
 
 ## 🔑 Clés API
 
-Les clés API utilisées dans cette configuration sont :
+Les clés `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_KEY` sont des JWT signés avec
+`SUPABASE_JWT_SECRET`. Générez-les vous-même ; ne réutilisez jamais les clés de
+démonstration publiques de Supabase.
 
-- **ANON_KEY** : `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0`
-- **SERVICE_KEY** : `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU`
-
-⚠️ **Important** : Ces clés sont des clés de démonstration. Pour la production, générez de nouvelles clés avec un secret JWT différent.
+⚠️ D'anciennes versions de ce dépôt contenaient un mot de passe PostgreSQL et des clés
+en clair : ils doivent être considérés comme compromis et changés.
 
 ## 🔒 Sécurité
 
 ### Pour la production :
 
-1. **Changez tous les mots de passe** dans `docker-compose.yml`
-2. **Générez de nouvelles clés JWT** :
+1. **Définissez tous les secrets dans `.env`** (jamais dans `docker-compose.yml`)
+2. **Générez un secret JWT** :
    ```bash
-   openssl rand -base64 32
+   openssl rand -hex 32
    ```
-3. **Mettez à jour les clés** dans `docker-compose.yml` et `kong.yml`
-4. **Configurez un reverse proxy** (nginx) avec SSL/TLS
-5. **Restreignez l'accès** aux ports exposés avec un firewall
+3. **Mettez à jour les clés** dans `.env` et `kong.yml`
+4. **Configurez un reverse proxy** (nginx) avec SSL/TLS si un accès externe est nécessaire
+5. **Restreignez l'accès** : `GOTRUE_URI_ALLOW_LIST` explicite, inscription désactivée
+   (`GOTRUE_DISABLE_SIGNUP=true`) et pas d'auto-confirmation des e-mails par défaut
 
 ## 📊 Persistance des données
 
@@ -112,38 +139,11 @@ docker exec supabase-db psql -U postgres -c "\du"
 
 Vérifiez les logs :
 ```bash
-docker-compose logs studio
+docker compose logs studio
 ```
 
 ## 📝 Notes
 
 - Les ports peuvent être modifiés dans `docker-compose.yml` si nécessaire
-- Pour accéder depuis l'extérieur, configurez votre routeur pour rediriger les ports
+- PostgREST est publié sur 3005 (le port 3001 est celui du backend TeachDigital)
 - Les images Docker sont fixées à des versions spécifiques pour la stabilité
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -9,6 +9,7 @@ const handler = require('./api/index.js');
 const logger = require('./lib/logger.js');
 const { corsMiddleware } = require('./lib/cors.js');
 const crypto = require('crypto');
+const { getJwtSecretProblem, authenticateToken } = require('./lib/auth.js');
 
 // Charger les variables d'environnement du backend (.env / env) avant tout accès à process.env
 const { loadBackendEnv } = require('./lib/loadEnv.js');
@@ -24,14 +25,18 @@ const envStr = (key, fallback = undefined) => {
   return typeof val === 'string' ? val.trim() : val;
 };
 
-// Checks de configuration (stabilité prod)
-const jwtSecret = envStr('JWT_SECRET', '');
-if (!jwtSecret || String(jwtSecret).length < 16) {
-  logger.error('Configuration invalide: JWT_SECRET manquant ou trop court', {
-    hint: 'Définissez JWT_SECRET (>= 16 caractères) dans votre environnement'
+// Checks de configuration (sécurité prod) : un secret JWT connu permet de forger un jeton parent
+const jwtSecretProblem = getJwtSecretProblem();
+if (jwtSecretProblem) {
+  logger.error(`Configuration invalide: ${jwtSecretProblem}`, {
+    hint: 'Générez un secret aléatoire (ex: openssl rand -hex 32) et définissez JWT_SECRET'
   });
   process.exit(1);
 }
+
+// Adresse IP client fiable (rate limiting, logs) : seuls les proxys du réseau local/Docker
+// (nginx) sont crus pour X-Forwarded-For ; un client direct ne peut pas usurper son IP.
+app.set('trust proxy', envStr('TRUST_PROXY', 'loopback, linklocal, uniquelocal'));
 
 logger.info('Configuration runtime', {
   nodeEnv: process.env.NODE_ENV || 'production',
@@ -87,7 +92,7 @@ app.use((req, res, next) => {
       path: req.originalUrl,
       statusCode: res.statusCode,
       durationMs: Math.round(durationMs * 100) / 100,
-      ip: req.headers['x-forwarded-for'] || req.socket?.remoteAddress,
+      ip: req.ip || req.socket?.remoteAddress,
       userAgent: req.headers['user-agent']
     });
   });
@@ -95,16 +100,69 @@ app.use((req, res, next) => {
   next();
 });
 
+// Limites d'upload (les fichiers sont gardés en mémoire : il faut les borner)
+const UPLOAD_LIMITS = {
+  fileSize: parseInt(process.env.API_UPLOAD_MAX_FILE_BYTES || String(15 * 1024 * 1024), 10),
+  files: parseInt(process.env.API_UPLOAD_MAX_FILES || '10', 10),
+  fields: 50,
+  fieldSize: 1024 * 1024,
+  totalBytes: parseInt(process.env.API_UPLOAD_MAX_TOTAL_BYTES || String(25 * 1024 * 1024), 10)
+};
+
+// Seules les routes IA reçoivent des fichiers (multipart)
+function isUploadRoute(req) {
+  const path = req.path || '';
+  return path.startsWith('/api/ai/') || path.startsWith('/ai/');
+}
+
 // Middleware pour parser FormData avec busboy AVANT les autres middlewares
 app.use(async (req, res, next) => {
   const contentType = req.headers['content-type'] || '';
   if (contentType.includes('multipart/form-data')) {
+    if (!isUploadRoute(req)) {
+      return res.status(415).json({ success: false, message: 'Envoi de fichiers non accepté sur cette route', code: 'UNSUPPORTED_MEDIA_TYPE' });
+    }
+    // Vérifier le jeton AVANT de lire le corps : un client anonyme ne doit pas pouvoir
+    // faire charger des fichiers en mémoire (les droits admin sont vérifiés par la route).
+    try {
+      const user = authenticateToken(req);
+      if (!user.isAdmin) {
+        return res.status(403).json({ success: false, message: 'Accès refusé - Admin requis', code: 'FORBIDDEN' });
+      }
+    } catch (authError) {
+      return res.status(401).json({ success: false, message: authError.message, code: 'UNAUTHORIZED' });
+    }
+    const declaredLength = parseInt(req.headers['content-length'] || '0', 10);
+    if (declaredLength > UPLOAD_LIMITS.totalBytes) {
+      return res.status(413).json({ success: false, message: 'Fichiers trop volumineux', code: 'PAYLOAD_TOO_LARGE' });
+    }
     try {
       // Parser FormData avec busboy
       const Busboy = require('@fastify/busboy');
-      const busboy = Busboy({ headers: req.headers });
+      const busboy = Busboy({
+        headers: req.headers,
+        limits: {
+          fileSize: UPLOAD_LIMITS.fileSize,
+          files: UPLOAD_LIMITS.files,
+          fields: UPLOAD_LIMITS.fields,
+          fieldSize: UPLOAD_LIMITS.fieldSize
+        }
+      });
       const fields = {};
       const files = [];
+      let totalBytes = 0;
+      let rejected = false;
+
+      const rejectTooLarge = () => {
+        if (rejected) return;
+        rejected = true;
+        req.unpipe(busboy);
+        req.resume();
+        res.status(413).json({ success: false, message: 'Fichiers trop volumineux ou trop nombreux', code: 'PAYLOAD_TOO_LARGE' });
+      };
+
+      busboy.on('filesLimit', rejectTooLarge);
+      busboy.on('fieldsLimit', rejectTooLarge);
 
       busboy.on('file', (fieldname, file, info) => {
         let filename, mimetype;
@@ -117,10 +175,17 @@ app.use(async (req, res, next) => {
         }
 
         const chunks = [];
+        file.on('limit', rejectTooLarge);
         file.on('data', (chunk) => {
-          chunks.push(chunk);
+          totalBytes += chunk.length;
+          if (totalBytes > UPLOAD_LIMITS.totalBytes) {
+            rejectTooLarge();
+            return;
+          }
+          if (!rejected) chunks.push(chunk);
         });
         file.on('end', () => {
+          if (rejected) return;
           files.push({
             fieldname,
             filename,
@@ -141,6 +206,7 @@ app.use(async (req, res, next) => {
       });
 
       busboy.on('finish', () => {
+        if (rejected) return;
         // Stocker les données parsées dans req.body pour compatibilité
         req.body = {
           fields,
@@ -159,9 +225,11 @@ app.use(async (req, res, next) => {
           requestId: req.requestId,
           error: err?.message || String(err)
         });
+        if (rejected || res.headersSent) return;
+        rejected = true;
         return res.status(400).json({
           success: false,
-          message: 'Erreur lors du parsing FormData: ' + err.message
+          message: 'Erreur lors de la lecture des fichiers envoyés'
         });
       });
 
@@ -181,15 +249,38 @@ app.use(async (req, res, next) => {
 });
 
 // Middleware pour parser le body JSON et URL-encoded
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// 10 Mo : une page de cours HTML fait au plus 5 Mo (schemas.js), le reste est bien plus petit
+const JSON_BODY_LIMIT = envStr('API_JSON_BODY_LIMIT', '10mb');
+app.use(express.json({ limit: JSON_BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
+// Route de santé pour Docker (avant le routeur API, qui exige un jeton)
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
 
 // Utilisation du routeur API
 // /api : accès direct au backend (ex. santé, tests)
 // / : nginx Synology transmet sans le préfixe /api (proxy_pass .../), donc /auth/family-gate etc.
 app.use('/api', handler);
 app.use('/', handler);
+
+// Erreurs de parsing (JSON invalide, corps trop gros) : réponse propre, sans détails internes
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({ success: false, message: 'Requête trop volumineuse', code: 'PAYLOAD_TOO_LARGE' });
+  }
+  if (err?.type === 'entity.parse.failed') {
+    return res.status(400).json({ success: false, message: 'JSON invalide', code: 'BAD_REQUEST' });
+  }
+  logger.error('Erreur non gérée', { requestId: req.requestId, error: err?.message || String(err) });
+  return res.status(500).json({ success: false, message: 'Erreur interne du serveur', code: 'INTERNAL_ERROR' });
+});
 
 // Gestion des erreurs 404 pour les routes API non trouvées
 app.use('/api/*', (req, res) => {
@@ -198,15 +289,6 @@ app.use('/api/*', (req, res) => {
     message: 'Route API non trouvée',
     code: 'NOT_FOUND',
     data: null
-  });
-});
-
-// Route de santé pour Docker
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
   });
 });
 
@@ -236,25 +318,29 @@ async function runAutoMigrations() {
       `);
       
       logger.info('✅ Migration target_profile_id terminée avec succès');
-    } else {
-      // Correction : si l'ancienne migration a mis target_profile_id = profile_id (l'ID du parent),
-      // on remet à NULL pour que les anciens quiz soient visibles par tous les enfants.
-      // On détecte ça en cherchant les leçons où target = creator (parent) et le profil est admin.
-      const fixResult = await pool.query(`
-        UPDATE lessons l
-        SET target_profile_id = NULL
-        WHERE l.target_profile_id = l.profile_id
-          AND EXISTS (SELECT 1 FROM profiles p WHERE p.id = l.profile_id AND p.is_admin = true)
-      `);
-      if (fixResult.rowCount > 0) {
-        logger.info(`🔧 Correction: ${fixResult.rowCount} leçon(s) remises à target_profile_id=NULL (ancienne migration)`);
-      }
     }
+    // NB : l'ancienne « correction » qui remettait target_profile_id à NULL à chaque démarrage
+    // a été retirée : elle réécrivait aussi les leçons créées depuis (cachées puis visibles par tous).
   } catch (error) {
     logger.warn('⚠️ Migration auto-migration (non bloquant):', error.message);
   }
 
   await ensureCoursePagesTable();
+  await ensureQuizResultsCompletedColumn();
+}
+
+// Sauvegardes intermédiaires d'une page de cours : exclues des badges tant que la
+// session n'est pas terminée. Les résultats existants sont considérés comme terminés.
+async function ensureQuizResultsCompletedColumn() {
+  try {
+    const { pool } = require('./lib/database.js');
+    await pool.query(`
+      ALTER TABLE quiz_results
+      ADD COLUMN IF NOT EXISTS is_completed BOOLEAN NOT NULL DEFAULT TRUE
+    `);
+  } catch (error) {
+    logger.error('❌ Migration quiz_results.is_completed échouée:', error.message);
+  }
 }
 
 // Migration automatique : table des pages de cours HTML publiées pour un enfant
@@ -287,29 +373,34 @@ async function ensureCoursePagesTable() {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_quiz_results_course_page ON quiz_results(course_page_id)
     `);
+
   } catch (error) {
     logger.warn('⚠️ Migration course_pages (non bloquant):', error.message);
   }
 }
 
-// Démarrage du serveur
-const server = app.listen(PORT, '0.0.0.0', async () => {
-  logger.info(`Serveur TeachDigital démarré sur le port ${PORT}`);
-  logger.info(`Mode: ${process.env.NODE_ENV || 'production'}`);
-  logger.info(`URL: http://0.0.0.0:${PORT}`);
-  if (logger.enableFileLogging) {
-    logger.info(`Logs écrits dans: ${logger.logsDirectory}`);
-  }
-  
-  // Exécuter les migrations automatiques après le démarrage
+// Démarrage du serveur : migrations d'abord, pour ne pas servir de requêtes sur un schéma incomplet
+// (ex. course_pages / is_completed absents → statistiques en erreur 500)
+async function start() {
   await runAutoMigrations();
-});
 
-// Configuration des timeouts pour les opérations IA longues
-// 180 secondes (3 minutes) pour permettre la génération de quiz avec plusieurs documents
-server.timeout = 180000; // Timeout global du serveur
-server.keepAliveTimeout = 185000; // Légèrement plus long que timeout pour éviter les race conditions
-server.headersTimeout = 190000; // Plus long que keepAliveTimeout
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    logger.info(`Serveur TeachDigital démarré sur le port ${PORT}`);
+    logger.info(`Mode: ${process.env.NODE_ENV || 'production'}`);
+    logger.info(`URL: http://0.0.0.0:${PORT}`);
+    if (logger.enableFileLogging) {
+      logger.info(`Logs écrits dans: ${logger.logsDirectory}`);
+    }
+  });
+
+  // Configuration des timeouts pour les opérations IA longues
+  // 180 secondes (3 minutes) pour permettre la génération de quiz avec plusieurs documents
+  server.timeout = 180000; // Timeout global du serveur
+  server.keepAliveTimeout = 185000; // Légèrement plus long que timeout pour éviter les race conditions
+  server.headersTimeout = 190000; // Plus long que keepAliveTimeout
+}
+
+start();
 
 // Gestion des erreurs non capturées
 process.on('unhandledRejection', (reason, promise) => {

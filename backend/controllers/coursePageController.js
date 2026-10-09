@@ -1,5 +1,5 @@
 const { pool } = require('../lib/database.js');
-const { authenticateToken } = require('../lib/auth.js');
+const { authenticateToken, canActForProfile } = require('../lib/auth.js');
 const { handleError } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
 const logger = require('../lib/logger.js');
@@ -256,7 +256,11 @@ function parseResultBody(body) {
         return null;
     }
     const answers = body?.answers && typeof body.answers === 'object' ? body.answers : {};
-    return { profileId, score, totalQuestions, percentage: Math.round((score / totalQuestions) * 100), answers };
+    // completed = false pour les sauvegardes intermédiaires (toutes les 5 réponses) :
+    // la ligne n'est alors pas prise en compte par les badges ni les statistiques « terminées ».
+    // Absent = true (compatibilité avec les anciens clients qui n'envoient que la sauvegarde finale).
+    const completed = body?.completed !== false;
+    return { profileId, score, totalQuestions, percentage: Math.round((score / totalQuestions) * 100), answers, completed };
 }
 
 async function unlockBadges(profileId, coursePage, data) {
@@ -294,6 +298,10 @@ async function handleCoursePageResults(req, res) {
             res.status(400).json({ success: false, message: 'Données de résultat invalides' });
             return;
         }
+        if (!canActForProfile(req.user, data.profileId)) {
+            res.status(403).json({ success: false, message: 'Accès refusé', code: 'FORBIDDEN' });
+            return;
+        }
 
         // La page doit exister, être visible et destinée à cet enfant
         const pages = await query(
@@ -310,10 +318,10 @@ async function handleCoursePageResults(req, res) {
         let rows;
         if (req.method === 'POST') {
             rows = await query(
-                `INSERT INTO quiz_results (course_page_id, profile_id, score, total_questions, percentage, answers, completed_at)
-                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, NOW())
+                `INSERT INTO quiz_results (course_page_id, profile_id, score, total_questions, percentage, answers, is_completed, completed_at)
+                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, NOW())
                  RETURNING *`,
-                [coursePageId, data.profileId, data.score, data.totalQuestions, data.percentage, JSON.stringify(data.answers)],
+                [coursePageId, data.profileId, data.score, data.totalQuestions, data.percentage, JSON.stringify(data.answers), data.completed],
                 'sauvegarde du résultat de page de cours'
             );
         } else {
@@ -324,10 +332,10 @@ async function handleCoursePageResults(req, res) {
             }
             rows = await query(
                 `UPDATE quiz_results
-                 SET score = $1, total_questions = $2, percentage = $3, answers = $4::jsonb, completed_at = NOW()
+                 SET score = $1, total_questions = $2, percentage = $3, answers = $4::jsonb, is_completed = $8, completed_at = NOW()
                  WHERE id = $5 AND course_page_id = $6 AND profile_id = $7
                  RETURNING *`,
-                [data.score, data.totalQuestions, data.percentage, JSON.stringify(data.answers), resultId, coursePageId, data.profileId],
+                [data.score, data.totalQuestions, data.percentage, JSON.stringify(data.answers), resultId, coursePageId, data.profileId, data.completed],
                 'mise à jour du résultat de page de cours'
             );
             if (!rows[0]) {
@@ -336,7 +344,8 @@ async function handleCoursePageResults(req, res) {
             }
         }
 
-        const unlockedBadges = await unlockBadges(data.profileId, coursePage, data);
+        // Badges évalués uniquement sur une session terminée (pas sur un 5/5 intermédiaire)
+        const unlockedBadges = data.completed ? await unlockBadges(data.profileId, coursePage, data) : [];
 
         res.status(req.method === 'POST' ? 201 : 200).json({
             success: true,

@@ -1,5 +1,5 @@
 const { sql } = require('../lib/database.js');
-const { authenticateToken, authenticateUser } = require('../lib/auth.js');
+
 const { runCors } = require('../lib/cors.js');
 const { createResponse, createErrorResponse } = require('../lib/response.js');
 
@@ -101,7 +101,7 @@ module.exports = async function handler(req, res) {
 
   } catch (error) {
     console.error('Erreur dans le gestionnaire badges:', error);
-    return res.status(500).json(createErrorResponse('Erreur serveur interne: ' + error.message, { stack: error.stack }));
+    return res.status(500).json(createErrorResponse('Erreur serveur interne'));
   }
 }
 

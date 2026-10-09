@@ -10,7 +10,6 @@ const DeepSeekProvider = require('./deepseek.js');
 const GroqProvider = require('./groq.js');
 const MistralProvider = require('./mistral.js');
 const KimiProvider = require('./kimi.js');
-const { getDemoAnalysis, getDemoQuiz } = require('../../utils/validation.js');
 
 /**
  * Crée et retourne tous les providers disponibles dans l'ordre de priorité
@@ -67,6 +66,14 @@ function getAvailableProviders() {
     return providers;
 }
 
+// Le message contient « Tous les services IA ont échoué » : reconnu par les routes (api/ai/index.js) → 503
+function createAllProvidersFailedError(reason) {
+    console.warn(`⚠️ ${reason}`);
+    const error = new Error(`Tous les services IA ont échoué : ${reason}`);
+    error.code = 'AI_UNAVAILABLE';
+    return error;
+}
+
 /**
  * Analyse un texte avec fallback automatique entre providers
  * @param {string} extractedText - Texte à analyser
@@ -76,8 +83,7 @@ async function analyzeWithAI(extractedText) {
     const providers = getAvailableProviders();
 
     if (providers.length === 0) {
-        console.warn('⚠️ Aucun provider IA disponible, utilisation du mode démo');
-        return getDemoAnalysis();
+        throw createAllProvidersFailedError('Aucun provider IA configuré');
     }
 
     for (const provider of providers) {
@@ -92,9 +98,8 @@ async function analyzeWithAI(extractedText) {
         }
     }
 
-    // Si tous les providers ont échoué, utiliser le mode démo
-    console.warn('⚠️ Tous les providers IA ont échoué, utilisation du mode démo');
-    return getDemoAnalysis();
+    // Ne pas renvoyer un faux contenu « démo » comme s'il venait de l'IA : la route répond 503
+    throw createAllProvidersFailedError('Tous les providers IA ont échoué (analyse)');
 }
 
 /**
@@ -108,8 +113,7 @@ async function generateQuizWithAI(analysis, childProfile, questionCount = 5) {
     const providers = getAvailableProviders();
 
     if (providers.length === 0) {
-        console.warn('⚠️ Aucun provider IA disponible, utilisation du mode démo');
-        return getDemoQuiz(childProfile);
+        throw createAllProvidersFailedError('Aucun provider IA configuré');
     }
 
     console.log(`🎯 Génération de quiz avec ${questionCount} questions demandées`);
@@ -126,9 +130,8 @@ async function generateQuizWithAI(analysis, childProfile, questionCount = 5) {
         }
     }
 
-    // Si tous les providers ont échoué, utiliser le mode démo
-    console.warn('⚠️ Tous les providers IA ont échoué, utilisation du mode démo');
-    return getDemoQuiz(childProfile);
+    // Ne pas renvoyer un faux quiz « démo » comme s'il venait de l'IA : la route répond 503
+    throw createAllProvidersFailedError('Tous les providers IA ont échoué (quiz)');
 }
 
 module.exports = {

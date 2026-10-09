@@ -4,6 +4,7 @@
 
 const { handleYoutubeVideos } = require('../../controllers/youtubeController.js');
 const {
+  describeWithDb,
   createTestProfile,
   createTestPin,
   generateTestToken,
@@ -12,7 +13,7 @@ const {
   createMockResponse
 } = require('../helpers/testHelpers.js');
 
-describe('API Endpoints - Vidéos YouTube', () => {
+describeWithDb('API Endpoints - Vidéos YouTube', () => {
   let testProfile;
   let testProfileIds = [];
 

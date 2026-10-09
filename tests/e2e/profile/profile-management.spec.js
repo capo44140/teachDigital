@@ -1,17 +1,19 @@
 import { test, expect } from '@playwright/test'
-import { loginAsParent, waitForAppLoad, cleanupTestData, createTestProfile } from '../utils/test-helpers.js'
+import { loginAsParent, waitForAppLoad, cleanupTestData, createTestProfile, passFamilyGate } from '../utils/test-helpers.js'
 import { selectors, testProfiles, formData } from '../utils/fixtures.js'
 
 test.describe('Gestion des Profils', () => {
   test.beforeEach(async ({ page }) => {
     await cleanupTestData(page)
+    // Toutes les pages exigent désormais le code familial (jeton famille)
+    await passFamilyGate(page)
   })
 
   test('devrait afficher la page de gestion des profils pour un parent', async ({ page }) => {
     await loginAsParent(page)
     
     // Naviguer vers la gestion des profils
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Vérifier que la page de gestion des profils est affichée
@@ -21,7 +23,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait afficher la liste des profils existants', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Vérifier que les profils sont listés
@@ -32,7 +34,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait permettre de créer un nouveau profil enfant', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Cliquer sur le bouton d'ajout de profil
@@ -57,7 +59,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait permettre de créer un nouveau profil adolescent', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Cliquer sur le bouton d'ajout de profil
@@ -79,7 +81,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait valider les données du formulaire', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Cliquer sur le bouton d'ajout de profil
@@ -96,7 +98,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait permettre de modifier un profil existant', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Cliquer sur le bouton d'édition du premier profil
@@ -119,7 +121,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait permettre de supprimer un profil', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Compter le nombre de profils avant suppression
@@ -139,7 +141,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait permettre d\'annuler la suppression d\'un profil', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Compter le nombre de profils avant tentative de suppression
@@ -158,7 +160,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait afficher les informations détaillées d\'un profil', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Cliquer sur un profil pour voir les détails
@@ -175,7 +177,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait permettre de filtrer les profils par type', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Filtrer par type "enfant"
@@ -188,7 +190,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait permettre de rechercher un profil', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Rechercher un profil par nom
@@ -201,7 +203,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait permettre de trier les profils', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Trier par nom
@@ -219,7 +221,7 @@ test.describe('Gestion des Profils', () => {
     
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Vérifier que la page s'adapte à la taille de l'écran
@@ -233,7 +235,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait être accessible au clavier', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Naviguer avec Tab
@@ -262,7 +264,7 @@ test.describe('Gestion des Profils', () => {
 
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Essayer de créer un profil
@@ -284,7 +286,7 @@ test.describe('Gestion des Profils', () => {
 
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Vérifier qu'un indicateur de chargement est affiché
@@ -294,7 +296,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait permettre d\'exporter la liste des profils', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Cliquer sur le bouton d'export
@@ -311,7 +313,7 @@ test.describe('Gestion des Profils', () => {
   test('devrait permettre d\'importer des profils', async ({ page }) => {
     await loginAsParent(page)
     
-    await page.goto('/manage-profiles?profile=1&unlocked=true')
+    await page.goto('/manage-profiles?profile=1')
     await waitForAppLoad(page)
     
     // Cliquer sur le bouton d'import

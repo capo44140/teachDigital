@@ -89,7 +89,7 @@
         <div class="mt-4 p-4 bg-blue-50 rounded-md">
           <h4 class="text-sm font-medium text-blue-800 mb-2">Mode Test</h4>
           <p class="text-xs text-blue-700">
-            Pour tester, utilisez le profil "Parent" avec le code PIN "1234"
+            Utilisez le code PIN du profil choisi. Code oublié : un parent peut le réinitialiser depuis le serveur.
           </p>
         </div>
       </form>

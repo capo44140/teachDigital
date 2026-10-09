@@ -65,15 +65,15 @@ if (-not (Test-Path $EnvFile)) {
 # ====================================
 
 # Base de Données PostgreSQL
-DATABASE_URL=postgresql://teachdigital:change_me_password@host.docker.internal:5432/teachdigital
+# DATABASE_URL=postgresql://teachdigital:<db-password>@host.docker.internal:5432/teachdigital
 DB_HOST=host.docker.internal
 DB_PORT=5432
 DB_USER=teachdigital
-DB_PASSWORD=change_me_password
+DB_PASSWORD=
 DB_NAME=teachdigital
 
 # JWT Secret
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+JWT_SECRET=__GENERATED_JWT_SECRET__
 
 # API Keys (Optionnelles)
 OPENAI_API_KEY=
@@ -100,6 +100,11 @@ LOGS_VOLUME=/volume1/docker/teachdigital/backend/logs
 OUTPUT_VOLUME=/volume1/docker/teachdigital/backend/output
 TEMP_VOLUME=/volume1/docker/teachdigital/backend/temp
 '@
+        # Secret JWT aléatoire (CSPRNG) : jamais de valeur par défaut connue
+        $jwtBytes = New-Object byte[] 32
+        [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($jwtBytes)
+        $jwtSecret = -join ($jwtBytes | ForEach-Object { $_.ToString('x2') })
+        $content = $content.Replace('__GENERATED_JWT_SECRET__', $jwtSecret)
         Set-Content -Path $EnvFile -Value $content -Encoding UTF8
         Write-Success "Fichier $EnvFile créé pour Synology"
         Write-Warning "Éditez $EnvFile et configurez vos paramètres Synology"
@@ -110,15 +115,15 @@ TEMP_VOLUME=/volume1/docker/teachdigital/backend/temp
 # ====================================
 
 # Base de Données PostgreSQL
-DATABASE_URL=postgresql://teachdigital:change_me_password@host.docker.internal:5432/teachdigital
+# DATABASE_URL=postgresql://teachdigital:<db-password>@host.docker.internal:5432/teachdigital
 DB_HOST=host.docker.internal
 DB_PORT=5432
 DB_USER=teachdigital
-DB_PASSWORD=change_me_password
+DB_PASSWORD=
 DB_NAME=teachdigital
 
 # JWT Secret
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+JWT_SECRET=__GENERATED_JWT_SECRET__
 
 # API Keys (Optionnelles)
 OPENAI_API_KEY=
@@ -145,6 +150,11 @@ LOGS_VOLUME=./logs
 OUTPUT_VOLUME=./output
 TEMP_VOLUME=./temp
 '@
+        # Secret JWT aléatoire (CSPRNG) : jamais de valeur par défaut connue
+        $jwtBytes = New-Object byte[] 32
+        [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($jwtBytes)
+        $jwtSecret = -join ($jwtBytes | ForEach-Object { $_.ToString('x2') })
+        $content = $content.Replace('__GENERATED_JWT_SECRET__', $jwtSecret)
         Set-Content -Path $EnvFile -Value $content -Encoding UTF8
         Write-Success "Fichier $EnvFile créé pour développement local"
     }
@@ -182,7 +192,7 @@ try {
 # 4. Build l'image
 Write-Header "Build de l'image Docker"
 Write-Info "Building teachdigital-backend:latest..."
-docker-compose build
+docker-compose --env-file $EnvFile build
 
 Write-Header "Setup Complété ✅"
 Write-Host ""
@@ -190,10 +200,10 @@ Write-Success "Configuration Docker Compose prête !"
 Write-Host ""
 Write-Host "Prochaines étapes:" -ForegroundColor Cyan
 Write-Host "1. Éditez le fichier: notepad $EnvFile"
-Write-Host "2. Configurez vos paramètres (DB_PASSWORD, JWT_SECRET, etc.)"
+Write-Host "2. Configurez vos paramètres (DB_PASSWORD, DB_HOST, etc. - JWT_SECRET est déjà généré)"
 Write-Host "3. Lancez le conteneur:"
 Write-Host ""
-Write-Host "   docker-compose up -d" -ForegroundColor Yellow
+Write-Host "   docker-compose --env-file $EnvFile up -d" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "4. Vérifiez le statut:"
 Write-Host ""

@@ -218,10 +218,10 @@ export default {
   },
   methods: {
     async loadCurrentProfile() {
-      const profileId = this.$route.query.profile || localStorage.getItem('selectedProfile')
+      const profileId = this.$route.query.profile || this.profileStore.selectedProfile?.id
       if (profileId) {
         await this.profileStore.loadProfiles()
-        this.currentProfile = this.profileStore.getProfileById(profileId)
+        this.currentProfile = this.profileStore.getProfileById(profileId) || this.profileStore.getProfileById(Number(profileId))
       }
     },
     

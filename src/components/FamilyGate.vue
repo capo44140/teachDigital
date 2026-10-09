@@ -38,12 +38,16 @@
             v-for="number in 9"
             :key="number"
             class="glass-button-pin h-12"
+            :data-testid="`family-gate-digit-${number}`"
+            :disabled="isLocked || isChecking"
             @click="addDigit(number)"
           >
             {{ number }}
           </button>
           <button
             class="glass-button-pin h-12 col-start-2"
+            data-testid="family-gate-digit-0"
+            :disabled="isLocked || isChecking"
             @click="addDigit(0)"
           >
             0
@@ -83,12 +87,17 @@ export default {
       currentDigit: 0,
       errorMessage: '',
       attempts: 0,
-      isLocked: false
+      isLocked: false,
+      isChecking: false,
+      unlockTimer: null
     }
+  },
+  beforeUnmount () {
+    if (this.unlockTimer) clearTimeout(this.unlockTimer)
   },
   methods: {
     addDigit (digit) {
-      if (this.isLocked) return
+      if (this.isLocked || this.isChecking) return
       if (this.currentDigit < 4) {
         this.pinDigits[this.currentDigit] = String(digit)
         this.currentDigit++
@@ -98,47 +107,69 @@ export default {
       }
     },
     removeDigit () {
+      if (this.isChecking) return
       if (this.currentDigit > 0) {
         this.currentDigit--
         this.pinDigits[this.currentDigit] = ''
-        this.errorMessage = ''
+        if (!this.isLocked) this.errorMessage = ''
       }
     },
     async checkCode () {
-      if (this.isLocked) return
+      if (this.isLocked || this.isChecking) return
       const pin = this.pinDigits.join('')
+      this.isChecking = true
       try {
         const response = await apiService.request('/api/auth/family-gate', {
           method: 'POST',
           body: JSON.stringify({ pin })
         })
-        if (response?.success && response?.data?.valid) {
-          familyGateService.createFamilySession()
-          this.$router.push('/')
+        // Le serveur renvoie un jeton famille (~24 h) à présenter sur chaque appel API
+        if (response?.success && response?.data?.valid && familyGateService.createFamilySession(response.data)) {
+          this.$router.push(this.redirectTarget())
         } else {
-          this.failAttempt()
+          this.failAttempt('Code incorrect')
         }
       } catch (err) {
-        const msg = err?.message || err?.data?.message || 'Code incorrect'
-        this.attempts++
-        if (this.attempts >= MAX_ATTEMPTS) {
-          this.isLocked = true
-          this.errorMessage = 'Trop de tentatives. Réessayez plus tard.'
+        if (err?.status === 429) {
+          this.lockFor(err.retryAfterSeconds || 60, err.message)
+        } else if (err?.status === 401) {
+          this.failAttempt('Code incorrect')
         } else {
-          this.errorMessage = `${msg}. Tentatives restantes : ${MAX_ATTEMPTS - this.attempts}`
+          this.errorMessage = err?.message || 'Erreur de connexion. Veuillez réessayer.'
           setTimeout(() => this.resetPin(), 1000)
         }
+      } finally {
+        this.isChecking = false
       }
     },
-    failAttempt () {
+    // Page demandée avant le code familial (chemin interne uniquement)
+    redirectTarget () {
+      const target = this.$route.query.redirect
+      if (typeof target === 'string' && target.startsWith('/') && !target.startsWith('//') && !target.startsWith('/family-gate')) {
+        return target
+      }
+      return '/'
+    },
+    failAttempt (message) {
       this.attempts++
       if (this.attempts >= MAX_ATTEMPTS) {
-        this.isLocked = true
-        this.errorMessage = 'Trop de tentatives. Réessayez plus tard.'
+        this.lockFor(60, 'Trop de tentatives. Réessayez plus tard.')
       } else {
-        this.errorMessage = `Code incorrect. Tentatives restantes : ${MAX_ATTEMPTS - this.attempts}`
+        this.errorMessage = `${message}. Tentatives restantes : ${MAX_ATTEMPTS - this.attempts}`
         setTimeout(() => this.resetPin(), 1000)
       }
+    },
+    lockFor (seconds, message) {
+      this.isLocked = true
+      this.errorMessage = message || 'Trop de tentatives. Réessayez plus tard.'
+      this.resetPin()
+      if (this.unlockTimer) clearTimeout(this.unlockTimer)
+      this.unlockTimer = setTimeout(() => {
+        this.isLocked = false
+        this.attempts = 0
+        this.errorMessage = ''
+        this.unlockTimer = null
+      }, seconds * 1000)
     },
     resetPin () {
       this.pinDigits = ['', '', '', '']

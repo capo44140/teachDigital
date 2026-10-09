@@ -3,7 +3,7 @@
  * Gère les routes pour la génération de quiz basée sur l'IA
  */
 
-const { authenticateToken } = require('../../lib/auth.js');
+
 const { runCors } = require('../../lib/cors.js');
 const { createResponse, createErrorResponse } = require('../../lib/response.js');
 
@@ -48,14 +48,7 @@ module.exports = async function handler(req, res) {
 
     let url;
     try {
-        // Authentification requise pour toutes les routes IA
-        try {
-            const user = authenticateToken(req);
-            // Si on arrive ici, l'authentification a réussi
-        } catch (authError) {
-            console.error('❌ Erreur d\'authentification:', authError.message);
-            return res.status(401).json(createErrorResponse('Token d\'authentification invalide ou manquant'));
-        }
+        // Authentification parent (requireAdmin) appliquée par le routeur (api/index.js)
 
         const { method } = req;
         url = new URL(req.url, `http://${req.headers.host}`);
@@ -118,7 +111,7 @@ module.exports = async function handler(req, res) {
             pathname: url?.pathname,
             method: req.method
         });
-        return res.status(500).json(createErrorResponse('Erreur serveur interne: ' + error.message));
+        return res.status(500).json(createErrorResponse('Erreur serveur interne'));
     }
 };
 
@@ -168,6 +161,11 @@ async function handleGenerateQuizFromImage(req, res) {
         return res.status(200).json(createResponse('Quiz généré avec succès', { quiz: validated.quiz, warnings: validated.warnings }));
     } catch (error) {
         console.error('Erreur lors de la génération du quiz depuis image:', error);
+        if (error.code === 'AI_UNAVAILABLE') {
+            return res.status(503).json(createErrorResponse(
+                'Impossible de générer le quiz : aucun service d\'intelligence artificielle disponible. Vérifiez la configuration des clés API.'
+            ));
+        }
         return res.status(500).json(createErrorResponse('Erreur lors de la génération du quiz: ' + error.message));
     }
 }
@@ -847,7 +845,7 @@ async function handleGetProviders(req, res) {
                 keyConfigured: isLocalLLMAvailable(),
                 model: localLLMConfig.getActiveModel(),
                 checkUrl: `${localLLMConfig.getBaseUrl()}/models`,
-                timeout: 380000
+                timeout: 15000
             },
             {
                 name: 'OpenAI',

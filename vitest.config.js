@@ -11,6 +11,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      // Mesurer uniquement le code applicatif front (pas backend/, scripts/, dist/...)
+      include: ['src/**/*.{js,vue}'],
       exclude: [
         'node_modules/',
         'dist/',
@@ -20,15 +22,12 @@ export default defineConfig({
         '**/coverage/**',
         '**/public/**',
         '**/scripts/**'
-      ],
-      thresholds: {
-        global: {
-          branches: 80,
-          functions: 80,
-          lines: 80,
-          statements: 80
-        }
-      }
+      ]
+      // Pas de seuils de couverture pour l'instant : l'ancienne clé `thresholds.global`
+      // (syntaxe Jest) était ignorée par Vitest, et la couverture réelle de src/ est
+      // très faible (quelques services seulement). Réintroduire des seuils réalistes
+      // au niveau racine quand la couverture aura progressé, par ex. :
+      // thresholds: { lines: 20, functions: 20, branches: 20, statements: 20 }
     },
     include: [
       'src/**/*.{test,spec}.{js,ts}',

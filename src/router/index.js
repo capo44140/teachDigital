@@ -3,6 +3,8 @@ import { useProfileStore } from '../stores/profileStore.js'
 import { useApiStore } from '../stores/apiStore.js'
 import sessionService from '../services/sessionService.js'
 import familyGateService from '../services/familyGateService.js'
+import { apiService } from '../services/apiService.js'
+import { hasParentAccess } from '../services/parentAccessService.js'
 
 // Imports dynamiques optimisés avec chunking intelligent
 // Composants critiques (chargés immédiatement)
@@ -66,7 +68,9 @@ const routes = [
   {
     path: '/family-gate',
     name: 'FamilyGate',
-    component: FamilyGate
+    component: FamilyGate,
+    // Seule route accessible sans session famille
+    meta: { public: true }
   },
   {
     path: '/',
@@ -200,7 +204,8 @@ const routes = [
     path: '/progress-tracking',
     name: 'ProgressTracking',
     component: ProgressTracking,
-    meta: { requiresAuth: true }
+    // Page enfant (?childId=) : profil enfant/ado exigé, consultable aussi depuis l'espace parent
+    meta: { requiresChildOrTeen: true }
   },
   {
     path: '/parent-progress-tracking',
@@ -248,7 +253,8 @@ const routes = [
     path: '/badge-manager',
     name: 'BadgeManager',
     component: BadgeManager,
-    meta: { requiresAuth: true }
+    // Page enfant (?profile=) : profil enfant/ado exigé
+    meta: { requiresChildOrTeen: true }
   },
   {
     path: '/badge-admin-manager',
@@ -292,22 +298,38 @@ const router = createRouter({
   routes
 })
 
-// Guard de navigation simplifié pour éviter les boucles infinies
-router.beforeEach(async (to, from, next) => {
-  // Éviter les boucles infinies en vérifiant si on est déjà en train de rediriger
-  if (to.path === from.path) {
-    next()
-    return
+/**
+ * Retrouver un profil (id string ou number) dans le store, après chargement
+ */
+async function findProfile (profileId) {
+  const profileStore = useProfileStore()
+  await profileStore.loadProfiles()
+  return profileStore.getProfileById(profileId) ||
+    profileStore.getProfileById(Number(profileId)) ||
+    profileStore.getProfileById(String(profileId)) ||
+    null
+}
+
+// Accès parent : session parent déverrouillée ET jeton admin du même profil
+export { hasParentAccess }
+
+/**
+ * Guard de navigation.
+ * Pas de court-circuit « même chemin » : au démarrage, from.path vaut '/' et
+ * cela sautait le code familial. vue-router n'exécute de toute façon pas les
+ * guards pour une navigation dupliquée, et aucune redirection ci-dessous ne boucle
+ * (/family-gate est public ; /pin-lock et / n'exigent que la session famille).
+ */
+export async function navigationGuard (to) {
+  // Code d'entrée familial : seule page publique
+  if (to.meta.public) {
+    return true
   }
 
-  // Code d'entrée familial : accès à / (sélection de profils) uniquement si session famille valide
-  if (to.path === '/family-gate') {
-    next()
-    return
-  }
-  if (to.path === '/' && !familyGateService.hasValidFamilySession()) {
-    next({ path: '/family-gate' })
-    return
+  // Toutes les autres pages exigent une session famille valide (jeton non expiré)
+  if (!familyGateService.hasValidFamilySession()) {
+    const query = to.fullPath && to.fullPath !== '/' ? { redirect: to.fullPath } : {}
+    return { path: '/family-gate', query }
   }
 
   // Vérifier l'authentification API
@@ -320,106 +342,76 @@ router.beforeEach(async (to, from, next) => {
     }
 
     if (!apiStore.isAuthenticated) {
-      console.log('Redirection vers la page de connexion API')
-      next({ path: '/api-login' })
-      return
+      return { path: '/api-login' }
     }
   }
 
-  // Vérifier les pages qui nécessitent des permissions admin
+  // Pages parent : session parent + jeton admin du même profil
   if (to.meta.requiresAdmin) {
-    const profileId = to.query.profile
-    const isUnlocked = to.query.unlocked === 'true'
-    let currentProfile = null
-
-    // Si l'accès est déverrouillé (après vérification du PIN), vérifier qu'une session valide existe
-    if (isUnlocked) {
-      // Vérifier qu'une session valide existe pour ce profil
-      // Comparaison souple (string vs number) avec == au lieu de ===
-      const session = sessionService.getValidSession()
-      if (session && String(session.profileId) === String(profileId) && session.isUnlocked) {
-        console.log('Accès autorisé après vérification du PIN avec session valide')
-        next()
-        return
-      } else {
-        // Si unlocked=true mais pas de session valide, rediriger vers la page PIN
-        console.warn('Accès déverrouillé demandé mais session invalide, redirection vers PIN')
-        next({
-          path: '/pin-lock',
-          query: {
-            profile: profileId,
-            name: 'Parent'
-          }
-        })
-        return
-      }
-    }
-
-    // Vérifier si une session valide existe
     const session = sessionService.getValidSession()
-    if (session && String(session.profileId) === String(profileId) && session.isUnlocked) {
-      console.log('Accès autorisé par session valide pour:', session.profileName)
-      // Prolonger la session
+    const profileId = to.query.profile || session?.profileId || null
+
+    if (hasParentAccess(profileId)) {
+      // Prolonger la session parent
       sessionService.extendSession()
-      next()
-      return
+      return true
     }
 
+    console.warn('Accès parent refusé (PIN requis):', to.path)
     if (profileId) {
-      try {
-        const profileStore = useProfileStore()
-        await profileStore.loadProfiles()
-        // Comparer avec les deux types (string et number) pour getProfileById
-        currentProfile = profileStore.getProfileById(profileId) || profileStore.getProfileById(Number(profileId))
-      } catch (error) {
-        console.error('Erreur lors du chargement du profil:', error)
-      }
+      return { path: '/pin-lock', query: { profile: String(profileId) } }
     }
-
-    if (!currentProfile || !currentProfile.is_admin) {
-      console.warn('Accès refusé à la page admin:', to.path)
-      next({ path: '/' })
-      return
-    }
+    return { path: '/' }
   }
 
-  // Vérifier les pages qui nécessitent des permissions enfant/adolescent
+  // Pages enfant/adolescent (?profile= ou ?childId=)
   if (to.meta.requiresChildOrTeen) {
-    const profileId = to.query.profile
+    const profileId = to.query.profile || to.query.childId
     let currentProfile = null
+    let lookupFailed = false
 
     if (profileId) {
       try {
-        const profileStore = useProfileStore()
-        await profileStore.loadProfiles()
-
-        // Essayer avec l'ID comme string et comme number
-        currentProfile = profileStore.getProfileById(profileId)
-        if (!currentProfile) {
-          currentProfile = profileStore.getProfileById(parseInt(profileId))
-        }
-        if (!currentProfile) {
-          currentProfile = profileStore.getProfileById(String(profileId))
-        }
+        currentProfile = await findProfile(profileId)
       } catch (error) {
         console.error('Erreur lors du chargement du profil:', error)
+        lookupFailed = true
       }
     }
 
     if (!currentProfile || (!currentProfile.is_child && !currentProfile.is_teen)) {
-      // Solution temporaire : créer un profil par défaut si aucun profil n'est trouvé
-      if (to.path === '/user-dashboard') {
-        next()
-        return
+      // Tableau de bord enfant : toléré si les profils n'ont pas pu être chargés (hors ligne…)
+      if (to.path === '/user-dashboard' && lookupFailed) {
+        return true
       }
-
-      next({ path: '/' })
-      return
+      return { path: '/' }
     }
   }
 
-  // Pour toutes les autres pages, permettre l'accès
-  next()
+  // Pour toutes les autres pages, la session famille suffit
+  return true
+}
+
+router.beforeEach(navigationGuard)
+
+/**
+ * Session refusée par le serveur (401) :
+ * - jeton famille → retour au code familial ;
+ * - jeton parent → nouveau PIN si l'on est dans l'espace parent.
+ */
+apiService.setAuthErrorHandler(({ kind }) => {
+  const current = router.currentRoute.value
+  if (kind === 'family') {
+    if (!current.meta?.public) {
+      router.replace({ path: '/family-gate' }).catch(() => {})
+    }
+    return
+  }
+  if (current.meta?.requiresAdmin) {
+    const profileId = current.query.profile
+    const target = profileId ? { path: '/pin-lock', query: { profile: String(profileId) } } : { path: '/' }
+    router.replace(target).catch(() => {})
+  }
 })
 
 export default router

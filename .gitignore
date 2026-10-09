@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Lockfiles d'autres gestionnaires (pnpm est le seul gestionnaire du projet)
+package-lock.json
+yarn.lock
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -23,19 +27,26 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables
+# Environment variables / secrets (seuls les fichiers *.example sont versionnés)
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-backend/.env
-backend/.env.local
+.env.*
+!.env.example
+# backend/lib/loadEnv.js lit aussi un fichier `env` (sans point) en développement
+/backend/env
+# Certificats TLS
+ssl/
+*.pem
+*.key
 
-# Synology deployment config
+# Synology deployment config (hôte, utilisateur, chemins)
 .synology-deploy.json
+.synology-deploy-frontend.json
 
-# Vercel
+# Sorties runtime du backend (volumes Docker)
+backend/output/
+backend/temp/
+
+# Vercel (historique)
 .vercel
 
 # Playwright
@@ -48,5 +59,10 @@ blob-report/
 coverage/
 *.lcov
 
-# Claude Code agent worktrees
+# Rapports Lighthouse
+lighthouse-report.html
+lighthouse-*.json
+
+# Claude Code
 .claude/worktrees/
+.claude/settings.local.json

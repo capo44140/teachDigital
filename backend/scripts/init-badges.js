@@ -5,7 +5,7 @@
  * Ce script crée des badges de démonstration dans la base de données
  */
 
-import sql from '../lib/database.js';
+const { default: sql } = require('../lib/database.js');
 
 // Badges par défaut à créer
 const defaultBadges = [
@@ -294,7 +294,7 @@ async function initializeBadges() {
 }
 
 // Exécuter le script
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   initializeBadges()
     .then(() => {
       console.log('✨ Script terminé.');
@@ -306,4 +306,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     });
 }
 
-export { initializeBadges, defaultBadges };
+module.exports = { initializeBadges, defaultBadges };

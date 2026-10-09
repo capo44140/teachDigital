@@ -14,10 +14,11 @@ const TIMEOUTS = {
 };
 
 function withQueryTimeout(queryPromise, timeoutMs = TIMEOUTS.DEFAULT, operationName = 'requête') {
+    let timeoutId;
     return Promise.race([
         queryPromise,
         new Promise((_, reject) => {
-            setTimeout(() => {
+            timeoutId = setTimeout(() => {
                 const err = new Error(`Timeout ${operationName} après ${timeoutMs}ms`);
                 err.code = 'GATEWAY_TIMEOUT';
                 err.isTimeout = true;
@@ -26,7 +27,7 @@ function withQueryTimeout(queryPromise, timeoutMs = TIMEOUTS.DEFAULT, operationN
                 reject(err);
             }, timeoutMs);
         })
-    ]);
+    ]).finally(() => clearTimeout(timeoutId));
 }
 
 module.exports = {

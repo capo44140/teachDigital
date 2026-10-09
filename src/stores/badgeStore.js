@@ -1,6 +1,17 @@
 import { defineStore } from 'pinia'
 import badgeService from '../services/badgeService.js'
 
+const emptyBadgeStats = () => ({
+  total: 0,
+  unlocked: 0,
+  locked: 0,
+  points: 0,
+  percentage: 0
+})
+
+// Identifiant de la dernière requête de badges de profil (les réponses plus anciennes sont ignorées)
+let latestProfileBadgesRequest = 0
+
 /**
  * Store pour la gestion des badges
  */
@@ -16,13 +27,7 @@ export const useBadgeStore = defineStore('badge', {
     unlockedBadges: [],
 
     // Statistiques du profil actuel
-    badgeStats: {
-      total: 0,
-      unlocked: 0,
-      locked: 0,
-      points: 0,
-      percentage: 0
-    },
+    badgeStats: emptyBadgeStats(),
 
     // Badges récemment débloqués
     recentBadges: [],
@@ -128,31 +133,48 @@ export const useBadgeStore = defineStore('badge', {
 
     /**
      * Charger les badges d'un profil
+     * Au changement de profil, l'état est vidé pour ne jamais afficher les badges
+     * du profil précédent ; une réponse arrivée après une requête plus récente est ignorée.
      * @param {number} profileId - ID du profil
      */
     async loadProfileBadges (profileId) {
+      const requestId = ++latestProfileBadgesRequest
+      const isStale = () => requestId !== latestProfileBadgesRequest
+
+      if (String(this.currentProfileId) !== String(profileId)) {
+        this.profileBadges = []
+        this.unlockedBadges = []
+        this.badgeStats = emptyBadgeStats()
+        this.recentBadges = []
+      }
       this.loading = true
       this.error = null
       this.currentProfileId = profileId
 
       try {
-        // Charger les badges avec progression
-        this.profileBadges = await badgeService.getProfileBadges(profileId)
+        const [profileBadges, unlockedBadges, badgeStats, recentBadges] = await Promise.all([
+          // Badges avec progression
+          badgeService.getProfileBadges(profileId),
+          // Badges débloqués
+          badgeService.getUnlockedBadges(profileId),
+          // Statistiques
+          badgeService.getBadgeStats(profileId),
+          // Badges récents
+          badgeService.getRecentlyUnlockedBadges(profileId, 5)
+        ])
+        if (isStale()) return
 
-        // Charger les badges débloqués
-        this.unlockedBadges = await badgeService.getUnlockedBadges(profileId)
-
-        // Charger les statistiques
-        this.badgeStats = await badgeService.getBadgeStats(profileId)
-
-        // Charger les badges récents
-        this.recentBadges = await badgeService.getRecentlyUnlockedBadges(profileId, 5)
+        this.profileBadges = profileBadges
+        this.unlockedBadges = unlockedBadges
+        this.badgeStats = badgeStats
+        this.recentBadges = recentBadges
       } catch (error) {
+        if (isStale()) return
         console.error('Erreur lors du chargement des badges du profil:', error)
         this.error = error.message
         throw error
       } finally {
-        this.loading = false
+        if (!isStale()) this.loading = false
       }
     },
 
@@ -301,16 +323,12 @@ export const useBadgeStore = defineStore('badge', {
      * Réinitialiser l'état du store
      */
     reset () {
+      // Toute réponse encore en vol devient obsolète
+      latestProfileBadgesRequest++
       this.allBadges = []
       this.profileBadges = []
       this.unlockedBadges = []
-      this.badgeStats = {
-        total: 0,
-        unlocked: 0,
-        locked: 0,
-        points: 0,
-        percentage: 0
-      }
+      this.badgeStats = emptyBadgeStats()
       this.recentBadges = []
       this.loading = false
       this.error = null

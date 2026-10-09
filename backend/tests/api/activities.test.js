@@ -4,6 +4,7 @@
 
 const { handleActivities } = require('../../controllers/activityController.js');
 const {
+  describeWithDb,
   createTestProfile,
   createTestPin,
   generateTestToken,
@@ -12,7 +13,7 @@ const {
   createMockResponse
 } = require('../helpers/testHelpers.js');
 
-describe('API Endpoints - Activités', () => {
+describeWithDb('API Endpoints - Activités', () => {
   let testProfile;
   let testProfileIds = [];
 

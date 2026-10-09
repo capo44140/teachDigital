@@ -82,15 +82,15 @@ if [ ! -f "$ENV_FILE" ]; then
 # ====================================
 
 # Base de Données PostgreSQL
-DATABASE_URL=postgresql://teachdigital:change_me_password@host.docker.internal:5432/teachdigital
+# DATABASE_URL=postgresql://teachdigital:<db-password>@host.docker.internal:5432/teachdigital
 DB_HOST=host.docker.internal
 DB_PORT=5432
 DB_USER=teachdigital
-DB_PASSWORD=change_me_password
+DB_PASSWORD=
 DB_NAME=teachdigital
 
 # JWT Secret
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+JWT_SECRET=__GENERATED_JWT_SECRET__
 
 # API Keys (Optionnelles)
 OPENAI_API_KEY=
@@ -127,15 +127,15 @@ EOF
 # ====================================
 
 # Base de Données PostgreSQL
-DATABASE_URL=postgresql://teachdigital:change_me_password@host.docker.internal:5432/teachdigital
+# DATABASE_URL=postgresql://teachdigital:<db-password>@host.docker.internal:5432/teachdigital
 DB_HOST=host.docker.internal
 DB_PORT=5432
 DB_USER=teachdigital
-DB_PASSWORD=change_me_password
+DB_PASSWORD=
 DB_NAME=teachdigital
 
 # JWT Secret
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+JWT_SECRET=__GENERATED_JWT_SECRET__
 
 # API Keys (Optionnelles)
 OPENAI_API_KEY=
@@ -165,6 +165,17 @@ TEMP_VOLUME=./temp
 EOF
         print_success "Fichier $ENV_FILE créé pour développement local"
     fi
+
+    # Secret JWT aléatoire (jamais de valeur par défaut connue)
+    JWT_GENERATED=$(openssl rand -hex 32 2>/dev/null || node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+    if [ -z "$JWT_GENERATED" ]; then
+        print_error "Impossible de générer JWT_SECRET (openssl ou node requis)"
+        exit 1
+    fi
+    sed -i.bak "s/__GENERATED_JWT_SECRET__/${JWT_GENERATED}/" "$ENV_FILE" && rm -f "$ENV_FILE.bak"
+    chmod 600 "$ENV_FILE"
+    print_success "JWT_SECRET aléatoire généré dans $ENV_FILE"
+    print_warning "Renseignez DB_PASSWORD dans $ENV_FILE"
 else
     print_info "Fichier $ENV_FILE existe déjà"
 fi
@@ -193,7 +204,7 @@ print_success "Docker Compose trouvé: $(docker-compose --version)"
 # 4. Build l'image
 print_header "Build de l'image Docker"
 print_info "Building teachdigital-backend:latest..."
-docker-compose build
+docker-compose --env-file "$ENV_FILE" build
 
 print_header "Setup Complété ✅"
 echo ""
@@ -201,10 +212,10 @@ print_success "Configuration Docker Compose prête !"
 echo ""
 echo -e "${BLUE}Prochaines étapes:${NC}"
 echo "1. Éditez le fichier: vim $ENV_FILE"
-echo "2. Configurez vos paramètres (DB_PASSWORD, JWT_SECRET, etc.)"
+echo "2. Configurez vos paramètres (DB_PASSWORD, DB_HOST, etc. — JWT_SECRET est déjà généré)"
 echo "3. Lancez le conteneur:"
 echo ""
-echo -e "${YELLOW}   docker-compose up -d${NC}"
+echo -e "${YELLOW}   docker-compose --env-file $ENV_FILE up -d${NC}"
 echo ""
 echo "4. Vérifiez le statut:"
 echo ""

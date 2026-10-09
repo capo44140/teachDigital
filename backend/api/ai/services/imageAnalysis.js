@@ -25,10 +25,9 @@ async function analyzeImage(base64Image) {
 
         return analysis;
     } catch (error) {
+        // Remonter l'erreur : une analyse « démo » serait présentée comme le vrai contenu de l'image
         console.error('❌ Erreur lors de l\'analyse de l\'image:', error);
-        // En cas d'erreur OCR, retourner une analyse basique
-        const { getDemoAnalysis } = require('../utils/validation.js');
-        return getDemoAnalysis();
+        throw error;
     }
 }
 

@@ -8,6 +8,7 @@ const {
   handleQuizResults
 } = require('../../controllers/lessonController.js');
 const {
+  describeWithDb,
   createTestProfile,
   createTestPin,
   createTestLesson,
@@ -17,7 +18,7 @@ const {
   createMockResponse
 } = require('../helpers/testHelpers.js');
 
-describe('API Endpoints - Leçons', () => {
+describeWithDb('API Endpoints - Leçons', () => {
   let testProfile;
   let testLesson;
   let testProfileIds = [];

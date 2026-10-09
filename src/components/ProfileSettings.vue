@@ -209,10 +209,7 @@ export default {
   },
   methods: {
     loadProfile() {
-      // Charger les données du profil depuis l'URL ou le store
-      const profileId = this.$route.params.id
-      if (profileId) {
-      }
+      // Les données du profil proviennent du store (aucun chargement supplémentaire)
     },
     
     goBack() {

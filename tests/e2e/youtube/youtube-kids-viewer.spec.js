@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test'
-import { loginAsChild, waitForAppLoad, cleanupTestData, waitForYouTubeVideo } from '../utils/test-helpers.js'
+import { loginAsChild, waitForAppLoad, cleanupTestData, waitForYouTubeVideo, passFamilyGate } from '../utils/test-helpers.js'
 import { selectors, testYouTubeVideos } from '../utils/fixtures.js'
 
 test.describe('Visualiseur YouTube Kids', () => {
   test.beforeEach(async ({ page }) => {
     await cleanupTestData(page)
+    // Toutes les pages exigent désormais le code familial (jeton famille)
+    await passFamilyGate(page)
   })
 
   test('devrait afficher le visualiseur YouTube Kids pour un profil enfant', async ({ page }) => {

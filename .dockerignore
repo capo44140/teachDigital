@@ -1,0 +1,43 @@
+# Contexte de build de Dockerfile.frontend (docker-compose.app.yml).
+# Dockerfile.frontend.prebuilt a son propre fichier : Dockerfile.frontend.prebuilt.dockerignore.
+
+# Dépendances / builds (réinstallés et reconstruits dans l'image)
+node_modules
+**/node_modules
+dist
+dist-ssr
+
+# Git / CI / éditeurs
+.git
+.github
+.vscode
+.idea
+.cursor
+.claude
+.DS_Store
+
+# Secrets / configuration locale
+.env
+.env.*
+**/.env
+**/.env.*
+.synology-deploy*.json
+ssl
+*.pem
+*.key
+
+# Tests et rapports
+tests
+coverage
+test-results
+playwright-report
+playwright
+blob-report
+lighthouse-*
+*.log
+
+# Documentation et code non nécessaires au build du frontend
+doc
+docs
+backend
+*.md

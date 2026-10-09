@@ -73,45 +73,45 @@ function notFoundResponse(message = 'Ressource non trouvée') {
 }
 
 // Middleware pour gérer les erreurs
+// Les détails techniques (message PostgreSQL, detail, hint, stack) restent dans les logs serveur :
+// les renvoyer au client permet d'extraire des données par messages d'erreur.
 function handleError(error, defaultMessage = 'Erreur interne du serveur') {
   console.error('Erreur API:', error);
-  
-  if (error.message === 'Token manquant' || error.message === 'Token invalide') {
-    return unauthorizedResponse(error.message);
+
+  const message = typeof error?.message === 'string' ? error.message : '';
+
+  if (message === 'Token manquant' || message === 'Token invalide') {
+    return unauthorizedResponse(message);
   }
-  
-  if (error.message.includes('validation')) {
-    return validationErrorResponse([error.message]);
+
+  // Erreurs de timeout (à tester avant les erreurs base : elles portent aussi un code)
+  const isTimeout =
+    error?.isTimeout === true ||
+    error?.code === 'GATEWAY_TIMEOUT' ||
+    /timeout/i.test(message);
+
+  if (isTimeout) {
+    return errorResponse('La requête a pris trop de temps. Veuillez réessayer.', 504, null, 'GATEWAY_TIMEOUT');
   }
-  
-  // Gérer les erreurs de base de données PostgreSQL
-  // Les codes d'erreur PostgreSQL sont des chaînes de 5 caractères (ex: '23505', '42P01', 'ECONNREFUSED')
-  if (error.code && (typeof error.code === 'string' || typeof error.code === 'number')) {
+
+  // Erreurs PostgreSQL (codes SQLSTATE à 5 caractères) ou réseau (ECONNREFUSED...)
+  if (error?.code && (typeof error.code === 'string' || typeof error.code === 'number')) {
     console.error('Erreur PostgreSQL:', {
       code: error.code,
       message: error.message,
       detail: error.detail,
       hint: error.hint
     });
-    return errorResponse(
-      error.message || defaultMessage,
-      500,
-      error.detail || error.hint,
-      'DB_ERROR'
-    );
+    // Contraintes : message générique mais statut utile au client
+    if (error.code === '23505') {
+      return errorResponse('Cette ressource existe déjà', 409, null, 'CONFLICT');
+    }
+    if (error.code === '23503' || error.code === '23502' || error.code === '22P02' || error.code === '22003') {
+      return errorResponse('Données invalides', 400, null, 'BAD_REQUEST');
+    }
+    return errorResponse(defaultMessage, 500, null, 'DB_ERROR');
   }
-  
-  // Gérer les erreurs de timeout
-  const isTimeout =
-    error?.isTimeout === true ||
-    error?.code === 'GATEWAY_TIMEOUT' ||
-    ((error?.message && error.message.includes('timeout')) || (error?.message && error.message.includes('Timeout')));
 
-  if (isTimeout) {
-    console.error('Erreur de timeout:', error.message);
-    return errorResponse('La requête a pris trop de temps. Veuillez réessayer.', 504, null, 'GATEWAY_TIMEOUT');
-  }
-  
   return errorResponse(defaultMessage, 500, null, 'INTERNAL_ERROR');
 }
 

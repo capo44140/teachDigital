@@ -175,7 +175,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import ImageOptimizer from './ImageOptimizer.vue'
 
@@ -313,9 +313,14 @@ export default {
     }
 
     // Lifecycle
+    let statsInterval = null
     onMounted(() => {
       updateStats()
-      setInterval(updateStats, 5000) // Mise à jour toutes les 5 secondes
+      statsInterval = setInterval(updateStats, 5000) // Mise à jour toutes les 5 secondes
+    })
+    onUnmounted(() => {
+      if (statsInterval) clearInterval(statsInterval)
+      statsInterval = null
     })
 
     return {

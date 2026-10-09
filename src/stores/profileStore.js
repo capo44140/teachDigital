@@ -1,11 +1,36 @@
 import { defineStore } from 'pinia'
 import { ProfileService, PinService } from '../services/profile/index.js'
-import { ProfileRepository } from '../repositories/profileRepository.js'
+
+const SELECTED_PROFILE_KEY = 'selectedProfile'
+
+// Champs conservés pour le profil sélectionné (pas d'image : localStorage limité)
+function toSelectedProfile (profile) {
+  if (!profile || profile.id === undefined || profile.id === null) return null
+  return {
+    id: profile.id,
+    name: profile.name || '',
+    type: profile.type || null,
+    is_admin: !!profile.is_admin,
+    is_child: !!profile.is_child,
+    is_teen: !!profile.is_teen
+  }
+}
+
+function readSelectedProfile () {
+  try {
+    const raw = localStorage.getItem(SELECTED_PROFILE_KEY)
+    return raw ? toSelectedProfile(JSON.parse(raw)) : null
+  } catch {
+    return null
+  }
+}
 
 export const useProfileStore = defineStore('profile', {
   state: () => ({
     profiles: [],
     currentProfile: null,
+    // Profil choisi sur l'écran « Qui est-ce ? » (persisté pour les rechargements)
+    selectedProfile: readSelectedProfile(),
     isLoading: false,
     error: null,
     stats: {
@@ -16,7 +41,6 @@ export const useProfileStore = defineStore('profile', {
       admins: 0
     },
 
-    profileRepository: new ProfileRepository(),
     // Protection contre les appels multiples simultanés
     loadingPromise: null,
     lastLoadTime: null,
@@ -52,6 +76,25 @@ export const useProfileStore = defineStore('profile', {
   },
 
   actions: {
+    // Mémoriser le profil sélectionné (écran de sélection, PIN parent)
+    setSelectedProfile (profile) {
+      this.selectedProfile = toSelectedProfile(profile)
+      try {
+        if (this.selectedProfile) {
+          localStorage.setItem(SELECTED_PROFILE_KEY, JSON.stringify(this.selectedProfile))
+        } else {
+          localStorage.removeItem(SELECTED_PROFILE_KEY)
+        }
+      } catch {
+        // localStorage indisponible : l'état en mémoire suffit
+      }
+    },
+
+    // Oublier le profil sélectionné (retour au choix des profils)
+    clearSelectedProfile () {
+      this.setSelectedProfile(null)
+    },
+
     // Charger tous les profils
     async loadProfiles (force = false) {
       // Si un chargement est déjà en cours, retourner la même promesse
@@ -275,18 +318,6 @@ export const useProfileStore = defineStore('profile', {
       }
     },
 
-    // Vérifier un code PIN
-    async verifyPin (profileId, pin) {
-      try {
-        const isValid = await PinService.verifyPin(profileId, pin)
-        return isValid
-      } catch (error) {
-        this.error = error.message
-        console.error('Erreur lors de la vérification du code PIN:', error)
-        return false
-      }
-    },
-
     // Mettre à jour le code PIN avec validation de sécurité
     async updatePin (profileId, newPin) {
       try {
@@ -317,16 +348,6 @@ export const useProfileStore = defineStore('profile', {
     // Valider un code PIN
     validatePin (pin) {
       return PinService.validatePin(pin)
-    },
-
-    // Récupérer le code PIN par défaut
-    async getDefaultPin () {
-      try {
-        return await PinService.getDefaultPin()
-      } catch (error) {
-        console.error('Erreur lors de la récupération du code PIN par défaut:', error)
-        return '1234'
-      }
     },
 
     // Nettoyer les erreurs

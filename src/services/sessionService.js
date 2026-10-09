@@ -1,5 +1,9 @@
+import { clearProfileToken } from './authStorage.js'
+
 /**
  * Service de gestion de session pour éviter de ressaisir le code PIN
+ * La session parent (30 min glissantes) et le jeton profil vont de pair :
+ * quand la session expire ou est effacée, le jeton profil est supprimé.
  */
 class SessionService {
   constructor () {
@@ -60,7 +64,7 @@ class SessionService {
    */
   isUnlocked (profileId) {
     const session = this.getValidSession()
-    return session && String(session.profileId) === String(profileId) && session.isUnlocked
+    return !!(session && String(session.profileId) === String(profileId) && session.isUnlocked)
   }
 
   /**
@@ -75,10 +79,11 @@ class SessionService {
   }
 
   /**
-   * Effacer la session
+   * Effacer la session (et le jeton profil parent qui l'accompagne)
    */
   clearSession () {
     localStorage.removeItem(this.SESSION_KEY)
+    clearProfileToken()
   }
 
   /**

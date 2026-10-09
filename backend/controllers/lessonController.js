@@ -1,5 +1,5 @@
 const { default: sql, pool } = require('../lib/database.js');
-const { authenticateToken } = require('../lib/auth.js');
+const { authenticateToken, canActForProfile } = require('../lib/auth.js');
 const { handleError } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
 const logger = require('../lib/logger.js');
@@ -332,6 +332,10 @@ async function handleQuizResults(req, res) {
                 res.status(400).json({ success: false, message: 'ID de profil invalide' });
                 return;
             }
+            if (!canActForProfile(req.user, profileIdNum)) {
+                res.status(403).json({ success: false, message: 'Accès refusé', code: 'FORBIDDEN' });
+                return;
+            }
 
             console.log(`🔍 Récupération résultats quiz - lessonId: ${lessonIdNum}, profileId: ${profileIdNum}`);
 
@@ -353,10 +357,20 @@ async function handleQuizResults(req, res) {
 
         } else if (req.method === 'POST') {
             // Sauvegarder un résultat de quiz
-            const { profileId, score, totalQuestions, answers } = req.body;
+            // Valider les types : chaque valeur interpolée dans sql`...` doit être un scalaire
+            const profileId = parseInt(req.body?.profileId, 10);
+            const score = Number(req.body?.score);
+            const totalQuestions = Number(req.body?.totalQuestions);
+            const answers = req.body?.answers && typeof req.body.answers === 'object' ? req.body.answers : null;
 
-            if (!profileId || score === undefined || !totalQuestions) {
-                res.status(400).json({ success: false, message: 'Données incomplètes' });
+            if (!Number.isInteger(profileId) || profileId <= 0
+                || !Number.isInteger(score) || !Number.isInteger(totalQuestions)
+                || totalQuestions < 1 || totalQuestions > 1000 || score < 0 || score > totalQuestions) {
+                res.status(400).json({ success: false, message: 'Données de résultat invalides' });
+                return;
+            }
+            if (!canActForProfile(req.user, profileId)) {
+                res.status(403).json({ success: false, message: 'Accès refusé', code: 'FORBIDDEN' });
                 return;
             }
 

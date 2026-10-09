@@ -1,6 +1,7 @@
 const { NativeHashService } = require('../lib/nativeHash.js');
 const { default: sql } = require('../lib/database.js');
-const { authenticateToken } = require('../lib/auth.js');
+const { authenticateToken, canActForProfile } = require('../lib/auth.js');
+const { pinFailures } = require('../lib/bruteForce.js');
 const { handleError, createErrorResponse } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
 const crypto = require('crypto');
@@ -9,7 +10,7 @@ const crypto = require('crypto');
 async function handleProfiles(req, res) {
     try {
         if (req.method === 'GET') {
-            // GET est public - récupérer tous les profils
+            // GET : tout membre (jeton famille ou profil) - sélecteur de profils
             // Requête optimisée sans retry pour éviter les timeouts
             const startTime = Date.now();
 
@@ -279,189 +280,6 @@ async function handleProfile(req, res) {
     }
 }
 
-// Handler d'un profil spécifique (route imbriquée pour le pin)
-async function handleProfilePin(req, res, profileId) {
-    try {
-        if (req.method === 'GET') {
-            // GET /api/profiles/:id/pin - Récupérer le statut du PIN (admin seulement)
-            const user = authenticateToken(req);
-
-            if (!user.isAdmin) {
-                res.status(403).json({
-                    success: false,
-                    message: 'Accès refusé - Admin requis'
-                });
-                return;
-            }
-
-            const pinData = await withQueryTimeout(
-                sql`
-          SELECT pin_code, created_at FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1
-        `,
-                TIMEOUTS.STANDARD,
-                'récupération du PIN'
-            );
-
-            if (!pinData[0]) {
-                res.status(404).json({
-                    success: false,
-                    message: 'Code PIN non trouvé pour ce profil'
-                });
-                return;
-            }
-
-            res.status(200).json({
-                success: true,
-                message: 'Code PIN récupéré avec succès',
-                data: {
-                    profileId,
-                    created_at: pinData[0].created_at
-                }
-            });
-
-        } else if (req.method === 'POST') {
-            // POST /api/profiles/:id/pin - Vérifier le PIN
-            const { pin } = req.body;
-
-            if (!pin) {
-                res.status(400).json({
-                    success: false,
-                    message: 'Code PIN requis'
-                });
-                return;
-            }
-
-            const existingPin = await withQueryTimeout(
-                sql`
-          SELECT pin_code FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1
-        `,
-                TIMEOUTS.STANDARD,
-                'vérification du PIN'
-            );
-
-            if (!existingPin[0]) {
-                res.status(404).json({
-                    success: false,
-                    message: 'Code PIN non trouvé pour ce profil'
-                });
-                return;
-            }
-
-            const isValidPin = await NativeHashService.verifyPin(pin, existingPin[0].pin_code);
-            if (!isValidPin) {
-                res.status(401).json({
-                    success: false,
-                    message: 'Code PIN incorrect'
-                });
-                return;
-            }
-
-            // Migration transparente bcrypt (non-bloquant)
-            if (NativeHashService.needsRehash(existingPin[0].pin_code)) {
-                NativeHashService.hashPin(pin)
-                    .then(newHash => sql`UPDATE pin_codes SET pin_code = ${newHash} WHERE profile_id = ${profileId}`)
-                    .catch(err => console.error('⚠️ Migration bcrypt PIN échouée (non-bloquant):', err?.message || err));
-            }
-
-            res.status(200).json({
-                success: true,
-                message: 'Code PIN vérifié avec succès'
-            });
-
-        } else if (req.method === 'PUT') {
-            // PUT /api/profiles/:id/pin - Mettre à jour le PIN (authentification requise)
-            const user = authenticateToken(req);
-            const { newPin, currentPin } = req.body;
-
-            if (!newPin) {
-                res.status(400).json({
-                    success: false,
-                    message: 'Nouveau code PIN requis'
-                });
-                return;
-            }
-
-            // Vérifier que le profil existe
-            const profile = await withQueryTimeout(
-                sql`
-          SELECT id FROM profiles WHERE id = ${profileId}
-        `,
-                TIMEOUTS.STANDARD,
-                'vérification du profil'
-            );
-
-            if (!profile[0]) {
-                res.status(404).json({
-                    success: false,
-                    message: 'Profil non trouvé'
-                });
-                return;
-            }
-
-            // Vérifier le PIN actuel si fourni (sécurité additionnelle)
-            if (currentPin) {
-                const existingPin = await withQueryTimeout(
-                    sql`
-            SELECT pin_code FROM pin_codes WHERE profile_id = ${profileId} ORDER BY created_at DESC LIMIT 1
-          `,
-                    TIMEOUTS.STANDARD,
-                    'vérification du PIN actuel'
-                );
-
-                if (!existingPin[0]) {
-                    res.status(404).json({
-                        success: false,
-                        message: 'Code PIN non trouvé pour ce profil'
-                    });
-                    return;
-                }
-
-                const isValidPin = await NativeHashService.verifyPin(currentPin, existingPin[0].pin_code);
-                if (!isValidPin) {
-                    res.status(401).json({
-                        success: false,
-                        message: 'Code PIN actuel incorrect'
-                    });
-                    return;
-                }
-            }
-
-            // Hacher le nouveau PIN
-            const hashedPin = await NativeHashService.hashPin(newPin);
-
-            // Mettre à jour ou créer le PIN
-            const result = await withQueryTimeout(
-                sql`
-          INSERT INTO pin_codes (profile_id, pin_code)
-          VALUES (${profileId}, ${hashedPin})
-          RETURNING profile_id, created_at
-        `,
-                TIMEOUTS.STANDARD,
-                'mise à jour du PIN'
-            );
-
-            res.status(200).json({
-                success: true,
-                message: 'Code PIN mis à jour avec succès',
-                data: {
-                    profileId,
-                    created_at: result[0].created_at
-                }
-            });
-
-        } else {
-            res.status(405).json({
-                success: false,
-                message: 'Méthode non autorisée'
-            });
-        }
-
-    } catch (error) {
-        const errorResponse = handleError(error, 'Erreur lors de la gestion du code PIN du profil');
-        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
-    }
-}
-
 // Handler des statistiques des profils
 async function handleProfileStats(req, res) {
     try {
@@ -512,9 +330,8 @@ async function handleProfileLearningStats(req, res) {
             return;
         }
 
-        const user = authenticateToken(req);
-        // Admin: accès à tous; sinon accès uniquement à son propre profil
-        if (!user?.isAdmin && user?.profileId !== profileIdNum) {
+        // Parent : tous les profils ; appareil familial : les enfants ; profil : le sien
+        if (!canActForProfile(req.user, profileIdNum)) {
             res.status(403).json(createErrorResponse('Accès refusé', 'FORBIDDEN'));
             return;
         }
@@ -693,7 +510,10 @@ async function handlePin(req, res) {
                 return;
             }
 
-            console.log(`🔐 Vérification PIN pour profil ${profileIdNum} (PIN fourni: ${pin ? 'OUI' : 'NON'})`);
+            const lockKey = `profile:${profileIdNum}`;
+            if (pinFailures.rejectIfLocked(lockKey, res)) {
+                return;
+            }
 
             const pinData = await withQueryTimeout(
                 sql`SELECT pin_code FROM pin_codes WHERE profile_id = ${profileIdNum} ORDER BY created_at DESC LIMIT 1`,
@@ -710,6 +530,11 @@ async function handlePin(req, res) {
             }
 
             const isValidPin = await NativeHashService.verifyPin(pin, pinData[0].pin_code);
+            if (isValidPin) {
+                pinFailures.recordSuccess(lockKey);
+            } else {
+                pinFailures.recordFailure(lockKey);
+            }
 
             // Migration transparente bcrypt (non-bloquant) si valide et legacy
             if (isValidPin && NativeHashService.needsRehash(pinData[0].pin_code)) {
@@ -732,6 +557,18 @@ async function handlePin(req, res) {
                 res.status(400).json({
                     success: false,
                     message: 'Nouveau code PIN requis'
+                });
+                return;
+            }
+
+            // requireAdmin + validate(pinUpdateSchema) sont appliqués par le routeur.
+            // Un parent peut réinitialiser le PIN d'un autre profil ; pour changer le sien,
+            // le PIN actuel est exigé (session parent laissée ouverte sur la tablette).
+            const isOwnProfile = String(req.user?.profileId) === String(profileIdNum);
+            if (isOwnProfile && !currentPin) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Code PIN actuel requis'
                 });
                 return;
             }
@@ -759,15 +596,6 @@ async function handlePin(req, res) {
                         return;
                     }
                 }
-            }
-
-            // Valider le nouveau code PIN
-            if (newPin.length < 4 || newPin.length > 8) {
-                res.status(400).json({
-                    success: false,
-                    message: 'Le code PIN doit contenir entre 4 et 8 caractères'
-                });
-                return;
             }
 
             // Hacher le nouveau code PIN
@@ -806,10 +634,14 @@ async function handlePin(req, res) {
                 );
             }
 
+            // Ne jamais renvoyer le hash du PIN
             res.status(200).json({
                 success: true,
                 message: 'Code PIN mis à jour avec succès',
-                data: { pin: result[0] }
+                data: {
+                    profileId: profileIdNum,
+                    updatedAt: result[0]?.updated_at || result[0]?.created_at || null
+                }
             });
 
         } else {
@@ -913,7 +745,6 @@ module.exports = {
     handleProfiles,
     handleProfile,
     handleProfileStats,
-    handleProfilePin,
     handlePin,
     handleProfileLearningStats,
     handleProfileCreationRequest

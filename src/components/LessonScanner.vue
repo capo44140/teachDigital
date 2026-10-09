@@ -159,6 +159,7 @@ import { ImageValidationService } from '../services/imageValidationService.js'
 import imageOptimizationService from '../services/imageOptimizationService.js'
 // Import dynamique pour éviter les problèmes d'initialisation
 import { LessonService } from '../services/lessonService.js'
+import { apiService } from '../services/apiService.js'
 import { migrationService } from '../services/migrationService.js'
 import LessonScannerChildSelector from './LessonScannerChildSelector.vue'
 import LessonScannerFileUpload from './LessonScannerFileUpload.vue'
@@ -451,9 +452,8 @@ export default {
         return
       }
 
-      // Vérifier que l'utilisateur est connecté
-      const token = localStorage.getItem('auth_token')
-      if (!token) {
+      // Vérifier que le parent est connecté (jeton profil valide, session parent active)
+      if (!apiService.isAuthenticated()) {
         this.errorMessage = 'Vous devez être connecté pour générer un quiz. Veuillez vous connecter avec votre code PIN.'
         return
       }

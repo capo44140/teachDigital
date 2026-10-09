@@ -1,25 +1,30 @@
 #!/usr/bin/env node
 
 /**
- * Initialise le code d'entrée familial par défaut (table family_gate).
- * Code par défaut : 1234 (à modifier dans les paramètres Parent après première connexion).
+ * Initialise le code d'entrée familial (table family_gate).
+ * Usage : node scripts/init-family-gate.js <CODE>
+ * Aucun code par défaut : un code connu de tous (ex. 1234) ouvrirait l'accès à l'API.
  */
 
-const { default: sql } = require('../lib/database.js');
 const { NativeHashService } = require('../lib/nativeHash.js');
-
-const DEFAULT_PIN = '1234';
+const { assertStrongPin } = require('./pinPolicy.js');
 
 async function initFamilyGate() {
   console.log('🔐 Initialisation du code d\'entrée familial\n');
 
+  let pin;
   try {
-    const hashedPin = await NativeHashService.hashPin(DEFAULT_PIN);
-    console.log('🔒 Code familial par défaut (1234) haché');
+    pin = assertStrongPin(process.argv[2] || process.env.FAMILY_GATE_PIN);
+  } catch (error) {
+    console.error(`❌ ${error.message}`);
+    console.error('   Usage : node scripts/init-family-gate.js <code à 4-8 chiffres>');
+    process.exit(1);
+  }
 
-    // Important: `sql\`...\`` ne s'exécute pas correctement avec `await` direct
-    // dans ce projet (thenable custom). Pour les scripts CLI, on passe par
-    // `pool.query` et on ferme explicitement le pool pour que Node termine.
+  try {
+    const hashedPin = await NativeHashService.hashPin(pin);
+
+    // Scripts CLI : pool.query puis fermeture explicite du pool pour que Node termine.
     const db = require('../lib/database.js');
     await db.query(
       `
@@ -31,7 +36,7 @@ async function initFamilyGate() {
       `,
       [hashedPin]
     );
-    console.log('✅ Code d\'entrée familial initialisé (défaut: 1234)');
+    console.log('✅ Code d\'entrée familial initialisé');
     console.log('\n📝 Modifiez ce code dans Paramètres Parent > Code d\'entrée familial.');
 
     // Fermer le pool pour éviter que le script reste vivant

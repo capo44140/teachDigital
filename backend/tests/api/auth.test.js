@@ -4,6 +4,7 @@
 
 const { handleLogin, handleLogout } = require('../../controllers/authController.js');
 const {
+  describeWithDb,
   createTestProfile,
   createTestPin,
   generateTestToken,
@@ -12,7 +13,7 @@ const {
   createMockResponse
 } = require('../helpers/testHelpers.js');
 
-describe('API Endpoints - Authentification', () => {
+describeWithDb('API Endpoints - Authentification', () => {
   let testProfile;
   let testProfileIds = [];
 

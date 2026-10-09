@@ -2,6 +2,8 @@
  * Utilitaires et helpers pour les tests Playwright de TeachDigital
  */
 
+import { familyGate } from './fixtures.js'
+
 /**
  * Attendre que l'application soit complètement chargée
  * @param {import('@playwright/test').Page} page
@@ -24,14 +26,58 @@ export async function waitForAppLoad(page) {
 }
 
 /**
+ * Passer l'écran du code d'entrée familial (obligatoire avant toute autre page).
+ * Le jeton famille obtenu est conservé dans le localStorage du contexte de test.
+ * @param {import('@playwright/test').Page} page
+ * @param {string} code - Code familial (E2E_FAMILY_CODE par défaut)
+ */
+export async function passFamilyGate(page, code = familyGate.code) {
+  await page.goto('/family-gate')
+  await waitForAppLoad(page)
+
+  for (const digit of String(code)) {
+    await page.click(`[data-testid="family-gate-digit-${digit}"]`)
+  }
+
+  // Redirection vers la sélection de profils une fois le code validé
+  await page.waitForURL((url) => !url.pathname.startsWith('/family-gate'))
+}
+
+/**
+ * Simuler un code familial accepté (tests sans backend : les appels /api/* doivent aussi être simulés).
+ * Le jeton renvoyé n'est pas signé : un vrai backend le refuserait (401 → retour au code familial).
+ * @param {import('@playwright/test').Page} page
+ */
+export async function mockFamilyGate(page) {
+  const encode = (value) => Buffer.from(JSON.stringify(value)).toString('base64url')
+  const exp = Math.floor(Date.now() / 1000) + 24 * 3600
+  const token = `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ scope: 'family', exp })}.e2e`
+
+  await page.route('**/api/auth/family-gate', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: { valid: true, token, expiresAt: new Date(exp * 1000).toISOString() }
+      })
+    })
+  })
+}
+
+/**
  * Se connecter en tant que profil parent
  * @param {import('@playwright/test').Page} page
  * @param {string} pin - Code PIN du parent
  */
 export async function loginAsParent(page, pin = '1234') {
-  // Aller à la page de sélection de profil
+  // Aller à la page de sélection de profil (code familial d'abord si nécessaire)
   await page.goto('/')
   await waitForAppLoad(page)
+  if (page.url().includes('/family-gate')) {
+    await passFamilyGate(page)
+  }
   
   // Sélectionner le profil parent
   await page.click('[data-testid="profile-parent"]')
@@ -55,6 +101,9 @@ export async function loginAsParent(page, pin = '1234') {
 export async function loginAsChild(page, profileName = 'Enfant') {
   await page.goto('/')
   await waitForAppLoad(page)
+  if (page.url().includes('/family-gate')) {
+    await passFamilyGate(page)
+  }
   
   // Sélectionner le profil enfant
   await page.click(`[data-testid="profile-${profileName.toLowerCase()}"]`)
@@ -69,7 +118,7 @@ export async function loginAsChild(page, profileName = 'Enfant') {
  * @param {Object} profileData - Données du profil
  */
 export async function createTestProfile(page, profileData) {
-  await page.goto('/manage-profiles?profile=1&unlocked=true')
+  await page.goto('/manage-profiles?profile=1')
   await waitForAppLoad(page)
   
   // Cliquer sur le bouton d'ajout de profil

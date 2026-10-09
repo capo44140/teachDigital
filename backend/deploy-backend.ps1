@@ -117,7 +117,13 @@ if ($useRsync) {
         "--exclude=dist",
         "--exclude=.vscode",
         "--exclude=.idea",
-        "--exclude=.cursor"
+        "--exclude=.cursor",
+        # Dossiers/fichiers propres au serveur : jamais ecrases ni supprimes par --delete
+        "--exclude=.env.*",
+        "--exclude=logs/",
+        "--exclude=output/",
+        "--exclude=temp/",
+        "--exclude=ssl/"
     )
     
     $rsyncCmd = "rsync -avz --delete $($rsyncExcludes -join ' ') ./ ${sshAlias}:$DeployPath/"
@@ -148,7 +154,7 @@ if (-not $useRsync) {
         # Utiliser --verbose pour voir ce qui est transfere
         # Commande tar avec extraction dans le bon repertoire
         # Important: utiliser -C pour changer de repertoire avant extraction
-        $bashCmd = "tar -czf - --exclude=node_modules --exclude=.git --exclude='*.log' --exclude=.env --exclude=.synology-deploy.json --exclude=dist --exclude=.vscode --exclude=.idea --exclude=.cursor . 2>/dev/null | ssh $sshAlias 'mkdir -p $DeployPath && cd $DeployPath && tar -xzf - 2>&1'"
+        $bashCmd = "tar -czf - --exclude=node_modules --exclude=.git --exclude='*.log' --exclude=.env --exclude=.synology-deploy.json --exclude=dist --exclude=.vscode --exclude=.idea --exclude=.cursor --exclude='.env.*' --exclude=logs --exclude=output --exclude=temp --exclude=ssl . 2>/dev/null | ssh $sshAlias 'mkdir -p $DeployPath && cd $DeployPath && tar -xzf - 2>&1'"
         Write-Info "   Execution via Git Bash..."
         Write-Info "   Transfert en cours (cela peut prendre quelques instants)..."
         $tarOutput = & $bashPath -c $bashCmd 2>&1
@@ -170,7 +176,7 @@ if (-not $useRsync) {
         Write-Info "   Installez Git for Windows pour une meilleure compatibilite"
     
         # Essayer avec tar directement
-        $tarOutput = tar -czf - --exclude=node_modules --exclude=.git --exclude='*.log' --exclude=.env --exclude=.synology-deploy.json --exclude=dist --exclude=.vscode --exclude=.idea --exclude=.cursor . 2>&1 | ssh $sshAlias "cd $DeployPath && tar -xzf -" 2>&1
+        $tarOutput = tar -czf - --exclude=node_modules --exclude=.git --exclude='*.log' --exclude=.env --exclude=.synology-deploy.json --exclude=dist --exclude=.vscode --exclude=.idea --exclude=.cursor --exclude='.env.*' --exclude=logs --exclude=output --exclude=temp --exclude=ssl . 2>&1 | ssh $sshAlias "cd $DeployPath && tar -xzf -" 2>&1
         $tarExitCode = $LASTEXITCODE
     }
 

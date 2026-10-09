@@ -179,7 +179,7 @@ export default {
   },
   methods: {
     navigate(path) {
-      this.$router.push({ path, query: { profile: this.profileId, unlocked: 'true' } })
+      this.$router.push({ path, query: { profile: this.profileId } })
     }
   }
 }

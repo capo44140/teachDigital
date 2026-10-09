@@ -5,4 +5,3 @@
 
 export { ProfileService } from './profileService.js'
 export { PinService } from './pinService.js'
-export { SessionService } from './sessionService.js'

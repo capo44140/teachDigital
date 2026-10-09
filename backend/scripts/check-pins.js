@@ -1,5 +1,5 @@
 // Script pour vérifier les codes PIN en base
-import sql from '../lib/database.js';
+const { default: sql, pool } = require('../lib/database.js');
 
 async function checkPins() {
   console.log('🔍 Vérification des codes PIN en base de données\n');
@@ -55,4 +55,4 @@ async function checkPins() {
   }
 }
 
-checkPins();
+checkPins().finally(() => pool.end());

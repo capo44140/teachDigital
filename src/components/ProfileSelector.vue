@@ -205,6 +205,7 @@ import { useProfileStore } from '../stores/profileStore.js'
 import sessionService from '../services/sessionService.js'
 import ProfileSkeleton from './ProfileSkeleton.vue'
 import { ProfileService } from '../services/profile/index.js'
+import { hasParentAccess, leaveParentSpace } from '../services/parentAccessService.js'
 
 export default {
   name: 'ProfileSelector',
@@ -235,30 +236,34 @@ export default {
     }
   },
   async mounted() {
+    // Session parent encore active (PIN saisi il y a moins de 30 min) : reprendre l'espace parent
     const session = sessionService.getValidSession()
-    if (session) {
+    if (session && hasParentAccess(session.profileId)) {
       this.$router.push({
-        path: '/dashboard', 
-        query: { 
-          profile: session.profileId,
-          unlocked: 'true'
-        } 
+        path: '/dashboard',
+        query: { profile: session.profileId }
       })
       return
     }
-    
+    // Session parent sans jeton valide : la supprimer
+    if (session) {
+      sessionService.clearSession()
+    }
+
     await this.profileStore.loadProfiles()
   },
   methods: {
     selectProfile(profile) {
       this.selectedProfile = profile
 
-      localStorage.setItem('selectedProfile', JSON.stringify(profile))
+      this.profileStore.setSelectedProfile(profile)
       this.$emit('profile-selected', profile)
       
       if (profile.is_admin) {
         this.showAuthOptions(profile)
       } else {
+        // Profil enfant : aucun jeton ni session parent ne doit subsister
+        leaveParentSpace()
         this.$router.push({ path: '/user-dashboard', query: { profile: profile.id } })
       }
     },

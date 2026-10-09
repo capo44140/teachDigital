@@ -8,12 +8,10 @@
 
 const { createErrorResponse } = require('./response.js');
 
+// req.ip est calculé par Express selon le réglage « trust proxy » (server.js) : seules les
+// entrées X-Forwarded-For ajoutées par des proxys de confiance sont prises en compte.
+// Ne jamais lire X-Forwarded-For directement : le client peut y mettre n'importe quoi.
 function getClientIp(req) {
-  const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.trim()) {
-    // x-forwarded-for: "client, proxy1, proxy2"
-    return xff.split(',')[0].trim();
-  }
   if (req.ip) return req.ip;
   if (req.socket && req.socket.remoteAddress) return req.socket.remoteAddress;
   return 'unknown';

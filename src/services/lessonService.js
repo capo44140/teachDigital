@@ -8,6 +8,7 @@
 import { apiService } from './apiService.js'
 import { auditLogService } from './auditLogService.js'
 import { NotificationService } from './notificationService.js'
+import { MAX_HISTORY_LIMIT } from './progressService.js'
 
 export class LessonService {
   /**
@@ -223,12 +224,15 @@ export class LessonService {
   /**
    * Récupère l'historique des quiz d'un enfant
    * @param {number} profileId - ID du profil enfant
-   * @returns {Promise<Array>} Historique des quiz
+   * @param {{ historyLimit?: number }} options - Nombre max d'entrées (500 max côté serveur,
+   *   à demander en entier pour les vues « année » / « tout »)
+   * @returns {Promise<Array>} Historique des quiz (avec le détail des réponses)
    */
-  static async getChildQuizHistory (profileId) {
+  static async getChildQuizHistory (profileId, { historyLimit = MAX_HISTORY_LIMIT } = {}) {
     // Le résumé de progression contient les quiz de leçons et les sessions sur les pages de cours
     try {
-      const response = await apiService.request(`/api/profiles/${profileId}/progress-summary`)
+      const limit = Math.min(Math.max(1, Number(historyLimit) || MAX_HISTORY_LIMIT), MAX_HISTORY_LIMIT)
+      const response = await apiService.request(`/api/profiles/${profileId}/progress-summary?historyLimit=${limit}`)
       const history = response?.data?.summary?.recentHistory
       if (Array.isArray(history)) {
         return history.map(q => ({

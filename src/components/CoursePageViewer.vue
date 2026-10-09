@@ -42,21 +42,30 @@
 
 <script>
 import { apiService } from '../services/apiService.js'
+import { useProfileStore } from '../stores/profileStore.js'
 import CoursePageFrame from './CoursePageFrame.vue'
 
 // Une session compte comme un quiz à partir de 5 réponses ; ensuite on sauvegarde
-// toutes les 5 réponses, et à la sortie de la page.
+// toutes les 5 réponses (completed: false), puis une dernière fois à la sortie
+// de la page (completed: true : c'est elle qui déclenche l'évaluation des badges).
 const MIN_ANSWERS = 5
 const SAVE_EVERY = 5
 
 export default {
   name: 'CoursePageViewer',
   components: { CoursePageFrame },
+  beforeRouteLeave() {
+    this.saveFinal()
+  },
   props: {
     id: {
       type: [String, Number],
       required: true
     }
+  },
+  setup() {
+    const profileStore = useProfileStore()
+    return { profileStore }
   },
   data() {
     return {
@@ -64,20 +73,23 @@ export default {
       isLoading: true,
       errorMessage: null,
       progress: { ok: 0, total: 0, streak: 0, bestStreak: 0 },
+      // Profil figé à l'ouverture : à la sortie, $route pointe déjà vers la page suivante
+      sessionProfileId: null,
       resultId: null,
       savedTotal: 0,
-      saving: null
+      savedCompleted: false,
+      // File des sauvegardes : une seule requête à la fois, aucune n'est abandonnée
+      saveQueue: Promise.resolve(),
+      checkpointQueued: false
     }
   },
   computed: {
     profileId() {
-      return this.$route.query.profile
-    },
-    hasUnsavedProgress() {
-      return this.progress.total >= MIN_ANSWERS && this.progress.total > this.savedTotal
+      return this.sessionProfileId
     }
   },
   async created() {
+    this.sessionProfileId = this.resolveProfileId()
     try {
       this.coursePage = await apiService.getCoursePage(this.id)
       if (!this.coursePage) {
@@ -91,17 +103,30 @@ export default {
     }
   },
   mounted() {
-    // Fermeture de l'onglet ou retour à l'écran d'accueil sur mobile
-    this.onPageHide = () => this.saveProgress({ keepalive: true })
+    // Fermeture de l'onglet, retour à l'écran d'accueil ou changement d'application sur mobile
+    this.onPageHide = () => this.saveFinal()
+    this.onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') this.saveFinal()
+    }
     window.addEventListener('pagehide', this.onPageHide)
+    document.addEventListener('visibilitychange', this.onVisibilityChange)
   },
   beforeUnmount() {
     window.removeEventListener('pagehide', this.onPageHide)
-  },
-  beforeRouteLeave() {
-    this.saveProgress({ keepalive: true })
+    document.removeEventListener('visibilitychange', this.onVisibilityChange)
+    this.saveFinal()
   },
   methods: {
+    // Profil enfant sélectionné (source fiable) ; ?profile= seulement à défaut
+    resolveProfileId() {
+      const selected = this.profileStore.selectedProfile
+      if (selected?.id != null && (selected.is_child || selected.is_teen)) {
+        return String(selected.id)
+      }
+      const fromRoute = this.$route.query.profile
+      return fromRoute ? String(fromRoute) : null
+    },
+
     goBack() {
       this.$router.push({
         name: 'UserDashboard',
@@ -112,37 +137,65 @@ export default {
     onProgress({ ok, total, streak }) {
       this.progress = { ok, total, streak, bestStreak: Math.max(this.progress.bestStreak, streak) }
       const dueForSave = this.resultId ? total - this.savedTotal >= SAVE_EVERY : total >= MIN_ANSWERS
-      if (dueForSave) this.saveProgress()
+      if (dueForSave) this.saveProgress({ completed: false })
     },
 
-    async saveProgress({ keepalive = false } = {}) {
-      if (!this.hasUnsavedProgress || !this.profileId || this.saving) return
+    // Sauvegarde de fin de session (sortie de la page) : keepalive + completed: true
+    saveFinal() {
+      return this.saveProgress({ completed: true, keepalive: true })
+    },
+
+    needsSave(completed) {
+      const { total } = this.progress
+      if (!this.profileId || total < MIN_ANSWERS) return false
+      if (total > this.savedTotal) return true
+      // Rien de neuf, mais la session doit encore être marquée terminée
+      return completed && !this.savedCompleted
+    },
+
+    /**
+     * Mettre en file une sauvegarde : si une requête est en cours (ex. le premier POST),
+     * la sauvegarde attend sa fin au lieu d'être perdue, et réutilise l'id du résultat créé.
+     */
+    saveProgress({ completed = false, keepalive = false } = {}) {
+      if (!this.needsSave(completed)) return this.saveQueue
+      // Un point d'étape déjà en attente lira la progression la plus récente
+      if (!completed) {
+        if (this.checkpointQueued) return this.saveQueue
+        this.checkpointQueued = true
+      }
+      const run = () => this.sendProgress({ completed, keepalive })
+      this.saveQueue = this.saveQueue.then(run, run)
+      return this.saveQueue
+    },
+
+    async sendProgress({ completed, keepalive }) {
+      if (!completed) this.checkpointQueued = false
+      // Réévalué au moment de l'envoi (une sauvegarde précédente a pu tout couvrir)
+      if (!this.needsSave(completed)) return
       const { ok, total, bestStreak } = this.progress
       const payload = {
         profileId: this.profileId,
         score: ok,
         totalQuestions: total,
-        answers: { source: 'course_page', bestStreak }
+        answers: { source: 'course_page', bestStreak },
+        completed
       }
 
-      this.saving = (async () => {
-        try {
-          const data = this.resultId
-            ? await apiService.updateCoursePageResult(this.id, this.resultId, payload, { keepalive })
-            : await apiService.saveCoursePageResult(this.id, payload)
-          if (!data) return
-          this.resultId = this.resultId || data.result?.id || null
-          this.savedTotal = total
-          for (const badge of data.unlockedBadges || []) {
-            this.$toast?.success(`${badge.icon || '🏅'} Badge débloqué : ${badge.name}`, { duration: 6000 })
-          }
-        } catch (error) {
-          console.error('Erreur lors de la sauvegarde de la session:', error)
-        } finally {
-          this.saving = null
+      try {
+        const data = this.resultId
+          ? await apiService.updateCoursePageResult(this.id, this.resultId, payload, { keepalive })
+          : await apiService.saveCoursePageResult(this.id, payload, { keepalive })
+        if (!data) return
+        this.resultId = this.resultId || data.result?.id || null
+        this.savedTotal = total
+        this.savedCompleted = completed
+        for (const badge of data.unlockedBadges || []) {
+          this.$toast?.success(`${badge.icon || '🏅'} Badge débloqué : ${badge.name}`, { duration: 6000 })
         }
-      })()
-      return this.saving
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde de la session:', error)
+      }
     }
   }
 }

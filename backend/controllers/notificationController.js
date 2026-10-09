@@ -1,5 +1,5 @@
 const { default: sql } = require('../lib/database.js');
-const { authenticateToken } = require('../lib/auth.js');
+const { authenticateToken, canActForProfile } = require('../lib/auth.js');
 const { handleError } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
 
@@ -24,17 +24,21 @@ async function handleNotifications(req, res) {
       `;
             const params = [];
 
-            if (profileId) {
-                params.push(profileId);
-                queryText += ` AND n.profile_id = $${params.length}`;
-            } else {
-                // Si pas de profileId, il faut être authentifié
-                const user = authenticateToken(req);
-                params.push(user.profileId);
-                queryText += ` AND n.profile_id = $${params.length}`;
+            // Sans profileId explicite : les notifications du profil connecté
+            const targetProfileId = parseInt(profileId || req.user?.profileId, 10);
+            if (!Number.isInteger(targetProfileId) || targetProfileId <= 0) {
+                res.status(400).json({ success: false, message: 'ID de profil requis' });
+                return;
             }
+            if (!canActForProfile(req.user, targetProfileId)) {
+                res.status(403).json({ success: false, message: 'Accès refusé', code: 'FORBIDDEN' });
+                return;
+            }
+            params.push(targetProfileId);
+            queryText += ` AND n.profile_id = $${params.length}`;
 
-            if (isRead !== undefined) {
+            // searchParams.get renvoie null (et non undefined) quand le filtre est absent
+            if (isRead !== null) {
                 params.push(isRead === 'true');
                 queryText += ` AND n.is_read = $${params.length}`;
             }
@@ -139,18 +143,19 @@ async function handleNotification(req, res) {
             const notifications = await withQueryTimeout(
                 sql`
           SELECT 
-            n.id, n.type, n.title, n.message, n.data, 
+            n.id, n.profile_id, n.type, n.title, n.message, n.data, 
             n.is_read, n.created_at,
             p.name as profile_name
           FROM notifications n
           JOIN profiles p ON n.profile_id = p.id
-          WHERE n.id = ${parseInt(id)}
+          WHERE n.id = ${parseInt(id, 10)}
         `,
                 TIMEOUTS.STANDARD,
                 'récupération de la notification'
             );
 
-            if (!notifications[0]) {
+            // 404 aussi quand la notification appartient à un autre profil (ne pas révéler son existence)
+            if (!notifications[0] || !canActForProfile(req.user, notifications[0].profile_id)) {
                 res.status(404).json({
                     success: false,
                     message: 'Notification non trouvée'
@@ -186,7 +191,7 @@ async function handleNotification(req, res) {
                 return;
             }
 
-            if (!user.isAdmin && existingNotification[0].profile_id !== user.profileId) {
+            if (!canActForProfile(user, existingNotification[0].profile_id)) {
                 res.status(403).json({
                     success: false,
                     message: 'Accès refusé'
@@ -233,7 +238,7 @@ async function handleNotification(req, res) {
                 return;
             }
 
-            if (!user.isAdmin && existingNotification[0].profile_id !== user.profileId) {
+            if (!canActForProfile(user, existingNotification[0].profile_id)) {
                 res.status(403).json({
                     success: false,
                     message: 'Accès refusé'

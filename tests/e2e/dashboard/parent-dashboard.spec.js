@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test'
-import { loginAsParent, waitForAppLoad, cleanupTestData } from '../utils/test-helpers.js'
+import { loginAsParent, waitForAppLoad, cleanupTestData, passFamilyGate } from '../utils/test-helpers.js'
 import { selectors, testProfiles } from '../utils/fixtures.js'
 
 test.describe('Dashboard Parent', () => {
   test.beforeEach(async ({ page }) => {
     await cleanupTestData(page)
+    // Toutes les pages exigent désormais le code familial (jeton famille)
+    await passFamilyGate(page)
   })
 
   test('devrait afficher le dashboard parent après authentification', async ({ page }) => {

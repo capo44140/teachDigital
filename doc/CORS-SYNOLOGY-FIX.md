@@ -1,12 +1,12 @@
 # 🔧 Guide de Correction CORS pour Synology
 
-Ce guide vous aide à corriger les erreurs CORS lorsque le frontend Vercel (`https://teach-digital.vercel.app`) appelle le backend Synology (`https://lespoires.synology.me:3002`).
+Ce guide vous aide à corriger les erreurs CORS lorsque le frontend Vercel (`https://teach-digital.vercel.app`) appelle le backend Synology (`https://votre-nas.synology.me:3002`).
 
 ## 🔍 Diagnostic du Problème
 
 L'erreur CORS se produit lorsque :
 - Le frontend est sur `https://teach-digital.vercel.app`
-- Le backend est sur `https://lespoires.synology.me:3002`
+- Le backend est sur `https://votre-nas.synology.me:3002`
 - Le reverse proxy Synology ne transmet pas correctement les en-têtes CORS
 
 ## ✅ Solution 1 : Vérifier la Configuration du Reverse Proxy Synology
@@ -15,14 +15,14 @@ L'erreur CORS se produit lorsque :
 
 1. **Connectez-vous à DSM** (interface web de votre Synology)
 2. **Allez dans** : **Panneau de configuration** → **Application Portal** → **Reverse Proxy**
-3. **Trouvez la règle** pour `lespoires.synology.me:3002`
+3. **Trouvez la règle** pour `votre-nas.synology.me:3002`
 
 ### Étape 2 : Vérifier la Configuration de la Règle
 
 #### Onglet "Général"
 - **Description** : `TeachDigital Backend API`
 - **Protocole** : `HTTPS`
-- **Nom d'hôte** : `lespoires.synology.me`
+- **Nom d'hôte** : `votre-nas.synology.me`
 - **Port** : `3002`
 - **Activer HSTS** : ✅ (recommandé)
 - **Activer HTTP/2** : ✅ (recommandé)
@@ -145,7 +145,7 @@ curl -X OPTIONS \
   -H "Access-Control-Request-Method: GET" \
   -H "Access-Control-Request-Headers: Content-Type,Authorization" \
   -v \
-  https://lespoires.synology.me:3002/api/profiles
+  https://votre-nas.synology.me:3002/api/profiles
 ```
 
 Vous devriez voir dans la réponse :
@@ -166,7 +166,7 @@ Si le reverse proxy Synology ne fonctionne pas correctement, vous pouvez utilise
 ```nginx
 server {
     listen 3002;
-    server_name lespoires.synology.me;
+    server_name votre-nas.synology.me;
 
     location / {
         proxy_pass http://localhost:3001;
@@ -198,7 +198,7 @@ curl -X OPTIONS \
   -H "Access-Control-Request-Method: GET" \
   -H "Access-Control-Request-Headers: Content-Type,Authorization" \
   -v \
-  https://lespoires.synology.me:3002/api/profiles
+  https://votre-nas.synology.me:3002/api/profiles
 ```
 
 **Résultat attendu** : Status 200 avec tous les en-têtes CORS
@@ -209,7 +209,7 @@ curl -X OPTIONS \
 curl -X GET \
   -H "Origin: https://teach-digital.vercel.app" \
   -v \
-  https://lespoires.synology.me:3002/api/profiles
+  https://votre-nas.synology.me:3002/api/profiles
 ```
 
 **Résultat attendu** : Status 200 avec les données JSON et les en-têtes CORS

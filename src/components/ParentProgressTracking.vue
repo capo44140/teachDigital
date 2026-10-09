@@ -203,8 +203,12 @@
             >
               <div class="flex items-center justify-between">
                 <div class="flex-1">
-                  <h4 class="font-bold text-white">{{ quiz.title }}</h4>
+                  <h4 class="font-bold text-white">
+                    {{ quiz.title }}
+                    <span v-if="quiz.source === 'course_page'" class="ml-2 align-middle text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200">Page de cours</span>
+                  </h4>
                   <p class="text-white/60 text-sm">{{ quiz.childName }} • {{ formatDate(quiz.completedAt) }}</p>
+                  <p v-if="quiz.bestStreak >= 2" class="text-white/50 text-xs mt-1">🔥 Série max : {{ quiz.bestStreak }}</p>
                 </div>
                 <div class="text-right">
                   <p class="text-2xl font-bold text-white">{{ quiz.score }}%</p>
@@ -256,6 +260,8 @@
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
 import { LessonService } from '../services/lessonService.js'
+import { MAX_HISTORY_LIMIT } from '../services/progressService.js'
+import { getBestStreak } from '../utils/progressFormatters.js'
 import VersionInfo from './VersionInfo.vue'
 
 export default {
@@ -379,9 +385,17 @@ export default {
       
       for (const child of children) {
         try {
-          const childHistory = await LessonService.getChildQuizHistory(child.id)
+          // Historique complet : les filtres « année » / « tout » dépassent les 50 entrées par défaut
+          const childHistory = await LessonService.getChildQuizHistory(child.id, { historyLimit: MAX_HISTORY_LIMIT })
           const historyWithChild = childHistory.map(quiz => ({
             ...quiz,
+            // Champs attendus par l'affichage de l'historique
+            id: `${child.id}-${quiz.source || 'quiz'}-${quiz.id}`,
+            title: quiz.lessonTitle || 'Quiz',
+            score: Math.round(Number(quiz.percentage) || 0),
+            questionsCorrect: quiz.score,
+            questionsTotal: quiz.totalQuestions,
+            bestStreak: getBestStreak(quiz.answers),
             childName: child.name
           }))
           allQuizHistory.push(...historyWithChild)
@@ -394,7 +408,8 @@ export default {
       this.quizHistory = allQuizHistory.sort((a, b) => 
         new Date(b.completedAt) - new Date(a.completedAt)
       )
-      this.filteredQuizHistory = [...this.quizHistory]
+      // Réappliquer la période choisie (actualisation des données)
+      this.filterQuizHistory()
     },
 
     filterQuizHistory() {
@@ -483,8 +498,7 @@ export default {
       this.$router.push({
         name: 'Dashboard',
         query: {
-          profile: this.$route.query.profile || '1',
-          unlocked: 'true'
+          profile: this.$route.query.profile || '1'
         }
       })
     },

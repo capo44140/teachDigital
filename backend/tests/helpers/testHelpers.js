@@ -3,7 +3,10 @@
  */
 
 const { default: sql } = require('../../lib/database.js');
-const { generateToken } = require('../../lib/auth.js');
+const { generateToken, generateFamilyToken, authenticateToken } = require('../../lib/auth.js');
+
+// Suites d'intégration : uniquement avec une base de test dédiée (voir tests/setup.js)
+const describeWithDb = process.env.TEST_DATABASE_URL ? describe : describe.skip;
 const { NativeHashService } = require('../../lib/nativeHash.js');
 
 /**
@@ -83,6 +86,17 @@ function generateTestToken(profile) {
 }
 
 /**
+ * En-têtes d'authentification prêts à l'emploi
+ */
+function familyAuthHeader() {
+  return { authorization: `Bearer ${generateFamilyToken().token}` };
+}
+
+function profileAuthHeader(payload) {
+  return { authorization: `Bearer ${generateToken(payload)}` };
+}
+
+/**
  * Nettoie les données de test
  */
 async function cleanupTestData(profileIds = [], lessonIds = [], badgeIds = []) {
@@ -93,7 +107,6 @@ async function cleanupTestData(profileIds = [], lessonIds = [], badgeIds = []) {
       await sql`DELETE FROM quiz_results WHERE profile_id = ANY(${profileIds})`;
       await sql`DELETE FROM notifications WHERE profile_id = ANY(${profileIds})`;
       await sql`DELETE FROM pin_codes WHERE profile_id = ANY(${profileIds})`;
-      await sql`DELETE FROM sessions WHERE profile_id = ANY(${profileIds})`;
     }
 
     if (lessonIds.length > 0) {
@@ -154,7 +167,17 @@ function createMockRequest(method = 'GET', path = '/', body = {}, headers = {}, 
       return this.headers[name.toLowerCase()];
     }
   };
-  
+
+  // Simule le middleware requireMember du routeur (api/index.js) : les tests appellent
+  // les contrôleurs directement, sans passer par Express.
+  if (req.headers.authorization) {
+    try {
+      req.user = authenticateToken(req);
+    } catch (_error) {
+      req.user = undefined;
+    }
+  }
+
   return req;
 }
 
@@ -255,6 +278,9 @@ async function createTestBadge(overrides = {}) {
 }
 
 module.exports = {
+  describeWithDb,
+  familyAuthHeader,
+  profileAuthHeader,
   createTestProfile,
   createTestPin,
   generateTestToken,

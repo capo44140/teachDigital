@@ -1,17 +1,32 @@
 version: "3.8"
 
+# ============================================================================
+# Stack Supabase OPTIONNELLE (expérimentale, non utilisée par l'application).
+# L'application TeachDigital tourne avec backend/docker-compose.yml +
+# docker-compose.frontend.yml (cf. deploy.ps1) ou docker-compose.app.yml.
+#
+# - Tous les secrets viennent de l'environnement / d'un fichier .env (non commité) :
+#     POSTGRES_PASSWORD, AUTHENTICATOR_PASSWORD, SUPABASE_JWT_SECRET,
+#     SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY (JWT signés avec SUPABASE_JWT_SECRET).
+#   Les mots de passe sont utilisés dans des URL postgres:// : éviter les caractères
+#   spéciaux (ou les encoder) — ex. openssl rand -hex 24.
+# - Tous les ports sont liés à 127.0.0.1 (Studio et l'API d'admin n'ont pas d'auth).
+# - Kong attend un fichier ./kong.yml (non fourni dans ce dépôt).
+# - Initialisation des rôles : cf. init-supabase.sql et doc/README-SUPABASE.md.
+# ============================================================================
+
 services:
   db:
     image: supabase/postgres:15.1.0.147
     container_name: supabase-db
     restart: always
     environment:
-      POSTGRES_PASSWORD: 5WZqggz2CrD1vyLA
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
       POSTGRES_HOST: /var/run/postgresql
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -25,13 +40,14 @@ services:
     container_name: supabase-studio
     restart: always
     ports:
-      - "8080:3000"
+      # Studio n'a pas d'authentification : jamais exposé hors de l'hôte
+      - "127.0.0.1:8080:3000"
     environment:
       SUPABASE_URL: http://kong:8000
-      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      SUPABASE_SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:?SUPABASE_ANON_KEY must be set}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY:?SUPABASE_SERVICE_KEY must be set}
       STUDIO_PG_META_URL: http://meta:8080
-      POSTGRES_PASSWORD: 5WZqggz2CrD1vyLA
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     depends_on:
       db:
         condition: service_healthy
@@ -48,15 +64,16 @@ services:
       db:
         condition: service_healthy
     environment:
-      PGRST_DB_URI: postgres://authenticator:5WZqggz2CrD1vyLA@db:5432/postgres
+      PGRST_DB_URI: postgres://authenticator:${AUTHENTICATOR_PASSWORD:?AUTHENTICATOR_PASSWORD must be set}@db:5432/postgres
       PGRST_DB_SCHEMAS: public,storage,graphql_public
       PGRST_DB_ANON_ROLE: anon
-      PGRST_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+      PGRST_JWT_SECRET: ${SUPABASE_JWT_SECRET:?SUPABASE_JWT_SECRET must be set}
       PGRST_DB_USE_LEGACY_GUCS: "false"
-      PGRST_APP_SETTINGS_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+      PGRST_APP_SETTINGS_JWT_SECRET: ${SUPABASE_JWT_SECRET:?SUPABASE_JWT_SECRET must be set}
       PGRST_APP_SETTINGS_JWT_EXP: "3600"
     ports:
-      - "3001:3000"
+      # 3005 (et non 3001) pour ne pas entrer en conflit avec le backend TeachDigital
+      - "127.0.0.1:3005:3000"
 
   meta:
     image: supabase/postgres-meta:v0.79.0
@@ -71,9 +88,9 @@ services:
       PG_META_DB_PORT: 5432
       PG_META_DB_NAME: postgres
       PG_META_DB_USER: postgres
-      PG_META_DB_PASSWORD: 5WZqggz2CrD1vyLA
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     ports:
-      - "8081:8080"
+      - "127.0.0.1:8081:8080"
 
   kong:
     image: kong:2.8.1
@@ -87,8 +104,8 @@ services:
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
     ports:
-      - "8000:8000"
-      - "8443:8443"
+      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8443:8443"
     volumes:
       - ./kong.yml:/usr/local/kong/kong.yml:ro
     depends_on:
@@ -106,44 +123,19 @@ services:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://postgres:5WZqggz2CrD1vyLA@db:5432/postgres
-      GOTRUE_SITE_URL: http://localhost:8080
-      GOTRUE_URI_ALLOW_LIST: "*"
-      GOTRUE_DISABLE_SIGNUP: "false"
-      GOTRUE_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+      GOTRUE_DB_DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@db:5432/postgres
+      GOTRUE_SITE_URL: ${GOTRUE_SITE_URL:-http://localhost:8080}
+      # Liste explicite des URL de redirection autorisées (plus de "*")
+      GOTRUE_URI_ALLOW_LIST: ${GOTRUE_URI_ALLOW_LIST:-http://localhost:8080}
+      GOTRUE_DISABLE_SIGNUP: ${GOTRUE_DISABLE_SIGNUP:-true}
+      GOTRUE_JWT_SECRET: ${SUPABASE_JWT_SECRET:?SUPABASE_JWT_SECRET must be set}
       GOTRUE_JWT_EXP: 3600
       GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
-      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      # Pas de confirmation automatique des e-mails par défaut
+      GOTRUE_MAILER_AUTOCONFIRM: ${GOTRUE_MAILER_AUTOCONFIRM:-false}
     ports:
-      - "9999:9999"
+      - "127.0.0.1:9999:9999"
 
 volumes:
   db_data:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

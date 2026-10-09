@@ -31,29 +31,31 @@ export const useApiStore = defineStore('api', {
 
   actions: {
     /**
-     * Initialiser l'état depuis le localStorage
+     * Initialiser l'état depuis le localStorage.
+     * Seul le jeton profil est vérifié : le jeton famille ne correspond pas à un utilisateur connecté.
      */
     async initialize () {
       try {
-        const token = localStorage.getItem('auth_token')
+        if (!apiService.isAuthenticated()) {
+          this.resetState()
+          return
+        }
+
         const userProfile = localStorage.getItem('user_profile')
+        this.token = apiService.getProfileToken()
+        this.user = userProfile ? JSON.parse(userProfile) : null
 
-        if (token && userProfile) {
-          this.token = token
-          this.user = JSON.parse(userProfile)
-
-          // Vérifier que le token est toujours valide
-          const verifiedUser = await apiService.verifyToken()
-          if (verifiedUser) {
-            this.isAuthenticated = true
-            this.user = verifiedUser
-          } else {
-            this.logout()
-          }
+        // Vérifier que le token est toujours valide (un 401 supprime le jeton)
+        const verifiedUser = await apiService.verifyToken()
+        if (verifiedUser) {
+          this.isAuthenticated = true
+          this.user = { ...(this.user || {}), ...verifiedUser }
+        } else {
+          this.resetState()
         }
       } catch (error) {
         console.error('Erreur lors de l\'initialisation:', error)
-        this.logout()
+        this.resetState()
       }
     },
 
@@ -84,7 +86,7 @@ export const useApiStore = defineStore('api', {
     },
 
     /**
-     * Déconnexion
+     * Déconnexion (supprime le jeton profil et la session parent)
      */
     async logout () {
       try {
@@ -92,14 +94,21 @@ export const useApiStore = defineStore('api', {
       } catch (error) {
         console.error('Erreur lors de la déconnexion:', error)
       } finally {
-        this.isAuthenticated = false
-        this.user = null
-        this.token = null
-        this.profiles = []
-        this.lessons = []
-        this.notifications = []
-        this.error = null
+        this.resetState()
       }
+    },
+
+    /**
+     * Réinitialiser l'état local (sans appel réseau)
+     */
+    resetState () {
+      this.isAuthenticated = false
+      this.user = null
+      this.token = null
+      this.profiles = []
+      this.lessons = []
+      this.notifications = []
+      this.error = null
     },
 
     /**

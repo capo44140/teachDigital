@@ -1,13 +1,15 @@
 // Service Worker pour TeachDigital PWA
-// Version dynamique basée sur la date de build
-const BUILD_VERSION = 'teachdigital-v' + new Date().getTime();
-const CACHE_NAME = BUILD_VERSION;
-// v3 : purge les caches v2, qui contiennent des réponses API figées
-// (l'ancien test de ressource statique attrapait toutes les requêtes GET)
-const STATIC_CACHE = 'teachdigital-static-v3';
-const DYNAMIC_CACHE = 'teachdigital-dynamic-v3';
-const CRITICAL_DATA_CACHE = 'teachdigital-critical-v1';
-const API_CACHE = 'teachdigital-api-v1';
+// Seul Service Worker de l'application (enregistré dans src/main.js).
+// BUILD_VERSION est remplacé au build par scripts/generate-sw.js (même valeur que dist/version.json).
+const BUILD_VERSION = 'teachdigital-dev';
+
+// Caches versionnés : chaque déploiement repart d'un précache propre
+const STATIC_CACHE = `teachdigital-static-${BUILD_VERSION}`;
+// Assets Vite hachés (/assets/*) : immuables, conservés d'un build à l'autre
+// (un onglet resté sur l'ancienne version peut encore charger ses chunks)
+const ASSET_CACHE = 'teachdigital-assets-v1';
+const MAX_ASSET_ENTRIES = 300;
+const CURRENT_CACHES = [STATIC_CACHE, ASSET_CACHE];
 
 const urlsToCache = [
   '/',
@@ -20,50 +22,81 @@ const urlsToCache = [
   '/favicon-16x16.png'
 ];
 
-// URLs critiques pour le mode offline
-const criticalUrls = [
-  '/api/profiles',
-  '/api/lessons',
-  '/api/notifications'
-];
+// Fichiers à ne jamais mettre en cache (détection de mise à jour)
+const NEVER_CACHE = ['/version.json', '/sw.js'];
 
-// Configuration des stratégies de cache
-const CACHE_STRATEGIES = {
-  // Cache First - pour les assets statiques
-  CACHE_FIRST: 'cache-first',
-  // Network First - pour les données API
-  NETWORK_FIRST: 'network-first',
-  // Stale While Revalidate - pour les données critiques
-  STALE_WHILE_REVALIDATE: 'stale-while-revalidate',
-  // Network Only - pour les actions importantes
-  NETWORK_ONLY: 'network-only'
-};
+// Réponse générique quand l'API est injoignable (aucune donnée API n'est jamais mise en cache :
+// jetons, PIN, progression et notifications ne doivent pas survivre dans le cache du navigateur)
+function offlineApiResponse() {
+  return new Response(JSON.stringify({
+    success: false,
+    message: 'Connexion au serveur impossible. Vérifiez votre connexion internet.',
+    code: 'OFFLINE',
+    offline: true
+  }), {
+    status: 503,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+  });
+}
+
+function isApiRequest(url) {
+  return url.pathname === '/api' || url.pathname.startsWith('/api/');
+}
+
+// Supprimer tous les caches qui ne correspondent pas à ce build
+// (dont les anciens caches teachdigital-api-* / teachdigital-critical-*)
+async function deleteOldCaches() {
+  const cacheNames = await caches.keys();
+  await Promise.all(
+    cacheNames
+      .filter((cacheName) => !CURRENT_CACHES.includes(cacheName))
+      .map((cacheName) => {
+        console.log('🗑️ Service Worker: Suppression ancien cache', cacheName);
+        return caches.delete(cacheName);
+      })
+  );
+}
+
+// Limiter la taille du cache des assets (les plus anciens sont supprimés en premier)
+async function trimAssetCache() {
+  const cache = await caches.open(ASSET_CACHE);
+  const requests = await cache.keys();
+  const excess = requests.length - MAX_ASSET_ENTRIES;
+  if (excess > 0) {
+    await Promise.all(requests.slice(0, excess).map((request) => cache.delete(request)));
+  }
+}
+
+// Purger toute réponse API éventuellement présente dans les caches
+async function purgeApiCaches() {
+  const cacheNames = await caches.keys();
+  await Promise.all(cacheNames.map(async (cacheName) => {
+    if (/api|critical/i.test(cacheName)) {
+      await caches.delete(cacheName);
+      return;
+    }
+    const cache = await caches.open(cacheName);
+    const requests = await cache.keys();
+    await Promise.all(
+      requests
+        .filter((request) => isApiRequest(new URL(request.url)))
+        .map((request) => cache.delete(request))
+    );
+  }));
+}
 
 // Installation du Service Worker
 self.addEventListener('install', (event) => {
   console.log('🔧 Service Worker: Installation - Version:', BUILD_VERSION);
-  
+
   // Forcer l'activation immédiate du nouveau service worker
   self.skipWaiting();
-  
+
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then((cache) => {
         console.log('📦 Service Worker: Mise en cache des ressources statiques');
-        return cache.addAll(urlsToCache);
-      })
-      .then(() => {
-        // Nettoyer les anciens caches
-        return caches.keys().then((cacheNames) => {
-          return Promise.all(
-            cacheNames.map((cacheName) => {
-              if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
-                console.log('🗑️ Service Worker: Suppression ancien cache', cacheName);
-                return caches.delete(cacheName);
-              }
-            })
-          );
-        });
+        return cache.addAll(urlsToCache.map((url) => new Request(url, { cache: 'reload' })));
       })
       .catch((error) => {
         console.error('❌ Service Worker: Erreur lors de la mise en cache', error);
@@ -74,175 +107,113 @@ self.addEventListener('install', (event) => {
 // Activation du Service Worker
 self.addEventListener('activate', (event) => {
   console.log('🚀 Service Worker: Activation - Version:', BUILD_VERSION);
-  
-  // Prendre le contrôle immédiatement de tous les clients
+
+  // Prendre le contrôle immédiatement de tous les clients et nettoyer les anciens caches
   event.waitUntil(
-    self.clients.claim().then(() => {
-      // Nettoyer les anciens caches
-      return caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
-              console.log('🗑️ Service Worker: Suppression ancien cache', cacheName);
-              return caches.delete(cacheName);
-            }
-          })
-        );
-      });
-    })
+    self.clients.claim()
+      .then(() => deleteOldCaches())
+      .then(() => trimAssetCache())
   );
 });
 
-// Interception des requêtes avec stratégie de cache améliorée
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
-  
-  // Stratégie différente selon le type de ressource
-  if (request.method === 'GET') {
-    // Pour les données critiques (API)
-    if (criticalUrls.some(criticalUrl => url.pathname.startsWith(criticalUrl))) {
-      event.respondWith(handleCriticalData(request));
-    }
-    // Pour les autres ressources API
-    else if (url.pathname.startsWith('/api/')) {
-      event.respondWith(handleApiRequest(request));
-    }
-    // Pour les pages de l'application : réseau d'abord, pour charger la dernière version
-    else if (request.mode === 'navigate') {
-      event.respondWith(handleDynamicResource(request));
-    }
-    // Pour les ressources statiques listées (comparaison exacte du chemin :
-    // '/' donnait includes('') et attrapait toutes les requêtes, API comprises)
-    else if (urlsToCache.includes(url.pathname)) {
-      event.respondWith(handleStaticResource(request));
-    }
-    // Pour les autres ressources
-    else {
-      event.respondWith(handleDynamicResource(request));
-    }
-  } else {
-    // Pour les requêtes non-GET, toujours aller au réseau
-    event.respondWith(fetch(request));
+// Messages de l'application (déconnexion, verrouillage, mise à jour)
+self.addEventListener('message', (event) => {
+  const type = event.data && event.data.type;
+  if (type === 'PURGE_API_CACHE') {
+    event.waitUntil(purgeApiCaches());
+  } else if (type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
 
-// Gestion des ressources statiques (Cache First)
+// Interception des requêtes
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+
+  // Requêtes non-GET (POST/PUT/DELETE, keepalive compris) : laissées au navigateur
+  if (request.method !== 'GET') return;
+
+  const url = new URL(request.url);
+
+  // API (même origine ou backend distant) : réseau uniquement, jamais de cache
+  if (isApiRequest(url)) {
+    event.respondWith(
+      fetch(request).catch(() => offlineApiResponse())
+    );
+    return;
+  }
+
+  // Ressources d'autres origines (miniatures YouTube, polices…) : laissées au navigateur
+  if (url.origin !== self.location.origin) return;
+
+  // Fichiers de version : toujours le réseau
+  if (NEVER_CACHE.includes(url.pathname)) return;
+
+  // Pages de l'application : réseau d'abord, pour charger la dernière version
+  if (request.mode === 'navigate') {
+    event.respondWith(handleNavigation(request));
+    return;
+  }
+
+  // Assets hachés par Vite : immuables, cache d'abord
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(handleHashedAsset(request));
+    return;
+  }
+
+  // Ressources statiques listées (comparaison exacte du chemin)
+  if (urlsToCache.includes(url.pathname)) {
+    event.respondWith(handleStaticResource(request));
+  }
+  // Autres ressources : comportement normal du navigateur (pas de cache SW)
+});
+
+// Navigation : réseau d'abord, index.html du précache en secours (mode hors ligne)
+async function handleNavigation(request) {
+  try {
+    return await fetch(request);
+  } catch (error) {
+    const cache = await caches.open(STATIC_CACHE);
+    const cachedResponse = await cache.match('/index.html');
+    if (cachedResponse) {
+      console.log('📱 Service Worker: Page servie depuis le cache (hors ligne)', request.url);
+      return cachedResponse;
+    }
+    throw error;
+  }
+}
+
+// Assets hachés (Cache First)
+async function handleHashedAsset(request) {
+  const cache = await caches.open(ASSET_CACHE);
+  const cachedResponse = await cache.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
+  const networkResponse = await fetch(request);
+  if (networkResponse.status === 200) {
+    await cache.put(request, networkResponse.clone());
+  }
+  return networkResponse;
+}
+
+// Gestion des ressources statiques (réseau d'abord, précache en secours)
 async function handleStaticResource(request) {
   try {
+    const networkResponse = await fetch(request);
+    if (networkResponse.status === 200) {
+      const cache = await caches.open(STATIC_CACHE);
+      await cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch (error) {
     const cachedResponse = await caches.match(request);
     if (cachedResponse) {
       console.log('📱 Service Worker: Ressource statique en cache', request.url);
       return cachedResponse;
     }
-    
-    // Si pas en cache, récupérer du réseau et mettre en cache
-    const networkResponse = await fetch(request);
-    if (networkResponse.status === 200) {
-      const responseClone = networkResponse.clone();
-      const cache = await caches.open(STATIC_CACHE);
-      await cache.put(request, responseClone);
-    }
-    return networkResponse;
-  } catch (error) {
-    console.error('Erreur lors de la gestion de la ressource statique:', error);
     return new Response('Ressource non disponible', { status: 404 });
-  }
-}
-
-// Gestion des données critiques (Stale While Revalidate)
-async function handleCriticalData(request) {
-  try {
-    const cache = await caches.open(CRITICAL_DATA_CACHE);
-    const cachedResponse = await cache.match(request);
-    
-    // Toujours essayer le réseau en arrière-plan
-    const networkPromise = fetch(request).then(async (networkResponse) => {
-      if (networkResponse.status === 200) {
-        const responseClone = networkResponse.clone();
-        await cache.put(request, responseClone);
-      }
-      return networkResponse;
-    }).catch(() => null);
-    
-    // Retourner le cache immédiatement s'il existe
-    if (cachedResponse) {
-      console.log('📱 Service Worker: Données critiques en cache (stale-while-revalidate)', request.url);
-      // Mettre à jour en arrière-plan
-      networkPromise;
-      return cachedResponse;
-    }
-    
-    // Si pas de cache, attendre le réseau
-    const networkResponse = await networkPromise;
-    if (networkResponse) {
-      return networkResponse;
-    }
-    
-    throw new Error('Pas de données disponibles');
-  } catch (error) {
-    console.error('Erreur lors de la gestion des données critiques:', error);
-    return new Response(JSON.stringify({ 
-      error: 'Données non disponibles en mode offline',
-      offline: true 
-    }), { 
-      status: 503,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-}
-
-// Gestion des requêtes API (Network First)
-async function handleApiRequest(request) {
-  try {
-    const networkResponse = await fetch(request);
-    if (networkResponse.status === 200) {
-      const responseClone = networkResponse.clone();
-      const cache = await caches.open(API_CACHE);
-      await cache.put(request, responseClone);
-    }
-    return networkResponse;
-  } catch (error) {
-    console.log('📱 Service Worker: Tentative de récupération depuis le cache API', request.url);
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    // Dernier recours : réponse d'erreur
-    return new Response(JSON.stringify({ 
-      error: 'Service non disponible',
-      offline: true 
-    }), { 
-      status: 503,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-}
-
-// Gestion des ressources dynamiques
-async function handleDynamicResource(request) {
-  try {
-    const networkResponse = await fetch(request);
-    if (networkResponse.status === 200) {
-      const responseClone = networkResponse.clone();
-      const cache = await caches.open(DYNAMIC_CACHE);
-      await cache.put(request, responseClone);
-    }
-    return networkResponse;
-  } catch (error) {
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      console.log('📱 Service Worker: Ressource dynamique en cache (fallback)', request.url);
-      return cachedResponse;
-    }
-    
-    // Dernier recours : page d'accueil pour les documents
-    if (request.destination === 'document') {
-      return caches.match('/index.html');
-    }
-    
-    throw error;
   }
 }
 
@@ -430,20 +401,6 @@ function getNotificationActions(type) {
 
 // Gestion de la fermeture des notifications
 self.addEventListener('notificationclose', (event) => {
+  // Pas d'appel API ici : le Service Worker ne dispose pas du jeton d'authentification
   console.log('❌ Service Worker: Notification fermée', event.notification.tag);
-  
-  // Optionnel: tracker les notifications fermées
-  const data = event.notification.data || {};
-  if (data.trackClose) {
-    // Envoyer une requête pour tracker la fermeture
-    fetch('/api/notification-closed', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tag: event.notification.tag,
-        timestamp: Date.now(),
-        data: data
-      })
-    }).catch(console.error);
-  }
 });

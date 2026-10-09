@@ -3,6 +3,15 @@
  */
 
 /**
+ * Code d'entrée familial (écran /family-gate, obligatoire avant toute page).
+ * Le backend renvoie un jeton famille exigé par toutes les routes /api/*.
+ * Définir E2E_FAMILY_CODE avec le code configuré sur l'environnement de test.
+ */
+export const familyGate = {
+  code: process.env.E2E_FAMILY_CODE || '0000'
+}
+
+/**
  * Données de profils de test
  */
 export const testProfiles = {

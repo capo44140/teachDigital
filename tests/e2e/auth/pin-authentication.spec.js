@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test'
-import { waitForAppLoad, cleanupTestData } from '../utils/test-helpers.js'
+import { waitForAppLoad, cleanupTestData, passFamilyGate } from '../utils/test-helpers.js'
 import { selectors, testProfiles, errorMessages, successMessages } from '../utils/fixtures.js'
 
 test.describe('Authentification par Code PIN', () => {
   test.beforeEach(async ({ page }) => {
     await cleanupTestData(page)
+    // Toutes les pages exigent désormais le code familial (jeton famille)
+    await passFamilyGate(page)
   })
 
   test('devrait afficher la page de verrouillage PIN pour un profil parent', async ({ page }) => {

@@ -1,41 +1,28 @@
 /**
  * Configuration globale pour les tests Jest
- * Ce fichier est exécuté avant tous les tests
+ * Ce fichier est exécuté avant chaque fichier de test.
+ *
+ * ⚠️ Les tests ne lisent JAMAIS backend/.env : il pointe vers la base réelle.
+ * - Par défaut, la base est inaccessible (127.0.0.1:9) : seuls les tests qui mockent
+ *   lib/database.js s'exécutent, les suites d'intégration sont ignorées (describeWithDb).
+ * - Pour lancer les suites d'intégration, fournir une base DÉDIÉE aux tests :
+ *     TEST_DATABASE_URL=postgresql://user:pass@localhost:5432/teachdigital_test pnpm test
  */
 
-// Augmenter le timeout par défaut pour Jest (30 secondes)
+const crypto = require('crypto');
+
 jest.setTimeout(30000);
 
-// Charger les variables d'environnement pour les tests
-// Chercher le fichier .env dans le répertoire backend
-const path = require('path');
-const dotenv = require('dotenv');
+// Empêche lib/loadEnv.js de charger backend/.env (ou env)
+global.__TEACHDIGITAL_BACKEND_ENV_LOADED = true;
 
-// Charger depuis le répertoire backend
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
-// Aussi depuis la racine du projet au cas où
-dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
-
-// Vérifier que les variables d'environnement essentielles sont définies
-if (!process.env.DATABASE_URL && !process.env.DB_HOST) {
-  console.warn('⚠️  Avertissement: Variables de base de données non configurées');
-  console.warn('   Les tests nécessitent DATABASE_URL ou (DB_HOST, DB_NAME, DB_USER, DB_PASSWORD)');
-  console.warn('   Vérifiez que le fichier .env existe dans backend/ ou à la racine du projet');
+for (const key of ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_DATABASE', 'DB_USERNAME', 'DB_SSL']) {
+  delete process.env[key];
 }
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgresql://test:test@127.0.0.1:9/teachdigital_test';
 
-if (!process.env.JWT_SECRET) {
-  console.warn('⚠️  Avertissement: JWT_SECRET non configuré');
-  console.warn('   Les tests d\'authentification peuvent échouer');
-  // Utiliser une valeur par défaut pour les tests
-  process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret-key-for-jest-tests-only';
+// Secret aléatoire par exécution : aucun jeton de test n'est valable ailleurs
+if (!process.env.__TEST_JWT_SECRET) {
+  process.env.__TEST_JWT_SECRET = crypto.randomBytes(32).toString('hex');
 }
-
-// Afficher la configuration détectée (sans les secrets)
-if (process.env.DATABASE_URL) {
-  console.log('✅ DATABASE_URL détectée');
-} else if (process.env.DB_HOST) {
-  console.log(`✅ Configuration DB détectée: ${process.env.DB_HOST}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME}`);
-} else {
-  console.error('❌ Aucune configuration de base de données trouvée');
-}
-
+process.env.JWT_SECRET = process.env.__TEST_JWT_SECRET;

@@ -1,121 +1,180 @@
-name: 🚀 Deploy to Synology
+name: Deploy to Synology
+
+# Déploiement MANUEL uniquement (Actions > Deploy to Synology > Run workflow) :
+# plus de déploiement automatique à chaque push sur main.
+#
+# Reproduit le chemin de déploiement réel (deploy.ps1) :
+#   - backend  : contenu de backend/ -> BACKEND_PATH, puis backend/docker-compose.yml
+#                (lit le .env du serveur : JWT_SECRET, DB_*...)
+#   - frontend : dist/ + nginx-frontend.conf + Dockerfile.frontend.prebuilt
+#                + docker-compose.frontend.yml (renommé docker-compose.yml) -> FRONTEND_PATH
+# Le docker-compose.yml de la racine (stack Supabase optionnelle) n'est PAS déployé.
+#
+# Secrets requis : SYNOLOGY_SSH_KEY, SYNOLOGY_HOST, SYNOLOGY_USER
+# (l'ancien secret SYNOLOGY_DEPLOY_PATH n'est plus utilisé : chemins = inputs ci-dessous).
 
 on:
-  push:
-    branches:
-      - main
-      - master
-  workflow_dispatch: # Permet de déclencher manuellement
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Composant à déployer
+        type: choice
+        options: [both, backend, frontend]
+        default: both
+      backend_path:
+        description: Dossier backend sur le NAS
+        type: string
+        default: /volume1/docker/teachdigital/backend
+      frontend_path:
+        description: Dossier frontend sur le NAS
+        type: string
+        default: /volume1/docker/teachdigital/frontend
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-synology
+  cancel-in-progress: false
 
 jobs:
+  # Garde-fou : lint + tests + build doivent passer avant tout déploiement
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   deploy:
-    name: 📦 Build & Deploy to Synology
+    name: Deploy (${{ inputs.target }})
+    needs: ci
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 30
+    env:
+      SSH_TARGET: ${{ secrets.SYNOLOGY_USER }}@${{ secrets.SYNOLOGY_HOST }}
+      SYNOLOGY_HOST: ${{ secrets.SYNOLOGY_HOST }}
+      BACKEND_PATH: ${{ inputs.backend_path }}
+      FRONTEND_PATH: ${{ inputs.frontend_path }}
+
     steps:
-      - name: 📥 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 🔐 Setup SSH
-        uses: webfactory/ssh-agent@v0.8.0
+      - name: Download frontend build (from CI job)
+        if: inputs.target != 'backend'
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SYNOLOGY_SSH_KEY }}
 
-      - name: 🔍 Add Synology to known hosts
+      - name: Add Synology to known hosts
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.SYNOLOGY_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$SYNOLOGY_HOST" >> ~/.ssh/known_hosts
 
-      - name: 📤 Deploy to Synology
-        env:
-          SYNOLOGY_HOST: ${{ secrets.SYNOLOGY_HOST }}
-          SYNOLOGY_USER: ${{ secrets.SYNOLOGY_USER }}
-          SYNOLOGY_PATH: ${{ secrets.SYNOLOGY_DEPLOY_PATH }}
+      - name: Prepare remote compose script
         run: |
-          echo "🚀 Déploiement sur Synology..."
-          
-          # Créer le répertoire de déploiement s'il n'existe pas
-          ssh ${{ secrets.SYNOLOGY_USER }}@${{ secrets.SYNOLOGY_HOST }} \
-            "mkdir -p ${{ secrets.SYNOLOGY_DEPLOY_PATH }}"
-          
-          # Copier les fichiers nécessaires
-          echo "📋 Copie des fichiers..."
-          rsync -avz --delete \
-            --exclude 'node_modules' \
-            --exclude '.git' \
-            --exclude 'dist' \
-            --exclude '.env' \
-            --exclude '*.log' \
-            -e ssh \
-            ./ ${{ secrets.SYNOLOGY_USER }}@${{ secrets.SYNOLOGY_HOST }}:${{ secrets.SYNOLOGY_DEPLOY_PATH }}/
-          
-          # Exécuter le déploiement sur le Synology
-          echo "🔧 Déploiement des conteneurs Docker..."
-          ssh ${{ secrets.SYNOLOGY_USER }}@${{ secrets.SYNOLOGY_HOST }} << 'ENDSSH'
-            cd ${{ secrets.SYNOLOGY_DEPLOY_PATH }}
-            
-            # Arrêter les conteneurs existants
-            echo "⏸️ Arrêt des conteneurs..."
-            docker-compose down || true
-            
-            # Pull les dernières images (si nécessaire)
-            echo "📥 Pull des images Docker..."
-            docker-compose pull || true
-            
-            # Build les images (si Dockerfile existe)
-            echo "🔨 Build des images..."
-            docker-compose build --no-cache || true
-            
-            # Démarrer les conteneurs
-            echo "▶️ Démarrage des conteneurs..."
-            docker-compose up -d
-            
-            # Attendre que les services soient prêts
-            echo "⏳ Attente du démarrage des services..."
-            sleep 10
-            
-            # Vérifier l'état des conteneurs
-            echo "✅ État des conteneurs:"
-            docker-compose ps
-            
-            # Afficher les logs récents
-            echo "📋 Logs récents:"
-            docker-compose logs --tail=50
-          ENDSSH
-          
-          echo "✅ Déploiement terminé avec succès!"
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/compose-up.sh" <<'EOF'
+          #!/bin/bash
+          # Usage: compose-up.sh <dossier> <url-healthcheck>
+          set -euo pipefail
+          DIR="$1"
+          HEALTH_URL="$2"
 
-      - name: 🧪 Health Check
-        env:
-          SYNOLOGY_HOST: ${{ secrets.SYNOLOGY_HOST }}
-          SYNOLOGY_USER: ${{ secrets.SYNOLOGY_USER }}
-        run: |
-          echo "🏥 Vérification de santé des services..."
-          ssh ${{ secrets.SYNOLOGY_USER }}@${{ secrets.SYNOLOGY_HOST }} << 'ENDSSH'
-            cd ${{ secrets.SYNOLOGY_DEPLOY_PATH }}
-            
-            # Vérifier que les conteneurs sont en cours d'exécution
-            if docker-compose ps | grep -q "Up"; then
-              echo "✅ Les conteneurs sont en cours d'exécution"
-            else
-              echo "❌ Certains conteneurs ne sont pas démarrés"
-              docker-compose ps
-              exit 1
+          DOCKER=""
+          for d in docker /usr/local/bin/docker /var/packages/ContainerManager/target/usr/bin/docker; do
+            if "$d" --version >/dev/null 2>&1; then DOCKER="$d"; break; fi
+          done
+          [ -n "$DOCKER" ] || { echo "[ERREUR] docker introuvable sur le NAS"; exit 1; }
+          if "$DOCKER" compose version >/dev/null 2>&1; then
+            COMPOSE="$DOCKER compose"
+          else
+            COMPOSE=""
+            for c in docker-compose /usr/local/bin/docker-compose /var/packages/ContainerManager/target/usr/bin/docker-compose; do
+              if "$c" --version >/dev/null 2>&1; then COMPOSE="$c"; break; fi
+            done
+            [ -n "$COMPOSE" ] || { echo "[ERREUR] docker compose introuvable sur le NAS"; exit 1; }
+          fi
+
+          cd "$DIR"
+          [ -f docker-compose.yml ] || { echo "[ERREUR] docker-compose.yml introuvable dans $DIR"; exit 1; }
+
+          # Build AVANT d'arrêter : si le build échoue, l'ancienne version reste en ligne
+          # et le workflow échoue (pas de "|| true").
+          echo "[BUILD] $DIR"
+          $COMPOSE build
+          echo "[START] $DIR"
+          $COMPOSE up -d --remove-orphans
+          $COMPOSE ps
+
+          echo "[HEALTH] $HEALTH_URL"
+          for i in 1 2 3 4 5 6; do
+            sleep $((2 ** i))
+            if curl -fsS -o /dev/null "$HEALTH_URL"; then
+              echo "[OK] Service répond (tentative $i)"
+              exit 0
             fi
-            
-            # Test de connexion à la base de données
-            echo "🔍 Test de connexion à la base de données..."
-            docker-compose exec -T db psql -U postgres -c "SELECT 1" || echo "⚠️ Base de données non accessible"
-          ENDSSH
+            echo "[RETRY] $i/6"
+          done
+          echo "[ERREUR] Le service ne répond pas : $HEALTH_URL"
+          $COMPOSE logs --tail=50
+          exit 1
+          EOF
 
-      - name: 📊 Deployment Summary
+      - name: Deploy backend
+        if: inputs.target != 'frontend'
+        run: |
+          set -euo pipefail
+          ssh "$SSH_TARGET" "mkdir -p '$BACKEND_PATH/logs' '$BACKEND_PATH/output' '$BACKEND_PATH/temp'"
+          # --delete ne touche jamais aux chemins exclus : .env* (secrets du serveur),
+          # logs/, output/, temp/ (volumes), ssl/ (certificats).
+          rsync -az --delete \
+            --exclude 'node_modules/' \
+            --exclude '.git/' \
+            --exclude '*.log' \
+            --exclude '.env' \
+            --exclude '.env.*' \
+            --exclude '.synology-deploy.json' \
+            --exclude 'logs/' \
+            --exclude 'output/' \
+            --exclude 'temp/' \
+            --exclude 'ssl/' \
+            --exclude 'coverage/' \
+            -e ssh \
+            backend/ "$SSH_TARGET:$BACKEND_PATH/"
+          ssh "$SSH_TARGET" bash -s -- "$BACKEND_PATH" "http://localhost:3001/health" < "$RUNNER_TEMP/compose-up.sh"
+
+      - name: Deploy frontend
+        if: inputs.target != 'backend'
+        run: |
+          set -euo pipefail
+          STAGE="$RUNNER_TEMP/frontend"
+          mkdir -p "$STAGE"
+          cp -R dist nginx-frontend.conf Dockerfile.frontend.prebuilt "$STAGE/"
+          cp docker-compose.frontend.yml "$STAGE/docker-compose.yml"
+          ssh "$SSH_TARGET" "mkdir -p '$FRONTEND_PATH/logs'"
+          rsync -az --delete \
+            --exclude 'logs/' \
+            --exclude '.env' \
+            --exclude '.env.*' \
+            --exclude 'ssl/' \
+            -e ssh \
+            "$STAGE/" "$SSH_TARGET:$FRONTEND_PATH/"
+          ssh "$SSH_TARGET" bash -s -- "$FRONTEND_PATH" "http://localhost:3000/" < "$RUNNER_TEMP/compose-up.sh"
+
+      - name: Deployment Summary
         if: always()
         run: |
-          echo "## 🚀 Résumé du déploiement" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Déploiement terminé sur Synology" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Branche:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Auteur:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-
+          {
+            echo "## Déploiement Synology"
+            echo ""
+            echo "- **Cible :** ${{ inputs.target }}"
+            echo "- **Commit :** ${{ github.sha }}"
+            echo "- **Branche :** ${{ github.ref_name }}"
+            echo "- **Auteur :** ${{ github.actor }}"
+            echo "- **Statut :** ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"

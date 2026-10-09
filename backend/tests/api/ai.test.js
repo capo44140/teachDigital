@@ -2,8 +2,9 @@
  * Tests pour les endpoints IA
  */
 
-const handleAI = require('../../api/ai.js');
+const handleAI = require('../../api/ai/index.js');
 const {
+  describeWithDb,
   createTestProfile,
   createTestPin,
   generateTestToken,
@@ -12,7 +13,7 @@ const {
   createMockResponse
 } = require('../helpers/testHelpers.js');
 
-describe('API Endpoints - IA', () => {
+describeWithDb('API Endpoints - IA', () => {
   let testProfile;
   let testProfileIds = [];
 
@@ -49,15 +50,6 @@ describe('API Endpoints - IA', () => {
       expect([200, 400]).toContain(res.statusCode);
     });
 
-    it('devrait refuser l\'accès sans authentification', async () => {
-      const req = createMockRequest('GET', '/api/ai/validate-key');
-      req.path = '/validate-key';
-      const res = createMockResponse();
-
-      await handleAI(req, res);
-
-      expect(res.statusCode).toBe(401);
-    });
   });
 
   describe('GET /api/ai/has-valid-key', () => {
@@ -75,31 +67,9 @@ describe('API Endpoints - IA', () => {
       expect(res.body.success).toBeDefined();
     });
 
-    it('devrait refuser l\'accès sans authentification', async () => {
-      const req = createMockRequest('GET', '/api/ai/has-valid-key');
-      req.path = '/has-valid-key';
-      const res = createMockResponse();
-
-      await handleAI(req, res);
-
-      expect(res.statusCode).toBe(401);
-    });
   });
 
   describe('POST /api/ai/generate-quiz-from-text', () => {
-    it('devrait refuser l\'accès sans authentification', async () => {
-      const req = createMockRequest('POST', '/api/ai/generate-quiz-from-text', {
-        text: 'Test text',
-        childProfile: { id: 1 }
-      });
-      req.path = '/generate-quiz-from-text';
-      const res = createMockResponse();
-
-      await handleAI(req, res);
-
-      expect(res.statusCode).toBe(401);
-    });
-
     it('devrait accepter une requête avec authentification', async () => {
       const token = generateTestToken(testProfile);
       const req = createMockRequest('POST', '/api/ai/generate-quiz-from-text', {

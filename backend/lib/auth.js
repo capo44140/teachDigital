@@ -1,10 +1,29 @@
 const jwt = require('jsonwebtoken');
 const sql = require('./database.js').default;
 const { withQueryTimeout, TIMEOUTS } = require('./queries.js');
+const { createErrorResponse } = require('./response.js');
 
-// NB : ne pas faire « await sql`...` » directement. sql renvoie une Promise native dont
-// seul le then() surchargé lance la requête ; await l'ignore et attendrait indéfiniment.
-// withQueryTimeout (Promise.race) appelle bien ce then(), comme dans les contrôleurs.
+// Deux types de jetons :
+// - « family » : délivré par le code d'entrée familial. Donne l'accès « enfant »
+//   (lire les leçons, enregistrer les résultats d'un enfant, etc.).
+// - « profile » : délivré par le PIN d'un profil (/auth/login). Un jeton profil
+//   admin est exigé pour toutes les actions parent ; le statut admin est revérifié en base.
+const TOKEN_SCOPES = {
+  FAMILY: 'family',
+  PROFILE: 'profile'
+};
+
+const FAMILY_TOKEN_EXPIRES_IN = process.env.JWT_FAMILY_EXPIRES_IN || '24h';
+const PROFILE_TOKEN_EXPIRES_IN = process.env.JWT_PROFILE_EXPIRES_IN || '4h';
+
+// Valeurs d'exemple publiées dans le dépôt : ne doivent jamais servir de secret réel
+const KNOWN_EXAMPLE_SECRETS = new Set([
+  'teachdigital-super-secret-jwt-key-2024-change-in-production',
+  'change_me_jwt_secret_please',
+  'your-super-secret-jwt-key-change-in-production',
+  'test-secret-key-for-jest-tests-only'
+]);
+const MIN_JWT_SECRET_LENGTH = 32;
 
 function getJwtSecret() {
   const raw = process.env.JWT_SECRET;
@@ -14,131 +33,157 @@ function getJwtSecret() {
   return raw.replace(/\r/g, '').trim();
 }
 
-// Middleware d'authentification pour Vercel Functions
+// Renvoie un message d'erreur si le secret JWT n'est pas utilisable en production, sinon null
+function getJwtSecretProblem() {
+  const secret = getJwtSecret();
+  if (!secret) return 'JWT_SECRET manquant';
+  if (secret.length < MIN_JWT_SECRET_LENGTH) return `JWT_SECRET trop court (minimum ${MIN_JWT_SECRET_LENGTH} caractères)`;
+  if (KNOWN_EXAMPLE_SECRETS.has(secret)) return 'JWT_SECRET est une valeur d\'exemple publique';
+  return null;
+}
+
+function extractBearerToken(req) {
+  const authHeader = req.headers?.authorization;
+  if (typeof authHeader !== 'string') return null;
+  const [scheme, token] = authHeader.split(' ');
+  if (!/^Bearer$/i.test(scheme || '') || !token) return null;
+  return token;
+}
+
+// Décode et vérifie le jeton de la requête. Lève 'Token manquant' / 'Token invalide'.
 function authenticateToken(req) {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1];
+  const token = extractBearerToken(req);
 
   if (!token) {
     throw new Error('Token manquant');
   }
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, getJwtSecret());
-    return decoded;
+    decoded = jwt.verify(token, getJwtSecret(), { algorithms: ['HS256'] });
   } catch (error) {
     throw new Error('Token invalide');
   }
+
+  // Jetons émis avant l'introduction des scopes : ce sont des jetons profil
+  if (!decoded.scope && decoded.profileId) {
+    decoded.scope = TOKEN_SCOPES.PROFILE;
+  }
+  if (decoded.scope !== TOKEN_SCOPES.FAMILY && decoded.scope !== TOKEN_SCOPES.PROFILE) {
+    throw new Error('Token invalide');
+  }
+  if (decoded.scope === TOKEN_SCOPES.FAMILY) {
+    // Un jeton famille ne porte jamais de droits admin
+    decoded.isAdmin = false;
+    delete decoded.profileId;
+  }
+  return decoded;
 }
 
-// Générer un token JWT
+// Générer un jeton profil (après vérification du PIN)
 function generateToken(payload) {
-  return jwt.sign(payload, getJwtSecret(), { expiresIn: '24h' });
+  return jwt.sign(
+    { ...payload, scope: TOKEN_SCOPES.PROFILE },
+    getJwtSecret(),
+    { expiresIn: PROFILE_TOKEN_EXPIRES_IN, algorithm: 'HS256' }
+  );
 }
 
-// Vérifier une session en base de données
-async function verifySession(sessionToken) {
+// Générer un jeton famille (après vérification du code d'entrée familial)
+function generateFamilyToken() {
+  const token = jwt.sign(
+    { scope: TOKEN_SCOPES.FAMILY },
+    getJwtSecret(),
+    { expiresIn: FAMILY_TOKEN_EXPIRES_IN, algorithm: 'HS256' }
+  );
+  const { exp } = jwt.decode(token);
+  return { token, expiresAt: new Date(exp * 1000).toISOString() };
+}
+
+function sendUnauthorized(res, message) {
+  res.status(401).json(createErrorResponse(message || 'Authentification requise', 'UNAUTHORIZED'));
+}
+
+function sendForbidden(res, message) {
+  res.status(403).json(createErrorResponse(message || 'Accès refusé - Admin requis', 'FORBIDDEN'));
+}
+
+// Middleware : jeton famille ou profil valide requis. Renseigne req.user.
+function requireMember(req, res, next) {
+  if (req.method === 'OPTIONS') return next();
   try {
-    const sessions = await withQueryTimeout(
-      sql`
-        SELECT s.*, p.name, p.type, p.is_admin, p.is_child, p.is_teen
-        FROM sessions s
-        JOIN profiles p ON s.profile_id = p.id
-        WHERE s.session_token = ${sessionToken}
-        AND s.expires_at > CURRENT_TIMESTAMP
-      `,
-      TIMEOUTS.STANDARD,
-      'vérification de la session'
-    );
-    return sessions[0] || null;
+    req.user = authenticateToken(req);
+    return next();
   } catch (error) {
-    console.error('Erreur lors de la vérification de la session:', error);
-    throw error;
+    return sendUnauthorized(res, error.message);
   }
 }
 
-// Créer une session
-async function createSession(profileId, sessionToken, expiresAt) {
+// Vérifie en base que le profil existe, est actif et admin (révocation immédiate
+// si un parent est désactivé ou rétrogradé, sans attendre l'expiration du jeton).
+async function isActiveAdminProfile(profileId) {
+  const id = parseInt(profileId, 10);
+  if (!Number.isInteger(id) || id <= 0) return false;
+  const rows = await withQueryTimeout(
+    sql`SELECT is_admin, is_active FROM profiles WHERE id = ${id}`,
+    TIMEOUTS.FAST,
+    'vérification des droits admin'
+  );
+  return !!rows[0] && rows[0].is_admin === true && rows[0].is_active !== false;
+}
+
+// Middleware : jeton profil d'un parent (admin) requis. Renseigne req.user.
+async function requireAdmin(req, res, next) {
+  if (req.method === 'OPTIONS') return next();
+  let user;
   try {
-    const result = await withQueryTimeout(
-      sql`
-        INSERT INTO sessions (profile_id, session_token, expires_at)
-        VALUES (${profileId}, ${sessionToken}, ${expiresAt})
-        RETURNING *
-      `,
-      TIMEOUTS.STANDARD,
-      'création de la session'
-    );
-    return result[0];
+    user = authenticateToken(req);
   } catch (error) {
-    console.error('Erreur lors de la création de la session:', error);
-    throw error;
+    return sendUnauthorized(res, error.message);
   }
-}
-
-// Supprimer une session
-async function deleteSession(sessionToken) {
+  if (user.scope !== TOKEN_SCOPES.PROFILE || !user.isAdmin) {
+    return sendForbidden(res);
+  }
   try {
-    const result = await withQueryTimeout(
-      sql`
-        DELETE FROM sessions
-        WHERE session_token = ${sessionToken}
-        RETURNING *
-      `,
-      TIMEOUTS.STANDARD,
-      'suppression de la session'
-    );
-    return result[0];
-  } catch (error) {
-    console.error('Erreur lors de la suppression de la session:', error);
-    throw error;
-  }
-}
-
-// Authentifier un utilisateur (supporte JWT et Session Token)
-async function authenticateUser(req) {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    throw new Error('Token manquant');
-  }
-
-  // 1. Essayer JWT (rapide, synchrone)
-  try {
-    const decoded = jwt.verify(token, getJwtSecret());
-    return decoded;
-  } catch (jwtError) {
-    // 2. Si JWT échoue, essayer Session Token (DB, asynchrone)
-    try {
-      const session = await verifySession(token);
-      if (session) {
-        // Adapter le format de session au format utilisateur attendu
-        return {
-          id: session.profile_id,
-          name: session.name,
-          type: session.type,
-          isAdmin: session.is_admin,
-          isChild: session.is_child,
-          isTeen: session.is_teen,
-          iat: Math.floor(Date.now() / 1000),
-          exp: Math.floor(new Date(session.expires_at).getTime() / 1000)
-        };
-      }
-    } catch (sessionError) {
-      // Ignorer l'erreur de session pour retourner l'erreur d'auth principale
+    if (!(await isActiveAdminProfile(user.profileId))) {
+      return sendForbidden(res);
     }
-
-    throw new Error('Token invalide ou session expirée');
+  } catch (error) {
+    return res.status(503).json(createErrorResponse('Vérification des droits impossible. Veuillez réessayer.', 'SERVICE_UNAVAILABLE'));
   }
+  req.user = { ...user, isAdmin: true };
+  return next();
+}
+
+// Middleware conditionnel : lecture (GET/HEAD) pour tout membre, écriture réservée aux parents
+function requireAdminForWrites(req, res, next) {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    return requireMember(req, res, next);
+  }
+  return requireAdmin(req, res, next);
+}
+
+// Un utilisateur peut-il agir pour ce profil (enregistrer un résultat, lire sa progression) ?
+// - parent (jeton admin) : tous les profils
+// - jeton famille : tous les profils (l'appareil familial a passé le code d'entrée)
+// - jeton profil non admin : uniquement le sien
+function canActForProfile(user, profileId) {
+  if (!user) return false;
+  if (user.isAdmin === true && user.scope === TOKEN_SCOPES.PROFILE) return true;
+  if (user.scope === TOKEN_SCOPES.FAMILY) return true;
+  return String(user.profileId) === String(profileId);
 }
 
 module.exports = {
+  TOKEN_SCOPES,
+  getJwtSecret,
+  getJwtSecretProblem,
   authenticateToken,
-  authenticateUser,
   generateToken,
-  verifySession,
-  createSession,
-  deleteSession
+  generateFamilyToken,
+  requireMember,
+  requireAdmin,
+  requireAdminForWrites,
+  canActForProfile,
+  isActiveAdminProfile
 };
-

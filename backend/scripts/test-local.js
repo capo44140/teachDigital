@@ -1,5 +1,8 @@
 // Test local de l'API
-const API_URL = 'http://localhost:3001';
+// URL cible : argument CLI ou variable d'environnement API_URL (aucun hôte réel en dur)
+//   node scripts/test-local.js https://votre-domaine.example
+//   API_URL=https://votre-domaine.example node scripts/test-local.js
+const API_URL = (process.argv[2] || process.env.API_URL || 'http://localhost:3001').replace(/\/+$/, '');
 
 async function testLocalAPI() {
   console.log('🧪 Test local de l\'API\n');
@@ -51,7 +54,7 @@ async function testLocalAPI() {
     
   } catch (error) {
     console.log('❌ Erreur:', error.message);
-    console.log('💡 Assurez-vous que le serveur local est démarré avec: vercel dev');
+    console.log('💡 Assurez-vous que le serveur local est démarré avec: pnpm dev (dans backend/)');
   }
 }
 

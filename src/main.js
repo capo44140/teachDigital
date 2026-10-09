@@ -4,7 +4,7 @@ import './style.css'
 import App from './App.vue'
 import router from './router'
 import UpdateNotification from './components/UpdateNotification.vue'
-import { updateService } from './services/updateService.js'
+import { updateService, isChunkLoadError, reloadOnceAfterChunkError } from './services/updateService.js'
 import { useApiStore } from './stores/apiStore.js'
 
 // Services PWA avancés
@@ -93,23 +93,11 @@ if ('serviceWorker' in navigator) {
         // Écouter les mises à jour disponibles du Service Worker
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing
-          newWorker.addEventListener('statechange', async () => {
+          if (!newWorker) return
+          newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-
-              // Récupérer les versions réelles
-              try {
-                const response = await fetch('/version.json?t=' + Date.now())
-                if (response.ok) {
-                  const newVersionInfo = await response.json()
-                  const currentVersion = updateService.state.currentVersion || '1.0.0'
-                  updateService.showUpdateNotification(currentVersion, newVersionInfo.version)
-                }
-              } catch (error) {
-                console.error('Erreur récupération version:', error)
-                // Fallback: afficher quand même la notification
-                const currentVersion = updateService.state.currentVersion || '1.0.0'
-                updateService.showUpdateNotification(currentVersion, 'nouvelle version')
-              }
+              // Comparer le build exécuté (__APP_VERSION__) avec /version.json
+              updateService.checkForUpdates()
             }
           })
         })
@@ -126,6 +114,20 @@ if ('serviceWorker' in navigator) {
     }
   })
 }
+
+// Chunk JS/CSS introuvable après un déploiement (ancien index.html encore en mémoire) :
+// recharger une seule fois pour récupérer la nouvelle version
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadOnceAfterChunkError()) {
+    event.preventDefault()
+  }
+})
+
+router.onError((error, to) => {
+  if (isChunkLoadError(error)) {
+    reloadOnceAfterChunkError(to?.fullPath)
+  }
+})
 
 // Fournir les services globalement
 app.provide('updateService', updateService)

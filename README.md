@@ -1,407 +1,172 @@
 # TeachDigital
 
-[![Performance](https://img.shields.io/badge/Lighthouse-85+-brightgreen?style=flat-square&logo=lighthouse)](./OPTIMIZATIONS-SUMMARY.md)
-[![Speed](https://img.shields.io/badge/FCP-0.5s-success?style=flat-square)](./PERFORMANCE-OPTIMIZATIONS-2024.md)
-[![Bundle Size](https://img.shields.io/badge/Bundle-470KB-blue?style=flat-square)](./OPTIMIZATIONS-README.md)
-[![Accessibility](https://img.shields.io/badge/WCAG-AA-green?style=flat-square)](./QUICK-PERFORMANCE-CHECK.md)
+Application éducative familiale (PWA) : un frontend **Vue 3 + Vite 7** et une API **Node.js / Express**
+adossée à **PostgreSQL**, déployés en conteneurs **Docker sur un NAS Synology**.
 
-Une application Vue.js moderne avec Tailwind CSS 4, optimisée pour le déploiement sur Vercel avec configuration de production avancée.
+## 🚀 Stack technique
 
-## 🚀 Technologies utilisées
+| Couche | Technologies |
+| --- | --- |
+| Frontend | Vue 3, Vite 7, Pinia, Vue Router, Tailwind CSS 4 (PostCSS), PWA (service worker généré au build) |
+| Backend | Node.js, Express 4, `pg`, JWT, Zod, Helmet, Tesseract.js / fournisseurs IA (OpenAI, Gemini, Groq, Mistral, DeepSeek, Kimi, LLM local) |
+| Base de données | PostgreSQL |
+| Tests | Vitest (unitaires front), Jest (backend), Playwright (E2E) |
+| Déploiement | Docker / Docker Compose sur Synology via `deploy.ps1` (ou `deploy-frontend.ps1`) |
+| Outillage | **Node 22** (`.nvmrc`, minimum `^20.19 \|\| >=22.12` pour Vite 7), **pnpm 9.15** (`packageManager`) |
 
-- **Vue.js 3** - Framework JavaScript progressif
-- **Vite** - Outil de build rapide et moderne
-- **Tailwind CSS 4** - Framework CSS utilitaire
-- **PostCSS** - Processeur CSS
-- **Pinia** - Gestion d'état Vue.js
-- **PostgreSQL** - Base de données PostgreSQL
-- **Vercel** - Plateforme de déploiement optimisée
+## 📦 Installation (développement)
 
-## ⚡ Optimisations de Performance
-
-> **Nouveau !** (19 oct 2025) - Optimisations majeures implémentées : **-72% de JavaScript inutilisé** 🚀
-
-### 📊 Résultats
-
-- **First Contentful Paint** : 1.5s → 0.3s (-80%)
-- **Time to Interactive** : 4.5s → 1.2s (-73%)
-- **Lighthouse Score** : 65 → 92+ (+42%)
-- **Bundle Size** : 630 KB → 220 KB (-65%)
-- **JavaScript Inutilisé** : 388 KB → 100 KB (-72%)
-
-### 🎯 Optimisations Clés
-
-1. ✅ **Chargement différé asynchrone** - Les données non critiques se chargent en arrière-plan
-2. ✅ **Stale-while-revalidate** - Cache intelligent avec revalidation transparente
-3. ✅ **Code splitting dynamique** - Chunks optimisés par fonctionnalité
-4. ✅ **Skeleton loading UI** - Feedback visuel immédiat pendant le chargement
-5. ✅ **Lazy-loading Face-API** - 250 KB chargés uniquement quand nécessaire (-53%)
-6. ✅ **Tree-shaking agressif** - Suppression automatique du code mort
-7. ✅ **Terser optimisé** - Compression agressive avec minification intelligente
-
-### 📚 Documentation Complète
-
-- **[Guide des Optimisations](./OPTIMIZATIONS-README.md)** - Vue d'ensemble complète
-- **[Optimisation Bundle](./BUNDLE-SIZE-OPTIMIZATION.md)** - 🆕 Réduction -72% JavaScript inutilisé
-- **[Test Rapide](./QUICK-PERFORMANCE-CHECK.md)** - Vérifier les optimisations en 5 min
-- **[Documentation Technique](./PERFORMANCE-OPTIMIZATIONS-2024.md)** - Détails techniques
-- **[Config Vercel](./VERCEL-PERFORMANCE-OPTIMIZATION.md)** - Optimisations Vercel
-
-### 🛠️ Commandes d'Optimisation
+Prérequis : Node 22 (`nvm use`) et pnpm 9.15 (`corepack enable` ou `npm i -g pnpm@9.15.9`).
 
 ```bash
-npm run optimize:analyze     # Analyser le bundle et les imports
-npm run check:performance    # Vérifier toutes les optimisations
-npm run build:analyze        # Build avec analyse de bundle
-```
-
-## 📦 Installation
-
-Ce projet utilise **pnpm** comme gestionnaire de paquets pour de meilleures performances.
-
-1. Installez les dépendances :
-```bash
+# Frontend (racine)
 pnpm install
+cp .env.example .env            # aucune clé secrète côté frontend (cf. Sécurité)
+
+# Backend
+cd backend
+pnpm install
+cp env.example .env             # renseigner DB_* et JWT_SECRET
+pnpm dev                        # API sur http://localhost:3001
 ```
 
-2. Lancez le serveur de développement :
+Puis, à la racine : `pnpm dev` → [http://localhost:3000](http://localhost:3000).
+En développement, Vite relaie `/api` vers le backend (`VITE_DEV_API_TARGET`, défaut `http://127.0.0.1:3001`).
+
+## 🧪 Qualité et tests
+
 ```bash
-pnpm run dev
+pnpm run lint:check      # ESLint (sans correction) — utilisé par la CI
+pnpm run lint            # ESLint avec --fix
+pnpm exec vitest run     # tests unitaires frontend (pnpm test = mode watch)
+pnpm run test:coverage   # couverture (src/ uniquement, pas de seuil imposé pour l'instant)
+pnpm run test:e2e        # tests Playwright (cf. doc/PLAYWRIGHT-GUIDE.md)
+cd backend && pnpm test  # tests Jest du backend (tests DB ignorés sans TEST_DATABASE_URL)
 ```
 
-3. Ouvrez [http://localhost:3000](http://localhost:3000) dans votre navigateur.
+CI GitHub Actions :
 
-## 🏗️ Build pour la production
+- `.github/workflows/ci.yml` — à chaque push / PR : lint, tests unitaires, build frontend, tests backend.
+- `.github/workflows/e2e-tests.yml` — tests Playwright.
+- `.github/workflows/deploy-synology.yml` — déploiement **manuel** (`workflow_dispatch`), précédé de la CI.
+
+## 🏗️ Build de production
 
 ```bash
 pnpm run build
 ```
 
-Le build sera généré dans le dossier `dist/` avec optimisations avancées :
-- Minification avec Terser
-- Chunking intelligent des vendors
-- Noms de fichiers avec hash pour le cache
-- Configuration de production dédiée
+Génère `dist/` (Vite, minification Terser, chunks hashés) puis `dist/sw.js` (`scripts/generate-sw.js`).
+L'URL publique de l'API utilisée par le build est `VITE_API_URL_PROD` (défaut dans `src/services/apiService.js`).
 
-## 🚀 Déploiement Vercel
+## 🐳 Déploiement (Docker sur Synology)
 
-Ce projet est optimisé pour Vercel avec une configuration de production avancée :
+Le déploiement réel se fait depuis un poste Windows (PowerShell + Git Bash) vers le NAS via SSH
+(alias `synology` dans `~/.ssh/config`) :
 
-### Configuration Vercel recommandée :
-- **Build Command** : `pnpm run build`
-- **Output Directory** : `dist`
-- **Install Command** : `pnpm install`
-- **Framework** : `vite`
+```powershell
+.\deploy.ps1                     # backend + frontend
+.\deploy.ps1 -Target backend     # backend uniquement
+.\deploy.ps1 -Target frontend    # frontend uniquement (build local puis envoi de dist/)
+.\deploy.ps1 -SkipBuild          # réutilise le dist/ existant
+```
 
-### Fonctionnalités de déploiement :
-- **Cache optimisé** - Headers de cache pour les assets statiques
-- **Build rapide** - Configuration Vite optimisée pour la production
-- **Variables d'environnement** - Support complet des variables Neon Database
-- **PWA Ready** - Service Worker et manifest configurés
+- **Backend** : le contenu de `backend/` est copié dans le dossier défini par `backend/.synology-deploy.json`
+  (`deployPath`, cf. `backend/.synology-deploy.json.example`), puis `backend/docker-compose.yml` est
+  reconstruit et relancé. Le conteneur écoute sur le port **3001** (healthcheck `/health`).
+  Les secrets viennent du fichier **`.env` présent sur le NAS** à côté du compose (jamais transféré ni
+  commité) — modèle : `backend/env.docker.example`.
+- **Frontend** : `dist/`, `nginx-frontend.conf`, `Dockerfile.frontend.prebuilt` et
+  `docker-compose.frontend.yml` (renommé `docker-compose.yml`) sont copiés dans
+  `/volume1/docker/teachdigital/frontend` (ou `frontendDeployPath` de `.synology-deploy.json`).
+  L'hôte publie le port **3000** vers nginx (port 80 du conteneur), qui sert la SPA et relaie `/api/`
+  vers le backend (`host.docker.internal:3001`). Le reverse proxy DSM (HTTPS) pointe vers le port 3000.
+- `deploy-frontend.ps1` est l'ancien script équivalent pour le frontend seul.
 
-### Autres plateformes supportées :
-- **Netlify** - Déploiement automatique depuis Git
-- **GitHub Pages** - Hébergement gratuit
-- **Firebase Hosting** - Plateforme Google
+Autres fichiers Docker :
+
+- `docker-compose.app.yml` + `env.synology.example` : stack tout-en-un (PostgreSQL + backend + frontend
+  [+ nginx avec `--profile production`]), non utilisée par `deploy.ps1`.
+- `docker-compose.yml` (racine) + `init-supabase.sql` : stack Supabase **optionnelle et non utilisée**
+  (cf. [doc/README-SUPABASE.md](doc/README-SUPABASE.md)).
+
+Documentation complémentaire : [doc/DEPLOY-SYNOLOGY.md](doc/DEPLOY-SYNOLOGY.md),
+[doc/SYNOLOGY-ENV-VARIABLES.md](doc/SYNOLOGY-ENV-VARIABLES.md),
+[doc/HTTPS-SYNOLOGY-SETUP.md](doc/HTTPS-SYNOLOGY-SETUP.md)
+(certains guides de `doc/` décrivent d'anciennes approches — Vercel, Neon — et sont conservés pour l'historique).
+
+## 🔒 Sécurité / secrets
+
+Aucun secret ne doit être commité : seuls les fichiers `*.example` sont versionnés (`.env`, `.env.*`,
+`backend/.env` sont ignorés par git et exclus des images Docker).
+
+Variables **obligatoires** côté backend (`backend/.env` en local, `.env` du NAS en production) :
+
+| Variable | Exigence |
+| --- | --- |
+| `JWT_SECRET` | ≥ 32 caractères aléatoires, unique par environnement : `openssl rand -hex 32`. `docker compose` refuse de démarrer s'il est absent. |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` (ou `DATABASE_URL`) | Identifiants PostgreSQL dédiés à l'application, mot de passe fort. |
+| `FRONTEND_URL` / `ALLOWED_ORIGIN` | Origines autorisées par CORS. |
+
+Clés IA (`OPENAI_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`,
+`KIMI_API_KEY`) : **uniquement dans l'environnement du backend**. Ne jamais créer de variable `VITE_*`
+contenant une clé : tout ce qui est préfixé `VITE_` est intégré en clair dans le JavaScript livré.
+
+Mise en service :
+
+1. Initialiser le code d'entrée familial (aucun code par défaut) :
+   `cd backend && node scripts/init-family-gate.js <code à 4-8 chiffres>`
+2. Définir les codes PIN des profils : `node scripts/init-default-pins.js <PIN>` (dans `backend/`).
+3. **Changer tout code par défaut ou trivial** (ex. `1234`) : un code connu de tous donne accès à
+   l'espace parent. Les PIN se modifient ensuite depuis les paramètres parent.
+
+Si un secret a été commité par le passé, il doit être considéré comme compromis : le **changer**
+(la réécriture de l'historique git ne suffit pas).
 
 ## 📁 Structure du projet
 
-```
+```text
 teachDigital/
-├── public/              # Assets statiques et PWA
-├── src/
-│   ├── components/      # Composants Vue.js
-│   ├── services/        # Services (DB, AI, etc.)
-│   ├── stores/          # Gestion d'état Pinia
-│   ├── config/          # Configuration (DB, PIN)
-│   ├── router/          # Configuration Vue Router
-│   ├── App.vue          # Composant principal
-│   ├── main.js          # Point d'entrée
-│   └── style.css        # Styles Tailwind CSS
-├── scripts/             # Scripts de migration et utilitaires
-├── dist/                # Build de production
-├── index.html           # Template HTML
-├── package.json         # Dépendances et scripts
-├── vite.config.js       # Configuration Vite (dev)
-├── vite.config.prod.js  # Configuration Vite (production)
-├── vercel.json          # Configuration Vercel
-├── postcss.config.mjs   # Configuration PostCSS
-└── README.md
+├── src/                    # Frontend Vue 3 (components, services, stores, router, config, utils...)
+├── public/                 # Assets statiques, manifest, template du service worker
+├── scripts/                # Scripts de build (generate-sw.js), migrations et utilitaires
+├── tests/                  # Tests Vitest (tests/services) et Playwright (tests/e2e)
+├── backend/                # API Express (server.js, api/, controllers/, lib/, tests/, Dockerfile)
+├── doc/                    # Documentation détaillée
+├── .github/workflows/      # CI, E2E, déploiement manuel Synology
+├── deploy.ps1              # Déploiement Synology (backend + frontend)
+├── deploy-frontend.ps1     # Déploiement Synology (frontend seul, historique)
+├── docker-compose.frontend.yml, Dockerfile.frontend.prebuilt, nginx-frontend.conf   # image frontend (déploiement)
+├── docker-compose.app.yml, Dockerfile.frontend, nginx.conf                          # stack tout-en-un
+├── vite.config.js, vitest.config.js, playwright.config.js, eslint.config.js
+└── package.json            # scripts et dépendances frontend (pnpm)
 ```
 
-## 🎨 Personnalisation
+## 📝 Scripts utiles
 
-Le projet utilise Tailwind CSS 4 avec une configuration moderne. Vous pouvez personnaliser les styles dans `src/style.css` et ajouter vos propres classes utilitaires.
+- `pnpm run dev` / `pnpm run build` / `pnpm run preview`
+- `pnpm run generate-icons`, `pnpm run validate-manifest`
+- `pnpm run version:patch|minor|major` — gestion de version (cf. [doc/VERSION-MANAGEMENT.md](doc/VERSION-MANAGEMENT.md))
+- Scripts de migration / maintenance DB : `pnpm run init-db`, `migrate-db`, `migrate-pins`, `migrate-teens`,
+  `migrate-lessons`, `migrate-badges`, `migrate:audit-logs` (variables DB dans `.env`, cf. `env.example`)
+- `pnpm run audit` / `pnpm run security:check` — audit des dépendances + lint
+- `pnpm run build:analyze`, `pnpm run bundle:analyze`, `pnpm run lighthouse` — analyse de performance
 
-## 📝 Scripts disponibles
+## ⚡ Performance
 
-### Scripts de développement :
-- `pnpm run dev` - Lance le serveur de développement
-- `pnpm run build` - Construit l'application pour la production
-- `pnpm run preview` - Prévisualise le build de production
-
-### Scripts de base de données :
-- `pnpm run init-db` - Initialise la base de données
-- `pnpm run db:test` - Teste la connexion à la base de données
-- `pnpm run migrate-db` - Migre la base de données
-- `pnpm run migrate-pins` - Migre les codes PIN
-- `pnpm run migrate-teens` - Migre les profils adolescents
-
-### Scripts utilitaires :
-- `pnpm run generate-icons` - Génère les icônes PWA
-- `pnpm run test-pin-security` - Teste la sécurité des codes PIN
-- `pnpm run version:patch` - Incrémente la version (patch)
-- `pnpm run version:minor` - Incrémente la version (minor)
-- `pnpm run version:major` - Incrémente la version (major)
-
-## 🔧 Configuration Vercel
-
-Pour déployer sur Vercel, assurez-vous que les paramètres suivants sont configurés :
-
-1. **Framework Settings** :
-   - Framework Preset : `Vite`
-   - Build Command : `pnpm run build`
-   - Output Directory : `dist`
-   - Install Command : `pnpm install`
-   - Development Command : `vite`
-
-2. **Variables d'environnement** (à configurer dans Vercel) :
-   - `DATABASE_URL` - URL de connexion PostgreSQL (backend uniquement)
-   - `NEON_HOST`, `NEON_DATABASE`, `NEON_USERNAME`, `NEON_PASSWORD`, `NEON_PORT` (si vous utilisez la config par variables séparées)
-
-3. **Activation des Overrides** :
-   - Activez tous les toggles "Override" dans l'interface Vercel
-   - Cela synchronise les paramètres de projet avec ceux de production
-
-## 🚀 Fonctionnalités avancées
-
-- **PWA Ready** - Application Web Progressive avec Service Worker
-- **Gestion d'état** - Pinia pour la gestion d'état Vue.js
-- **Base de données** - Intégration Neon Database PostgreSQL
-- **Sécurité** - Système de codes PIN avec chiffrement
-- **Cache optimisé** - Headers de cache configurés pour Vercel
-- **Build optimisé** - Configuration de production dédiée
-
-## 🎯 Préconisations d'Amélioration
-
-### 🏗️ **1. Architecture et Structure**
-
-#### **Problèmes identifiés :**
-- **Monolithe frontend** : Tous les composants dans un seul bundle
-- **Services trop volumineux** : `profileService.js` fait 463+ lignes
-- **Gestion d'état dispersée** : Logique métier dans les composants
-
-#### **Recommandations :**
-- **Modulariser les services** : Diviser `profileService.js` en modules spécialisés
-- **Implémenter un pattern Repository** pour l'accès aux données
-- **Créer des stores Pinia spécialisés** (auth, lessons, notifications)
-- **Séparer la logique métier** des composants Vue
-
-### ⚡ **2. Performance**
-
-#### **Problèmes identifiés :**
-- **Chargement initial lourd** : 29 composants chargés simultanément
-- **Pas de lazy loading** pour les composants lourds
-- **Images non optimisées** : Pas de compression automatique
-- **Pas de cache intelligent** pour les données
-
-#### **Recommandations :**
-```javascript
-// Lazy loading des composants lourds
-const LessonScanner = () => import(/* webpackChunkName: "scanner" */ '../components/LessonScanner.vue')
-const YouTubeVideoManager = () => import(/* webpackChunkName: "youtube" */ '../components/YouTubeVideoManager.vue')
-
-// Cache intelligent avec TTL
-const cacheService = {
-  set(key, data, ttl = 300000) { /* 5 min */ },
-  get(key) { /* avec vérification TTL */ }
-}
-```
-
-### 🔒 **3. Sécurité**
-
-#### **Points forts existants :**
-- ✅ Rate limiting implémenté
-- ✅ Chiffrement des données sensibles
-- ✅ Logs d'audit
-- ✅ Validation des images
-
-#### **Améliorations recommandées :**
-- **CSP (Content Security Policy)** strict
-- **Sanitisation XSS** pour les contenus utilisateur
-- **Validation côté serveur** (actuellement côté client uniquement)
-- **Rotation des tokens** de session
-- **Chiffrement des communications** (HTTPS obligatoire)
-
-### 🧪 **4. Qualité du Code**
-
-#### **Problèmes identifiés :**
-- **Pas de tests unitaires** ou d'intégration
-- **Gestion d'erreurs inconsistante**
-- **Documentation technique limitée**
-- **Pas de linting strict**
-
-#### **Recommandations :**
-```javascript
-// Configuration ESLint stricte
-{
-  "extends": ["@vue/typescript/recommended", "plugin:security/recommended"],
-  "rules": {
-    "no-console": "warn",
-    "no-debugger": "error",
-    "security/detect-object-injection": "error"
-  }
-}
-
-// Tests unitaires avec Vitest
-import { describe, it, expect } from 'vitest'
-import { ProfileService } from './profileService.js'
-
-describe('ProfileService', () => {
-  it('should create profile with valid data', async () => {
-    // Test implementation
-  })
-})
-```
-
-### 🎨 **5. Expérience Utilisateur**
-
-#### **Améliorations recommandées :**
-- **Loading states** cohérents dans toute l'app
-- **Feedback visuel** pour les actions longues
-- **Gestion d'erreurs** user-friendly
-- **Accessibilité** (ARIA labels, navigation clavier)
-- **Mode sombre** optionnel
-- **Notifications toast** pour les actions
-
-### 📱 **6. PWA et Mobile**
-
-#### **Améliorations :**
-- **Offline-first** : Cache des données critiques
-- **Push notifications** pour les rappels
-- **Installation native** améliorée
-- **Performance mobile** optimisée
-
-### 🔧 **7. Maintenance et DevOps**
-
-#### **Recommandations :**
-```yaml
-# GitHub Actions CI/CD
-name: CI/CD Pipeline
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Install dependencies
-        run: pnpm install
-      - name: Run tests
-        run: pnpm test
-      - name: Run linting
-        run: pnpm lint
-      - name: Security audit
-        run: pnpm audit
-```
-
-### 📊 **8. Monitoring et Analytics**
-
-#### **Ajouts recommandés :**
-- **Métriques de performance** (Core Web Vitals)
-- **Tracking des erreurs** (Sentry)
-- **Analytics d'usage** (privacy-friendly)
-- **Health checks** automatisés
-
-### 🚀 **9. Plan d'Implémentation Priorisé**
-
-#### **Phase 1 (Immédiat - 1-2 semaines) :**
-1. Corriger les vulnérabilités de sécurité
-2. Implémenter les tests unitaires critiques
-3. Améliorer la gestion d'erreurs
-4. Optimiser les images et assets
-
-#### **Phase 2 (Court terme - 1 mois) :**
-1. Refactoriser les services volumineux
-2. Implémenter le lazy loading
-3. Ajouter les loading states
-4. Améliorer l'accessibilité
-
-#### **Phase 3 (Moyen terme - 2-3 mois) :**
-1. Architecture microservices (si nécessaire)
-2. Monitoring complet
-3. Tests d'intégration
-4. Documentation technique
-
-### 💡 **10. Améliorations Spécifiques par Composant**
-
-#### **Dashboard.vue :**
-- Pagination pour les listes longues
-- Filtres avancés
-- Export des données
-
-#### **ProfileService.js :**
-- Pagination des requêtes
-- Cache intelligent
-- Gestion des transactions
-
-#### **Router :**
-- Guards de navigation optimisés
-- Preloading des routes critiques
-- Gestion des erreurs 404
-
-## 🔧 Scripts de Maintenance
-
-### Scripts de qualité de code :
-- `pnpm run lint` - Vérification du code avec ESLint
-- `pnpm run lint:fix` - Correction automatique des erreurs de linting
-- `pnpm run test` - Exécution des tests unitaires
-- `pnpm run test:coverage` - Tests avec rapport de couverture
-- `pnpm run type-check` - Vérification des types TypeScript
-
-### Scripts de sécurité :
-- `pnpm run audit` - Audit de sécurité des dépendances
-- `pnpm run audit:fix` - Correction automatique des vulnérabilités
-- `pnpm run security:check` - Vérification de sécurité complète
-
-### Scripts de performance :
-- `pnpm run build:analyze` - Analyse du bundle de production
-- `pnpm run lighthouse` - Audit de performance avec Lighthouse
-- `pnpm run bundle:size` - Analyse de la taille des bundles
-
-## 📈 Métriques de Qualité
-
-### Objectifs de performance :
-- **First Contentful Paint** : < 1.5s
-- **Largest Contentful Paint** : < 2.5s
-- **Cumulative Layout Shift** : < 0.1
-- **First Input Delay** : < 100ms
-
-### Objectifs de qualité :
-- **Couverture de tests** : > 80%
-- **Complexité cyclomatique** : < 10 par fonction
-- **Duplication de code** : < 5%
-- **Vulnérabilités** : 0 critique, 0 haute
+Les travaux d'optimisation (code splitting, lazy loading, cache) sont documentés dans :
+[doc/OPTIMIZATIONS-README.md](doc/OPTIMIZATIONS-README.md),
+[doc/OPTIMIZATIONS-SUMMARY.md](doc/OPTIMIZATIONS-SUMMARY.md),
+[doc/BUNDLE-SIZE-OPTIMIZATION.md](doc/BUNDLE-SIZE-OPTIMIZATION.md),
+[doc/PERFORMANCE-OPTIMIZATIONS-2024.md](doc/PERFORMANCE-OPTIMIZATIONS-2024.md),
+[doc/QUICK-PERFORMANCE-CHECK.md](doc/QUICK-PERFORMANCE-CHECK.md).
+Pour mesurer l'état actuel : `pnpm run build:analyze` et `pnpm run lighthouse` (sur `pnpm preview`).
 
 ## 🤝 Contribution
 
-Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou une pull request.
-
-### Processus de contribution :
-1. Fork le projet
-2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
-3. Commit vos changements (`git commit -m 'Add some AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
-5. Ouvrir une Pull Request
-
-### Standards de code :
-- Suivre les conventions ESLint configurées
-- Ajouter des tests pour les nouvelles fonctionnalités
-- Documenter les changements majeurs
-- Maintenir la couverture de tests > 80%
+1. Créer une branche (`git checkout -b feature/ma-fonctionnalite`)
+2. Vérifier localement : `pnpm run lint:check && pnpm exec vitest run && pnpm run build`
+3. Ouvrir une Pull Request (la CI doit passer)
 
 ## 📄 Licence
 

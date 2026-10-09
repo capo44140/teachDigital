@@ -15,6 +15,6 @@ coverage/** -diff -merge
 *.lcov -diff -merge
 
 # Lock files
-pnpm-lock.yaml -diff -merge
-package-lock.json -diff -merge
-yarn.lock -diff -merge
+# pnpm-lock.yaml garde un diff texte pour que les changements de dépendances soient
+# relus en revue ; -merge : en cas de conflit, regénérer avec `pnpm install`.
+pnpm-lock.yaml -merge

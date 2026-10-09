@@ -85,8 +85,13 @@
           </button>
         </div>
 
+        <!-- Vérification en cours -->
+        <div v-if="isChecking" class="text-center mb-6">
+          <p class="text-white/60 text-sm">Vérification…</p>
+        </div>
+
         <!-- Message d'erreur -->
-        <div v-if="errorMessage" class="text-center mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+        <div v-if="errorMessage" class="text-center mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/30" role="alert">
           <p class="text-red-300 text-sm">{{ errorMessage }}</p>
         </div>
 
@@ -94,10 +99,14 @@
         <div class="text-center pt-6 border-t border-white/10">
           <button 
             class="text-sm text-white/60 hover:text-white transition-colors"
+            :aria-expanded="showForgotHelp ? 'true' : 'false'"
             @click="forgotPin"
           >
             Vous avez oublié votre code PIN ?
           </button>
+          <p v-if="showForgotHelp" class="mt-3 text-sm text-white/70">
+            {{ forgotPinMessage }}
+          </p>
         </div>
       </div>
     </div>
@@ -105,10 +114,46 @@
 </template>
 
 <script>
-import { PIN_CONFIG, getCurrentPin, setPin } from '../config/pinConfig.js'
+import { PIN_CONFIG } from '../config/pinConfig.js'
 import { useProfileStore } from '../stores/profileStore.js'
-import sessionService from '../services/sessionService.js'
 import { apiService } from '../services/apiService.js'
+import { hasParentAccess } from '../services/parentAccessService.js'
+
+// Verrouillage côté client persistant (le serveur applique le vrai verrouillage)
+const LOCKOUT_STORAGE_PREFIX = 'teachdigital_pin_lockout_'
+// Au-delà de 24 h sans échec, on repart de zéro
+const LOCKOUT_RESET_AFTER_MS = 24 * 60 * 60 * 1000
+
+function readLockout (profileId) {
+  try {
+    const raw = localStorage.getItem(LOCKOUT_STORAGE_PREFIX + profileId)
+    if (!raw) return null
+    const data = JSON.parse(raw)
+    if (!data || Date.now() - (data.updatedAt || 0) > LOCKOUT_RESET_AFTER_MS) {
+      localStorage.removeItem(LOCKOUT_STORAGE_PREFIX + profileId)
+      return null
+    }
+    return data
+  } catch {
+    return null
+  }
+}
+
+function writeLockout (profileId, data) {
+  try {
+    localStorage.setItem(LOCKOUT_STORAGE_PREFIX + profileId, JSON.stringify({ ...data, updatedAt: Date.now() }))
+  } catch {
+    // localStorage indisponible : verrouillage en mémoire uniquement
+  }
+}
+
+function clearLockout (profileId) {
+  try {
+    localStorage.removeItem(LOCKOUT_STORAGE_PREFIX + profileId)
+  } catch {
+    // Rien à nettoyer
+  }
+}
 
 export default {
   name: 'PinLock',
@@ -130,19 +175,41 @@ export default {
       attempts: 0,
       maxAttempts: PIN_CONFIG.MAX_ATTEMPTS,
       isLocked: false,
+      isChecking: false,
       lockoutLevel: 0,
       lockoutTimer: null,
-      lockoutRemaining: 0
+      lockoutRemaining: 0,
+      showForgotHelp: false,
+      forgotPinMessage: PIN_CONFIG.MESSAGES.FORGOT_PIN
+    }
+  },
+  computed: {
+    targetProfileId() {
+      const fromRoute = this.$route.query.profile
+      if (fromRoute) return String(fromRoute)
+      const selected = this.profileStore.selectedProfile
+      return selected?.is_admin ? String(selected.id) : null
     }
   },
   mounted() {
+    if (!this.targetProfileId) {
+      this.$router.replace('/')
+      return
+    }
+    // Session parent encore valide : inutile de redemander le PIN
+    if (hasParentAccess(this.targetProfileId)) {
+      this.$router.replace({ path: '/dashboard', query: { profile: this.targetProfileId } })
+      return
+    }
+    this.restoreLockout()
     this.focusFirstField()
   },
   beforeUnmount() {
-    if (this.lockoutTimer) clearInterval(this.lockoutTimer)
+    this.stopLockoutTimer()
   },
   methods: {
     addDigit(digit) {
+      if (this.isLocked || this.isChecking) return
       if (this.currentDigit < 4) {
         this.pinDigits[this.currentDigit] = digit.toString()
         this.currentDigit++
@@ -155,90 +222,133 @@ export default {
     },
     
     removeDigit() {
+      if (this.isChecking) return
       if (this.currentDigit > 0) {
         this.currentDigit--
         this.pinDigits[this.currentDigit] = ''
-        this.errorMessage = ''
+        if (!this.isLocked) this.errorMessage = ''
       }
     },
     
     async checkPin() {
-      if (this.isLocked) return
-      
+      if (this.isLocked || this.isChecking) return
+
+      const profileId = this.targetProfileId
+      if (!profileId) {
+        this.$router.replace('/')
+        return
+      }
       const enteredPin = this.pinDigits.join('')
-      
+      this.isChecking = true
+
       try {
-        // Récupérer le profil depuis la route (ou utiliser le profil parent par défaut)
-        const targetProfileId = this.$route.query.profile || '1'
-        const targetProfileIdNum = parseInt(targetProfileId, 10)
-        
-        // Vérifier le PIN pour le profil cible
-        const isValid = await this.profileStore.verifyPin(targetProfileIdNum, enteredPin)
-        if (isValid) {
-          // PIN correct - obtenir le token JWT via login
-          try {
-            // Appeler login pour obtenir le token JWT et le stocker dans localStorage
-            await apiService.login(targetProfileIdNum, enteredPin)
-          } catch (loginError) {
-            // Continuer quand même avec la session locale si le login échoue
-            // (pour ne pas bloquer l'utilisateur si l'API est temporairement indisponible)
-          }
-          
-          // Créer une session persistante
-          sessionService.createSession(targetProfileId, this.profileName)
-          
-          // Sauvegarder le profil sélectionné dans localStorage
-          localStorage.setItem('selectedProfile', JSON.stringify({ id: targetProfileId, name: this.profileName }))
-          
-          this.$router.push({ 
-            path: '/dashboard', 
-            query: { 
-              profile: targetProfileId,
-              unlocked: 'true'
-            } 
-          }).catch(error => {
-            console.error('Erreur lors de la redirection:', error)
-            // Fallback vers le sélecteur de profil
-            this.$router.push('/')
-          })
-        } else {
-          // PIN incorrect
-          this.attempts++
-          const remainingAttempts = this.maxAttempts - this.attempts
-          
-          if (remainingAttempts > 0) {
-            this.errorMessage = `${PIN_CONFIG.MESSAGES.INCORRECT_PIN}. Tentatives restantes : ${remainingAttempts}`
-            // Réinitialiser les champs après 1 seconde
-            setTimeout(() => {
-              this.resetPin()
-            }, 1000)
-          } else {
-            this.isLocked = true
-            const durations = [30, 60, 120]
-            this.lockoutRemaining = durations[this.lockoutLevel] || 120
-            this.errorMessage = `Trop de tentatives. Réessayez dans ${this.lockoutRemaining}s.`
-            this.lockoutTimer = setInterval(() => {
-              this.lockoutRemaining--
-              if (this.lockoutRemaining <= 0) {
-                clearInterval(this.lockoutTimer)
-                this.lockoutTimer = null
-                this.lockoutLevel++
-                this.attempts = 0
-                this.isLocked = false
-                this.errorMessage = ''
-                this.resetPin()
-              } else {
-                this.errorMessage = `Trop de tentatives. Réessayez dans ${this.lockoutRemaining}s.`
-              }
-            }, 1000)
-          }
+        // Vérification unique : le serveur contrôle le PIN et délivre le jeton parent.
+        // La session parent (30 min) n'est ouverte qu'en cas de succès.
+        const data = await apiService.login(Number(profileId), enteredPin)
+
+        if (data?.profile?.isAdmin !== true || !hasParentAccess(profileId)) {
+          await apiService.logout()
+          this.errorMessage = 'Ce profil n\'a pas accès à l\'espace parent.'
+          setTimeout(() => this.resetPin(), 1000)
+          return
         }
+
+        clearLockout(profileId)
+        this.profileStore.setSelectedProfile({
+          id: data.profile.id ?? profileId,
+          name: data.profile.name || this.profileName,
+          type: data.profile.type,
+          is_admin: true
+        })
+
+        this.$router.push({ path: '/dashboard', query: { profile: profileId } }).catch(error => {
+          console.error('Erreur lors de la redirection:', error)
+          // Fallback vers le sélecteur de profil
+          this.$router.push('/')
+        })
       } catch (error) {
-        console.error('Erreur lors de la vérification du PIN:', error)
-        this.errorMessage = 'Erreur de connexion. Veuillez réessayer.'
-        setTimeout(() => {
-          this.resetPin()
-        }, 1000)
+        if (error?.status === 401) {
+          this.registerFailedAttempt()
+        } else if (error?.status === 429) {
+          // Verrouillage décidé par le serveur
+          this.startLockout(error.retryAfterSeconds || 60, error.message)
+        } else {
+          console.error('Erreur lors de la vérification du PIN:', error)
+          this.errorMessage = error?.message || 'Erreur de connexion. Veuillez réessayer.'
+          setTimeout(() => this.resetPin(), 1000)
+        }
+      } finally {
+        this.isChecking = false
+      }
+    },
+
+    registerFailedAttempt() {
+      this.attempts++
+      const remainingAttempts = this.maxAttempts - this.attempts
+
+      if (remainingAttempts > 0) {
+        writeLockout(this.targetProfileId, { attempts: this.attempts, level: this.lockoutLevel, lockedUntil: 0 })
+        this.errorMessage = `${PIN_CONFIG.MESSAGES.INCORRECT_PIN}. Tentatives restantes : ${remainingAttempts}`
+        // Réinitialiser les champs après 1 seconde
+        setTimeout(() => this.resetPin(), 1000)
+        return
+      }
+
+      const durations = PIN_CONFIG.LOCKOUT_DURATIONS
+      const seconds = durations[Math.min(this.lockoutLevel, durations.length - 1)]
+      this.lockoutLevel++
+      this.startLockout(seconds)
+    },
+
+    startLockout(seconds, message = null) {
+      const lockedUntil = Date.now() + seconds * 1000
+      this.attempts = 0
+      writeLockout(this.targetProfileId, { attempts: 0, level: this.lockoutLevel, lockedUntil })
+      this.runLockoutCountdown(lockedUntil, message)
+    },
+
+    restoreLockout() {
+      const saved = readLockout(this.targetProfileId)
+      if (!saved) return
+      this.attempts = saved.attempts || 0
+      this.lockoutLevel = saved.level || 0
+      if (saved.lockedUntil && saved.lockedUntil > Date.now()) {
+        this.runLockoutCountdown(saved.lockedUntil)
+      } else if (this.attempts > 0) {
+        const remainingAttempts = Math.max(0, this.maxAttempts - this.attempts)
+        this.errorMessage = `Tentatives restantes : ${remainingAttempts}`
+      }
+    },
+
+    runLockoutCountdown(lockedUntil, message = null) {
+      this.stopLockoutTimer()
+      this.isLocked = true
+      this.resetPin()
+
+      const update = () => {
+        this.lockoutRemaining = Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000))
+        if (this.lockoutRemaining <= 0) {
+          this.stopLockoutTimer()
+          this.isLocked = false
+          this.errorMessage = ''
+          writeLockout(this.targetProfileId, { attempts: 0, level: this.lockoutLevel, lockedUntil: 0 })
+          return
+        }
+        this.errorMessage = message
+          ? `${message} (${this.lockoutRemaining}s)`
+          : `Trop de tentatives. Réessayez dans ${this.lockoutRemaining}s.`
+      }
+
+      update()
+      if (this.isLocked) {
+        this.lockoutTimer = setInterval(update, 1000)
+      }
+    },
+
+    stopLockoutTimer() {
+      if (this.lockoutTimer) {
+        clearInterval(this.lockoutTimer)
+        this.lockoutTimer = null
       }
     },
     
@@ -259,15 +369,9 @@ export default {
       this.$router.push('/')
     },
     
-    async forgotPin() {
-      try {
-        // Récupérer le code PIN depuis la base de données
-        const currentPin = await this.profileStore.getDefaultPin()
-        alert(PIN_CONFIG.MESSAGES.FORGOT_PIN.replace('{pin}', currentPin))
-      } catch (error) {
-        console.error('Erreur lors de la récupération du code PIN:', error)
-        alert('Code PIN par défaut : 1234')
-      }
+    forgotPin() {
+      // Aucun code n'est révélé : seul un adulte peut réinitialiser le PIN côté serveur
+      this.showForgotHelp = !this.showForgotHelp
     }
   }
 }

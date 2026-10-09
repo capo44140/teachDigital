@@ -14,45 +14,53 @@ const { withQueryTimeout, TIMEOUTS } = require('./queries.js');
  * @returns {Promise<Array>} Liste des badges nouvellement débloqués
  */
 async function checkAndUnlockBadges(profileId, actionType, actionData = {}) {
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
+    console.log(`🏆 Vérification des badges pour profil ${profileId}, action: ${actionType}`);
 
-        console.log(`🏆 Vérification des badges pour profil ${profileId}, action: ${actionType}`);
-
-        // Récupérer tous les badges actifs
-        const badges = await withQueryTimeout(
+    // 1. Lectures (hors transaction) : chaque requête emprunte puis rend une connexion du pool.
+    //    Ne pas garder une connexion ouverte pendant ces lectures : avec un pool de 10,
+    //    une dizaine de quiz simultanés bloqueraient toutes les connexions.
+    const [badges, profileBadges] = await Promise.all([
+        withQueryTimeout(
             sql`SELECT * FROM badges WHERE is_active = true`,
             TIMEOUTS.STANDARD,
             'récupération des badges actifs'
-        );
+        ),
+        withQueryTimeout(
+            sql`SELECT * FROM profile_badges WHERE profile_id = ${profileId}`,
+            TIMEOUTS.STANDARD,
+            'récupération des badges du profil'
+        )
+    ]);
 
-        // OPTIMISATION: Récupérer toutes les entrées profile_badges en une seule requête (évite N+1)
-        const profileBadgesResult = await client.query(
-            `SELECT * FROM profile_badges WHERE profile_id = $1`,
-            [profileId]
-        );
+    // Map pour accès O(1) (évite N+1)
+    const profileBadgesMap = new Map();
+    for (const pb of profileBadges) {
+        profileBadgesMap.set(pb.badge_id, pb);
+    }
 
-        // Créer un Map pour accès rapide O(1)
-        const profileBadgesMap = new Map();
-        for (const pb of profileBadgesResult.rows) {
-            profileBadgesMap.set(pb.badge_id, pb);
+    const pending = [];
+    for (const badge of badges) {
+        const profileBadge = profileBadgesMap.get(badge.id);
+        // Si déjà débloqué, passer au suivant
+        if (profileBadge && profileBadge.is_unlocked) {
+            continue;
         }
+        const { progress, isComplete } = await calculateBadgeProgress(profileId, badge, actionData);
+        pending.push({ badge, profileBadge, progress, isComplete });
+    }
 
+    if (pending.length === 0) {
+        return [];
+    }
+
+    // 2. Écritures : une seule connexion, transaction courte
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
         const unlockedBadges = [];
 
-        for (const badge of badges) {
-            const profileBadge = profileBadgesMap.get(badge.id);
-
-            // Si déjà débloqué, passer au suivant
-            if (profileBadge && profileBadge.is_unlocked) {
-                continue;
-            }
-
-            // Calculer la progression pour ce badge
-            const { progress, isComplete } = await calculateBadgeProgress(profileId, badge, actionData);
-
-            // CORRECTION RACE CONDITION: Utiliser UPSERT atomique avec ON CONFLICT
+        for (const { badge, profileBadge, progress, isComplete } of pending) {
+            // UPSERT atomique (évite les doublons en cas de requêtes concurrentes)
             const result = await client.query(
                 `INSERT INTO profile_badges (profile_id, badge_id, progress, is_unlocked, unlocked_at, created_at, updated_at)
                  VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
@@ -92,7 +100,7 @@ async function checkAndUnlockBadges(profileId, actionType, actionData = {}) {
         return unlockedBadges;
 
     } catch (error) {
-        await client.query('ROLLBACK');
+        await client.query('ROLLBACK').catch(() => {});
         console.error('❌ Erreur lors de la vérification des badges:', error);
         throw error;
     } finally {
@@ -166,7 +174,7 @@ async function calculateBadgeProgress(profileId, badge, actionData) {
  */
 async function calculateQuizCompletedProgress(profileId) {
     const result = await withQueryTimeout(
-        sql`SELECT COUNT(*) as count FROM quiz_results WHERE profile_id = ${profileId}`,
+        sql`SELECT COUNT(*) as count FROM quiz_results WHERE profile_id = ${profileId} AND is_completed IS NOT FALSE`,
         TIMEOUTS.STANDARD,
         'calcul quiz complétés'
     );
@@ -185,7 +193,7 @@ async function calculateQuizCompletedProgress(profileId) {
  */
 async function calculatePerfectScoreProgress(profileId) {
     const result = await withQueryTimeout(
-        sql`SELECT COUNT(*) as count FROM quiz_results WHERE profile_id = ${profileId} AND percentage = 100`,
+        sql`SELECT COUNT(*) as count FROM quiz_results WHERE profile_id = ${profileId} AND percentage = 100 AND is_completed IS NOT FALSE`,
         TIMEOUTS.STANDARD,
         'calcul scores parfaits'
     );
@@ -207,7 +215,7 @@ async function calculateScoreStreakProgress(profileId) {
         sql`
       SELECT percentage 
       FROM quiz_results 
-      WHERE profile_id = ${profileId}
+      WHERE profile_id = ${profileId} AND is_completed IS NOT FALSE
       ORDER BY completed_at DESC
       LIMIT 50
     `,
@@ -238,7 +246,7 @@ async function calculateSubjectsVarietyProgress(profileId) {
       FROM quiz_results qr
       LEFT JOIN lessons l ON qr.lesson_id = l.id
       LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
-      WHERE qr.profile_id = ${profileId} AND COALESCE(l.subject, cp.subject) IS NOT NULL
+      WHERE qr.profile_id = ${profileId} AND qr.is_completed IS NOT FALSE AND COALESCE(l.subject, cp.subject) IS NOT NULL
     `,
         TIMEOUTS.STANDARD,
         'calcul variété de matières'
@@ -267,7 +275,7 @@ async function calculateSubjectSpecificProgress(profileId, subject) {
       FROM quiz_results qr
       LEFT JOIN lessons l ON qr.lesson_id = l.id
       LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
-      WHERE qr.profile_id = ${profileId} AND LOWER(COALESCE(l.subject, cp.subject)) = LOWER(${subject})
+      WHERE qr.profile_id = ${profileId} AND qr.is_completed IS NOT FALSE AND LOWER(COALESCE(l.subject, cp.subject)) = LOWER(${subject})
     `,
         TIMEOUTS.STANDARD,
         'calcul quiz par matière'

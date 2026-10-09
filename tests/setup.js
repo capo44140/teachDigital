@@ -55,24 +55,29 @@ Object.defineProperty(globalThis.Notification, 'permission', {
   value: 'granted',
 })
 
-// Mock de localStorage
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+// Stockage en mémoire espionnable (les services d'authentification relisent ce qu'ils écrivent)
+function createStorageMock () {
+  let store = new Map()
+  return {
+    getItem: vi.fn((key) => (store.has(String(key)) ? store.get(String(key)) : null)),
+    setItem: vi.fn((key, value) => { store.set(String(key), String(value)) }),
+    removeItem: vi.fn((key) => { store.delete(String(key)) }),
+    clear: vi.fn(() => { store = new Map() }),
+    key: vi.fn((index) => Array.from(store.keys())[index] ?? null),
+    get length () {
+      return store.size
+    }
+  }
 }
+
+// Mock de localStorage
+const localStorageMock = createStorageMock()
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 })
 
 // Mock de sessionStorage
-const sessionStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-}
+const sessionStorageMock = createStorageMock()
 Object.defineProperty(window, 'sessionStorage', {
   value: sessionStorageMock
 })
@@ -93,4 +98,7 @@ afterEach(() => {
   console.warn = originalConsoleWarn
   console.error = originalConsoleError
   vi.clearAllMocks()
+  // Repartir d'un stockage vide à chaque test
+  localStorageMock.clear()
+  sessionStorageMock.clear()
 })

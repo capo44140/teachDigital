@@ -337,13 +337,13 @@ export default {
     checkSecurity() {
       // Vérifier que l'utilisateur a le droit d'accéder à ce quiz
       const childId = this.$route.query.childId
-      const profileId = this.$route.query.profile || localStorage.getItem('selectedProfile')
-      
+      const store = useProfileStore()
+      const profileId = this.$route.query.profile || store.selectedProfile?.id
+
       if (childId && profileId) {
         // Si l'ID du profil ne correspond pas à l'ID de l'enfant et que ce n'est pas un admin
-        if (profileId !== childId) {
-          const store = useProfileStore()
-          const currentProfile = store.getProfileById(profileId)
+        if (String(profileId) !== String(childId)) {
+          const currentProfile = store.getProfileById(profileId) || store.getProfileById(Number(profileId))
           
           if (!currentProfile || !currentProfile.is_admin) {
             console.warn('Tentative d\'accès non autorisé au quiz - redirection')

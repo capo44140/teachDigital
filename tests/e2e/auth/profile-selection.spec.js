@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test'
-import { waitForAppLoad, cleanupTestData } from '../utils/test-helpers.js'
+import { waitForAppLoad, cleanupTestData, passFamilyGate } from '../utils/test-helpers.js'
 import { selectors, testProfiles, timeouts } from '../utils/fixtures.js'
 
 test.describe('Sélection de Profil', () => {
   test.beforeEach(async ({ page }) => {
     await cleanupTestData(page)
+    // Toutes les pages exigent désormais le code familial (jeton famille)
+    await passFamilyGate(page)
   })
 
   test('devrait afficher la page de sélection de profil au chargement initial', async ({ page }) => {

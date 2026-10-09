@@ -100,6 +100,8 @@
 <script>
 import { apiService } from '../services/apiService.js'
 import familyGateService from '../services/familyGateService.js'
+import { leaveParentSpace } from '../services/parentAccessService.js'
+import { useProfileStore } from '../stores/profileStore.js'
 
 export default {
   name: 'FamilyGateSettings',
@@ -150,6 +152,9 @@ export default {
       }
     },
     lockApp () {
+      // Verrouillage complet : jeton parent, session parent et session famille
+      leaveParentSpace()
+      useProfileStore().clearSelectedProfile()
       familyGateService.clearFamilySession()
       this.$router.push('/family-gate')
     }

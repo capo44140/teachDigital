@@ -3,17 +3,22 @@ node_modules/
 pnpm-store/
 .pnpm-store/
 
-# Fichiers de logs et sorties
+# Secrets / configuration locale (jamais dans l'image : fournis via docker compose)
+.env
+.env.*
+!.env.example
+env
+.synology-deploy.json
+
+# Fichiers de logs et sorties (volumes montés au runtime)
 logs/
 *.log
 output/
 temp/
 tmp/
+ssl/
 
 # Fichiers de développement
-.env
-.env.local
-.env.*.local
 .vscode/
 .idea/
 *.swp
@@ -25,7 +30,9 @@ tmp/
 .git/
 .gitignore
 
-# Tests
+# Tests (non nécessaires en production)
+tests/
+**/*.test.js
 coverage/
 .nyc_output/
 
@@ -34,8 +41,11 @@ dist/
 build/
 .turbo/
 
-# Lock files (optionnel - à commenter si vous les incluez)
-# pnpm-lock.yaml
+# Scripts de déploiement / outillage local
+*.ps1
+docker-compose*.yml
+Dockerfile
+.dockerignore
 
 # Documentation
 docs/
@@ -45,4 +55,3 @@ README*
 # Fichiers temporaires
 .cache/
 .temp/
-

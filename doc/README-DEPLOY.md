@@ -20,7 +20,7 @@ Ajoute ces secrets dans **GitHub Settings > Secrets and variables > Actions** :
 | Secret | Description | Exemple |
 |--------|-------------|---------|
 | `SYNOLOGY_SSH_KEY` | Clé privée SSH pour accéder au Synology | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
-| `SYNOLOGY_HOST` | Adresse IP ou hostname du Synology | `lespoires.synology.me` ou `192.168.1.100` |
+| `SYNOLOGY_HOST` | Adresse IP ou hostname du Synology | `votre-nas.synology.me` ou `192.168.1.100` |
 | `SYNOLOGY_USER` | Utilisateur SSH du Synology | `admin` |
 | `SYNOLOGY_DEPLOY_PATH` | Chemin où déployer l'application | `/volume1/docker/teachdigital` |
 
@@ -69,7 +69,7 @@ cat ~/.ssh/synology_deploy.pub
 
 ```bash
 # Se connecter au Synology
-ssh admin@lespoires.synology.me
+ssh admin@votre-nas.synology.me
 
 # Créer le dossier .ssh s'il n'existe pas
 mkdir -p ~/.ssh
@@ -86,7 +86,7 @@ chmod 600 ~/.ssh/authorized_keys
 
 ```bash
 # Se connecter au Synology
-ssh admin@lespoires.synology.me
+ssh admin@votre-nas.synology.me
 
 # Créer le répertoire
 mkdir -p /volume1/docker/teachdigital
@@ -105,7 +105,7 @@ Copie le contenu de `.env.synology.example` et adapte les valeurs.
 ### 1. Cloner le repo sur le Synology
 
 ```bash
-ssh admin@lespoires.synology.me
+ssh admin@votre-nas.synology.me
 cd /volume1/docker/teachdigital
 git clone https://github.com/ton-username/teachDigital.git .
 ```
@@ -158,7 +158,7 @@ https://github.com/ton-username/teachDigital/actions
 ### Logs sur Synology
 
 ```bash
-ssh admin@lespoires.synology.me
+ssh admin@votre-nas.synology.me
 cd /volume1/docker/teachdigital
 docker-compose -f docker-compose.app.yml logs -f
 ```

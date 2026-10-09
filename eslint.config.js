@@ -1,8 +1,34 @@
 import js from '@eslint/js'
 import vue from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
+import globals from 'globals'
+
+// Globals partagés : code navigateur (src/) + quelques globals Node encore
+// référencés par le code front (process.env, Buffer...).
+const sharedGlobals = {
+  ...globals.browser,
+  process: 'readonly',
+  __dirname: 'readonly',
+  __filename: 'readonly',
+  Buffer: 'readonly',
+  global: 'readonly'
+}
+
+const sharedRules = {
+  // Allow console in development, warn in production
+  'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
+  'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
+  'no-unused-vars': 'warn',
+  'no-undef': 'error',
+  // Les commentaires /* global X */ hérités de l'ancienne config (liste manuelle
+  // de globals) ne doivent pas casser le lint maintenant que globals.browser est chargé.
+  'no-redeclare': ['error', { builtinGlobals: false }]
+}
 
 export default [
+  {
+    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'playwright-report/**', 'test-results/**']
+  },
   js.configs.recommended,
   {
     files: ['**/*.vue'],
@@ -10,107 +36,25 @@ export default [
       parser: vueParser,
       ecmaVersion: 2022,
       sourceType: 'module',
-      globals: {
-        // Browser globals
-        window: 'readonly',
-        document: 'readonly',
-        localStorage: 'readonly',
-        sessionStorage: 'readonly',
-        navigator: 'readonly',
-        fetch: 'readonly',
-        alert: 'readonly',
-        confirm: 'readonly',
-        console: 'readonly',
-        setTimeout: 'readonly',
-        setInterval: 'readonly',
-        clearTimeout: 'readonly',
-        clearInterval: 'readonly',
-        URL: 'readonly',
-        URLSearchParams: 'readonly',
-        FormData: 'readonly',
-        Blob: 'readonly',
-        File: 'readonly',
-        FileReader: 'readonly',
-        crypto: 'readonly',
-        btoa: 'readonly',
-        atob: 'readonly',
-        TextEncoder: 'readonly',
-        TextDecoder: 'readonly',
-        CustomEvent: 'readonly',
-        Notification: 'readonly',
-        performance: 'readonly',
-        AbortController: 'readonly',
-        // Node.js globals
-        process: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-        Buffer: 'readonly',
-        global: 'readonly',
-      },
+      globals: sharedGlobals
     },
     plugins: {
-      vue,
+      vue
     },
     rules: {
       ...vue.configs['vue3-recommended'].rules,
       'vue/multi-word-component-names': 'off',
       'vue/no-unused-vars': 'warn',
-      // Allow console in development, warn in production
-      'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
-      'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
-      'no-unused-vars': 'warn',
-      'no-undef': 'error',
-    },
+      ...sharedRules
+    }
   },
   {
     files: ['**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
-      globals: {
-        // Browser globals
-        window: 'readonly',
-        document: 'readonly',
-        localStorage: 'readonly',
-        sessionStorage: 'readonly',
-        navigator: 'readonly',
-        fetch: 'readonly',
-        alert: 'readonly',
-        confirm: 'readonly',
-        console: 'readonly',
-        setTimeout: 'readonly',
-        setInterval: 'readonly',
-        clearTimeout: 'readonly',
-        clearInterval: 'readonly',
-        URL: 'readonly',
-        URLSearchParams: 'readonly',
-        FormData: 'readonly',
-        Blob: 'readonly',
-        File: 'readonly',
-        FileReader: 'readonly',
-        crypto: 'readonly',
-        btoa: 'readonly',
-        atob: 'readonly',
-        TextEncoder: 'readonly',
-        TextDecoder: 'readonly',
-        CustomEvent: 'readonly',
-        Notification: 'readonly',
-        performance: 'readonly',
-        AbortController: 'readonly',
-        // Node.js globals
-        process: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly',
-        Buffer: 'readonly',
-        global: 'readonly',
-      },
+      globals: sharedGlobals
     },
-    rules: {
-      // Allow console in development, warn in production
-      'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
-      'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
-      'no-unused-vars': 'warn',
-      'no-undef': 'error',
-    },
-  },
+    rules: sharedRules
+  }
 ]

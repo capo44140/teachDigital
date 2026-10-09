@@ -14,10 +14,8 @@ class LocalLLMProvider extends AIProviderBase {
         super('LocalLLM');
         this.baseUrl = localLLMConfig.getBaseUrl();
         this.model = localLLMConfig.getActiveModel();
-        this.timeoutMs = parseInt(process.env.LOCAL_LLM_TIMEOUT_MS || '', 10);
-        if (!Number.isFinite(this.timeoutMs)) {
-            this.timeoutMs = LOCAL_LLM_TIMEOUT_MS;
-        }
+        // Déjà borné sous le timeout serveur dans constants.js
+        this.timeoutMs = LOCAL_LLM_TIMEOUT_MS;
     }
 
     isAvailable() {

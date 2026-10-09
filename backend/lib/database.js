@@ -194,18 +194,17 @@ function buildQuery(strings, values) {
       const value = values[i];
 
       // Log de débogage uniquement si logs activés
-      if (ENABLE_SQL_LOGS && value && typeof value === 'object' && value !== null && !(value instanceof SqlIdentifier)) {
-        // Log minimal pour le debugging
-        if ('text' in value && 'params' in value) {
-          console.log(`🔍 [SQL Builder] Requête imbriquée détectée à l'index ${i}`);
-        }
+      if (ENABLE_SQL_LOGS && value instanceof SqlQuery) {
+        console.log(`🔍 [SQL Builder] Requête imbriquée détectée à l'index ${i}`);
       }
 
       if (value instanceof SqlIdentifier) {
         // Les identifiants sont intégrés directement (pas de paramètre)
         result += value.value;
-      } else if (value && typeof value === 'object' && value !== null && 'text' in value && 'params' in value && Array.isArray(value.params)) {
-        // Si c'est une requête SQL précédente, on l'intègre avec ses paramètres
+      } else if (value instanceof SqlQuery) {
+        // Seul un fragment construit par sql`...` peut être imbriqué : un objet
+        // { text, params } venant d'une requête HTTP (req.body) reste un simple paramètre,
+        // sinon son texte serait injecté tel quel dans la requête (injection SQL).
         // On doit réindexer les paramètres
         const subText = String(value.text || '');
         const subParams = value.params || [];
@@ -324,8 +323,9 @@ function sql(strings, ...values) {
       const globalTimeout = Math.max(queryTimeout * 0.9, 5000); // Minimum 5s
 
       const queryPromise = pool.query(queryText, queryParams);
+      let timeoutId;
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           reject(new Error(`Query timeout après ${globalTimeout}ms (limite: ${queryTimeout}ms)`));
         }, globalTimeout);
       });
@@ -339,6 +339,8 @@ function sql(strings, ...values) {
           console.error(`⏱️  [SQL${queryId ? ':' + queryId : ''}] Timeout global déclenché après ${globalTimeout}ms`);
         }
         throw error;
+      } finally {
+        clearTimeout(timeoutId);
       }
 
       const queryEndTime = Date.now();
@@ -418,39 +420,39 @@ function sql(strings, ...values) {
     }
   };
 
-  // Créer la Promise mais ne pas l'exécuter immédiatement
-  let promiseResolve, promiseReject;
-  const promise = new Promise((resolve, reject) => {
-    promiseResolve = resolve;
-    promiseReject = reject;
-  });
+  return new SqlQuery(queryText, queryParams, executeQuery);
+}
 
-  // Ajouter les propriétés text et params directement sur la Promise
-  // Utiliser Object.defineProperty pour s'assurer qu'elles sont accessibles
-  Object.defineProperty(promise, 'text', {
-    value: queryText,
-    writable: false,
-    enumerable: true,
-    configurable: false
-  });
+// Requête paresseuse : rien n'est exécuté tant qu'on ne fait pas await / then().
+// Ce n'est volontairement PAS une Promise native : « await » sur une Promise native
+// ignore un then() surchargé et attendrait indéfiniment. Ici, await appelle bien then().
+// L'exécution est mémorisée : plusieurs then() ne relancent pas la requête.
+class SqlQuery {
+  constructor (text, params, execute) {
+    this.text = text;
+    this.params = params;
+    Object.defineProperty(this, '_execute', { value: execute });
+    Object.defineProperty(this, '_promise', { value: null, writable: true });
+  }
 
-  Object.defineProperty(promise, 'params', {
-    value: queryParams,
-    writable: false,
-    enumerable: true,
-    configurable: false
-  });
+  _run () {
+    if (!this._promise) {
+      this._promise = this._execute();
+    }
+    return this._promise;
+  }
 
-  // Surcharger then pour exécuter la requête
-  promise.then = function (resolve, reject) {
-    return executeQuery().then(resolve, reject);
-  };
+  then (resolve, reject) {
+    return this._run().then(resolve, reject);
+  }
 
-  promise.catch = function (reject) {
-    return executeQuery().catch(reject);
-  };
+  catch (reject) {
+    return this._run().catch(reject);
+  }
 
-  return promise;
+  finally (callback) {
+    return this._run().finally(callback);
+  }
 }
 
 // Ajouter une méthode sql(identifier) pour créer des identifiants
@@ -465,6 +467,8 @@ module.exports = {
   default: sql,
   pool,
   sql,
+  SqlQuery,
+  buildQuery,
   executeWithRetry,
   query: (text, params) => pool.query(text, params)
 };

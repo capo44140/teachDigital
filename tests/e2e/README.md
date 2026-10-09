@@ -86,12 +86,15 @@ La configuration Playwright se trouve dans `playwright.config.js` à la racine d
 ### Variables d'Environnement
 - `CI`: Mode CI/CD (retry automatique, 1 worker)
 - `BASE_URL`: URL de base pour les tests (défaut: http://localhost:5173)
+- `E2E_FAMILY_CODE`: code d'entrée familial de l'environnement testé (toutes les pages et toutes les routes `/api/*` exigent le jeton famille obtenu sur `/family-gate`)
 
 ## Utilitaires de Test
 
 ### test-helpers.js
 Fonctions utilitaires pour les tests :
 - `waitForAppLoad()`: Attendre que l'application soit chargée
+- `passFamilyGate()`: Saisir le code familial (obligatoire avant toute autre page)
+- `mockFamilyGate()`: Simuler un code familial accepté (tests sans backend)
 - `loginAsParent()`: Se connecter en tant que parent
 - `loginAsChild()`: Se connecter en tant qu'enfant
 - `createTestProfile()`: Créer un profil de test

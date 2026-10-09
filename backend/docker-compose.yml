@@ -8,20 +8,26 @@ services:
       dockerfile: Dockerfile
     container_name: teachdigital-backend
     restart: unless-stopped
+    # Toutes les variables du .env (LOCAL_LLM_URL, KIMI_API_KEY, TRUST_PROXY, API_*...) sont
+    # transmises au conteneur ; les clés listées sous « environment » ont la priorité.
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       DOCKER_ENV: "true"
       PORT: 3001
       # Configuration base de données PostgreSQL EXTERNE
       # Utilisez l'IP de votre Synology ou le nom du conteneur PostgreSQL si sur le même réseau Docker
-      DATABASE_URL: ${DATABASE_URL:-postgresql://${DB_USER:-teachdigital}:${DB_PASSWORD}@${DB_HOST:-host.docker.internal}:${DB_PORT:-5432}/${DB_NAME:-teachdigital}}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${DB_USER:-teachdigital}:${DB_PASSWORD:-}@${DB_HOST:-host.docker.internal}:${DB_PORT:-5432}/${DB_NAME:-teachdigital}}
       DB_HOST: ${DB_HOST:-host.docker.internal}
       DB_PORT: ${DB_PORT:-5432}
       DB_USER: ${DB_USER:-teachdigital}
-      DB_PASSWORD: ${DB_PASSWORD:-change_me_please}
+      # Pas de mot de passe par défaut : à définir dans .env (ou utiliser DATABASE_URL)
+      DB_PASSWORD: ${DB_PASSWORD:-}
       DB_NAME: ${DB_NAME:-teachdigital}
-      # JWT Secret
-      JWT_SECRET: ${JWT_SECRET:-change_me_jwt_secret_please}
+      # JWT Secret — OBLIGATOIRE (>= 32 caractères aléatoires : openssl rand -hex 32).
+      # docker compose refuse de démarrer s'il n'est pas défini dans .env.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env (openssl rand -hex 32)}
       # Clés API IA (optionnelles)
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}

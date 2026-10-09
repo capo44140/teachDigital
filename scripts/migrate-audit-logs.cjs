@@ -1,10 +1,18 @@
 /**
  * Script de migration pour créer la table audit_logs
- * Usage: node scripts/migrate-audit-logs.js
+ * Usage: pnpm run migrate:audit-logs  (ou: node scripts/migrate-audit-logs.cjs)
+ *
+ * Fichier .cjs : le package racine est en "type": "module".
+ * `pg` est une dépendance du backend : on le résout depuis backend/node_modules
+ * (exécuter `pnpm install` dans backend/ au préalable).
  */
 
+const path = require('path');
+const { createRequire } = require('module');
+
 require('dotenv').config();
-const { Pool } = require('pg');
+const backendRequire = createRequire(path.join(__dirname, '..', 'backend', 'package.json'));
+const { Pool } = backendRequire('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

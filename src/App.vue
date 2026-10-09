@@ -28,7 +28,7 @@ import { inject } from 'vue'
 import PullToRefresh from './components/PullToRefresh.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import OnboardingTour from './components/OnboardingTour.vue'
-import { useApiStore } from './stores/apiStore.js'
+import { useProfileStore } from './stores/profileStore.js'
 import { useOnboardingStore } from './stores/onboardingStore.js'
 
 export default {
@@ -40,18 +40,28 @@ export default {
   },
   setup() {
     const updateService = inject('updateService')
-    const apiStore = useApiStore()
+    const profileStore = useProfileStore()
     const onboardingStore = useOnboardingStore()
 
     return {
       updateService,
-      apiStore,
+      profileStore,
       onboardingStore
     }
   },
+  computed: {
+    // Profil enfant/ado sélectionné, uniquement lorsqu'on est dans son espace
+    onboardingProfile() {
+      const profile = this.profileStore.selectedProfile
+      const route = this.$route
+      if (!profile || !route?.meta?.requiresChildOrTeen) return null
+      return profile
+    }
+  },
   watch: {
-    // Déclenche l'onboarding au login (ou au reload si user déjà persisté)
-    'apiStore.user': {
+    // Déclenche l'onboarding à l'arrivée d'un enfant/ado dans son espace
+    // (apiStore.user ne concerne que le parent : il n'a jamais is_child)
+    onboardingProfile: {
       handler(profile) {
         if (profile) this.onboardingStore.startForProfileIfNeeded(profile)
       },

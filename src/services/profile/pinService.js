@@ -3,45 +3,12 @@ import { HashService } from '../hashService.js'
 
 /**
  * Service pour la gestion des codes PIN
- * Gère la création, validation et vérification des codes PIN
+ * Gère la création, la validation de format et la mise à jour des codes PIN.
+ * La vérification d'un PIN passe par apiService.login (déverrouillage parent)
+ * ou apiService.verifyPin : il n'y a plus de vérification dupliquée ici.
  * IMPORTANT: Ce service communique avec l'API backend, pas directement avec la BD
  */
 export class PinService {
-  /**
-   * Vérifier un code PIN via l'API backend
-   * @param {number} profileId - ID du profil
-   * @param {string} inputPin - Code PIN à vérifier
-   * @returns {Promise<boolean>} - True si le PIN est correct
-   */
-  static async verifyPin (profileId, inputPin) {
-    try {
-      if (!profileId || !inputPin) {
-        console.log('❌ ProfileId ou PIN manquant')
-        return false
-      }
-
-      // Appeler l'endpoint API backend: POST /api/profiles/:id/pin
-      const response = await ApiService.request(`/api/profiles/${profileId}/pin`, {
-        method: 'POST',
-        body: JSON.stringify({ pin: inputPin })
-      })
-
-      // Le backend retourne toujours success: true mais avec data.isValid qui indique la validité réelle
-      const isValid = response.success && response.data && response.data.isValid === true
-
-      if (isValid) {
-        console.log('✅ Code PIN vérifié avec succès')
-        return true
-      } else {
-        console.log('❌ Code PIN incorrect')
-        return false
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de la vérification du code PIN:', error)
-      return false
-    }
-  }
-
   /**
    * Mettre à jour le code PIN via l'API backend
    * @param {number} profileId - ID du profil
@@ -72,23 +39,6 @@ export class PinService {
     } catch (error) {
       console.error('❌ Erreur lors de la mise à jour du code PIN:', error)
       throw error
-    }
-  }
-
-  /**
-   * Récupérer le code PIN par défaut (pour l'affichage)
-   * @returns {Promise<string>} - Code PIN par défaut
-   */
-  static async getDefaultPin () {
-    try {
-      // Le code PIN par défaut est '1234'
-      // Cette méthode ne retourne pas le vrai PIN pour des raisons de sécurité
-      // Elle est utilisée uniquement pour l'affichage des hints
-      console.log('ℹ️ Code PIN par défaut: 1234 (à utiliser lors de la première connexion)')
-      return '1234'
-    } catch (error) {
-      console.error('❌ Erreur lors de la récupération du code PIN par défaut:', error)
-      return '1234'
     }
   }
 

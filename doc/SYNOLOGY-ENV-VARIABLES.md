@@ -51,7 +51,7 @@ DB_PASSWORD=VotreMotDePasseFort123!
 DB_NAME=teachdigital
 
 # JWT Secret (Générez un secret fort - voir section Sécurité)
-JWT_SECRET=VotreSecretJWTTrèsLongEtAléatoire123456789
+JWT_SECRET=<generate-with: openssl rand -hex 32>
 
 # API Keys (Optionnelles mais recommandées)
 OPENAI_API_KEY=sk-votre-cle-openai
@@ -376,7 +376,7 @@ DB_PASSWORD=MonMotDePasse123!
 DB_NAME=teachdigital
 
 # JWT Secret (généré avec: openssl rand -base64 32)
-JWT_SECRET=K8j3mN9pQ2rT5vX8zA1bC4dE7fG0hI3kL6mN9pQ2rT5vX8zA1bC4dE7fG0hI3kL6m
+JWT_SECRET=<generate-with: openssl rand -hex 32>
 
 # API Keys IA
 OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

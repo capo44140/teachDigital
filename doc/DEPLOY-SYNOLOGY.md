@@ -60,7 +60,7 @@ DB_NAME=teachdigital
 # SÉCURITÉ
 # ============================================
 # Générez un secret fort (voir section Sécurité)
-JWT_SECRET=VotreSecretJWTTrèsLongEtAléatoire123456789
+JWT_SECRET=<generate-with: openssl rand -hex 32>
 
 # ============================================
 # FRONTEND

@@ -6,12 +6,12 @@ Ce guide vous explique comment configurer HTTPS pour votre application TeachDigi
 
 - Synology NAS avec DSM 7.0 ou supérieur
 - Application TeachDigital déjà déployée et accessible en HTTP
-- Domaine configuré (ex: `lespoires.synology.me`)
+- Domaine configuré (ex: `votre-nas.synology.me`)
 - Accès administrateur à votre Synology
 
 ## 🎯 Objectif
 
-Configurer `https://lespoires.synology.me:3001` avec un certificat SSL valide.
+Configurer `https://votre-nas.synology.me:3001` avec un certificat SSL valide.
 
 ## 🚀 Méthode 1 : Reverse Proxy Synology (Recommandé)
 
@@ -22,8 +22,8 @@ Configurer `https://lespoires.synology.me:3001` avec un certificat SSL valide.
 3. **Cliquez sur "Ajouter"** → **"Ajouter un nouveau certificat"**
 4. **Sélectionnez "Obtenir un certificat depuis Let's Encrypt"**
 5. **Remplissez le formulaire** :
-   - **Nom du domaine** : `lespoires.synology.me`
-   - **Domaine** : `lespoires.synology.me`
+   - **Nom du domaine** : `votre-nas.synology.me`
+   - **Domaine** : `votre-nas.synology.me`
    - **E-mail** : Votre adresse e-mail (pour les notifications)
    - **Description** : `TeachDigital SSL Certificate`
 6. **Cliquez sur "Appliquer"**
@@ -41,7 +41,7 @@ Configurer `https://lespoires.synology.me:3001` avec un certificat SSL valide.
 
 - **Description** : `TeachDigital Backend HTTPS`
 - **Protocole** : `HTTPS`
-- **Nom d'hôte** : `lespoires.synology.me`
+- **Nom d'hôte** : `votre-nas.synology.me`
 - **Port** : `3001`
 - **Activer HSTS** : ✅ (recommandé)
 - **Activer HTTP/2** : ✅ (recommandé)
@@ -74,13 +74,13 @@ Mettez à jour votre fichier `.env` du backend pour utiliser HTTPS :
 
 ```env
 # URL du frontend (pour CORS) - IMPORTANT pour HTTPS
-FRONTEND_URL=https://lespoires.synology.me:3001
+FRONTEND_URL=https://votre-nas.synology.me:3001
 
 # Si vous avez un frontend séparé sur un autre port
-# FRONTEND_URL=https://lespoires.synology.me:3000
+# FRONTEND_URL=https://votre-nas.synology.me:3000
 
 # Optionnel : URL supplémentaire autorisée
-# ALLOWED_ORIGIN=https://lespoires.synology.me:3000
+# ALLOWED_ORIGIN=https://votre-nas.synology.me:3000
 ```
 
 > ⚠️ **Important** : Assurez-vous que `FRONTEND_URL` utilise bien `https://` et non `http://`. Cette variable est utilisée par la configuration CORS pour autoriser les requêtes depuis votre frontend.
@@ -98,10 +98,10 @@ Testez l'accès HTTPS :
 
 ```bash
 # Test depuis votre machine
-curl https://lespoires.synology.me:3001/health
+curl https://votre-nas.synology.me:3001/health
 
 # Ou ouvrez dans votre navigateur
-# https://lespoires.synology.me:3001/health
+# https://votre-nas.synology.me:3001/health
 ```
 
 ## 🔧 Méthode 2 : Configuration Avancée avec Nginx
@@ -151,7 +151,7 @@ http {
     # HTTP Server - Redirection vers HTTPS
     server {
         listen 80;
-        server_name lespoires.synology.me;
+        server_name votre-nas.synology.me;
 
         # Redirection vers HTTPS
         return 301 https://$host$request_uri;
@@ -160,7 +160,7 @@ http {
     # HTTPS Server
     server {
         listen 443 ssl http2;
-        server_name lespoires.synology.me;
+        server_name votre-nas.synology.me;
 
         # Certificats SSL
         ssl_certificate /etc/nginx/ssl/cert.pem;
@@ -253,7 +253,7 @@ Mettez à jour votre configuration frontend pour utiliser HTTPS :
 ### Fichier `.env` ou `env.local`
 
 ```env
-VITE_API_URL=https://lespoires.synology.me:3001/api
+VITE_API_URL=https://votre-nas.synology.me:3001/api
 ```
 
 ### Fichier `src/services/apiService.js`
@@ -261,7 +261,7 @@ VITE_API_URL=https://lespoires.synology.me:3001/api
 Vérifiez que l'URL de base utilise HTTPS :
 
 ```javascript
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://lespoires.synology.me:3001/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://votre-nas.synology.me:3001/api'
 ```
 
 ## 🔍 Vérification de la Configuration
@@ -270,7 +270,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://lespoires.synology
 
 ```bash
 # Vérifier le certificat
-openssl s_client -connect lespoires.synology.me:3001 -showcerts
+openssl s_client -connect votre-nas.synology.me:3001 -showcerts
 
 # Ou utilisez un outil en ligne
 # https://www.ssllabs.com/ssltest/
@@ -280,17 +280,17 @@ openssl s_client -connect lespoires.synology.me:3001 -showcerts
 
 ```bash
 # Doit rediriger vers HTTPS
-curl -I http://lespoires.synology.me:3001
+curl -I http://votre-nas.synology.me:3001
 ```
 
 ### Test 3 : Tester l'API en HTTPS
 
 ```bash
 # Test de santé
-curl https://lespoires.synology.me:3001/health
+curl https://votre-nas.synology.me:3001/health
 
 # Test avec authentification
-curl -H "Authorization: Bearer YOUR_TOKEN" https://lespoires.synology.me:3001/api/profiles
+curl -H "Authorization: Bearer YOUR_TOKEN" https://votre-nas.synology.me:3001/api/profiles
 ```
 
 ## 🐛 Dépannage
@@ -335,7 +335,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" https://lespoires.synology.me:3001/ap
 
 ### Problème : Le port 3001 n'est pas accessible en HTTPS
 
-**Symptômes** : Impossible d'accéder à `https://lespoires.synology.me:3001`
+**Symptômes** : Impossible d'accéder à `https://votre-nas.synology.me:3001`
 
 **Solutions** :
 1. Vérifiez que le reverse proxy est configuré pour le port 3001
@@ -376,7 +376,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" https://lespoires.synology.me:3001/ap
 - [ ] Pare-feu configuré pour autoriser le port 3001
 - [ ] `FRONTEND_URL` mis à jour dans `.env` du backend
 - [ ] Backend redémarré
-- [ ] Test HTTPS réussi (`curl https://lespoires.synology.me:3001/health`)
+- [ ] Test HTTPS réussi (`curl https://votre-nas.synology.me:3001/health`)
 - [ ] Redirection HTTP → HTTPS fonctionnelle
 - [ ] Renouvellement automatique activé
 - [ ] Frontend configuré pour utiliser HTTPS

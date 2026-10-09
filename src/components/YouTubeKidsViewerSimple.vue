@@ -179,9 +179,28 @@ export default {
       return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
     }
     
+    // Seuls les liens YouTube / YouTube Kids en https peuvent être ouverts
+    const ALLOWED_VIDEO_HOSTS = ['youtube.com', 'youtu.be', 'youtubekids.com']
+
+    const getSafeVideoUrl = (rawUrl) => {
+      try {
+        const url = new URL(String(rawUrl || ''))
+        const host = url.hostname.toLowerCase()
+        const allowed = ALLOWED_VIDEO_HOSTS.some(domain => host === domain || host.endsWith(`.${domain}`))
+        return url.protocol === 'https:' && allowed ? url.href : null
+      } catch {
+        return null
+      }
+    }
+
     const playVideo = (video) => {
-      // Ouvrir la vidéo dans un nouvel onglet
-      window.open(video.url, '_blank')
+      const safeUrl = getSafeVideoUrl(video?.url)
+      if (!safeUrl) {
+        console.warn('Lien vidéo refusé (YouTube https uniquement):', video?.url)
+        return
+      }
+      // Ouvrir la vidéo dans un nouvel onglet, sans accès à cette page
+      window.open(safeUrl, '_blank', 'noopener,noreferrer')
     }
     
     onMounted(() => {

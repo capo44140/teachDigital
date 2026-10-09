@@ -40,7 +40,7 @@
 
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
-import sessionService from '../services/sessionService.js'
+import { leaveParentSpace } from '../services/parentAccessService.js'
 import VersionInfo from './VersionInfo.vue'
 import MigrationControl from './MigrationControl.vue'
 import DashboardHeader from './DashboardHeader.vue'
@@ -107,12 +107,18 @@ export default {
         this.currentProfile = this.profiles.parent
       }
     },
+    // Quitter l'espace parent : le jeton parent ne doit pas rester disponible
+    // pour le profil enfant qui sera choisi ensuite
     changeProfile() {
-      this.$router.push('/')
+      this.exitParentSpace()
     },
     logout() {
-      sessionService.clearSession()
-      localStorage.removeItem('selectedProfile')
+      this.exitParentSpace()
+    },
+    exitParentSpace() {
+      // Suppression locale immédiate (jeton profil + session parent), l'appel réseau suit
+      leaveParentSpace()
+      this.profileStore.clearSelectedProfile()
       this.$router.push('/')
     }
   }

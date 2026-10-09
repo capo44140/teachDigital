@@ -9,6 +9,7 @@ const {
   handlePin
 } = require('../../controllers/profileController.js');
 const {
+  describeWithDb,
   createTestProfile,
   createTestPin,
   generateTestToken,
@@ -17,7 +18,7 @@ const {
   createMockResponse
 } = require('../helpers/testHelpers.js');
 
-describe('API Endpoints - Profils', () => {
+describeWithDb('API Endpoints - Profils', () => {
   let testProfile;
   let adminProfile;
   let testProfileIds = [];

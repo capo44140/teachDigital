@@ -296,7 +296,7 @@ function Publish-Backend {
     Send-Tarball `
         -LocalDir (Join-Path $ProjectRoot 'backend') `
         -RemoteDir $script:BackendPath `
-        -Excludes @('node_modules', '.git', '*.log', '.env', '.synology-deploy.json', 'dist', '.vscode', '.idea', '.cursor')
+        -Excludes @('node_modules', '.git', '*.log', '.env', '.env.*', '.synology-deploy.json', 'dist', '.vscode', '.idea', '.cursor', 'logs', 'output', 'temp', 'ssl', 'coverage')
 
     if (-not (Test-Ssh "test -f $script:BackendPath/docker-compose.yml")) {
         Write-Warn "   docker-compose.yml introuvable, etape Docker sautee"
@@ -366,8 +366,9 @@ function Publish-Frontend {
 
     Send-Tarball -LocalDir $ProjectRoot -RemoteDir $script:FrontendPath -IncludePaths $files
 
-    # Renommage cote serveur (1 ssh)
-    Invoke-Ssh "mv -f $script:FrontendPath/docker-compose.frontend.yml $script:FrontendPath/docker-compose.yml && mv -f $script:FrontendPath/Dockerfile.frontend.prebuilt $script:FrontendPath/Dockerfile" | Out-Null
+    # Renommage cote serveur (1 ssh) : seul le compose est renomme ; il reference
+    # directement Dockerfile.frontend.prebuilt (plus de renommage du Dockerfile).
+    Invoke-Ssh "mv -f $script:FrontendPath/docker-compose.frontend.yml $script:FrontendPath/docker-compose.yml" | Out-Null
 
     $bashScript = New-ComposeRunScript `
         -RemoteDir $script:FrontendPath `

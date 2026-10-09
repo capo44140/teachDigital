@@ -5,6 +5,7 @@
  */
 
 import { execSync } from 'child_process';
+import crypto from 'crypto';
 import fs from 'fs';
 
 // Lire les variables d'environnement depuis le fichier .env du projet principal
@@ -51,7 +52,9 @@ async function configureEnvironment() {
     // Variables requises
     const requiredVars = {
       'DATABASE_URL': envVars.DATABASE_URL || envVars.VITE_DATABASE_URL,
-      'JWT_SECRET': 'teachdigital-super-secret-jwt-key-2024-change-in-production',
+      // Jamais de valeur littérale : secret fourni (.env / variable d'environnement)
+      // ou généré aléatoirement (32 octets = 64 caractères hex).
+      'JWT_SECRET': envVars.JWT_SECRET || process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex'),
       'FRONTEND_URL': 'https://teachdigital.vercel.app'
     };
 
@@ -67,10 +70,10 @@ async function configureEnvironment() {
         console.log(`⚙️  Configuration de ${key}...`);
         
         // Utiliser echo pour passer la valeur à vercel env add
-        const command = `echo "${value}" | vercel env add ${key} production`;
-        execSync(command, { 
-          stdio: 'inherit',
-          shell: true
+        // Valeur passée sur stdin (pas dans la ligne de commande / l'historique du shell)
+        execSync(`vercel env add ${key} production`, {
+          input: value,
+          stdio: ['pipe', 'inherit', 'inherit']
         });
         
         console.log(`✅ ${key} configurée\n`);

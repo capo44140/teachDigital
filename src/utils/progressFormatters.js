@@ -64,3 +64,21 @@ export function filterHistoryByPeriod(history, period) {
 
   return history.filter(quiz => new Date(quiz.completedAt) >= filterDate)
 }
+
+/**
+ * Meilleure série de bonnes réponses d'une session (champ `answers` de l'historique,
+ * renseigné par les pages de cours : { source: 'course_page', bestStreak }).
+ * @returns {number} 0 si l'information est absente
+ */
+export function getBestStreak(answers) {
+  let data = answers
+  if (typeof data === 'string') {
+    try {
+      data = JSON.parse(data)
+    } catch {
+      return 0
+    }
+  }
+  const value = Number(data?.bestStreak)
+  return Number.isFinite(value) && value > 0 ? value : 0
+}

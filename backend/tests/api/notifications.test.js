@@ -7,6 +7,7 @@ const {
   handleNotification
 } = require('../../controllers/notificationController.js');
 const {
+  describeWithDb,
   createTestProfile,
   createTestPin,
   generateTestToken,
@@ -16,7 +17,7 @@ const {
 } = require('../helpers/testHelpers.js');
 const { default: sql } = require('../../lib/database.js');
 
-describe('API Endpoints - Notifications', () => {
+describeWithDb('API Endpoints - Notifications', () => {
   let testProfile;
   let adminProfile;
   let testProfileIds = [];

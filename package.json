@@ -3,13 +3,16 @@
   "private": true,
   "version": "1.0.2",
   "type": "module",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build --mode production && node scripts/generate-sw.js",
     "preview": "vite preview",
     "generate-icons": "node scripts/generate-icons.js",
     "validate-manifest": "node scripts/validate-manifest.js",
-    "test-profile-cache": "node scripts/test-profile-cache.js",
     "init-db": "node scripts/init-db.js",
     "init-badges": "node scripts/init-badges.js",
     "db:init": "node scripts/init-db.js",
@@ -25,6 +28,7 @@
     "create-teen": "node scripts/migrate-teen-profiles.js create",
     "migrate-lessons": "node scripts/migrate-lessons.js",
     "migrate-badges": "node scripts/migrate-badges.js",
+    "migrate:audit-logs": "node scripts/migrate-audit-logs.cjs",
     "version:patch": "node scripts/version-bump.js patch",
     "version:minor": "node scripts/version-bump.js minor",
     "version:major": "node scripts/version-bump.js major",
@@ -37,8 +41,8 @@
     "update:deps:check": "node scripts/update-dependencies.js check",
     "update:deps:minor": "node scripts/update-dependencies.js minor",
     "update:deps:major": "node scripts/update-dependencies.js major",
-    "lint": "eslint src --ext .js,.vue --fix",
-    "lint:check": "eslint src --ext .js,.vue",
+    "lint": "eslint src --fix",
+    "lint:check": "eslint src",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
@@ -59,7 +63,6 @@
     "test:e2e:pwa": "playwright test tests/e2e/pwa/",
     "test:e2e:profile": "playwright test tests/e2e/profile/",
     "test:all": "pnpm test:run && pnpm test:e2e",
-    "type-check": "vue-tsc --noEmit",
     "audit": "pnpm audit",
     "audit:fix": "pnpm audit --fix",
     "security:check": "pnpm audit && pnpm run lint:check",
@@ -92,6 +95,7 @@
     "eslint": "^9.0.0",
     "eslint-plugin-security": "^2.0.0",
     "eslint-plugin-vue": "^9.0.0",
+    "globals": "^16.4.0",
     "jsdom": "^25.0.0",
     "lighthouse": "^12.0.0",
     "postcss": "^8.4.0",
@@ -100,8 +104,14 @@
     "terser": "^5.24.0",
     "vite": "^7.1.9",
     "vite-bundle-analyzer": "^0.7.0",
-    "vite-plugin-pwa": "^1.0.3",
     "vitest": "^3.2.4",
-    "vue-tsc": "^2.0.0"
+    "vue-eslint-parser": "^9.4.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@tailwindcss/oxide",
+      "esbuild",
+      "sharp"
+    ]
   }
 }

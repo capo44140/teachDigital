@@ -1,15 +1,12 @@
 {
   "name": "teachdigital-backend",
   "version": "1.0.0",
-  "description": "Backend API pour TeachDigital - Vercel Functions",
+  "description": "Backend API Express pour TeachDigital (déployé en Docker sur Synology via ../deploy.ps1)",
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
     "build": "echo 'No build step required'",
-    "deploy": "node scripts/deploy.js production",
-    "deploy:preview": "node scripts/deploy.js preview",
-    "deploy:synology": "powershell -ExecutionPolicy Bypass -File ./deploy-synology.ps1",
-    "deploy:synology:skip-build": "powershell -ExecutionPolicy Bypass -File ./deploy-synology.ps1 -SkipBuild",
     "setup:env": "node scripts/setup-env.js",
     "init-badges": "node scripts/init-badges.js",
     "init-family-gate": "node scripts/init-family-gate.js",
@@ -55,7 +52,7 @@
     "jest": "^29.7.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
