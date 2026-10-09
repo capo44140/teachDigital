@@ -8,8 +8,8 @@ description: Standards de test pour TeachDigital
 ## Configuration des Tests
 
 ### Framework de test
-- **Vitest** : Framework principal (configuration dans [vitest.config.js](mdc:vitest.config.js))
-- **Setup** : [tests/setup.js](mdc:tests/setup.js)
+- **Vitest** : Framework principal (configuration dans [vitest.config.js](mdc:frontend/vitest.config.js))
+- **Setup** : [tests/setup.js](mdc:frontend/tests/setup.js)
 - **Coverage** : V8 coverage provider
 
 ### Scripts de test disponibles
@@ -46,14 +46,14 @@ describe('ProfileService', () => {
 ```
 
 ### Tests de base de données
-- **Configuration DB** : [scripts/test-database-config.js](mdc:scripts/test-database-config.js)
-- **Tests de migration** : Tester avec [scripts/migrate-database.js](mdc:scripts/migrate-database.js)
-- **Tests de sécurité** : [scripts/test-pin-security.js](mdc:scripts/test-pin-security.js)
+- **Configuration DB** : [scripts/test-database-config.js](mdc:frontend/scripts/test-database-config.js)
+- **Tests de migration** : Tester avec [scripts/migrate-database.js](mdc:frontend/scripts/migrate-database.js)
+- **Tests de sécurité** : [scripts/test-pin-security.js](mdc:frontend/scripts/test-pin-security.js)
 
 ### Tests de services spécifiques
-- **Notifications** : [scripts/test-notifications.js](mdc:scripts/test-notifications.js)
-- **YouTube** : [scripts/test-youtube-service.js](mdc:scripts/test-youtube-service.js)
-- **Version** : [scripts/test-version-display.js](mdc:scripts/test-version-display.js)
+- **Notifications** : [scripts/test-notifications.js](mdc:frontend/scripts/test-notifications.js)
+- **YouTube** : [scripts/test-youtube-service.js](mdc:frontend/scripts/test-youtube-service.js)
+- **Version** : [scripts/test-version-display.js](mdc:frontend/scripts/test-version-display.js)
 
 ### Tests de composants Vue
 - Utiliser Vue Test Utils pour les composants

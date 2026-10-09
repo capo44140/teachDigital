@@ -87,22 +87,22 @@ export default {
 ## Composants Spécialisés
 
 ### Composants de Dashboard
-- **PerformanceDashboard** : [src/components/PerformanceDashboard.vue](mdc:src/components/PerformanceDashboard.vue)
+- **PerformanceDashboard** : [src/components/PerformanceDashboard.vue](mdc:frontend/src/components/PerformanceDashboard.vue)
 - **CacheStats** : Composant de statistiques de cache
 - **ImageOptimizer** : Optimisation d'images
 
 ### Composants de Gestion
-- **YouTubeVideoManager** : [src/components/YouTubeVideoManager.vue](mdc:src/components/YouTubeVideoManager.vue)
-- **YouTubeKidsViewer** : [src/components/YouTubeKidsViewer.vue](mdc:src/components/YouTubeKidsViewer.vue)
+- **YouTubeVideoManager** : [src/components/YouTubeVideoManager.vue](mdc:frontend/src/components/YouTubeVideoManager.vue)
+- **YouTubeKidsViewer** : [src/components/YouTubeKidsViewer.vue](mdc:frontend/src/components/YouTubeKidsViewer.vue)
 - **LessonScanner** : Scanner de leçons
 
 ### Composants de Configuration
-- **PinSettings** : [src/components/PinSettings.vue](mdc:src/components/PinSettings.vue)
+- **PinSettings** : [src/components/PinSettings.vue](mdc:frontend/src/components/PinSettings.vue)
 - **ChildSettings** : Configuration des profils enfants
 - **BadgeManager** : Gestion des badges
 
 ### Composants de Notification
-- **UpdateNotification** : [src/components/UpdateNotification.vue](mdc:src/components/UpdateNotification.vue)
+- **UpdateNotification** : [src/components/UpdateNotification.vue](mdc:frontend/src/components/UpdateNotification.vue)
 - **NotificationCenter** : Centre de notifications
 - **ProgressTracking** : Suivi des progrès
 
@@ -204,9 +204,9 @@ export const useProfileStore = defineStore('profile', () => {
 ```
 
 ### Stores Spécialisés
-- **AuthStore** : [src/stores/authStore.js](mdc:src/stores/authStore.js)
-- **LessonStore** : [src/stores/lessonStore.js](mdc:src/stores/lessonStore.js)
-- **ApiStore** : [src/stores/apiStore.js](mdc:src/stores/apiStore.js)
+- **AuthStore** : [src/stores/authStore.js](mdc:frontend/src/stores/authStore.js)
+- **LessonStore** : [src/stores/lessonStore.js](mdc:frontend/src/stores/lessonStore.js)
+- **ApiStore** : [src/stores/apiStore.js](mdc:frontend/src/stores/apiStore.js)
 
 ## Patterns de Composants
 

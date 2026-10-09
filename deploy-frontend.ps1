@@ -14,13 +14,13 @@ function Write-Info { Write-Host $args -ForegroundColor Cyan }
 $sshAlias = "synology"
 $defaultDeployPath = "/volume1/docker/teachdigital/frontend"
 
-# Se positionner dans le dossier racine du projet
+# Se positionner dans le dossier frontend/ (package.json, dist/, Dockerfile.prebuilt, nginx.conf, docker-compose.yml)
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $scriptPath
+Set-Location (Join-Path $scriptPath 'frontend')
 
 # Charger le chemin de deploiement
 if (-not $DeployPath) {
-    $configFile = ".synology-deploy-frontend.json"
+    $configFile = Join-Path $scriptPath ".synology-deploy-frontend.json"
     if (Test-Path $configFile) {
         $config = Get-Content $configFile | ConvertFrom-Json
         $DeployPath = $config.deployPath.Trim()
@@ -95,8 +95,8 @@ Write-Info "   Compression et envoi en cours..."
 $bashPath = "C:\Program Files\Git\bin\bash.exe"
 $tarOutput = ""
 
-# Liste des fichiers a inclure: dist, nginx-frontend.conf, Dockerfile.frontend.prebuilt, docker-compose.frontend.yml
-$filesToTransfer = "dist nginx-frontend.conf Dockerfile.frontend.prebuilt docker-compose.frontend.yml"
+# Liste des fichiers a inclure (relatifs a frontend/) : dist, nginx.conf, Dockerfile.prebuilt, docker-compose.yml
+$filesToTransfer = "dist nginx.conf Dockerfile.prebuilt docker-compose.yml"
 
 if (Test-Path $bashPath) {
     # Utiliser Git Bash pour gerer correctement les pipes
@@ -134,13 +134,6 @@ else {
         $tarOutput | ForEach-Object { Write-Info "   $_" }
     }
     exit 1
-}
-
-# Renommer les fichiers sur le serveur
-if ($transferSuccess) {
-    Write-Info "   Configuration des fichiers Docker..."
-    # Seul le compose est renomme : il reference directement Dockerfile.frontend.prebuilt
-    ssh $sshAlias "mv -f $DeployPath/docker-compose.frontend.yml $DeployPath/docker-compose.yml" 2>&1 | Out-Null
 }
 
 Write-Info ""

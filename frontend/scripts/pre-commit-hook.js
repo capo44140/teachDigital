@@ -14,7 +14,8 @@ function checkIfVersionFilesChanged() {
     const result = execSync('git diff --cached --name-only', { encoding: 'utf8' })
     const changedFiles = result.trim().split('\n').filter(Boolean)
     
-    const versionFiles = ['package.json', 'public/manifest.json', 'public/version.json']
+    // git diff renvoie des chemins relatifs à la racine du dépôt : le frontend vit dans frontend/
+    const versionFiles = ['frontend/package.json', 'frontend/public/manifest.json', 'frontend/public/version.json']
     const hasVersionChanges = versionFiles.some(file => changedFiles.includes(file))
     
     return hasVersionChanges

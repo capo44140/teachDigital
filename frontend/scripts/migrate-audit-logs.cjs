@@ -11,7 +11,7 @@ const path = require('path');
 const { createRequire } = require('module');
 
 require('dotenv').config();
-const backendRequire = createRequire(path.join(__dirname, '..', 'backend', 'package.json'));
+const backendRequire = createRequire(path.join(__dirname, '..', '..', 'backend', 'package.json'));
 const { Pool } = backendRequire('pg');
 
 const pool = new Pool({

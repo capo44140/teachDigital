@@ -8,7 +8,7 @@ description: Optimisations de performance spécifiques à Vue.js pour TeachDigit
 ## Configuration Vite Optimisée
 
 ### Configuration de build optimisée
-La configuration Vite dans [vite.config.js](mdc:vite.config.js) inclut des optimisations avancées :
+La configuration Vite dans [vite.config.js](mdc:frontend/vite.config.js) inclut des optimisations avancées :
 
 ```javascript
 // Optimisations Terser activées
@@ -42,7 +42,7 @@ scheduleIdleTask(() => {
 ```
 
 ### Composants Optimisés
-- **PerformanceDashboard** : [src/components/PerformanceDashboard.vue](mdc:src/components/PerformanceDashboard.vue)
+- **PerformanceDashboard** : [src/components/PerformanceDashboard.vue](mdc:frontend/src/components/PerformanceDashboard.vue)
 - **YouTubeVideoManager** : Chargement différé des vidéos
 - **ImageOptimizer** : Optimisation automatique des images
 
@@ -52,9 +52,9 @@ scheduleIdleTask(() => {
 - Préférer `computed` pour les calculs coûteux
 
 ### Services de Performance
-- **Cache Service** : [src/services/cachedApiService.js](mdc:src/services/cachedApiService.js)
-- **Offline Data Service** : [src/services/offlineDataService.js](mdc:src/services/offlineDataService.js)
-- **Mobile Optimization** : [src/services/mobileOptimizationService.js](mdc:src/services/mobileOptimizationService.js)
+- **Cache Service** : [src/services/cachedApiService.js](mdc:frontend/src/services/cachedApiService.js)
+- **Offline Data Service** : [src/services/offlineDataService.js](mdc:frontend/src/services/offlineDataService.js)
+- **Mobile Optimization** : [src/services/mobileOptimizationService.js](mdc:frontend/src/services/mobileOptimizationService.js)
 
 ## Optimisations de Bundle
 
@@ -113,7 +113,7 @@ manualChunks: (id) => {
 ## Monitoring en Temps Réel
 
 ### Dashboard de Performance
-Le composant [PerformanceDashboard.vue](mdc:src/components/PerformanceDashboard.vue) fournit :
+Le composant [PerformanceDashboard.vue](mdc:frontend/src/components/PerformanceDashboard.vue) fournit :
 - Temps de chargement des composants
 - Statistiques de cache
 - Métriques de bundle

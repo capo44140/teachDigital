@@ -6,11 +6,14 @@ import { execSync } from 'child_process'
 
 /**
  * Script pour configurer les hooks Git automatiques
- * Usage: node scripts/setup-git-hooks.js
+ * Usage (depuis frontend/): node scripts/setup-git-hooks.js
+ * Les hooks générés se placent dans frontend/ avant de s'exécuter (git les lance depuis la racine du dépôt).
  */
 
 function createGitHooks() {
-  const hooksDir = '.git/hooks'
+  // Le script est lancé depuis frontend/ : résoudre le vrai dossier .git du dépôt
+  const gitDir = execSync('git rev-parse --git-dir', { encoding: 'utf8' }).trim()
+  const hooksDir = path.join(gitDir, 'hooks')
   const preCommitHook = path.join(hooksDir, 'pre-commit')
   const prePushHook = path.join(hooksDir, 'pre-push')
   
@@ -22,7 +25,7 @@ function createGitHooks() {
   // Hook pre-commit
   const preCommitContent = `#!/bin/sh
 # Hook pre-commit pour incrémenter automatiquement la version
-node scripts/pre-commit-hook.js
+cd "$(git rev-parse --show-toplevel)/frontend" && node scripts/pre-commit-hook.js
 `
   
   fs.writeFileSync(preCommitHook, preCommitContent)
@@ -33,7 +36,7 @@ node scripts/pre-commit-hook.js
   const prePushContent = `#!/bin/sh
 # Hook pre-push pour vérifier la version
 echo "🚀 Pushing to remote repository..."
-echo "📦 Current version: $(node -p "require('./package.json').version")"
+cd "$(git rev-parse --show-toplevel)/frontend" && echo "📦 Current version: $(node -p "require('./package.json').version")"
 `
   
   fs.writeFileSync(prePushHook, prePushContent)

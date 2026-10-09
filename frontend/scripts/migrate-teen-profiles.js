@@ -3,7 +3,7 @@
  * Utilise la base de données Neon pour mettre à jour les profils
  */
 
-import db from '../backend/lib/database.js'
+import db from '../../backend/lib/database.js'
 
 const sql = db.sql || db.default
 

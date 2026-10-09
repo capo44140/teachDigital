@@ -34,7 +34,8 @@ param(
 # PowerShell 5.1 transforme chaque ligne stderr d'un .exe en NativeCommandError ;
 # avec 'Stop', un simple WARNING ssh (ex: post-quantum) tuerait le script.
 # On gere les erreurs via $LASTEXITCODE + exit 1 explicites.
-$ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ProjectRoot  = Split-Path -Parent $MyInvocation.MyCommand.Path
+$FrontendRoot = Join-Path $ProjectRoot 'frontend'   # code + build du frontend (package.json, dist/, Dockerfile.prebuilt...)
 Set-Location $ProjectRoot
 
 # ----- Logging helpers -----------------------------------------------------
@@ -256,16 +257,19 @@ done
 # ============================================================================
 function Invoke-FrontendBuild {
     if ($SkipBuild) {
-        Write-Warn "[BUILD] -SkipBuild actif : on utilise le dist/ existant"
-        if (-not (Test-Path (Join-Path $ProjectRoot 'dist'))) {
-            Write-Err "[ERREUR] dist/ absent. Lance un build au moins une fois sans -SkipBuild."
+        Write-Warn "[BUILD] -SkipBuild actif : on utilise le frontend/dist/ existant"
+        if (-not (Test-Path (Join-Path $FrontendRoot 'dist'))) {
+            Write-Err "[ERREUR] frontend/dist/ absent. Lance un build au moins une fois sans -SkipBuild."
             exit 1
         }
         return
     }
     Write-Section "BUILD FRONTEND"
+    Push-Location $FrontendRoot
     & pnpm run build
-    if ($LASTEXITCODE -ne 0) {
+    $buildExit = $LASTEXITCODE
+    Pop-Location
+    if ($buildExit -ne 0) {
         Write-Err "[ERREUR] pnpm run build a echoue"
         exit 1
     }
@@ -357,18 +361,15 @@ function Publish-Frontend {
     # Prep + nettoyage dist en 1 seul ssh
     Invoke-Ssh "mkdir -p $script:FrontendPath/logs && chmod 777 $script:FrontendPath/logs && rm -rf $script:FrontendPath/dist" | Out-Null
 
-    $files = @('dist', 'nginx-frontend.conf', 'Dockerfile.frontend.prebuilt', 'docker-compose.frontend.yml')
-    $missing = $files | Where-Object { -not (Test-Path (Join-Path $ProjectRoot $_)) }
+    # Fichiers pris dans frontend/ ; docker-compose.yml y porte deja son nom final (plus de renommage cote NAS)
+    $files = @('dist', 'nginx.conf', 'Dockerfile.prebuilt', 'docker-compose.yml')
+    $missing = $files | Where-Object { -not (Test-Path (Join-Path $FrontendRoot $_)) }
     if ($missing) {
         Write-Err "[ERREUR] Fichiers manquants : $($missing -join ', ')"
         exit 1
     }
 
-    Send-Tarball -LocalDir $ProjectRoot -RemoteDir $script:FrontendPath -IncludePaths $files
-
-    # Renommage cote serveur (1 ssh) : seul le compose est renomme ; il reference
-    # directement Dockerfile.frontend.prebuilt (plus de renommage du Dockerfile).
-    Invoke-Ssh "mv -f $script:FrontendPath/docker-compose.frontend.yml $script:FrontendPath/docker-compose.yml" | Out-Null
+    Send-Tarball -LocalDir $FrontendRoot -RemoteDir $script:FrontendPath -IncludePaths $files
 
     $bashScript = New-ComposeRunScript `
         -RemoteDir $script:FrontendPath `

@@ -8,14 +8,14 @@ description: Guidelines complètes pour les tests unitaires, d'intégration et E
 ## Configuration des Tests
 
 ### Framework Principal - Vitest
-- **Configuration** : [vitest.config.js](mdc:vitest.config.js)
-- **Setup global** : [tests/setup.js](mdc:tests/setup.js)
+- **Configuration** : [vitest.config.js](mdc:frontend/vitest.config.js)
+- **Setup global** : [tests/setup.js](mdc:frontend/tests/setup.js)
 - **Coverage** : V8 coverage provider avec seuil de 80%
 
 ### Tests E2E - Playwright
-- **Configuration** : [playwright.config.js](mdc:playwright.config.js)
-- **Configuration manuelle** : [playwright.manual.config.js](mdc:playwright.manual.config.js)
-- **Tests E2E** : [tests/e2e/](mdc:tests/e2e/)
+- **Configuration** : [playwright.config.js](mdc:frontend/playwright.config.js)
+- **Configuration manuelle** : [playwright.manual.config.js](mdc:frontend/playwright.manual.config.js)
+- **Tests E2E** : [tests/e2e/](mdc:frontend/tests/e2e/)
 
 ## Scripts de Test Disponibles
 

@@ -1,5 +1,5 @@
-# Build complet du frontend dans Docker (utilisé par docker-compose.app.yml).
-# Le déploiement Synology (deploy.ps1) utilise Dockerfile.frontend.prebuilt avec un dist/ construit en local.
+# Build complet du frontend dans Docker (utilisé par ../docker-compose.app.yml, contexte = frontend/).
+# Le déploiement Synology (../deploy.ps1) utilise Dockerfile.prebuilt avec un dist/ construit en local.
 
 # Stage 1: Build — Vite 7 requiert Node ^20.19 || >=22.12
 FROM node:22-alpine AS builder
@@ -28,12 +28,12 @@ RUN pnpm run build
 FROM nginx:alpine
 
 # Copier la configuration Nginx
-COPY nginx-frontend.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copier les fichiers buildés
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Exposer le port (nginx-frontend.conf écoute sur 80)
+# Exposer le port (nginx.conf écoute sur 80)
 EXPOSE 80
 
 # Health check

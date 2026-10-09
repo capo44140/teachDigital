@@ -8,18 +8,18 @@ description: Guidelines pour PWA et Service Workers
 ## Configuration PWA
 
 ### Manifest et Icônes
-- **Manifest** : [public/manifest.json](mdc:public/manifest.json)
-- **Icônes** : Générées automatiquement par [scripts/generate-icons.js](mdc:scripts/generate-icons.js)
-- **Configuration Vite PWA** : Définie dans [vite.config.js](mdc:vite.config.js)
+- **Manifest** : [public/manifest.json](mdc:frontend/public/manifest.json)
+- **Icônes** : Générées automatiquement par [scripts/generate-icons.js](mdc:frontend/scripts/generate-icons.js)
+- **Configuration Vite PWA** : Définie dans [vite.config.js](mdc:frontend/vite.config.js)
 
 ### Service Worker
-- **Service Worker principal** : [public/sw.js](mdc:public/sw.js)
-- **Génération automatique** : [scripts/generate-sw.js](mdc:scripts/generate-sw.js)
-- **Enregistrement** : Dans [src/main.js](mdc:src/main.js)
+- **Service Worker principal** : [public/sw.js](mdc:frontend/public/sw.js)
+- **Génération automatique** : [scripts/generate-sw.js](mdc:frontend/scripts/generate-sw.js)
+- **Enregistrement** : Dans [src/main.js](mdc:frontend/src/main.js)
 
 ### Gestion des mises à jour
-- **Service de mise à jour** : [src/services/updateService.js](mdc:src/services/updateService.js)
-- **Composant de notification** : [src/components/UpdateNotification.vue](mdc:src/components/UpdateNotification.vue)
+- **Service de mise à jour** : [src/services/updateService.js](mdc:frontend/src/services/updateService.js)
+- **Composant de notification** : [src/components/UpdateNotification.vue](mdc:frontend/src/components/UpdateNotification.vue)
 - **Vérification automatique** : Toutes les 30 secondes
 
 ### Configuration du Service Worker

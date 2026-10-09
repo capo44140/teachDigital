@@ -9,7 +9,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
-const { default: sql } = require('../backend/lib/database.js');
+const { default: sql } = require('../../backend/lib/database.js');
 
 async function fixLessonsSequence() {
   try {

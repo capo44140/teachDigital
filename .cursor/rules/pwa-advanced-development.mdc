@@ -8,9 +8,9 @@ description: Guidelines avancées pour le développement PWA avec Service Worker
 ## Configuration PWA Complète
 
 ### Manifest et Métadonnées
-- **Manifest principal** : [public/manifest.json](mdc:public/manifest.json)
-- **Manifest alternatif** : [public/manifest.webmanifest](mdc:public/manifest.webmanifest)
-- **Génération automatique** : [scripts/generate-icons.js](mdc:scripts/generate-icons.js)
+- **Manifest principal** : [public/manifest.json](mdc:frontend/public/manifest.json)
+- **Manifest alternatif** : [public/manifest.webmanifest](mdc:frontend/public/manifest.webmanifest)
+- **Génération automatique** : [scripts/generate-icons.js](mdc:frontend/scripts/generate-icons.js)
 
 ### Configuration Vite PWA
 ```javascript
@@ -35,9 +35,9 @@ VitePWA({
 ## Service Worker Avancé
 
 ### Service Worker Principal
-- **Fichier principal** : [public/sw.js](mdc:public/sw.js)
-- **Génération automatique** : [scripts/generate-sw.js](mdc:scripts/generate-sw.js)
-- **Enregistrement optimisé** : Dans [src/main.js](mdc:src/main.js)
+- **Fichier principal** : [public/sw.js](mdc:frontend/public/sw.js)
+- **Génération automatique** : [scripts/generate-sw.js](mdc:frontend/scripts/generate-sw.js)
+- **Enregistrement optimisé** : Dans [src/main.js](mdc:frontend/src/main.js)
 
 ### Stratégies de Cache
 ```javascript
@@ -81,8 +81,8 @@ navigator.serviceWorker.register('/sw.js', {
 ## Services PWA Spécialisés
 
 ### Service de Mise à Jour
-- **Update Service** : [src/services/updateService.js](mdc:src/services/updateService.js)
-- **Composant de notification** : [src/components/UpdateNotification.vue](mdc:src/components/UpdateNotification.vue)
+- **Update Service** : [src/services/updateService.js](mdc:frontend/src/services/updateService.js)
+- **Composant de notification** : [src/components/UpdateNotification.vue](mdc:frontend/src/components/UpdateNotification.vue)
 
 ### Service de Données Hors Ligne
 ```javascript
@@ -109,12 +109,12 @@ export default {
 ```
 
 ### Service d'Installation
-- **Install Service** : [src/services/installService.js](mdc:src/services/installService.js)
+- **Install Service** : [src/services/installService.js](mdc:frontend/src/services/installService.js)
 - Gestion du prompt d'installation
 - Détection des capacités PWA
 
 ### Service d'Optimisation Mobile
-- **Mobile Optimization** : [src/services/mobileOptimizationService.js](mdc:src/services/mobileOptimizationService.js)
+- **Mobile Optimization** : [src/services/mobileOptimizationService.js](mdc:frontend/src/services/mobileOptimizationService.js)
 - Optimisations spécifiques mobile
 - Gestion des événements tactiles
 

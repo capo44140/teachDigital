@@ -1,5 +1,5 @@
-# Contexte de build de Dockerfile.frontend (docker-compose.app.yml).
-# Dockerfile.frontend.prebuilt a son propre fichier : Dockerfile.frontend.prebuilt.dockerignore.
+# Contexte de build de frontend/Dockerfile (../docker-compose.app.yml).
+# Dockerfile.prebuilt a son propre fichier : Dockerfile.prebuilt.dockerignore.
 
 # Dépendances / builds (réinstallés et reconstruits dans l'image)
 node_modules
@@ -36,8 +36,7 @@ blob-report
 lighthouse-*
 *.log
 
-# Documentation et code non nécessaires au build du frontend
+# Documentation et fichiers non nécessaires au build du frontend
 doc
 docs
-backend
 *.md

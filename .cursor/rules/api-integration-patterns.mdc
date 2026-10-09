@@ -30,10 +30,10 @@ export class BaseRepository {
 ```
 
 ### Services Métier
-- **ProfileService** : [src/services/profileService.js](mdc:src/services/profileService.js)
-- **LessonService** : [src/services/lessonService.js](mdc:src/services/lessonService.js)
-- **NotificationService** : [src/services/notificationService.js](mdc:src/services/notificationService.js)
-- **YouTubeService** : [src/services/youtubeVideoService.js](mdc:src/services/youtubeVideoService.js)
+- **ProfileService** : [src/services/profileService.js](mdc:frontend/src/services/profileService.js)
+- **LessonService** : [src/services/lessonService.js](mdc:frontend/src/services/lessonService.js)
+- **NotificationService** : [src/services/notificationService.js](mdc:frontend/src/services/notificationService.js)
+- **YouTubeService** : [src/services/youtubeVideoService.js](mdc:frontend/src/services/youtubeVideoService.js)
 
 ## Configuration API
 
@@ -63,7 +63,7 @@ export class ApiService {
 ```
 
 ### Gestion des Erreurs Centralisée
-Utiliser le service d'erreur : [src/services/errorService.js](mdc:src/services/errorService.js)
+Utiliser le service d'erreur : [src/services/errorService.js](mdc:frontend/src/services/errorService.js)
 
 ```javascript
 import { ErrorService } from '@/services/errorService.js'
@@ -175,12 +175,12 @@ export class CachedApiService {
 ```
 
 ### Service de Reconnaissance Faciale
-- **Face Recognition** : [src/services/faceRecognitionService.js](mdc:src/services/faceRecognitionService.js)
+- **Face Recognition** : [src/services/faceRecognitionService.js](mdc:frontend/src/services/faceRecognitionService.js)
 - Chargement différé des modèles
 - Cache des résultats de reconnaissance
 
 ### Service YouTube
-- **YouTube Manager** : [src/services/youtubeVideoService.js](mdc:src/services/youtubeVideoService.js)
+- **YouTube Manager** : [src/services/youtubeVideoService.js](mdc:frontend/src/services/youtubeVideoService.js)
 - Gestion des vidéos et métadonnées
 - Optimisation des thumbnails
 

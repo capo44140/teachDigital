@@ -191,7 +191,7 @@ if (!user.isAdmin) {
 
 ## 📚 Références
 
-- **API Service** : [src/services/apiService.js](mdc:src/services/apiService.js)
+- **API Service** : [src/services/apiService.js](mdc:frontend/src/services/apiService.js)
 - **Database Backend** : [backend/lib/database.js](mdc:backend/lib/database.js)
 - **Exemple API** : [backend/api/badges.js](mdc:backend/api/badges.js)
-- **Exemple Service Frontend** : [src/services/badgeService.js](mdc:src/services/badgeService.js)
+- **Exemple Service Frontend** : [src/services/badgeService.js](mdc:frontend/src/services/badgeService.js)

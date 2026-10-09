@@ -3,7 +3,7 @@ version: "3.8"
 # ============================================================================
 # Stack Supabase OPTIONNELLE (expérimentale, non utilisée par l'application).
 # L'application TeachDigital tourne avec backend/docker-compose.yml +
-# docker-compose.frontend.yml (cf. deploy.ps1) ou docker-compose.app.yml.
+# frontend/docker-compose.yml (cf. deploy.ps1) ou docker-compose.app.yml.
 #
 # - Tous les secrets viennent de l'environnement / d'un fichier .env (non commité) :
 #     POSTGRES_PASSWORD, AUTHENTICATOR_PASSWORD, SUPABASE_JWT_SECRET,

@@ -1,7 +1,7 @@
 # 🚀 Installation Supabase sur Synology (optionnel)
 
 > ℹ️ Cette stack est **optionnelle et non utilisée par l'application** TeachDigital
-> (qui tourne avec `backend/docker-compose.yml` + `docker-compose.frontend.yml`, cf. `deploy.ps1`).
+> (qui tourne avec `backend/docker-compose.yml` + `frontend/docker-compose.yml`, cf. `deploy.ps1`).
 
 Ce guide vous explique comment installer et configurer Supabase sur votre Synology avec Docker Compose.
 

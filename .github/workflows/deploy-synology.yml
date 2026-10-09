@@ -6,8 +6,8 @@ name: Deploy to Synology
 # Reproduit le chemin de déploiement réel (deploy.ps1) :
 #   - backend  : contenu de backend/ -> BACKEND_PATH, puis backend/docker-compose.yml
 #                (lit le .env du serveur : JWT_SECRET, DB_*...)
-#   - frontend : dist/ + nginx-frontend.conf + Dockerfile.frontend.prebuilt
-#                + docker-compose.frontend.yml (renommé docker-compose.yml) -> FRONTEND_PATH
+#   - frontend : frontend/dist/ + frontend/nginx.conf + frontend/Dockerfile.prebuilt
+#                + frontend/docker-compose.yml -> FRONTEND_PATH
 # Le docker-compose.yml de la racine (stack Supabase optionnelle) n'est PAS déployé.
 #
 # Secrets requis : SYNOLOGY_SSH_KEY, SYNOLOGY_HOST, SYNOLOGY_USER
@@ -62,7 +62,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-dist
-          path: dist
+          path: frontend/dist
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -154,8 +154,7 @@ jobs:
           set -euo pipefail
           STAGE="$RUNNER_TEMP/frontend"
           mkdir -p "$STAGE"
-          cp -R dist nginx-frontend.conf Dockerfile.frontend.prebuilt "$STAGE/"
-          cp docker-compose.frontend.yml "$STAGE/docker-compose.yml"
+          cp -R frontend/dist frontend/nginx.conf frontend/Dockerfile.prebuilt frontend/docker-compose.yml "$STAGE/"
           ssh "$SSH_TARGET" "mkdir -p '$FRONTEND_PATH/logs'"
           rsync -az --delete \
             --exclude 'logs/' \

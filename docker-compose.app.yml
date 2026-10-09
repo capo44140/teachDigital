@@ -2,7 +2,7 @@ version: '3.8'
 
 # Stack "tout-en-un" (PostgreSQL + backend + frontend [+ reverse proxy optionnel]).
 # Ce n'est PAS le chemin de déploiement Synology actuel (cf. deploy.ps1 qui utilise
-# backend/docker-compose.yml et docker-compose.frontend.yml).
+# backend/docker-compose.yml et frontend/docker-compose.yml).
 #
 # Variables requises (fichier .env à côté de ce compose, jamais commité) :
 #   POSTGRES_PASSWORD, JWT_SECRET (>= 32 caractères aléatoires : openssl rand -hex 32)
@@ -48,7 +48,7 @@ services:
       PORT: 3001
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     ports:
-      # Publié sur l'hôte : nginx-frontend.conf (conteneur frontend) relaie /api/
+      # Publié sur l'hôte : frontend/nginx.conf (conteneur frontend) relaie /api/
       # vers host.docker.internal:3001.
       - "3001:3001"
     depends_on:
@@ -66,8 +66,8 @@ services:
   # Frontend (Vue.js + Nginx). Les variables VITE_* sont injectées AU BUILD (pas au runtime).
   frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.frontend
+      context: ./frontend
+      dockerfile: Dockerfile
       args:
         VITE_API_URL_PROD: ${VITE_API_URL_PROD:-}
     container_name: teachdigital-web

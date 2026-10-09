@@ -5,29 +5,43 @@ description: Guide de structure du projet TeachDigital
 
 # Structure du Projet TeachDigital
 
-## Architecture Vue.js 3 + Vite
+Le dépôt est découpé en deux applications indépendantes, chacune avec son `package.json` (pnpm) :
 
-Le projet utilise Vue.js 3 avec Composition API, Pinia pour la gestion d'état, et Vite comme bundler.
+- `frontend/` — application Vue.js 3 (Composition API) + Vite 7, Pinia, Vue Router, PWA
+- `backend/` — API Node.js / Express + PostgreSQL (`pg`), déployée en Docker sur Synology
+
+Les commandes `pnpm ...` se lancent dans le dossier concerné (`cd frontend` ou `cd backend`).
 
 ### Points d'entrée principaux
-- **Application principale** : [src/main.js](mdc:src/main.js) - Point d'entrée avec configuration Pinia, router et Service Worker
-- **Composant racine** : [src/App.vue](mdc:src/App.vue) - Composant principal avec router-view
-- **Configuration Vite** : [vite.config.js](mdc:vite.config.js) - Configuration PWA, chunks et variables d'environnement
+- **Application principale** : [frontend/src/main.js](mdc:frontend/src/main.js) - Point d'entrée avec configuration Pinia, router et Service Worker
+- **Composant racine** : [frontend/src/App.vue](mdc:frontend/src/App.vue) - Composant principal avec router-view
+- **Configuration Vite** : [frontend/vite.config.js](mdc:frontend/vite.config.js) - Configuration build, chunks, proxy `/api` et variables d'environnement
+- **Serveur API** : [backend/server.js](mdc:backend/server.js) - Express, routes `backend/api/`, contrôleurs `backend/controllers/`
 
 ### Structure des dossiers
-- `src/components/` - Composants Vue réutilisables
-- `src/services/` - Services métier (API, base de données, reconnaissance faciale)
-- `src/stores/` - Stores Pinia pour la gestion d'état
-- `src/repositories/` - Pattern Repository pour l'accès aux données
-- `src/router/` - Configuration Vue Router
-- `backend/` - API Vercel Functions
-- `scripts/` - Scripts utilitaires (migration, build, tests)
+- `frontend/src/components/` - Composants Vue réutilisables
+- `frontend/src/services/` - Services métier (API, profils, cours, PWA...)
+- `frontend/src/stores/` - Stores Pinia pour la gestion d'état
+- `frontend/src/router/` - Configuration Vue Router
+- `frontend/public/` - Assets statiques, `manifest.json`, template du service worker `sw.js`
+- `frontend/scripts/` - Scripts utilitaires (build `generate-sw.js`, versioning, migrations DB)
+- `frontend/tests/` - Tests Vitest (`tests/services`) et Playwright (`tests/e2e`)
+- `backend/api/`, `backend/controllers/`, `backend/lib/` - Routes, contrôleurs et bibliothèques de l'API
+- `backend/scripts/`, `backend/tests/` - Scripts d'initialisation et tests Jest
+- `doc/` - Documentation détaillée
+- Racine : `deploy.ps1`, `docker-compose.app.yml`, `nginx.conf`, workflows GitHub Actions
+
+### Fichiers Docker / déploiement
+- `frontend/Dockerfile` + `frontend/.dockerignore` - build complet du front (utilisé par `docker-compose.app.yml`)
+- `frontend/Dockerfile.prebuilt`, `frontend/nginx.conf`, `frontend/docker-compose.yml` - image déployée sur le NAS à partir de `frontend/dist/`
+- `backend/Dockerfile`, `backend/docker-compose.yml` - image et stack du backend
 
 ### Technologies clés
-- **Frontend** : Vue 3, Pinia, Vue Router, TailwindCSS
-- **Backend** : Vercel Functions, Neon Database
+- **Frontend** : Vue 3, Pinia, Vue Router, Tailwind CSS 4
+- **Backend** : Node.js, Express, PostgreSQL, JWT, Zod
 - **PWA** : Service Worker, Manifest, Cache
-- **Tests** : Vitest, ESLint
+- **Tests** : Vitest, Playwright (frontend), Jest (backend), ESLint
 
 ### Variables d'environnement
-Le projet utilise des variables d'environnement pour la base de données Neon. Voir [env.example](mdc:env.example) pour la configuration.
+- Frontend : [frontend/env.example](mdc:frontend/env.example) (copier en `frontend/.env`, uniquement des variables `VITE_*` publiques)
+- Backend : [backend/env.example](mdc:backend/env.example) (copier en `backend/.env` : `DB_*`, `JWT_SECRET`, clés IA)

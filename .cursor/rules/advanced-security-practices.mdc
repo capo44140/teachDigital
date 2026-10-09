@@ -60,8 +60,8 @@ export class EncryptionService {
 ```
 
 ### Service de Hachage Sécurisé
-- **Hash Service** : [src/services/hashService.js](mdc:src/services/hashService.js)
-- **Native Hash Service** : [src/services/nativeHashService.js](mdc:src/services/nativeHashService.js)
+- **Hash Service** : [src/services/hashService.js](mdc:frontend/src/services/hashService.js)
+- **Native Hash Service** : [src/services/nativeHashService.js](mdc:frontend/src/services/nativeHashService.js)
 
 ```javascript
 // Utilisation du service de hachage
@@ -129,8 +129,8 @@ export const verifyToken = async (token) => {
 ```
 
 ### Gestion des Sessions Sécurisée
-- **Session Service** : [src/services/sessionService.js](mdc:src/services/sessionService.js)
-- **Auth Store** : [src/stores/authStore.js](mdc:src/stores/authStore.js)
+- **Session Service** : [src/services/sessionService.js](mdc:frontend/src/services/sessionService.js)
+- **Auth Store** : [src/stores/authStore.js](mdc:frontend/src/stores/authStore.js)
 
 ```javascript
 // Gestion sécurisée des sessions
@@ -168,7 +168,7 @@ export class SessionService {
 ## Validation et Sanitisation
 
 ### Service de Validation d'Images
-- **Image Validation** : [src/services/imageValidationService.js](mdc:src/services/imageValidationService.js)
+- **Image Validation** : [src/services/imageValidationService.js](mdc:frontend/src/services/imageValidationService.js)
 
 ```javascript
 export class ImageValidationService {
@@ -274,8 +274,8 @@ export class InputValidationService {
 ## Sécurité des PINs
 
 ### Configuration de Sécurité des PINs
-- **PIN Config** : [src/config/pinConfig.js](mdc:src/config/pinConfig.js)
-- **PIN Service** : [src/services/pinService.js](mdc:src/services/pinService.js)
+- **PIN Config** : [src/config/pinConfig.js](mdc:frontend/src/config/pinConfig.js)
+- **PIN Service** : [src/services/pinService.js](mdc:frontend/src/services/pinService.js)
 
 ```javascript
 // Configuration sécurisée des PINs
@@ -392,7 +392,7 @@ export const securityHeaders = {
 ## Limitation de Taux (Rate Limiting)
 
 ### Service de Rate Limiting
-- **Rate Limit Service** : [src/services/rateLimitService.js](mdc:src/services/rateLimitService.js)
+- **Rate Limit Service** : [src/services/rateLimitService.js](mdc:frontend/src/services/rateLimitService.js)
 
 ```javascript
 export class RateLimitService {
@@ -435,7 +435,7 @@ export class RateLimitService {
 ## Audit et Logging
 
 ### Service d'Audit Sécurisé
-- **Audit Log Service** : [src/services/auditLogService.js](mdc:src/services/auditLogService.js)
+- **Audit Log Service** : [src/services/auditLogService.js](mdc:frontend/src/services/auditLogService.js)
 
 ```javascript
 export class AuditLogService {
@@ -487,7 +487,7 @@ export class AuditLogService {
 ## Reconnaissance Faciale Sécurisée
 
 ### Service de Reconnaissance Faciale
-- **Face Recognition** : [src/services/faceRecognitionService.js](mdc:src/services/faceRecognitionService.js)
+- **Face Recognition** : [src/services/faceRecognitionService.js](mdc:frontend/src/services/faceRecognitionService.js)
 
 ```javascript
 export class SecureFaceRecognitionService {
@@ -539,7 +539,7 @@ export class SecureFaceRecognitionService {
 
 ### Variables d'Environnement
 - Ne jamais commiter les secrets dans le code
-- Utiliser [env.example](mdc:env.example) comme template
+- Utiliser [env.example](mdc:frontend/env.example) comme template
 - Rotation régulière des clés API et JWT secrets
 
 ### Validation Côté Client et Serveur

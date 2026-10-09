@@ -5,7 +5,7 @@
  * Exécute: node scripts/migrate-lessons.js
  */
 
-import db from '../backend/lib/database.js'
+import db from '../../backend/lib/database.js'
 
 const sql = db.sql || db.default
 

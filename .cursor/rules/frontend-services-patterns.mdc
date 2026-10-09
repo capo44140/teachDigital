@@ -254,7 +254,7 @@ Avant de créer un nouveau service frontend, vérifier :
 
 ## 📚 Références
 
-- **Service API Principal** : [src/services/apiService.js](mdc:src/services/apiService.js)
-- **Exemple Service Badge** : [src/services/badgeService.js](mdc:src/services/badgeService.js)
-- **Exemple Service Cache** : [src/services/cacheService.js](mdc:src/services/cacheService.js)
+- **Service API Principal** : [src/services/apiService.js](mdc:frontend/src/services/apiService.js)
+- **Exemple Service Badge** : [src/services/badgeService.js](mdc:frontend/src/services/badgeService.js)
+- **Exemple Service Cache** : [src/services/cacheService.js](mdc:frontend/src/services/cacheService.js)
 - **Architecture** : [.cursor/rules/architecture-overview.mdc](mdc:.cursor/rules/architecture-overview.mdc)
