@@ -308,7 +308,11 @@ class ApiService {
 
     // Timeout plus long pour le login (peut prendre du temps avec la vérification du PIN)
     // Timeout de 180s pour la génération de quiz depuis documents (traitement LLM long avec plusieurs documents)
-    const timeout = isPublicEndpoint ? 60000 : (isLongTimeoutEndpoint ? 180000 : 30000) // 60s pour login, 180s pour génération quiz documents, 30s pour les autres
+    // Génération d'une page de cours complète par l'IA : jusqu'à ~9 min côté serveur
+    const isCoursePageGeneration = path === '/api/ai/generate-course-page'
+    const timeout = isCoursePageGeneration
+      ? 600000
+      : isPublicEndpoint ? 60000 : (isLongTimeoutEndpoint ? 180000 : 30000) // 60s pour login, 180s pour génération quiz documents, 30s pour les autres
 
     // Ne pas définir Content-Type si le body est FormData (le navigateur le fait automatiquement)
     const isFormData = typeof FormData !== 'undefined' && fetchOptions.body instanceof FormData

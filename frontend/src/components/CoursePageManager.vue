@@ -63,7 +63,10 @@
       </section>
 
       <template v-if="selectedChild">
-        <!-- 2. Dépôt des fichiers -->
+        <!-- 2. Génération par l'IA à partir de photos -->
+        <CoursePageGenerator :key="selectedChild.id" :child="selectedChild" @generated="addGeneratedDraft" />
+
+        <!-- 3. Dépôt des fichiers -->
         <section class="glass-card-dashboard">
           <h2 class="text-xl font-bold text-white mb-4">Ajouter des pages pour {{ selectedChild.name }}</h2>
           <label
@@ -100,6 +103,10 @@
                 </div>
               </div>
               <p class="text-white/50 text-xs mt-2">{{ draft.fileName }} · {{ formatSize(draft.size) }}</p>
+              <details v-if="draft.summary" class="mt-2 text-sm text-white/80" open>
+                <summary class="cursor-pointer text-white/60 text-xs">Ce que l'IA a fait et ce qu'il faut vérifier</summary>
+                <p class="mt-1 whitespace-pre-line">{{ draft.summary }}</p>
+              </details>
               <label v-if="findExisting(draft)" class="flex items-center gap-2 mt-2 text-amber-200 text-sm">
                 <input v-model="draft.replaceExisting" type="checkbox">
                 Remplacer la page « {{ findExisting(draft).title }} » déjà publiée
@@ -123,7 +130,7 @@
           </div>
         </section>
 
-        <!-- 3. Pages déjà publiées -->
+        <!-- 4. Pages déjà publiées -->
         <section class="glass-card-dashboard">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-xl font-bold text-white">Pages de {{ selectedChild.name }}</h2>
@@ -192,15 +199,16 @@
 <script>
 import { useProfileStore } from '../stores/profileStore.js'
 import { apiService } from '../services/apiService.js'
-import { readCoursePageFile, COURSE_SUBJECTS } from '../services/coursePageService.js'
+import { readCoursePageFile, extractCoursePageMetadata, COURSE_SUBJECTS } from '../services/coursePageService.js'
 import CoursePageFrame from './CoursePageFrame.vue'
+import CoursePageGenerator from './CoursePageGenerator.vue'
 import VersionInfo from './VersionInfo.vue'
 
 let nextDraftKey = 1
 
 export default {
   name: 'CoursePageManager',
-  components: { CoursePageFrame, VersionInfo },
+  components: { CoursePageFrame, CoursePageGenerator, VersionInfo },
   setup() {
     const profileStore = useProfileStore()
     return { profileStore }
@@ -294,6 +302,21 @@ export default {
           this.$toast?.error(error.message)
         }
       }
+    },
+
+    // Page produite par l'IA : relue (Aperçu) puis publiée comme un fichier déposé
+    addGeneratedDraft({ html, summary, provider, model, subject, topic }) {
+      const metadata = extractCoursePageMetadata(html, topic || 'Page générée')
+      this.drafts.push({
+        key: nextDraftKey++,
+        fileName: `Générée par l'IA (${provider} · ${model})`,
+        size: new Blob([html]).size,
+        html,
+        ...metadata,
+        subject: subject || metadata.subject,
+        summary,
+        replaceExisting: true
+      })
     },
 
     removeDraft(draft) {

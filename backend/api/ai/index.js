@@ -16,6 +16,7 @@ const { generateQuizFromAnalysis, generateQuizFromMultipleAnalyses, generateQuiz
 const { parseFormData, bufferToBase64 } = require('./middleware/formDataParser.js');
 const { validateApiKey, hasAtLeastOneValidKey } = require('./utils/validation.js');
 const { validateAndNormalizeQuiz } = require('./utils/quizFormat.js');
+const { generateCoursePageFromImages, COURSE_PAGE_TIMEOUT_MS } = require('./services/coursePageGenerator.js');
 const localLLMConfig = require('./services/aiProviders/localLLMConfig.js');
 
 // ==================== CONFIGURATION OCR ====================
@@ -73,6 +74,10 @@ module.exports = async function handler(req, res) {
 
         if (pathname === '/generate-quiz-from-text' && method === 'POST') {
             return await handleGenerateQuizFromText(req, res);
+        }
+
+        if (pathname === '/generate-course-page' && method === 'POST') {
+            return await handleGenerateCoursePage(req, res);
         }
 
         if (pathname === '/validate-key' && method === 'GET') {
@@ -629,6 +634,73 @@ async function handleGenerateQuizFromAnalyses(req, res) {
         }
 
         return res.status(500).json(createErrorResponse('Erreur lors de la génération du quiz: ' + error.message));
+    }
+}
+
+/**
+ * Génère une page HTML d'entraînement à partir des photos d'une leçon / d'un contrôle
+ * Multipart : file_i (images), fileCount, childProfile (JSON), subject, topic, instructions
+ * La page n'est pas publiée ici : le parent la relit puis la publie via /course-pages
+ */
+async function handleGenerateCoursePage(req, res) {
+    // La génération d'une page complète dépasse le timeout global du serveur (180s)
+    req.setTimeout(COURSE_PAGE_TIMEOUT_MS + 30000);
+    res.setTimeout(COURSE_PAGE_TIMEOUT_MS + 30000);
+
+    try {
+        const contentType = req.headers['content-type'] || '';
+        if (!contentType.includes('multipart/form-data')) {
+            return res.status(400).json(createErrorResponse('Photos requises (multipart/form-data)'));
+        }
+
+        const { fields = {}, files = [] } = await parseFormData(req);
+        const fileCount = parseInt(fields.fileCount || '0', 10);
+        const images = [];
+        for (let i = 0; i < fileCount; i++) {
+            const file = files.find(f => f.fieldname === `file_${i}`);
+            const mimeType = fields[`file_${i}_type`] || file?.mimetype || '';
+            if (file && mimeType.startsWith('image/')) {
+                images.push({ base64: bufferToBase64(file.buffer), mimeType });
+            }
+        }
+        if (images.length === 0) {
+            return res.status(400).json(createErrorResponse('Au moins une photo (image) est requise'));
+        }
+
+        let childProfile;
+        try {
+            childProfile = JSON.parse(fields.childProfile || 'null');
+        } catch {
+            childProfile = null;
+        }
+        if (!childProfile || typeof childProfile !== 'object') {
+            return res.status(400).json(createErrorResponse('Profil enfant requis'));
+        }
+
+        const result = await generateCoursePageFromImages({
+            images,
+            childProfile: { name: childProfile.name, level: childProfile.level },
+            subject: String(fields.subject || '').slice(0, 100),
+            topic: String(fields.topic || '').slice(0, 255),
+            instructions: String(fields.instructions || '').slice(0, 2000)
+        });
+
+        return res.status(200).json(createResponse('Page de cours générée avec succès', result));
+    } catch (error) {
+        console.error('❌ Erreur lors de la génération de la page de cours:', {
+            message: error.message,
+            stack: error.stack?.substring(0, 500)
+        });
+
+        if (error.code === 'AI_UNAVAILABLE') {
+            return res.status(503).json(createErrorResponse(
+                'Impossible de générer la page. Vérifiez la configuration IA (un modèle capable de lire des photos est requis : LM Studio avec un modèle vision, OpenAI ou Gemini).',
+                'AI_UNAVAILABLE',
+                { reason: error.message }
+            ));
+        }
+
+        return res.status(500).json(createErrorResponse('Erreur lors de la génération de la page: ' + error.message));
     }
 }
 

@@ -82,6 +82,42 @@ class AIService {
   }
 
   /**
+   * Génère une page HTML d'entraînement à partir des photos d'une leçon / d'un contrôle
+   * La page n'est pas publiée : elle est renvoyée pour relecture avant publication
+   * @param {File[]} files - Photos
+   * @param {Object} childProfile - Profil de l'enfant (name, level)
+   * @param {{subject?: string, topic?: string, instructions?: string}} options
+   * @returns {Promise<{html: string, summary: string, provider: string, model: string}>}
+   */
+  async generateCoursePage (files, childProfile, { subject = '', topic = '', instructions = '' } = {}) {
+    const formData = new FormData()
+    files.forEach((file, index) => {
+      formData.append(`file_${index}`, file)
+      formData.append(`file_${index}_name`, file.name)
+      formData.append(`file_${index}_type`, file.type)
+    })
+    formData.append('fileCount', files.length.toString())
+    formData.append('childProfile', JSON.stringify({ name: childProfile.name, level: childProfile.level }))
+    formData.append('subject', subject)
+    formData.append('topic', topic)
+    formData.append('instructions', instructions)
+
+    try {
+      const response = await apiService.request('/api/ai/generate-course-page', {
+        method: 'POST',
+        body: formData
+      })
+      return response.data
+    } catch (error) {
+      console.error('Erreur lors de la génération de la page de cours:', error)
+      if (error.message.includes('413') || error.message.includes('Content Too Large')) {
+        throw new Error('Les photos sont trop volumineuses (25 Mo au total maximum). Réduisez leur taille ou leur nombre.')
+      }
+      throw new Error(error.message || 'Impossible de générer la page. Veuillez réessayer.')
+    }
+  }
+
+  /**
    * Génère un quiz à partir d'analyses déjà effectuées (étape 2)
    * Prend les extractions retournées par extractTextFromDocuments
    */
