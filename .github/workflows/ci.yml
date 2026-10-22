@@ -53,12 +53,30 @@ jobs:
           retention-days: 7
 
   backend:
-    name: Backend (tests Jest)
+    name: Backend (tests Jest + PostgreSQL)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
       run:
         working-directory: backend
+    # Base dédiée aux tests : le schéma est créé par tests/schema.sql
+    # (aucune donnée de production n'est utilisée).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: teachdigital
+          POSTGRES_PASSWORD: teachdigital
+          POSTGRES_DB: teachdigital_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U teachdigital -d teachdigital_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://teachdigital:teachdigital@localhost:5432/teachdigital_test
     steps:
       - uses: actions/checkout@v4
 
@@ -75,9 +93,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Aucune base de données n'est fournie : les tests d'intégration DB sont
-      # ignorés tant que TEST_DATABASE_URL n'est pas défini.
-      - name: Tests
-        run: pnpm test
+      - name: Initialiser le schéma de test
+        run: pnpm run test:db:init
+
+      - name: Tests (unitaires + intégration DB)
+        # --runInBand : une seule suite à la fois sur la même base de test
+        run: pnpm test -- --runInBand
         env:
           CI: true

@@ -87,6 +87,14 @@ describe('Sans jeton : 401', () => {
     ['GET', '/ai/providers'],
     ['GET', '/audit/logs'],
     ['GET', '/activities'],
+    ['POST', '/activities'],
+    ['GET', '/activities/1'],
+    ['PUT', '/activities/1'],
+    ['DELETE', '/activities/1'],
+    ['GET', '/youtube-videos/1'],
+    ['PUT', '/youtube-videos/1'],
+    ['DELETE', '/youtube-videos/1'],
+    ['POST', '/notifications/mark-all-read'],
     ['GET', '/route-inconnue']
   ])('%s %s', async (method, path) => {
     expect(await call(method, path, 'none', method === 'GET' ? undefined : {})).toBe(401);
@@ -111,7 +119,11 @@ describe('Jeton famille ou enfant sur une action parent : 403', () => {
     ['DELETE', '/course-pages/1'],
     ['POST', '/notifications'],
     ['POST', '/activities'],
+    ['PUT', '/activities/1'],
+    ['DELETE', '/activities/1'],
     ['POST', '/youtube-videos'],
+    ['PUT', '/youtube-videos/1'],
+    ['DELETE', '/youtube-videos/1'],
     ['POST', '/badges'],
     ['PUT', '/badges/1'],
     ['DELETE', '/badges/1'],
@@ -143,9 +155,17 @@ describe('Accès autorisés', () => {
     ['GET', '/course-pages?targetProfileId=7'],
     ['GET', '/notifications?profileId=7'],
     ['GET', '/activities'],
-    ['GET', '/youtube-videos']
+    ['GET', '/activities/1'],
+    ['GET', '/youtube-videos'],
+    ['GET', '/youtube-videos/1']
   ])('famille : %s %s', async (method, path) => {
     const status = await call(method, path, 'family');
+    expect(status).not.toBe(401);
+    expect(status).not.toBe(403);
+  });
+
+  it('famille : marque toutes les notifications d\'un profil comme lues', async () => {
+    const status = await call('POST', '/notifications/mark-all-read', 'family', { profileId: 7 });
     expect(status).not.toBe(401);
     expect(status).not.toBe(403);
   });
@@ -153,7 +173,11 @@ describe('Accès autorisés', () => {
   it.each([
     ['GET', '/ai/providers'],
     ['GET', '/profiles/stats'],
-    ['GET', '/audit/stats']
+    ['GET', '/audit/stats'],
+    ['PUT', '/activities/1'],
+    ['DELETE', '/activities/1'],
+    ['PUT', '/youtube-videos/1'],
+    ['DELETE', '/youtube-videos/1']
   ])('parent : %s %s', async (method, path) => {
     const status = await call(method, path, 'admin');
     expect(status).not.toBe(401);

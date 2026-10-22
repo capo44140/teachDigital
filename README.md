@@ -44,12 +44,14 @@ pnpm run lint            # ESLint avec --fix
 pnpm exec vitest run     # tests unitaires frontend (pnpm test = mode watch)
 pnpm run test:coverage   # couverture (src/ uniquement, pas de seuil imposé pour l'instant)
 pnpm run test:e2e        # tests Playwright (cf. doc/PLAYWRIGHT-GUIDE.md)
-cd backend && pnpm test  # tests Jest du backend (tests DB ignorés sans TEST_DATABASE_URL)
+cd backend && pnpm test  # tests Jest unitaires (les suites DB sont ignorées sans TEST_DATABASE_URL)
+                         # tests d'intégration : voir backend/tests/README.md (base dédiée + schema.sql)
 ```
 
 CI GitHub Actions :
 
-- `.github/workflows/ci.yml` — à chaque push / PR : lint, tests unitaires, build frontend, tests backend.
+- `.github/workflows/ci.yml` — à chaque push / PR : lint, tests unitaires, build frontend, tests backend
+  (unitaires + intégration sur un PostgreSQL de service, schéma `backend/tests/schema.sql`).
 - `.github/workflows/e2e-tests.yml` — tests Playwright.
 - `.github/workflows/deploy-synology.yml` — déploiement **manuel** (`workflow_dispatch`), précédé de la CI.
 
@@ -76,7 +78,8 @@ Le déploiement réel se fait depuis un poste Windows (PowerShell + Git Bash) ve
 
 - **Backend** : le contenu de `backend/` est copié dans le dossier défini par `backend/.synology-deploy.json`
   (`deployPath`, cf. `backend/.synology-deploy.json.example`), puis `backend/docker-compose.yml` est
-  reconstruit et relancé. Le conteneur écoute sur le port **3001** (healthcheck `/health`).
+  reconstruit et relancé. Le conteneur écoute sur le port **3001** (healthcheck `/health` ; readiness
+  `/health/ready`, qui vérifie PostgreSQL et renvoie 503 si la base est injoignable).
   Les secrets viennent du fichier **`.env` présent sur le NAS** à côté du compose (jamais transféré ni
   commité) — modèle : `backend/env.docker.example`.
 - **Frontend** : `frontend/dist/`, `frontend/nginx.conf`, `frontend/Dockerfile.prebuilt` et
@@ -125,6 +128,13 @@ Mise en service :
 
 Si un secret a été commité par le passé, il doit être considéré comme compromis : le **changer**
 (la réécriture de l'historique git ne suffit pas).
+
+Le conteneur frontend applique aussi les en-têtes de sécurité dans `frontend/nginx.conf` (CSP,
+`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`). La CSP est
+stricte pour l'application (`script-src 'self'`) ; les routes `/course-page*`, qui affichent du HTML
+généré par l'IA avec ses scripts inline, reçoivent une CSP dédiée (`'unsafe-inline'`, Google Fonts).
+Une navigation SPA vers ces routes force un chargement complet du document pour bénéficier de cette
+CSP (cf. `frontend/src/router/index.js`).
 
 ## 📁 Structure du projet
 

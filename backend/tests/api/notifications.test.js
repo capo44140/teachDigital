@@ -73,7 +73,10 @@ describeWithDb('API Endpoints - Notifications', () => {
     });
 
     it('devrait filtrer les notifications par profileId', async () => {
-      const req = createMockRequest('GET', `/api/notifications?profileId=${testProfile.id}`);
+      const token = generateTestToken(testProfile);
+      const req = createMockRequest('GET', `/api/notifications?profileId=${testProfile.id}`, {}, {
+        authorization: `Bearer ${token}`
+      });
       const res = createMockResponse();
 
       await handleNotifications(req, res);
@@ -97,13 +100,15 @@ describeWithDb('API Endpoints - Notifications', () => {
       expect(res.body.data.notifications).toBeDefined();
     });
 
-    it('devrait refuser l\'accès sans authentification si profileId manquant', async () => {
+    it('devrait refuser une requête sans profileId', async () => {
+      // Le 401 (jeton manquant) est vérifié par le routeur (tests/api/router.test.js) ;
+      // ici, le contrôleur appelé directement ne peut pas identifier de profil.
       const req = createMockRequest('GET', '/api/notifications');
       const res = createMockResponse();
 
       await handleNotifications(req, res);
 
-      expect(res.statusCode).toBe(401);
+      expect(res.statusCode).toBe(400);
     });
   });
 

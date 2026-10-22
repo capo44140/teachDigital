@@ -10,6 +10,7 @@ const logger = require('./lib/logger.js');
 const { corsMiddleware } = require('./lib/cors.js');
 const crypto = require('crypto');
 const { getJwtSecretProblem, authenticateToken } = require('./lib/auth.js');
+const { withQueryTimeout } = require('./lib/queries.js');
 
 // Charger les variables d'environnement du backend (.env / env) avant tout accès à process.env
 const { loadBackendEnv } = require('./lib/loadEnv.js');
@@ -255,12 +256,44 @@ app.use(express.json({ limit: JSON_BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Route de santé pour Docker (avant le routeur API, qui exige un jeton)
+// Liveness : le process répond. Ne teste volontairement pas la base, sinon un
+// incident PostgreSQL ferait redémarrer le conteneur en boucle.
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
+});
+
+// Readiness : le service peut réellement servir des requêtes (base joignable).
+// À utiliser par un reverse proxy / une supervision, pas par le restart Docker.
+app.get('/health/ready', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const startedAt = Date.now();
+  try {
+    // Import paresseux : la config DB est validée au démarrage du serveur,
+    // inutile de charger le pool avant la première requête de readiness.
+    const { pool } = require('./lib/database.js');
+    await withQueryTimeout(pool.query('SELECT 1'), 2000, 'readiness DB');
+    return res.status(200).json({
+      status: 'ready',
+      database: 'ok',
+      latencyMs: Date.now() - startedAt,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    // Ne jamais renvoyer le message PostgreSQL au client (hôte, utilisateur, etc.)
+    logger.warn('Readiness check en échec', {
+      requestId: req.requestId,
+      error: error?.message || String(error)
+    });
+    return res.status(503).json({
+      status: 'not_ready',
+      database: 'unavailable',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Utilisation du routeur API
@@ -327,6 +360,7 @@ async function runAutoMigrations() {
 
   await ensureCoursePagesTable();
   await ensureQuizResultsCompletedColumn();
+  await ensureActivitiesTable();
 }
 
 // Sauvegardes intermédiaires d'une page de cours : exclues des badges tant que la
@@ -376,6 +410,44 @@ async function ensureCoursePagesTable() {
 
   } catch (error) {
     logger.warn('⚠️ Migration course_pages (non bloquant):', error.message);
+  }
+}
+
+// Migration automatique : table des activités (devoirs/tâches) et colonnes du modèle
+// utilisé par l'interface parent (enfant ciblé, priorité, échéance).
+async function ensureActivitiesTable() {
+  try {
+    const { pool } = require('./lib/database.js');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS activities (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        child_id INTEGER REFERENCES profiles(id) ON DELETE SET NULL,
+        priority VARCHAR(20) NOT NULL DEFAULT 'medium',
+        due_date TIMESTAMPTZ,
+        type VARCHAR(50) NOT NULL DEFAULT 'task',
+        status VARCHAR(20) NOT NULL DEFAULT 'active',
+        difficulty_level VARCHAR(20) DEFAULT 'medium',
+        estimated_duration INTEGER DEFAULT 30,
+        target_age_group VARCHAR(20) DEFAULT '6-12',
+        subject_area VARCHAR(100) DEFAULT 'general',
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    // Bases créées avec l'ancienne version de la table (sans ces colonnes)
+    await pool.query('ALTER TABLE activities ADD COLUMN IF NOT EXISTS child_id INTEGER REFERENCES profiles(id) ON DELETE SET NULL');
+    await pool.query("ALTER TABLE activities ADD COLUMN IF NOT EXISTS priority VARCHAR(20) NOT NULL DEFAULT 'medium'");
+    await pool.query('ALTER TABLE activities ADD COLUMN IF NOT EXISTS due_date TIMESTAMPTZ');
+    await pool.query("ALTER TABLE activities ALTER COLUMN type SET DEFAULT 'task'");
+    await pool.query("ALTER TABLE activities ALTER COLUMN description SET DEFAULT ''");
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_activities_child ON activities(child_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_activities_status ON activities(status)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_activities_due_date ON activities(due_date)');
+  } catch (error) {
+    logger.warn('⚠️ Migration activities (non bloquant):', error.message);
   }
 }
 

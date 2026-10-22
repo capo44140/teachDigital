@@ -10,16 +10,12 @@ Cette suite de tests couvre tous les endpoints de l'API TeachDigital. Les tests 
 backend/tests/
 ├── helpers/
 │   └── testHelpers.js      # Fonctions utilitaires pour les tests
-├── api/
-│   ├── auth.test.js         # Tests d'authentification
-│   ├── profiles.test.js     # Tests de profils
-│   ├── lessons.test.js      # Tests de leçons
-│   ├── notifications.test.js # Tests de notifications
-│   ├── badges.test.js       # Tests de badges
-│   ├── activities.test.js   # Tests d'activités
-│   ├── youtube.test.js      # Tests de vidéos YouTube
-│   ├── ai.test.js          # Tests d'endpoints IA
-│   └── index.test.js       # Fichier principal (importe tous les tests)
+├── api/                    # Tests des contrôleurs / endpoints
+├── lib/                    # Tests des utilitaires (auth, CORS, SQL...)
+├── services/               # Tests des générateurs IA
+├── schema.sql              # Schéma PostgreSQL minimal pour les tests d'intégration
+├── init-test-db.js         # Initialise une base de test dédiée
+├── setup.js                # Configuration Jest (JWT, base de test, fermeture du pool)
 └── README.md               # Ce fichier
 ```
 
@@ -34,12 +30,36 @@ pnpm install
 
 ## ▶️ Exécution des Tests
 
-### Tous les tests
+### Tests unitaires uniquement (sans base)
 
 ```bash
 cd backend
 pnpm test
 ```
+
+Les suites d'intégration (`describeWithDb`) sont ignorées automatiquement tant que
+`TEST_DATABASE_URL` n'est pas défini.
+
+### Tests complets, avec une base PostgreSQL dédiée
+
+```bash
+cd backend
+# 1) Démarrer une base jetable (nom contenant « test »)
+docker run --rm -d --name teachdigital-test-db \
+  -e POSTGRES_USER=teachdigital -e POSTGRES_PASSWORD=teachdigital \
+  -e POSTGRES_DB=teachdigital_test -p 5432:5432 postgres:16-alpine
+
+# 2) Créer le schéma
+TEST_DATABASE_URL=postgresql://teachdigital:teachdigital@localhost:5432/teachdigital_test \
+  pnpm run test:db:init
+
+# 3) Lancer tous les tests (une suite à la fois, même base)
+TEST_DATABASE_URL=postgresql://teachdigital:teachdigital@localhost:5432/teachdigital_test \
+  pnpm test -- --runInBand
+```
+
+`init-test-db.js` refuse de vider une base dont le nom ne contient pas « test »
+(protection contre une `TEST_DATABASE_URL` pointant par erreur vers la production).
 
 ### Tests en mode watch (re-exécution automatique)
 

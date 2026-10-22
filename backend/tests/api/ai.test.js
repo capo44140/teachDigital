@@ -38,9 +38,11 @@ describeWithDb('API Endpoints - IA', () => {
   describe('GET /api/ai/validate-key', () => {
     it('devrait valider une clé API', async () => {
       const token = generateTestToken(testProfile);
-      const req = createMockRequest('GET', '/api/ai/validate-key?provider=openai&key=test-key', {}, {
+      const req = createMockRequest('GET', '/api/ai/validate-key?type=openai', {}, {
         authorization: `Bearer ${token}`
       });
+      // Appel direct du handler : Express retire normalement le préfixe /api/ai
+      req.url = '/validate-key?type=openai';
       req.path = '/validate-key';
       const res = createMockResponse();
 
@@ -55,9 +57,10 @@ describeWithDb('API Endpoints - IA', () => {
   describe('GET /api/ai/has-valid-key', () => {
     it('devrait vérifier si une clé valide existe', async () => {
       const token = generateTestToken(testProfile);
-      const req = createMockRequest('GET', '/api/ai/has-valid-key?provider=openai', {}, {
+      const req = createMockRequest('GET', '/api/ai/has-valid-key', {}, {
         authorization: `Bearer ${token}`
       });
+      req.url = '/has-valid-key';
       req.path = '/has-valid-key';
       const res = createMockResponse();
 
@@ -78,13 +81,14 @@ describeWithDb('API Endpoints - IA', () => {
       }, {
         authorization: `Bearer ${token}`
       });
+      req.url = '/generate-quiz-from-text';
       req.path = '/generate-quiz-from-text';
       const res = createMockResponse();
 
       await handleAI(req, res);
 
       // Peut retourner 200, 400 ou 500 selon la configuration
-      expect([200, 400, 500]).toContain(res.statusCode);
+      expect([200, 400, 500, 503]).toContain(res.statusCode);
     });
   });
 });

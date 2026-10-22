@@ -1,6 +1,6 @@
 const { default: sql } = require('../lib/database.js');
 const { authenticateToken, canActForProfile } = require('../lib/auth.js');
-const { handleError } = require('../lib/response.js');
+const { handleError, createErrorResponse } = require('../lib/response.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
 
 // Handler des notifications
@@ -275,7 +275,48 @@ async function handleNotification(req, res) {
     }
 }
 
+// POST /api/notifications/mark-all-read
+// Marque comme lues toutes les notifications d'un profil (le sien par défaut).
+async function handleMarkAllNotificationsRead(req, res) {
+    try {
+        if (req.method !== 'POST') {
+            return res.status(405).json(createErrorResponse('Méthode non autorisée', 'METHOD_NOT_ALLOWED'));
+        }
+
+        const rawProfileId = req.body?.profileId ?? req.user?.profileId;
+        const profileId = parseInt(rawProfileId, 10);
+
+        if (!Number.isInteger(profileId) || profileId <= 0) {
+            return res.status(400).json(createErrorResponse('ID de profil requis', 'BAD_REQUEST'));
+        }
+        if (!canActForProfile(req.user, profileId)) {
+            return res.status(403).json(createErrorResponse('Accès refusé', 'FORBIDDEN'));
+        }
+
+        const rows = await withQueryTimeout(
+            sql`
+              UPDATE notifications
+              SET is_read = true, updated_at = CURRENT_TIMESTAMP
+              WHERE profile_id = ${profileId} AND is_read = false
+              RETURNING id
+            `,
+            TIMEOUTS.STANDARD,
+            'marquage de toutes les notifications comme lues'
+        );
+
+        return res.status(200).json({
+            success: true,
+            message: 'Notifications marquées comme lues',
+            data: { profileId, updated: rows.length }
+        });
+    } catch (error) {
+        const errorResponse = handleError(error, 'Erreur lors du marquage des notifications');
+        return res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+    }
+}
+
 module.exports = {
     handleNotifications,
-    handleNotification
+    handleNotification,
+    handleMarkAllNotificationsRead
 };

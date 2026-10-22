@@ -1,95 +1,34 @@
-/**
- * Service de gestion des activités
- * Gère les activités des enfants (devoirs, tâches, projets, etc.)
- */
+import { apiService } from './apiService.js'
 
+/**
+ * Service de gestion des activités (devoirs, tâches, projets…).
+ * Toutes les opérations passent par l'API backend : plus de données simulées.
+ */
 class ActivityService {
   constructor () {
-    this.baseUrl = '/api/activities' // URL de base pour les appels API
-    this.activities = [] // Cache local des activités
+    this.activities = [] // Cache local (stats, export CSV)
   }
 
   /**
-   * Récupérer toutes les activités
-   * @param {Object} filters - Filtres optionnels (child_id, status, etc.)
-   * @returns {Promise<Array>} Liste des activités
+   * Récupérer les activités
+   * @param {Object} filters - Filtres optionnels (child_id, status, priority, search)
+   * @returns {Promise<Array>}
    */
   async getActivities (filters = {}) {
     try {
-      // Dans une vraie application, ceci ferait un appel API
-      // Pour l'instant, on simule avec des données locales
-      const mockActivities = [
-        {
-          id: 1,
-          title: 'Devoirs de mathématiques',
-          description: 'Exercices de géométrie - Chapitre 5',
-          child_id: 1,
-          priority: 'high',
-          status: 'active',
-          due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-          created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: 2,
-          title: 'Lecture quotidienne',
-          description: 'Lire 30 minutes par jour',
-          child_id: 1,
-          priority: 'medium',
-          status: 'completed',
-          due_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: 3,
-          title: 'Projet d\'histoire',
-          description: 'Préparer la présentation sur la Révolution française',
-          child_id: 2,
-          priority: 'high',
-          status: 'paused',
-          due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-          created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: 4,
-          title: 'Exercices de français',
-          description: 'Grammaire et conjugaison - Leçon 12',
-          child_id: 2,
-          priority: 'medium',
-          status: 'active',
-          due_date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
-          created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      ]
-
-      // Appliquer les filtres
-      let filteredActivities = [...mockActivities]
-
-      if (filters.child_id) {
-        filteredActivities = filteredActivities.filter(activity => activity.child_id === filters.child_id)
+      const params = new URLSearchParams()
+      if (filters.child_id !== undefined && filters.child_id !== null && filters.child_id !== '') {
+        params.append('child_id', filters.child_id)
       }
+      if (filters.status) params.append('status', filters.status)
+      if (filters.priority) params.append('priority', filters.priority)
+      if (filters.search) params.append('search', filters.search)
 
-      if (filters.status) {
-        filteredActivities = filteredActivities.filter(activity => activity.status === filters.status)
-      }
+      const endpoint = params.toString() ? `/api/activities?${params}` : '/api/activities'
+      const response = await apiService.request(endpoint)
 
-      if (filters.priority) {
-        filteredActivities = filteredActivities.filter(activity => activity.priority === filters.priority)
-      }
-
-      if (filters.search) {
-        const searchTerm = filters.search.toLowerCase()
-        filteredActivities = filteredActivities.filter(activity =>
-          activity.title.toLowerCase().includes(searchTerm) ||
-          activity.description.toLowerCase().includes(searchTerm)
-        )
-      }
-
-      this.activities = filteredActivities
-      return filteredActivities
+      this.activities = response?.data?.activities || []
+      return this.activities
     } catch (error) {
       console.error('Erreur lors de la récupération des activités:', error)
       throw error
@@ -98,13 +37,13 @@ class ActivityService {
 
   /**
    * Récupérer une activité par son ID
-   * @param {number} id - ID de l'activité
-   * @returns {Promise<Object|null>} L'activité ou null si non trouvée
+   * @param {number} id
+   * @returns {Promise<Object|null>}
    */
   async getActivityById (id) {
     try {
-      const activities = await this.getActivities()
-      return activities.find(activity => activity.id === id) || null
+      const response = await apiService.request(`/api/activities/${id}`)
+      return response?.data?.activity || null
     } catch (error) {
       console.error('Erreur lors de la récupération de l\'activité:', error)
       throw error
@@ -112,28 +51,38 @@ class ActivityService {
   }
 
   /**
-   * Créer une nouvelle activité
-   * @param {Object} activityData - Données de l'activité
-   * @returns {Promise<Object>} L'activité créée
+   * Ne garder que les champs modifiables par l'API, et convertir les valeurs vides
+   * des champs optionnels en null (sinon le backend reçoit une chaîne vide).
+   */
+  normalizePayload (activityData = {}) {
+    const payload = {}
+    const fields = [
+      'title', 'description', 'child_id', 'priority', 'due_date', 'status',
+      'type', 'difficulty_level', 'estimated_duration', 'target_age_group',
+      'subject_area', 'is_active'
+    ]
+
+    for (const field of fields) {
+      if (activityData[field] === undefined) continue
+      const value = activityData[field]
+      payload[field] = (field === 'child_id' || field === 'due_date') && value === '' ? null : value
+    }
+
+    return payload
+  }
+
+  /**
+   * Créer une activité
+   * @param {Object} activityData
+   * @returns {Promise<Object|null>}
    */
   async createActivity (activityData) {
     try {
-      const newActivity = {
-        id: Date.now(), // ID temporaire
-        ...activityData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-
-      // Dans une vraie application, ceci ferait un appel API POST
-      // await fetch(`${this.baseUrl}`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(newActivity)
-      // })
-
-      this.activities.push(newActivity)
-      return newActivity
+      const response = await apiService.request('/api/activities', {
+        method: 'POST',
+        body: JSON.stringify(this.normalizePayload(activityData))
+      })
+      return response?.data?.activity || null
     } catch (error) {
       console.error('Erreur lors de la création de l\'activité:', error)
       throw error
@@ -142,33 +91,17 @@ class ActivityService {
 
   /**
    * Mettre à jour une activité
-   * @param {number} id - ID de l'activité
-   * @param {Object} updateData - Données à mettre à jour
-   * @returns {Promise<Object>} L'activité mise à jour
+   * @param {number} id
+   * @param {Object} updateData
+   * @returns {Promise<Object|null>}
    */
   async updateActivity (id, updateData) {
     try {
-      const activityIndex = this.activities.findIndex(activity => activity.id === id)
-
-      if (activityIndex === -1) {
-        throw new Error('Activité non trouvée')
-      }
-
-      const updatedActivity = {
-        ...this.activities[activityIndex],
-        ...updateData,
-        updated_at: new Date().toISOString()
-      }
-
-      // Dans une vraie application, ceci ferait un appel API PUT
-      // await fetch(`${this.baseUrl}/${id}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(updatedActivity)
-      // })
-
-      this.activities[activityIndex] = updatedActivity
-      return updatedActivity
+      const response = await apiService.request(`/api/activities/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(this.normalizePayload(updateData))
+      })
+      return response?.data?.activity || null
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'activité:', error)
       throw error
@@ -177,22 +110,13 @@ class ActivityService {
 
   /**
    * Supprimer une activité
-   * @param {number} id - ID de l'activité
-   * @returns {Promise<boolean>} True si supprimée avec succès
+   * @param {number} id
+   * @returns {Promise<boolean>}
    */
   async deleteActivity (id) {
     try {
-      const activityIndex = this.activities.findIndex(activity => activity.id === id)
-
-      if (activityIndex === -1) {
-        throw new Error('Activité non trouvée')
-      }
-
-      // Dans une vraie application, ceci ferait un appel API DELETE
-      // await fetch(`${this.baseUrl}/${id}`, { method: 'DELETE' })
-
-      this.activities.splice(activityIndex, 1)
-      return true
+      const response = await apiService.request(`/api/activities/${id}`, { method: 'DELETE' })
+      return response?.success === true
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'activité:', error)
       throw error
@@ -201,106 +125,89 @@ class ActivityService {
 
   /**
    * Changer le statut d'une activité
-   * @param {number} id - ID de l'activité
-   * @param {string} status - Nouveau statut
-   * @returns {Promise<Object>} L'activité mise à jour
+   * @param {number} id
+   * @param {string} status
+   * @returns {Promise<Object|null>}
    */
   async updateActivityStatus (id, status) {
     return this.updateActivity(id, { status })
   }
 
   /**
-   * Récupérer les statistiques des activités
-   * @param {number} childId - ID de l'enfant (optionnel)
-   * @returns {Promise<Object>} Statistiques des activités
+   * Statistiques calculées à partir des activités de l'API
+   * @param {number|null} childId
+   * @returns {Promise<Object>}
    */
   async getActivityStats (childId = null) {
-    try {
-      const activities = await this.getActivities(childId ? { child_id: childId } : {})
+    const activities = await this.getActivities(childId ? { child_id: childId } : {})
 
-      const stats = {
-        total: activities.length,
-        active: activities.filter(a => a.status === 'active').length,
-        completed: activities.filter(a => a.status === 'completed').length,
-        paused: activities.filter(a => a.status === 'paused').length,
-        cancelled: activities.filter(a => a.status === 'cancelled').length,
-        high_priority: activities.filter(a => a.priority === 'high').length,
-        medium_priority: activities.filter(a => a.priority === 'medium').length,
-        low_priority: activities.filter(a => a.priority === 'low').length,
-        overdue: activities.filter(a => {
-          if (!a.due_date || a.status === 'completed') return false
-          return new Date(a.due_date) < new Date()
-        }).length
-      }
-
-      // Calculer le taux de complétion
-      stats.completion_rate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0
-
-      return stats
-    } catch (error) {
-      console.error('Erreur lors du calcul des statistiques:', error)
-      throw error
+    const stats = {
+      total: activities.length,
+      active: activities.filter(a => a.status === 'active').length,
+      completed: activities.filter(a => a.status === 'completed').length,
+      paused: activities.filter(a => a.status === 'paused').length,
+      cancelled: activities.filter(a => a.status === 'cancelled').length,
+      high_priority: activities.filter(a => a.priority === 'high').length,
+      medium_priority: activities.filter(a => a.priority === 'medium').length,
+      low_priority: activities.filter(a => a.priority === 'low').length,
+      overdue: activities.filter(a => {
+        if (!a.due_date || a.status === 'completed' || a.status === 'cancelled') return false
+        return new Date(a.due_date) < new Date()
+      }).length
     }
+
+    stats.completion_rate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0
+    return stats
   }
 
   /**
-   * Récupérer les activités par enfant
-   * @param {number} childId - ID de l'enfant
-   * @returns {Promise<Array>} Liste des activités de l'enfant
+   * Récupérer les activités d'un enfant
+   * @param {number} childId
+   * @returns {Promise<Array>}
    */
   async getActivitiesByChild (childId) {
     return this.getActivities({ child_id: childId })
   }
 
   /**
-   * Récupérer les activités en retard
-   * @returns {Promise<Array>} Liste des activités en retard
+   * Activités en retard
+   * @returns {Promise<Array>}
    */
   async getOverdueActivities () {
-    try {
-      const activities = await this.getActivities()
-      const now = new Date()
+    const activities = await this.getActivities()
+    const now = new Date()
 
-      return activities.filter(activity => {
-        if (!activity.due_date || activity.status === 'completed' || activity.status === 'cancelled') {
-          return false
-        }
-        return new Date(activity.due_date) < now
-      })
-    } catch (error) {
-      console.error('Erreur lors de la récupération des activités en retard:', error)
-      throw error
-    }
+    return activities.filter(activity => {
+      if (!activity.due_date || activity.status === 'completed' || activity.status === 'cancelled') {
+        return false
+      }
+      return new Date(activity.due_date) < now
+    })
   }
 
   /**
-   * Récupérer les activités à venir (prochaines 7 jours)
-   * @returns {Promise<Array>} Liste des activités à venir
+   * Activités à venir (7 prochains jours)
+   * @returns {Promise<Array>}
    */
   async getUpcomingActivities () {
-    try {
-      const activities = await this.getActivities()
-      const now = new Date()
-      const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    const activities = await this.getActivities()
+    const now = new Date()
+    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
 
-      return activities.filter(activity => {
-        if (!activity.due_date || activity.status === 'completed' || activity.status === 'cancelled') {
-          return false
-        }
-        const dueDate = new Date(activity.due_date)
-        return dueDate >= now && dueDate <= nextWeek
-      })
-    } catch (error) {
-      console.error('Erreur lors de la récupération des activités à venir:', error)
-      throw error
-    }
+    return activities.filter(activity => {
+      if (!activity.due_date || activity.status === 'completed' || activity.status === 'cancelled') {
+        return false
+      }
+      const dueDate = new Date(activity.due_date)
+      return dueDate >= now && dueDate <= nextWeek
+    })
   }
 
   /**
    * Rechercher des activités
-   * @param {string} query - Terme de recherche
-   * @param {Object} filters - Filtres additionnels
-   * @returns {Promise<Array>} Liste des activités correspondantes
+   * @param {string} query
+   * @param {Object} filters
+   * @returns {Promise<Array>}
    */
   async searchActivities (query, filters = {}) {
     return this.getActivities({ ...filters, search: query })
@@ -308,8 +215,8 @@ class ActivityService {
 
   /**
    * Exporter les activités en CSV
-   * @param {Array} activities - Liste des activités à exporter
-   * @returns {string} Contenu CSV
+   * @param {Array|null} activities
+   * @returns {string}
    */
   exportToCSV (activities = null) {
     const data = activities || this.activities
@@ -324,7 +231,7 @@ class ActivityService {
       ...data.map(activity => [
         activity.id,
         `"${activity.title}"`,
-        `"${activity.description}"`,
+        `"${(activity.description || '').replace(/"/g, '""')}"`,
         activity.child_id,
         activity.priority,
         activity.status,
@@ -334,38 +241,6 @@ class ActivityService {
     ].join('\n')
 
     return csvContent
-  }
-
-  /**
-   * Sauvegarder les activités dans le localStorage
-   * @returns {Promise<boolean>} True si sauvegardé avec succès
-   */
-  async saveToLocalStorage () {
-    try {
-      localStorage.setItem('activities', JSON.stringify(this.activities))
-      return true
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error)
-      return false
-    }
-  }
-
-  /**
-   * Charger les activités depuis le localStorage
-   * @returns {Promise<Array>} Liste des activités chargées
-   */
-  async loadFromLocalStorage () {
-    try {
-      const saved = localStorage.getItem('activities')
-      if (saved) {
-        this.activities = JSON.parse(saved)
-        return this.activities
-      }
-      return []
-    } catch (error) {
-      console.error('Erreur lors du chargement:', error)
-      return []
-    }
   }
 }
 

@@ -175,7 +175,8 @@ export default {
     }
     
     const getThumbnailUrl = (videoId) => {
-      if (!videoId) return 'https://via.placeholder.com/300x200?text=No+Thumbnail'
+      // Pas d'image externe de secours : on reste sur une ressource locale (CSP)
+      if (!videoId) return '/icons/icon-192x192.png'
       return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
     }
     

@@ -6,9 +6,9 @@ const { handleLogin, handleLogout, handleVerify, handleFamilyGate } = require('.
 const { handleProfiles, handleProfile, handleProfileStats, handlePin, handleProfileLearningStats, handleProfileCreationRequest } = require('../controllers/profileController.js');
 const { handleLessons, handleLesson, handleQuizResults, handleGlobalLessonStats } = require('../controllers/lessonController.js');
 const { handleCoursePages, handleCoursePage, handleCoursePageResults } = require('../controllers/coursePageController.js');
-const { handleNotifications, handleNotification } = require('../controllers/notificationController.js');
-const { handleActivities } = require('../controllers/activityController.js');
-const { handleYoutubeVideos } = require('../controllers/youtubeController.js');
+const { handleNotifications, handleNotification, handleMarkAllNotificationsRead } = require('../controllers/notificationController.js');
+const { handleActivities, handleActivity } = require('../controllers/activityController.js');
+const { handleYoutubeVideos, handleYoutubeVideo } = require('../controllers/youtubeController.js');
 const { handleAudit } = require('../controllers/auditController.js');
 const { handleProfileProgressSummary } = require('../controllers/progressController.js');
 const handleBadges = require('./badges.js');
@@ -128,15 +128,24 @@ router.delete('/course-pages/:id', requireAdmin, handleCoursePage);
 // Routes des notifications
 router.get('/notifications', handleNotifications);
 router.post('/notifications', requireAdmin, handleNotifications);
+// Avant /notifications/:id : sinon « mark-all-read » serait interprété comme un id
+router.post('/notifications/mark-all-read', handleMarkAllNotificationsRead);
 router.all('/notifications/:id', handleNotification);
 
 // Routes des activités
 router.get('/activities', handleActivities);
 router.post('/activities', requireAdmin, handleActivities);
+router.get('/activities/:id', handleActivity);
+router.put('/activities/:id', requireAdmin, handleActivity);
+router.delete('/activities/:id', requireAdmin, handleActivity);
 
 // Routes des vidéos YouTube
 router.get('/youtube-videos', handleYoutubeVideos);
 router.post('/youtube-videos', requireAdmin, handleYoutubeVideos);
+// Lecture par les enfants (vidéos actives uniquement), écriture réservée aux parents
+router.get('/youtube-videos/:id', handleYoutubeVideo);
+router.put('/youtube-videos/:id', requireAdmin, handleYoutubeVideo);
+router.delete('/youtube-videos/:id', requireAdmin, handleYoutubeVideo);
 
 // Routes des badges : lecture pour tous les membres, écriture (et check-unlock) parents uniquement
 router.use('/badges', requireAdminForWrites, handleBadges);

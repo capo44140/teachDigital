@@ -299,17 +299,21 @@ describeWithDb('API Endpoints - Leçons', () => {
 
   describe('GET /api/lessons/:id/quiz-results', () => {
     it('devrait récupérer les résultats de quiz d\'une leçon', async () => {
-      const req = createMockRequest('GET', `/api/lessons/${testLesson.id}/quiz-results`, {}, {}, {
-        id: testLesson.id
-      });
+      const token = generateTestToken(testProfile);
+      const req = createMockRequest(
+        'GET',
+        `/api/lessons/${testLesson.id}/quiz-results?profileId=${testProfile.id}`,
+        {},
+        { authorization: `Bearer ${token}` },
+        { id: testLesson.id }
+      );
       const res = createMockResponse();
 
       await handleQuizResults(req, res);
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.quizResults).toBeDefined();
-      expect(Array.isArray(res.body.data.quizResults)).toBe(true);
+      expect(Array.isArray(res.body.data.results)).toBe(true);
     });
   });
 
@@ -317,6 +321,7 @@ describeWithDb('API Endpoints - Leçons', () => {
     it('devrait créer un résultat de quiz', async () => {
       const token = generateTestToken(testProfile);
       const req = createMockRequest('POST', `/api/lessons/${testLesson.id}/quiz-results`, {
+        profileId: testProfile.id,
         score: 8,
         totalQuestions: 10,
         percentage: 80,
@@ -334,15 +339,16 @@ describeWithDb('API Endpoints - Leçons', () => {
 
       expect(res.statusCode).toBe(201);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.quizResult).toBeDefined();
-      expect(res.body.data.quizResult.score).toBe(8);
+      expect(res.body.data.result).toBeDefined();
+      expect(res.body.data.result.score).toBe(8);
     });
 
     it('devrait refuser la création sans authentification', async () => {
       const req = createMockRequest('POST', `/api/lessons/${testLesson.id}/quiz-results`, {
+        profileId: testProfile.id,
         score: 8,
         totalQuestions: 10,
-        percentage: 80
+        answers: {}
       }, {}, {
         id: testLesson.id
       });
@@ -350,7 +356,8 @@ describeWithDb('API Endpoints - Leçons', () => {
 
       await handleQuizResults(req, res);
 
-      expect(res.statusCode).toBe(401);
+      // Le 401 (jeton manquant) est vérifié par le routeur ; le contrôleur refuse l'action.
+      expect(res.statusCode).toBe(403);
     });
   });
 });

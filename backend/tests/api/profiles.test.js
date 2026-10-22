@@ -170,7 +170,8 @@ describeWithDb('API Endpoints - Profils', () => {
 
   describe('PUT /api/profiles/:id', () => {
     it('devrait mettre à jour un profil', async () => {
-      const token = generateTestToken(testProfile);
+      // La mise à jour d'un profil est réservée aux parents (requireAdmin côté routeur)
+      const token = generateTestToken(adminProfile);
       const req = createMockRequest('PUT', `/api/profiles/${testProfile.id}`, {
         name: 'Updated Profile Name',
         description: 'Description mise à jour'
@@ -250,16 +251,16 @@ describeWithDb('API Endpoints - Profils', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.stats).toBeDefined();
-      expect(res.body.data.stats.total).toBeDefined();
+      expect(res.body.data).toBeDefined();
+      expect(res.body.data.total).toBeDefined();
     });
   });
 
   describe('POST /api/profiles/:id/pin', () => {
-    it('devrait mettre à jour le PIN d\'un profil', async () => {
+    it('devrait vérifier un PIN valide (POST = vérification)', async () => {
       const token = generateTestToken(testProfile);
       const req = createMockRequest('POST', `/api/profiles/${testProfile.id}/pin`, {
-        pin: '5678'
+        pin: '1234'
       }, {
         authorization: `Bearer ${token}`
       }, {
@@ -271,19 +272,21 @@ describeWithDb('API Endpoints - Profils', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
+      expect(res.body.data.isValid).toBe(true);
     });
 
-    it('devrait refuser la mise à jour du PIN sans authentification', async () => {
-      const req = createMockRequest('POST', `/api/profiles/${testProfile.id}/pin`, {
-        pin: '5678'
-      }, {}, {
+    it('devrait refuser une vérification sans PIN', async () => {
+      const token = generateTestToken(testProfile);
+      const req = createMockRequest('POST', `/api/profiles/${testProfile.id}/pin`, {}, {
+        authorization: `Bearer ${token}`
+      }, {
         id: testProfile.id
       });
       const res = createMockResponse();
 
       await handlePin(req, res);
 
-      expect(res.statusCode).toBe(401);
+      expect(res.statusCode).toBe(400);
     });
   });
 });

@@ -313,6 +313,10 @@ async function findProfile (profileId) {
 // Accès parent : session parent déverrouillée ET jeton admin du même profil
 export { hasParentAccess }
 
+// Pages qui affichent du HTML généré (scripts inline) : elles nécessitent la CSP
+// dédiée servie par nginx pour /course-page* (voir frontend/nginx.conf).
+const FULL_PAGE_ROUTES = new Set(['CoursePageViewer', 'CoursePageManager'])
+
 /**
  * Guard de navigation.
  * Pas de court-circuit « même chemin » : au démarrage, from.path vaut '/' et
@@ -320,7 +324,19 @@ export { hasParentAccess }
  * guards pour une navigation dupliquée, et aucune redirection ci-dessous ne boucle
  * (/family-gate est public ; /pin-lock et / n'exigent que la session famille).
  */
-export async function navigationGuard (to) {
+export async function navigationGuard (to, from) {
+  // Les pages de cours embarquent du JavaScript inline. La CSP servie pour
+  // /course-page* l'autorise, mais un document chargé depuis une autre route SPA
+  // conserve la CSP stricte de l'application : on force donc un chargement complet.
+  // (Au chargement initial du document, la bonne CSP a déjà été envoyée.)
+  if (FULL_PAGE_ROUTES.has(to.name)) {
+    const isInitialDocumentLoad = !from || !from.matched || from.matched.length === 0
+    if (!isInitialDocumentLoad) {
+      window.location.assign(to.fullPath || to.path)
+      return false
+    }
+  }
+
   // Code d'entrée familial : seule page publique
   if (to.meta.public) {
     return true

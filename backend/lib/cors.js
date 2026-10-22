@@ -1,58 +1,98 @@
 const cors = require('cors');
 
-// Base allowed origins
-const baseAllowedOrigins = [
+/**
+ * Configuration CORS centralisée.
+ *
+ * Principe : liste blanche stricte. Une origine inconnue ne reçoit aucun en-tête
+ * CORS (le navigateur bloque la lecture de la réponse) — on ne renvoie plus « * ».
+ *
+ * Origines autorisées :
+ * - FRONTEND_URL (une URL) ;
+ * - ALLOWED_ORIGIN (une ou plusieurs URL séparées par des virgules) ;
+ * - en développement uniquement : localhost / 127.0.0.1 sur les ports Vite.
+ *
+ * En production (NODE_ENV=production ou DOCKER_ENV=true), localhost n'est pas
+ * autorisé par défaut : il faut le déclarer explicitement dans FRONTEND_URL /
+ * ALLOWED_ORIGIN si un front local doit joindre une API distante.
+ */
+
+// Ports utilisés par le front en développement (Vite 3000 par défaut, 5173 en secours)
+const DEV_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://teach-digital.vercel.app',
-  'https://teachdigital.vercel.app'
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173'
 ];
 
-// Get all allowed origins including env vars
-const getAllowedOrigins = () => {
-  const origins = [...baseAllowedOrigins];
+function isProduction() {
+  return String(process.env.NODE_ENV || '').trim() === 'production' ||
+    String(process.env.DOCKER_ENV || '').trim() === 'true';
+}
 
-  // Add FRONTEND_URL if defined
-  if (process.env.FRONTEND_URL) {
-    origins.push(process.env.FRONTEND_URL);
+// Normalise une origine : espaces, slash final, casse de l'hôte
+function normalizeOrigin(value) {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    // Valeur non parsable (ex. « * ») : ignorée plutôt qu'ajoutée telle quelle
+    return '';
   }
+}
 
-  // Add ALLOWED_ORIGIN if defined (comma separated)
-  if (process.env.ALLOWED_ORIGIN) {
-    const additionalOrigins = process.env.ALLOWED_ORIGIN.split(',')
-      .map(url => url.trim())
-      .filter(Boolean);
-    origins.push(...additionalOrigins);
+function envOrigins() {
+  const raw = [process.env.FRONTEND_URL, process.env.ALLOWED_ORIGIN]
+    .filter(Boolean)
+    .join(',');
+  return raw.split(',').map(normalizeOrigin).filter(Boolean);
+}
+
+function getAllowedOrigins() {
+  const origins = new Set();
+
+  if (!isProduction()) {
+    for (const origin of DEV_ORIGINS) origins.add(origin);
   }
+  for (const origin of envOrigins()) origins.add(origin);
 
-  return origins;
-};
+  return [...origins];
+}
+
+function isOriginAllowed(origin) {
+  if (typeof origin !== 'string' || !origin) return false;
+  // « Origin: null » (iframe sandbox, file://) n'est jamais autorisé
+  const normalized = normalizeOrigin(origin);
+  if (!normalized) return false;
+  return getAllowedOrigins().includes(normalized);
+}
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+  origin(origin, callback) {
+    // Pas d'en-tête Origin : requête serveur-à-serveur (curl, healthcheck Docker)
+    // ou même-origine sans préflight. Rien à filtrer.
     if (!origin) return callback(null, true);
 
-    // Allow localhost with any port in development
-    const isLocalhost = origin.startsWith('http://localhost');
-    const allowedOrigins = getAllowedOrigins();
-
-    if (isLocalhost || allowedOrigins.indexOf(origin) !== -1) {
-      // Trusted origin: reflect it and allow credentials
-      callback(null, true);
-    } else {
-      // Untrusted origin: allow it but as '*' (no credentials)
-      // Note: passing a string to callback sets Access-Control-Allow-Origin to that string
-      callback(null, '*');
+    if (isOriginAllowed(origin)) {
+      // Origine de confiance : on la reflète (obligatoire avec credentials)
+      return callback(null, origin);
     }
+
+    // Origine inconnue : pas d'en-tête CORS. Ne pas lever d'erreur ici, sinon
+    // Express renverrait 500 pour une simple requête cross-origin non autorisée.
+    return callback(null, false);
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Request-Id', 'Accept'],
+  // En-têtes que le front peut lire dans la réponse (rate limiting, debug, retry)
+  exposedHeaders: ['Retry-After', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'X-Request-Id'],
   maxAge: 86400,
-  credentials: true // This will be ignored/handled correctly if origin is '*' by standard browser rules
+  credentials: true,
+  optionsSuccessStatus: 204
 };
 
-// Wrapper for Vercel serverless functions
+// Wrapper pour les handlers « serverless » (api/ai, api/badges)
 const runCors = (req, res) => {
   return new Promise((resolve, reject) => {
     cors(corsOptions)(req, res, (result) => {
@@ -67,5 +107,8 @@ const runCors = (req, res) => {
 module.exports = {
   corsOptions,
   runCors,
-  corsMiddleware: cors(corsOptions)
+  corsMiddleware: cors(corsOptions),
+  getAllowedOrigins,
+  isOriginAllowed,
+  isProduction
 };

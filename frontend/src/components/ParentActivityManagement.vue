@@ -541,13 +541,13 @@ export default {
         const query = this.searchQuery.toLowerCase()
         filtered = filtered.filter(activity => 
           activity.title.toLowerCase().includes(query) ||
-          activity.description.toLowerCase().includes(query)
+          (activity.description || '').toLowerCase().includes(query)
         )
       }
       
       // Filtre par enfant
       if (this.selectedChild) {
-        filtered = filtered.filter(activity => activity.child_id === this.selectedChild)
+        filtered = filtered.filter(activity => String(activity.child_id) === String(this.selectedChild))
       }
       
       // Filtre par statut
@@ -586,9 +586,8 @@ export default {
         // Charger les profils enfants
         this.childrenStats = store.nonAdminProfiles || []
         
-        // Charger les activités (simulation pour l'instant)
         await this.loadActivities()
-        await this.loadGlobalStats()
+        this.loadGlobalStats()
       } catch (error) {
         console.error('Erreur lors du chargement des données:', error)
       } finally {
@@ -605,24 +604,14 @@ export default {
       }
     },
     
-    async loadGlobalStats() {
-      try {
-        const stats = await activityService.getActivityStats()
-        this.globalStats = {
-          totalActivities: stats.total,
-          activeActivities: stats.active,
-          completionRate: stats.completion_rate
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des statistiques:', error)
-        // Fallback sur les statistiques calculées localement
-        this.globalStats = {
-          totalActivities: this.activities.length,
-          activeActivities: this.activities.filter(a => a.status === 'active').length,
-          completionRate: this.activities.length > 0 
-            ? Math.round((this.activities.filter(a => a.status === 'completed').length / this.activities.length) * 100)
-            : 0
-        }
+    loadGlobalStats() {
+      // Calcul local à partir des activités déjà chargées (évite un second GET)
+      this.globalStats = {
+        totalActivities: this.activities.length,
+        activeActivities: this.activities.filter(a => a.status === 'active').length,
+        completionRate: this.activities.length > 0
+          ? Math.round((this.activities.filter(a => a.status === 'completed').length / this.activities.length) * 100)
+          : 0
       }
     },
     
@@ -631,7 +620,7 @@ export default {
     },
     
     getChildName(childId) {
-      const child = this.childrenStats.find(c => c.id === childId)
+      const child = this.childrenStats.find(c => String(c.id) === String(childId))
       return child ? child.name : 'Enfant inconnu'
     },
     
@@ -700,9 +689,20 @@ export default {
       return Math.round(Number(value)) || 0
     },
     
+    toDateTimeLocal(value) {
+      if (!value) return ''
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) return ''
+      const pad = number => String(number).padStart(2, '0')
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+    },
+
     editActivity(activity) {
       this.editingActivity = activity
-      this.activityForm = { ...activity }
+      this.activityForm = {
+        ...activity,
+        due_date: this.toDateTimeLocal(activity.due_date)
+      }
       this.showCreateActivityModal = true
     },
     
@@ -719,7 +719,7 @@ export default {
         
         // Recharger les données
         await this.loadActivities()
-        await this.loadGlobalStats()
+        this.loadGlobalStats()
         this.closeModal()
       } catch (error) {
         console.error('Erreur lors de la sauvegarde:', error)
@@ -735,7 +735,7 @@ export default {
           await activityService.deleteActivity(activity.id)
           // Recharger les données
           await this.loadActivities()
-          await this.loadGlobalStats()
+          this.loadGlobalStats()
         } catch (error) {
           console.error('Erreur lors de la suppression:', error)
           alert('Erreur lors de la suppression de l\'activité')
@@ -749,7 +749,7 @@ export default {
         await activityService.updateActivityStatus(activity.id, newStatus)
         // Recharger les données
         await this.loadActivities()
-        await this.loadGlobalStats()
+        this.loadGlobalStats()
       } catch (error) {
         console.error('Erreur lors du changement de statut:', error)
         alert('Erreur lors du changement de statut de l\'activité')

@@ -26,3 +26,16 @@ if (!process.env.__TEST_JWT_SECRET) {
   process.env.__TEST_JWT_SECRET = crypto.randomBytes(32).toString('hex');
 }
 process.env.JWT_SECRET = process.env.__TEST_JWT_SECRET;
+
+// Fermer le pool PostgreSQL après chaque fichier de test : sinon Jest reste
+// bloqué sur des connexions ouvertes (surtout avec --runInBand en CI).
+afterAll(async () => {
+  try {
+    const db = require('../lib/database.js');
+    if (db.pool && typeof db.pool.end === 'function') {
+      await db.pool.end();
+    }
+  } catch {
+    // Tests qui mockent lib/database.js : rien à fermer
+  }
+});

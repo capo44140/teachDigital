@@ -2,7 +2,12 @@
 
 ## Résumé
 
-Cette suite de tests couvre **tous les endpoints** de l'API TeachDigital avec plus de **80 cas de test** couvrant :
+> **Mise à jour** : les suites d'intégration (`describeWithDb`) tournent désormais en CI grâce au
+> service PostgreSQL de `.github/workflows/ci.yml`. Le schéma est créé par `backend/tests/schema.sql`.
+> Total actuel : **279 tests** (209 sans base, 279 avec base de test). Les chiffres historiques
+> ci-dessous restent indicatifs.
+
+Cette suite de tests couvre l'API TeachDigital avec plus de **270 cas de test** couvrant :
 
 - ✅ Authentification
 - ✅ Gestion des profils

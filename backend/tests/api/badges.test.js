@@ -72,8 +72,8 @@ describeWithDb('API Endpoints - Badges', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.badges).toBeDefined();
-      expect(Array.isArray(res.body.data.badges)).toBe(true);
+      // createResponse(message, data) : le tableau est directement dans data
+      expect(Array.isArray(res.body.data)).toBe(true);
     });
 
   });
@@ -100,11 +100,11 @@ describeWithDb('API Endpoints - Badges', () => {
 
       expect(res.statusCode).toBe(201);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.badge).toBeDefined();
-      expect(res.body.data.badge.name).toBe('New Test Badge');
-      
-      if (res.body.data.badge.id) {
-        testBadgeIds.push(res.body.data.badge.id);
+      expect(res.body.data).toBeDefined();
+      expect(res.body.data.name).toBe('New Test Badge');
+
+      if (res.body.data.id) {
+        testBadgeIds.push(res.body.data.id);
       }
     });
 
@@ -123,8 +123,8 @@ describeWithDb('API Endpoints - Badges', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.badge).toBeDefined();
-      expect(res.body.data.badge.id).toBe(testBadge.id);
+      expect(res.body.data).toBeDefined();
+      expect(res.body.data.id).toBe(testBadge.id);
     });
   });
 
@@ -141,8 +141,8 @@ describeWithDb('API Endpoints - Badges', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.badges).toBeDefined();
-      expect(Array.isArray(res.body.data.badges)).toBe(true);
+      // createResponse(message, data) : le tableau est directement dans data
+      expect(Array.isArray(res.body.data)).toBe(true);
     });
 
     it('devrait récupérer les badges débloqués d\'un profil', async () => {
@@ -157,7 +157,7 @@ describeWithDb('API Endpoints - Badges', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.badges).toBeDefined();
+      expect(Array.isArray(res.body.data)).toBe(true);
     });
 
     it('devrait récupérer les statistiques de badges d\'un profil', async () => {
@@ -172,17 +172,18 @@ describeWithDb('API Endpoints - Badges', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.stats).toBeDefined();
+      expect(res.body.data).toBeDefined();
+      expect(res.body.data.total).toBeDefined();
     });
   });
 
   describe('POST /api/badges/check-unlock', () => {
     it('devrait vérifier et débloquer les badges', async () => {
-      const token = generateTestToken(testProfile);
+      const token = generateTestToken(adminProfile);
       const req = createMockRequest('POST', '/api/badges/check-unlock', {
         profileId: testProfile.id,
-        conditionType: 'quiz_completed',
-        context: {}
+        actionType: 'quiz_completed',
+        actionData: {}
       }, {
         authorization: `Bearer ${token}`
       });
