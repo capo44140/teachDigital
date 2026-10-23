@@ -70,6 +70,28 @@ function getAvailableProviders() {
     return providers;
 }
 
+const PROVIDER_CLASSES = {
+    LocalLLM: LocalLLMProvider,
+    OpenAI: OpenAIProvider,
+    Gemini: GeminiProvider,
+    DeepSeek: DeepSeekProvider,
+    Groq: GroqProvider,
+    Mistral: MistralProvider,
+    Kimi: KimiProvider,
+    OpenRouter: OpenRouterProvider
+};
+
+/**
+ * Instancie un provider par son nom, sans les filtres AI_PROVIDER / AI_PROVIDERS_ORDER / AI_DISABLE_PROVIDERS
+ * (utilisé quand le provider est choisi explicitement depuis l'interface)
+ * @param {string} name - Nom du provider (ex: "OpenRouter")
+ * @returns {Object|null} Provider, ou null si le nom est inconnu
+ */
+function getProviderByName(name) {
+    const ProviderClass = PROVIDER_CLASSES[name];
+    return ProviderClass ? new ProviderClass() : null;
+}
+
 // Le message contient « Tous les services IA ont échoué » : reconnu par les routes (api/ai/index.js) → 503
 function createAllProvidersFailedError(reason) {
     console.warn(`⚠️ ${reason}`);
@@ -140,6 +162,7 @@ async function generateQuizWithAI(analysis, childProfile, questionCount = 5) {
 
 module.exports = {
     getAvailableProviders,
+    getProviderByName,
     analyzeWithAI,
     generateQuizWithAI
 };

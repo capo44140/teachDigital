@@ -38,6 +38,10 @@ $ProjectRoot  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $FrontendRoot = Join-Path $ProjectRoot 'frontend'   # code + build du frontend (package.json, dist/, Dockerfile.prebuilt...)
 Set-Location $ProjectRoot
 
+# PowerShell peut prefixer d'un BOM UTF-8 le texte pipe vers ssh : sans ce nettoyage,
+# la 1re ligne des scripts distants (ex: cd "$RemoteDir") echoue et bash tourne dans le home.
+$Script:RemoteClean = "sed '1s/^\xEF\xBB\xBF//' | tr -d '\r'"
+
 # ----- Logging helpers -----------------------------------------------------
 function Write-Success { Write-Host $args -ForegroundColor Green }
 function Write-Err     { Write-Host $args -ForegroundColor Red }
@@ -181,7 +185,7 @@ function Send-Tarball {
 function Invoke-RemoteBashScript([string]$Script) {
     $unix = $Script -replace "`r`n", "`n"
     $remote = "/tmp/td-deploy-$([System.Guid]::NewGuid().ToString('N').Substring(0,8)).sh"
-    $unix | & ssh @Script:SshOpts $SshAlias "tr -d '\r' > $remote" 2>$null | Out-Null
+    $unix | & ssh @Script:SshOpts $SshAlias "$Script:RemoteClean > $remote" 2>$null | Out-Null
     if ($LASTEXITCODE -ne 0) {
         Write-Err "[ERREUR] Impossible de transferer le script distant"
         return @{ ExitCode = 1; Output = '' }
@@ -266,8 +270,17 @@ function Invoke-FrontendBuild {
     }
     Write-Section "BUILD FRONTEND"
     Push-Location $FrontendRoot
-    & pnpm run build
-    $buildExit = $LASTEXITCODE
+    # pnpm absent du PATH : repli sur corepack (fourni avec Node)
+    $buildExit = 1
+    if (Get-Command pnpm -ErrorAction SilentlyContinue) {
+        & pnpm run build
+        $buildExit = $LASTEXITCODE
+    } elseif (Get-Command corepack -ErrorAction SilentlyContinue) {
+        & corepack pnpm run build
+        $buildExit = $LASTEXITCODE
+    } else {
+        Write-Err "[ERREUR] pnpm introuvable (ni corepack)"
+    }
     Pop-Location
     if ($buildExit -ne 0) {
         Write-Err "[ERREUR] pnpm run build a echoue"
@@ -323,7 +336,7 @@ function Publish-Backend {
     # Helper script (commandes pratiques sur le NAS)
     $helper = Join-Path $ProjectRoot 'backend\docker-helper.sh'
     if (Test-Path $helper) {
-        Get-Content $helper -Raw | & ssh @Script:SshOpts $SshAlias "tr -d '\r' > $script:BackendPath/docker-helper.sh && chmod +x $script:BackendPath/docker-helper.sh" 2>$null | Out-Null
+        Get-Content $helper -Raw | & ssh @Script:SshOpts $SshAlias "$Script:RemoteClean > $script:BackendPath/docker-helper.sh && chmod +x $script:BackendPath/docker-helper.sh" 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) { Write-Success "   docker-helper.sh deploye" }
     }
 

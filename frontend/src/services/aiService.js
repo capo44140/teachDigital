@@ -339,6 +339,38 @@ class AIService {
       throw error
     }
   }
+
+  /**
+   * Récupère le provider IA utilisé pour la génération de pages de cours
+   * @returns {Promise<Object|null>} { provider: string|null, options: [{ name, label, configured, model }] }
+   */
+  async getCoursePageProvider () {
+    try {
+      const response = await apiService.request('/api/ai/course-page/provider')
+      return response.data || null
+    } catch (error) {
+      console.error('Erreur lors de la récupération du provider des pages de cours:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Enregistre le provider IA des pages de cours
+   * @param {string|null} provider - Nom du provider (ex: "OpenRouter"), ou null pour le mode automatique
+   * @returns {Promise<Object|null>} Configuration mise à jour
+   */
+  async setCoursePageProvider (provider) {
+    try {
+      const response = await apiService.request('/api/ai/course-page/provider', {
+        method: 'POST',
+        body: JSON.stringify({ provider })
+      })
+      return response.data || null
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement du provider des pages de cours:', error)
+      throw error
+    }
+  }
 }
 
 export { AIService }

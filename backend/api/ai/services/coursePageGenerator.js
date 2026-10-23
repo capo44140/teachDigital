@@ -1,15 +1,17 @@
 /**
  * Génère une page HTML d'entraînement à partir des photos d'une leçon / d'un contrôle
- * S'appuie sur la configuration IA (ordre des providers, modèle LM Studio actif) :
- * seuls les providers capables de lire des images sont utilisés (LocalLLM, OpenAI, Gemini).
+ * Provider choisi dans l'interface (coursePageConfig) : seul ce provider est utilisé.
+ * Sinon (automatique) : ordre de la configuration IA, en ne gardant que les providers
+ * capables de lire des images (LocalLLM, OpenAI, Gemini, OpenRouter).
  */
 
-const { getAvailableProviders } = require('./aiProviders/index.js');
+const { getAvailableProviders, getProviderByName } = require('./aiProviders/index.js');
+const coursePageConfig = require('./coursePageConfig.js');
 const { fetchWithTimeout, handleOpenAIResponse } = require('../utils/fetch.js');
-const { OPENAI_BASE_URL, GEMINI_BASE_URL } = require('../utils/constants.js');
+const { OPENAI_BASE_URL, GEMINI_BASE_URL, OPENROUTER_BASE_URL } = require('../utils/constants.js');
 const { buildCoursePagePrompt, parseCoursePageResponse } = require('../prompts/coursePageHtml.js');
 
-const VISION_PROVIDERS = ['LocalLLM', 'OpenAI', 'Gemini'];
+const { VISION_PROVIDERS } = coursePageConfig;
 
 // Une page complète (leçon + banque de 40 questions) demande beaucoup plus de jetons qu'un quiz
 const COURSE_PAGE_MAX_TOKENS = parseInt(process.env.COURSE_PAGE_MAX_TOKENS || '16000', 10) || 16000;
@@ -18,13 +20,14 @@ const COURSE_PAGE_TIMEOUT_MS = parseInt(process.env.COURSE_PAGE_TIMEOUT_MS || '5
 
 const toDataUrl = image => `data:${image.mimeType || 'image/jpeg'};base64,${image.base64}`;
 
-// API compatible OpenAI (OpenAI, LM Studio, Ollama)
-async function callChatCompletions({ baseUrl, apiKey, model, prompt, images, timeoutMs, label }) {
+// API compatible OpenAI (OpenAI, OpenRouter, LM Studio, Ollama)
+async function callChatCompletions({ baseUrl, apiKey, model, prompt, images, timeoutMs, label, extraHeaders = {} }) {
     const response = await fetchWithTimeout(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {})
+            ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+            ...extraHeaders
         },
         body: JSON.stringify({
             model,
@@ -77,6 +80,9 @@ function callProvider(provider, request) {
     if (name === 'OpenAI') {
         return callChatCompletions({ ...request, baseUrl: OPENAI_BASE_URL, apiKey: process.env.OPENAI_API_KEY, model: provider.model, label: 'OpenAI (page de cours)' });
     }
+    if (name === 'OpenRouter') {
+        return callChatCompletions({ ...request, baseUrl: OPENROUTER_BASE_URL, apiKey: provider.apiKey, model: provider.model, label: 'OpenRouter (page de cours)', extraHeaders: { 'X-Title': 'TeachDigital' } });
+    }
     return callGemini({ ...request, model: provider.model });
 }
 
@@ -89,13 +95,29 @@ function callProvider(provider, request) {
  * @param {string} [options.instructions]
  * @returns {Promise<{html: string, summary: string, provider: string, model: string}>}
  */
-async function generateCoursePageFromImages({ images, childProfile, subject, topic, instructions }) {
+function getCoursePageProviders() {
+    const selected = coursePageConfig.getProvider();
+    if (selected) {
+        const provider = getProviderByName(selected);
+        if (!provider || !provider.isAvailable()) {
+            const error = new Error(`Tous les services IA ont échoué : le provider choisi pour les pages de cours (${selected}) n'est pas configuré`);
+            error.code = 'AI_UNAVAILABLE';
+            throw error;
+        }
+        return [provider];
+    }
+
     const providers = getAvailableProviders().filter(provider => VISION_PROVIDERS.includes(provider.getName()));
     if (providers.length === 0) {
-        const error = new Error('Tous les services IA ont échoué : aucun service IA capable de lire des photos n\'est configuré (LM Studio, OpenAI ou Gemini)');
+        const error = new Error('Tous les services IA ont échoué : aucun service IA capable de lire des photos n\'est configuré (LM Studio, OpenAI, Gemini ou OpenRouter)');
         error.code = 'AI_UNAVAILABLE';
         throw error;
     }
+    return providers;
+}
+
+async function generateCoursePageFromImages({ images, childProfile, subject, topic, instructions }) {
+    const providers = getCoursePageProviders();
 
     const prompt = buildCoursePagePrompt({ childProfile, subject, topic, instructions, photoCount: images.length });
     const deadline = Date.now() + COURSE_PAGE_TIMEOUT_MS;

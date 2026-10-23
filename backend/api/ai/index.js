@@ -19,6 +19,7 @@ const { validateAndNormalizeQuiz } = require('./utils/quizFormat.js');
 const { generateCoursePageFromImages, COURSE_PAGE_TIMEOUT_MS } = require('./services/coursePageGenerator.js');
 const localLLMConfig = require('./services/aiProviders/localLLMConfig.js');
 const openRouterConfig = require('./services/aiProviders/openRouterConfig.js');
+const coursePageConfig = require('./services/coursePageConfig.js');
 
 // ==================== CONFIGURATION OCR ====================
 
@@ -113,6 +114,15 @@ module.exports = async function handler(req, res) {
 
         if (pathname === '/openrouter/key' && method === 'DELETE') {
             return await handleDeleteOpenRouterKey(req, res);
+        }
+
+        // Provider IA utilisé pour la génération de pages de cours
+        if (pathname === '/course-page/provider' && method === 'GET') {
+            return await handleGetCoursePageProvider(req, res);
+        }
+
+        if (pathname === '/course-page/provider' && method === 'POST') {
+            return await handleSetCoursePageProvider(req, res);
         }
 
         if (pathname === '/providers' && method === 'GET') {
@@ -708,7 +718,7 @@ async function handleGenerateCoursePage(req, res) {
 
         if (error.code === 'AI_UNAVAILABLE') {
             return res.status(503).json(createErrorResponse(
-                'Impossible de générer la page. Vérifiez la configuration IA (un modèle capable de lire des photos est requis : LM Studio avec un modèle vision, OpenAI ou Gemini).',
+                'Impossible de générer la page. Vérifiez la configuration IA (un modèle capable de lire des photos est requis : LM Studio avec un modèle vision, OpenAI, Gemini ou OpenRouter avec un modèle vision).',
                 'AI_UNAVAILABLE',
                 { reason: error.message }
             ));
@@ -1004,6 +1014,60 @@ async function handleDeleteOpenRouterKey(req, res) {
     } catch (error) {
         console.error('❌ Erreur lors de la suppression de la clé OpenRouter:', error);
         return res.status(500).json(createErrorResponse('Erreur lors de la suppression de la clé OpenRouter: ' + error.message));
+    }
+}
+
+// ==================== HANDLERS PAGE DE COURS ====================
+
+const COURSE_PAGE_PROVIDER_LABELS = {
+    LocalLLM: 'LM Studio',
+    OpenAI: 'OpenAI',
+    Gemini: 'Google Gemini',
+    OpenRouter: 'OpenRouter'
+};
+
+function getCoursePageProviderPayload() {
+    const { getProviderByName } = require('./services/aiProviders/index.js');
+    return {
+        provider: coursePageConfig.getProvider(),
+        options: coursePageConfig.VISION_PROVIDERS.map(name => {
+            const instance = getProviderByName(name);
+            return {
+                name,
+                label: COURSE_PAGE_PROVIDER_LABELS[name] || name,
+                configured: !!instance?.isAvailable(),
+                model: instance?.model || ''
+            };
+        })
+    };
+}
+
+/**
+ * Retourne le provider choisi pour les pages de cours et les providers vision possibles
+ */
+async function handleGetCoursePageProvider(req, res) {
+    return res.status(200).json(createResponse('Provider des pages de cours', getCoursePageProviderPayload()));
+}
+
+/**
+ * Enregistre le provider des pages de cours
+ * Body: { provider: string|null } (null = automatique)
+ */
+async function handleSetCoursePageProvider(req, res) {
+    try {
+        const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) || {};
+        if (!('provider' in body)) {
+            return res.status(400).json(createErrorResponse('provider requis (null = automatique)'));
+        }
+        const provider = body.provider || null;
+        if (provider !== null && !coursePageConfig.VISION_PROVIDERS.includes(provider)) {
+            return res.status(400).json(createErrorResponse(`Provider invalide (valeurs possibles : ${coursePageConfig.VISION_PROVIDERS.join(', ')})`));
+        }
+        await coursePageConfig.setProvider(provider);
+        return res.status(200).json(createResponse('Provider des pages de cours enregistré', getCoursePageProviderPayload()));
+    } catch (error) {
+        console.error('❌ Erreur lors de l\'enregistrement du provider des pages de cours:', error);
+        return res.status(500).json(createErrorResponse('Erreur lors de l\'enregistrement du provider des pages de cours: ' + error.message));
     }
 }
 

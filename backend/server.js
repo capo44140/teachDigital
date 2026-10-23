@@ -377,6 +377,7 @@ async function ensureAiSettingsTable() {
       )
     `);
     await require('./api/ai/services/aiProviders/openRouterConfig.js').load();
+    await require('./api/ai/services/coursePageConfig.js').load();
   } catch (error) {
     logger.warn('⚠️ Migration ai_settings (non bloquant):', error.message);
   }

@@ -3,10 +3,17 @@
  */
 
 jest.mock('../../api/ai/services/aiProviders/index.js', () => ({
-  getAvailableProviders: jest.fn()
+  getAvailableProviders: jest.fn(),
+  getProviderByName: jest.fn()
 }));
 
-const { getAvailableProviders } = require('../../api/ai/services/aiProviders/index.js');
+jest.mock('../../api/ai/services/coursePageConfig.js', () => ({
+  VISION_PROVIDERS: ['LocalLLM', 'OpenAI', 'Gemini', 'OpenRouter'],
+  getProvider: jest.fn(() => null)
+}));
+
+const { getAvailableProviders, getProviderByName } = require('../../api/ai/services/aiProviders/index.js');
+const coursePageConfig = require('../../api/ai/services/coursePageConfig.js');
 const { generateCoursePageFromImages } = require('../../api/ai/services/coursePageGenerator.js');
 const {
   SUMMARY_MARKER,
@@ -15,7 +22,7 @@ const {
 } = require('../../api/ai/prompts/coursePageHtml.js');
 
 const PAGE = '<!DOCTYPE html><html><head><title>Pythagore</title></head><body><span id="sOk">0</span></body></html>';
-const fakeProvider = (name, model) => ({ getName: () => name, model, baseUrl: 'http://llm.local/v1' });
+const fakeProvider = (name, model, available = true) => ({ getName: () => name, model, baseUrl: 'http://llm.local/v1', apiKey: 'sk-or-v1-test', isAvailable: () => available });
 const chatResponse = content => ({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content } }] }) });
 
 describe('buildCoursePagePrompt', () => {
@@ -67,12 +74,14 @@ describe('generateCoursePageFromImages', () => {
 
   beforeEach(() => {
     global.fetch = jest.fn();
+    jest.clearAllMocks();
     process.env.OPENAI_API_KEY = 'sk-test-key-for-course-pages';
   });
 
   afterEach(() => {
     delete global.fetch;
     delete process.env.OPENAI_API_KEY;
+    coursePageConfig.getProvider.mockReturnValue(null);
   });
 
   it('utilise le modèle LM Studio configuré et envoie toutes les photos', async () => {
@@ -112,6 +121,41 @@ describe('generateCoursePageFromImages', () => {
 
     await expect(generateCoursePageFromImages({ images, childProfile }))
       .rejects.toMatchObject({ code: 'AI_UNAVAILABLE' });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("utilise uniquement le provider choisi dans l'interface (OpenRouter)", async () => {
+    coursePageConfig.getProvider.mockReturnValue('OpenRouter');
+    getProviderByName.mockReturnValue(fakeProvider('OpenRouter', 'google/gemini-2.5-flash'));
+    global.fetch.mockResolvedValue(chatResponse(PAGE));
+
+    const result = await generateCoursePageFromImages({ images, childProfile });
+
+    expect(getProviderByName).toHaveBeenCalledWith('OpenRouter');
+    expect(getAvailableProviders).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ provider: 'OpenRouter', model: 'google/gemini-2.5-flash' });
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toBe('https://openrouter.ai/api/v1/chat/completions');
+    expect(options.headers.Authorization).toBe('Bearer sk-or-v1-test');
+    expect(JSON.parse(options.body).model).toBe('google/gemini-2.5-flash');
+  });
+
+  it('ne bascule pas sur un autre provider quand le provider choisi échoue', async () => {
+    coursePageConfig.getProvider.mockReturnValue('OpenAI');
+    getProviderByName.mockReturnValue(fakeProvider('OpenAI', 'gpt-4o'));
+    global.fetch.mockResolvedValue(chatResponse('<!DOCTYPE html><html><body>coupé'));
+
+    await expect(generateCoursePageFromImages({ images, childProfile }))
+      .rejects.toMatchObject({ code: 'AI_UNAVAILABLE' });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("échoue avec AI_UNAVAILABLE si le provider choisi n'est pas configuré", async () => {
+    coursePageConfig.getProvider.mockReturnValue('Gemini');
+    getProviderByName.mockReturnValue(fakeProvider('Gemini', 'gemini-flash', false));
+
+    await expect(generateCoursePageFromImages({ images, childProfile }))
+      .rejects.toThrow(/provider choisi pour les pages de cours \(Gemini\)/);
     expect(global.fetch).not.toHaveBeenCalled();
   });
 });

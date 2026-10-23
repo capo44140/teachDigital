@@ -350,6 +350,56 @@
           </form>
         </div>
 
+        <!-- Section Pages de cours -->
+        <div class="glass-card-dashboard">
+          <h2 class="text-xl font-bold text-white mb-2 flex items-center">
+            <svg class="w-6 h-6 text-pink-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+            Pages de cours
+          </h2>
+          <p class="text-sm text-white/50 mb-4">Provider IA utilisé pour générer une page de cours à partir des photos (modèle capable de lire des images requis).</p>
+
+          <div class="space-y-3">
+            <button
+              v-for="option in coursePageOptions"
+              :key="option.name || 'auto'"
+              type="button"
+              :disabled="savingCoursePageProvider || (option.name && !option.configured)"
+              :class="[
+                'w-full text-left p-4 rounded-xl border-2 transition-all duration-300',
+                coursePage.provider === option.name
+                  ? 'border-purple-400 bg-purple-500/15 shadow-lg shadow-purple-500/10'
+                  : 'border-white/10 bg-white/5 hover:border-white/30 hover:bg-white/10',
+                option.name && !option.configured ? 'opacity-40 cursor-not-allowed' : ''
+              ]"
+              @click="saveCoursePageProvider(option.name)"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <div :class="[
+                    'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all',
+                    coursePage.provider === option.name ? 'border-purple-400 bg-purple-500' : 'border-white/30'
+                  ]">
+                    <div v-if="coursePage.provider === option.name" class="w-2 h-2 rounded-full bg-white"></div>
+                  </div>
+                  <div>
+                    <p class="font-medium text-white">{{ option.label }}</p>
+                    <p class="text-xs text-white/30">{{ option.description }}</p>
+                  </div>
+                </div>
+                <span v-if="option.name && !option.configured" class="text-xs px-2 py-0.5 rounded-full bg-slate-500/20 text-slate-400 border border-slate-500/30">
+                  Non configuré
+                </span>
+              </div>
+            </button>
+          </div>
+
+          <div v-if="coursePageError" class="bg-red-500/20 border border-red-500/30 rounded-xl p-4 mt-4">
+            <p class="text-red-200 text-sm">{{ coursePageError }}</p>
+          </div>
+        </div>
+
         <!-- Section Mode OCR -->
         <div class="glass-card-dashboard">
           <h2 class="text-xl font-bold text-white mb-4 flex items-center">
@@ -430,10 +480,23 @@ export default {
       openRouterKeyInput: '',
       openRouterModelInput: '',
       savingOpenRouter: false,
-      openRouterError: null
+      openRouterError: null,
+      coursePage: {
+        provider: null,
+        options: []
+      },
+      savingCoursePageProvider: false,
+      coursePageError: null
     }
   },
   computed: {
+    // Mode automatique (null) suivi des providers capables de lire des photos
+    coursePageOptions() {
+      return [
+        { name: null, label: 'Automatique', description: 'Premier provider vision disponible, dans l\'ordre de priorité', configured: true },
+        ...this.coursePage.options.map(option => ({ ...option, description: option.model || '' }))
+      ]
+    },
     // Modèle saisi tel qu'il sera enregistré (vide = défaut)
     openRouterSavedModelInput() {
       return this.openRouter.modelSource === 'ui' ? this.openRouter.model : ''
@@ -487,6 +550,7 @@ export default {
       }
 
       await this.loadOpenRouterConfig(aiService)
+      await this.loadCoursePageProvider(aiService)
 
       // Charger les providers en parallèle (peut prendre quelques secondes)
       try {
@@ -581,6 +645,7 @@ export default {
         this.applyOpenRouterConfig(await aiService.saveOpenRouterConfig(payload))
         this.successMessage = 'Configuration OpenRouter enregistrée'
         setTimeout(() => { this.successMessage = null }, 4000)
+        await this.loadCoursePageProvider(aiService)
         this.providers = await aiService.getProvidersStatus().catch(() => this.providers)
       } catch (err) {
         this.openRouterError = err.message || 'Erreur lors de l\'enregistrement'
@@ -599,11 +664,42 @@ export default {
         this.applyOpenRouterConfig(await aiService.deleteOpenRouterKey())
         this.successMessage = 'Clé OpenRouter supprimée'
         setTimeout(() => { this.successMessage = null }, 4000)
+        await this.loadCoursePageProvider(aiService)
         this.providers = await aiService.getProvidersStatus().catch(() => this.providers)
       } catch (err) {
         this.openRouterError = err.message || 'Erreur lors de la suppression'
       } finally {
         this.savingOpenRouter = false
+      }
+    },
+
+    async loadCoursePageProvider(aiService = new AIService()) {
+      try {
+        const config = await aiService.getCoursePageProvider()
+        if (config) this.coursePage = config
+      } catch (err) {
+        this.coursePageError = 'Impossible de charger le provider des pages de cours: ' + (err.message || 'erreur inconnue')
+      }
+    },
+
+    async saveCoursePageProvider(provider) {
+      if (provider === this.coursePage.provider) return
+
+      this.savingCoursePageProvider = true
+      this.coursePageError = null
+      this.successMessage = null
+
+      try {
+        const aiService = new AIService()
+        const config = await aiService.setCoursePageProvider(provider)
+        if (config) this.coursePage = config
+        const label = this.coursePageOptions.find(option => option.name === provider)?.label || 'Automatique'
+        this.successMessage = `Pages de cours : ${label}`
+        setTimeout(() => { this.successMessage = null }, 4000)
+      } catch (err) {
+        this.coursePageError = err.message || 'Erreur lors de l\'enregistrement'
+      } finally {
+        this.savingCoursePageProvider = false
       }
     },
 
