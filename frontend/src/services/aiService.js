@@ -295,49 +295,79 @@ class AIService {
   }
 
   /**
-   * Récupère la configuration OpenRouter (clé masquée, modèle actif)
-   * @returns {Promise<Object|null>} Configuration OpenRouter
+   * Change l'URL du LLM local
+   * @param {string|null} baseUrl - URL de l'API compatible OpenAI, ou null pour revenir au .env
+   * @returns {Promise<Object|null>} { baseUrl, baseUrlSource, envBaseUrl }
    */
-  async getOpenRouterConfig () {
+  async setLocalLLMUrl (baseUrl) {
     try {
-      const response = await apiService.request('/api/ai/openrouter/config')
+      const response = await apiService.request('/api/ai/local-llm/url', {
+        method: 'POST',
+        body: JSON.stringify({ baseUrl })
+      })
       return response.data || null
     } catch (error) {
-      console.error('Erreur lors de la récupération de la configuration OpenRouter:', error)
+      console.error('Erreur lors du changement d\'URL LM Studio:', error)
       throw error
     }
   }
 
   /**
-   * Enregistre la clé API et/ou le modèle OpenRouter
-   * @param {Object} config - { apiKey?: string, model?: string|null } (model null = défaut)
-   * @returns {Promise<Object|null>} Configuration OpenRouter mise à jour
+   * Récupère la configuration de chaque provider à clé API (clé masquée, modèle actif)
+   * @returns {Promise<Array>} [{ name, label, keyConfigured, keySource, maskedKey, model, modelSource, defaultModel, ... }]
    */
-  async saveOpenRouterConfig (config) {
+  async getProvidersConfig () {
     try {
-      const response = await apiService.request('/api/ai/openrouter/config', {
+      const response = await apiService.request('/api/ai/providers/config')
+      return response.data?.providers || []
+    } catch (error) {
+      console.error('Erreur lors de la récupération de la configuration des providers:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Enregistre la clé API et/ou le modèle d'un provider (la clé est vérifiée par le serveur)
+   * @param {string} name - Nom du provider (ex: "OpenAI")
+   * @param {Object} config - { apiKey?: string, model?: string|null } (model null = défaut)
+   * @returns {Promise<Object|null>} Configuration du provider mise à jour
+   */
+  async saveProviderConfig (name, config) {
+    try {
+      const response = await apiService.request(`/api/ai/providers/${encodeURIComponent(name)}/config`, {
         method: 'POST',
         body: JSON.stringify(config)
       })
       return response.data || null
     } catch (error) {
-      console.error('Erreur lors de l\'enregistrement de la configuration OpenRouter:', error)
+      console.error(`Erreur lors de l'enregistrement de la configuration ${name}:`, error)
       throw error
     }
   }
 
   /**
-   * Supprime la clé OpenRouter enregistrée depuis l'interface
-   * @returns {Promise<Object|null>} Configuration OpenRouter mise à jour
+   * Supprime la clé enregistrée depuis l'interface (retour à la clé du .env)
+   * @param {string} name - Nom du provider
+   * @returns {Promise<Object|null>} Configuration du provider mise à jour
    */
-  async deleteOpenRouterKey () {
+  async deleteProviderKey (name) {
     try {
-      const response = await apiService.request('/api/ai/openrouter/key', { method: 'DELETE' })
+      const response = await apiService.request(`/api/ai/providers/${encodeURIComponent(name)}/key`, { method: 'DELETE' })
       return response.data || null
     } catch (error) {
-      console.error('Erreur lors de la suppression de la clé OpenRouter:', error)
+      console.error(`Erreur lors de la suppression de la clé ${name}:`, error)
       throw error
     }
+  }
+
+  /**
+   * Liste les modèles proposés par un provider (suggestions)
+   * @param {string} name - Nom du provider
+   * @returns {Promise<string[]>} Identifiants de modèles
+   */
+  async getProviderModels (name) {
+    const response = await apiService.request(`/api/ai/providers/${encodeURIComponent(name)}/models`)
+    return response.data?.models || []
   }
 
   /**

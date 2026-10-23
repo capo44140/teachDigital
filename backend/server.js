@@ -364,7 +364,7 @@ async function runAutoMigrations() {
   await ensureAiSettingsTable();
 }
 
-// Migration automatique : réglages IA enregistrés depuis l'interface (ex. clé OpenRouter chiffrée),
+// Migration automatique : réglages IA enregistrés depuis l'interface (clés API chiffrées, modèles, URL LM Studio),
 // puis chargement en mémoire pour que les providers les utilisent dès le démarrage.
 async function ensureAiSettingsTable() {
   try {
@@ -376,7 +376,8 @@ async function ensureAiSettingsTable() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    await require('./api/ai/services/aiProviders/openRouterConfig.js').load();
+    await require('./api/ai/services/aiProviders/providerSettings.js').load();
+    await require('./api/ai/services/aiProviders/localLLMConfig.js').load();
     await require('./api/ai/services/coursePageConfig.js').load();
   } catch (error) {
     logger.warn('⚠️ Migration ai_settings (non bloquant):', error.message);

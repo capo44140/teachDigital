@@ -22,7 +22,7 @@ const {
 } = require('../../api/ai/prompts/coursePageHtml.js');
 
 const PAGE = '<!DOCTYPE html><html><head><title>Pythagore</title></head><body><span id="sOk">0</span></body></html>';
-const fakeProvider = (name, model, available = true) => ({ getName: () => name, model, baseUrl: 'http://llm.local/v1', apiKey: 'sk-or-v1-test', isAvailable: () => available });
+const fakeProvider = (name, model, available = true) => ({ getName: () => name, model, baseUrl: 'http://llm.local/v1', apiKey: `key-${name}`, isAvailable: () => available });
 const chatResponse = content => ({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content } }] }) });
 
 describe('buildCoursePagePrompt', () => {
@@ -75,12 +75,10 @@ describe('generateCoursePageFromImages', () => {
   beforeEach(() => {
     global.fetch = jest.fn();
     jest.clearAllMocks();
-    process.env.OPENAI_API_KEY = 'sk-test-key-for-course-pages';
   });
 
   afterEach(() => {
     delete global.fetch;
-    delete process.env.OPENAI_API_KEY;
     coursePageConfig.getProvider.mockReturnValue(null);
   });
 
@@ -113,7 +111,7 @@ describe('generateCoursePageFromImages', () => {
 
     expect(result.provider).toBe('OpenAI');
     expect(global.fetch).toHaveBeenCalledTimes(2);
-    expect(global.fetch.mock.calls[1][1].headers.Authorization).toBe('Bearer sk-test-key-for-course-pages');
+    expect(global.fetch.mock.calls[1][1].headers.Authorization).toBe('Bearer key-OpenAI');
   });
 
   it('échoue avec AI_UNAVAILABLE sans provider capable de lire des photos', async () => {
@@ -136,7 +134,7 @@ describe('generateCoursePageFromImages', () => {
     expect(result).toMatchObject({ provider: 'OpenRouter', model: 'google/gemini-2.5-flash' });
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).toBe('https://openrouter.ai/api/v1/chat/completions');
-    expect(options.headers.Authorization).toBe('Bearer sk-or-v1-test');
+    expect(options.headers.Authorization).toBe('Bearer key-OpenRouter');
     expect(JSON.parse(options.body).model).toBe('google/gemini-2.5-flash');
   });
 

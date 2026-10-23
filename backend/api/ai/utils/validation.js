@@ -2,8 +2,6 @@
  * Fonctions de validation des clés API
  */
 
-const { LOCAL_LLM_BASE_URL } = require('./constants.js');
-
 /**
  * Vérifie si une clé API OpenAI est valide
  * @param {string} apiKey - Clé API à valider
@@ -51,14 +49,13 @@ function isValidDeepSeekKey(apiKey) {
 }
 
 /**
- * Vérifie si une clé API Mistral est valide
+ * Vérifie si une clé API Mistral est valide (les clés Mistral n'ont pas de préfixe)
  * @param {string} apiKey - Clé API à valider
  * @returns {boolean} True si la clé est valide
  */
 function isValidMistralKey(apiKey) {
     return apiKey &&
         apiKey !== 'your-mistral-api-key-here' &&
-        apiKey.startsWith('mistral-') &&
         apiKey.length > 20;
 }
 
@@ -91,45 +88,23 @@ function isValidOpenRouterKey(apiKey) {
  * @returns {boolean} True si le LLM local est disponible
  */
 function isLocalLLMAvailable() {
-    const localLLMUrl = process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
+    // require local : localLLMConfig dépend du stockage ai_settings
+    const localLLMUrl = require('../services/aiProviders/localLLMConfig.js').getBaseUrl();
     const localLLMEnabled = process.env.LOCAL_LLM_ENABLED !== 'false'; // Activé par défaut si URL configurée
     return localLLMEnabled && localLLMUrl && localLLMUrl !== '';
 }
 
 /**
- * Fonction helper pour valider une clé API
+ * Fonction helper pour valider une clé API (clé de l'interface, sinon du .env)
  * @param {string} apiType - Type d'API (openai, gemini, deepseek, groq, mistral, kimi, openrouter)
  * @returns {Promise<boolean>} True si la clé est valide
  */
 async function validateApiKey(apiType) {
     console.log(`🔑 validateApiKey: ${apiType}`);
-    let apiKey;
-
-    switch (apiType) {
-        case 'openai':
-            apiKey = process.env.OPENAI_API_KEY;
-            return isValidOpenAIKey(apiKey);
-        case 'gemini':
-            apiKey = process.env.GEMINI_API_KEY;
-            return isValidGeminiKey(apiKey);
-        case 'deepseek':
-            apiKey = process.env.DEEPSEEK_API_KEY;
-            return isValidDeepSeekKey(apiKey);
-        case 'groq':
-            apiKey = process.env.GROQ_API_KEY;
-            return isValidGroqKey(apiKey);
-        case 'mistral':
-            apiKey = process.env.MISTRAL_API_KEY;
-            return isValidMistralKey(apiKey);
-        case 'kimi':
-            apiKey = process.env.KIMI_API_KEY;
-            return isValidKimiKey(apiKey);
-        case 'openrouter':
-            apiKey = require('../services/aiProviders/openRouterConfig.js').getApiKey();
-            return isValidOpenRouterKey(apiKey);
-        default:
-            return false;
-    }
+    // require local : providerSettings importe ce module
+    const providerSettings = require('../services/aiProviders/providerSettings.js');
+    const name = providerSettings.resolveName(apiType);
+    return name ? providerSettings.isConfigured(name) : false;
 }
 
 /**
@@ -138,15 +113,8 @@ async function validateApiKey(apiType) {
  */
 async function hasAtLeastOneValidKey() {
     console.log('🔑 hasAtLeastOneValidKey: Début');
-    const openaiValid = await validateApiKey('openai');
-    const geminiValid = await validateApiKey('gemini');
-    const deepseekValid = await validateApiKey('deepseek');
-    const groqValid = await validateApiKey('groq');
-    const mistralValid = await validateApiKey('mistral');
-    const kimiValid = await validateApiKey('kimi');
-    const openrouterValid = await validateApiKey('openrouter');
-
-    return openaiValid || geminiValid || deepseekValid || groqValid || mistralValid || kimiValid || openrouterValid;
+    const providerSettings = require('../services/aiProviders/providerSettings.js');
+    return providerSettings.NAMES.some(name => providerSettings.isConfigured(name));
 }
 
 /**

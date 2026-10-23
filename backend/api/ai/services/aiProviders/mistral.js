@@ -5,13 +5,14 @@
 const AIProviderBase = require('./base.js');
 const { fetchWithTimeout } = require('../../utils/fetch.js');
 const { isValidMistralKey } = require('../../utils/validation.js');
-const { MISTRAL_BASE_URL, DEFAULT_MISTRAL_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } = require('../../utils/constants.js');
+const { MISTRAL_BASE_URL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } = require('../../utils/constants.js');
+const providerSettings = require('./providerSettings.js');
 
 class MistralProvider extends AIProviderBase {
     constructor() {
         super('Mistral');
-        this.apiKey = process.env.MISTRAL_API_KEY;
-        this.model = DEFAULT_MISTRAL_MODEL;
+        this.apiKey = providerSettings.getApiKey('Mistral');
+        this.model = providerSettings.getModel('Mistral');
     }
 
     isAvailable() {

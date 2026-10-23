@@ -18,7 +18,7 @@ const { validateApiKey, hasAtLeastOneValidKey } = require('./utils/validation.js
 const { validateAndNormalizeQuiz } = require('./utils/quizFormat.js');
 const { generateCoursePageFromImages, COURSE_PAGE_TIMEOUT_MS } = require('./services/coursePageGenerator.js');
 const localLLMConfig = require('./services/aiProviders/localLLMConfig.js');
-const openRouterConfig = require('./services/aiProviders/openRouterConfig.js');
+const providerSettings = require('./services/aiProviders/providerSettings.js');
 const coursePageConfig = require('./services/coursePageConfig.js');
 
 // ==================== CONFIGURATION OCR ====================
@@ -103,17 +103,31 @@ module.exports = async function handler(req, res) {
             return await handleSetLocalLLMModel(req, res);
         }
 
-        // Routes OpenRouter (clé API et modèle enregistrés depuis l'interface)
-        if (pathname === '/openrouter/config' && method === 'GET') {
-            return await handleGetOpenRouterConfig(req, res);
+        if (pathname === '/local-llm/url' && method === 'POST') {
+            return await handleSetLocalLLMUrl(req, res);
         }
 
-        if (pathname === '/openrouter/config' && method === 'POST') {
-            return await handleSetOpenRouterConfig(req, res);
+        // Routes des providers à clé API (clé et modèle enregistrés depuis l'interface)
+        if (pathname === '/providers/config' && method === 'GET') {
+            return await handleGetProvidersConfig(req, res);
         }
 
-        if (pathname === '/openrouter/key' && method === 'DELETE') {
-            return await handleDeleteOpenRouterKey(req, res);
+        const providerRoute = pathname.match(PROVIDER_ROUTE_PATTERN);
+        if (providerRoute) {
+            const name = providerSettings.resolveName(providerRoute[1]);
+            const action = providerRoute[2];
+            if (!name) {
+                return res.status(404).json(createErrorResponse(`Provider inconnu : ${providerRoute[1]}`));
+            }
+            if (action === 'config' && method === 'POST') {
+                return await handleSetProviderConfig(name, req, res);
+            }
+            if (action === 'key' && method === 'DELETE') {
+                return await handleDeleteProviderKey(name, res);
+            }
+            if (action === 'models' && method === 'GET') {
+                return await handleGetProviderModels(name, res);
+            }
         }
 
         // Provider IA utilisé pour la génération de pages de cours
@@ -840,6 +854,8 @@ async function handleGetLocalLLMModels(req, res) {
         return res.status(200).json(createResponse('Modèles récupérés', {
             connected,
             baseUrl,
+            baseUrlSource: localLLMConfig.getBaseUrlSource(),
+            envBaseUrl: localLLMConfig.getEnvBaseUrl(),
             activeModel,
             activeModelSource: source,
             envModel: localLLMConfig.getEnvModel(),
@@ -876,6 +892,8 @@ async function handleGetLocalLLMStatus(req, res) {
         return res.status(200).json(createResponse('Statut LM Studio', {
             connected,
             baseUrl,
+            baseUrlSource: localLLMConfig.getBaseUrlSource(),
+            envBaseUrl: localLLMConfig.getEnvBaseUrl(),
             activeModel,
             activeModelSource: source,
             envModel: localLLMConfig.getEnvModel(),
@@ -898,7 +916,7 @@ async function handleSetLocalLLMModel(req, res) {
 
         if (modelId === null || modelId === undefined) {
             // Restaurer le défaut du .env
-            localLLMConfig.setActiveModel(null);
+            await localLLMConfig.setActiveModel(null);
             return res.status(200).json(createResponse('Modèle restauré au défaut', {
                 activeModel: localLLMConfig.getActiveModel(),
                 activeModelSource: 'env'
@@ -909,7 +927,7 @@ async function handleSetLocalLLMModel(req, res) {
             return res.status(400).json(createErrorResponse('modelId requis (string non vide ou null pour restaurer)'));
         }
 
-        localLLMConfig.setActiveModel(modelId.trim());
+        await localLLMConfig.setActiveModel(modelId.trim());
 
         return res.status(200).json(createResponse('Modèle changé avec succès', {
             activeModel: localLLMConfig.getActiveModel(),
@@ -921,40 +939,67 @@ async function handleSetLocalLLMModel(req, res) {
     }
 }
 
-// ==================== HANDLERS OPENROUTER ====================
-
-// Identifiant de modèle OpenRouter : "fournisseur/modele" éventuellement suffixé (ex: ":free")
-const OPENROUTER_MODEL_PATTERN = /^[\w.-]+\/[\w.:-]+$/;
-
-function getOpenRouterConfigPayload() {
-    return {
-        keyConfigured: !!openRouterConfig.getApiKey(),
-        keySource: openRouterConfig.getApiKeySource(),
-        maskedKey: openRouterConfig.getMaskedApiKey(),
-        model: openRouterConfig.getModel(),
-        modelSource: openRouterConfig.getModelSource(),
-        defaultModel: openRouterConfig.getDefaultModel()
-    };
-}
-
 /**
- * Retourne la configuration OpenRouter (la clé n'est jamais renvoyée en clair)
+ * Change l'URL du LLM local
+ * Body: { baseUrl: string|null } (null = retour à LOCAL_LLM_URL du .env)
  */
-async function handleGetOpenRouterConfig(req, res) {
-    console.log('🌐 handleGetOpenRouterConfig: Début');
-    return res.status(200).json(createResponse('Configuration OpenRouter', getOpenRouterConfigPayload()));
-}
-
-/**
- * Enregistre la clé API et/ou le modèle OpenRouter
- * Body: { apiKey?: string, model?: string|null } (model null = retour au défaut)
- */
-async function handleSetOpenRouterConfig(req, res) {
-    console.log('🌐 handleSetOpenRouterConfig: Début');
+async function handleSetLocalLLMUrl(req, res) {
+    console.log('🏠 handleSetLocalLLMUrl: Début');
     try {
-        const { isValidOpenRouterKey } = require('./utils/validation.js');
+        const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) || {};
+        if (!('baseUrl' in body)) {
+            return res.status(400).json(createErrorResponse('baseUrl requis (null = retour au .env)'));
+        }
+
+        const baseUrl = typeof body.baseUrl === 'string' ? body.baseUrl.trim().replace(/\/+$/, '') : null;
+        if (baseUrl) {
+            let parsed = null;
+            try {
+                parsed = new URL(baseUrl);
+            } catch {
+                parsed = null;
+            }
+            if (!parsed || !['http:', 'https:'].includes(parsed.protocol)) {
+                return res.status(400).json(createErrorResponse('URL invalide (ex: http://192.168.1.20:1234/v1)'));
+            }
+        }
+
+        await localLLMConfig.setBaseUrl(baseUrl || null);
+        return res.status(200).json(createResponse('URL LM Studio enregistrée', {
+            baseUrl: localLLMConfig.getBaseUrl(),
+            baseUrlSource: localLLMConfig.getBaseUrlSource(),
+            envBaseUrl: localLLMConfig.getEnvBaseUrl()
+        }));
+    } catch (error) {
+        console.error('❌ Erreur lors du changement d\'URL LM Studio:', error);
+        return res.status(500).json(createErrorResponse('Erreur lors du changement d\'URL LM Studio: ' + error.message));
+    }
+}
+
+// ==================== HANDLERS PROVIDERS À CLÉ API ====================
+
+// /providers/<nom>/config (POST), /providers/<nom>/key (DELETE), /providers/<nom>/models (GET)
+const PROVIDER_ROUTE_PATTERN = /^\/providers\/([A-Za-z]+)\/(config|key|models)$/;
+
+/**
+ * Retourne les paramètres de chaque provider à clé API (les clés ne sont jamais renvoyées en clair)
+ */
+async function handleGetProvidersConfig(req, res) {
+    return res.status(200).json(createResponse('Configuration des providers', {
+        providers: providerSettings.NAMES.map(name => providerSettings.getPublicConfig(name))
+    }));
+}
+
+/**
+ * Enregistre la clé API et/ou le modèle d'un provider
+ * Body: { apiKey?: string, model?: string|null } (model null ou vide = retour au défaut)
+ * La clé est vérifiée auprès du provider avant d'être enregistrée.
+ */
+async function handleSetProviderConfig(name, req, res) {
+    console.log(`🔑 handleSetProviderConfig: ${name}`);
+    const label = providerSettings.getLabel(name);
+    try {
         const { fetchWithTimeout } = require('./utils/fetch.js');
-        const { OPENROUTER_BASE_URL } = require('./utils/constants.js');
 
         const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) || {};
         const apiKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : undefined;
@@ -964,56 +1009,79 @@ async function handleSetOpenRouterConfig(req, res) {
             return res.status(400).json(createErrorResponse('apiKey ou model requis'));
         }
 
-        if (apiKey !== undefined && !isValidOpenRouterKey(apiKey)) {
-            return res.status(400).json(createErrorResponse('Clé OpenRouter invalide (elle doit commencer par "sk-or-")'));
+        if (apiKey !== undefined && !providerSettings.isValidKeyFormat(name, apiKey)) {
+            const format = providerSettings.getKeyFormat(name);
+            return res.status(400).json(createErrorResponse(`Clé ${label} invalide${format ? ` (${format})` : ''}`));
         }
 
-        if (model !== undefined && model !== null && model !== '' && !OPENROUTER_MODEL_PATTERN.test(model)) {
-            return res.status(400).json(createErrorResponse('Modèle invalide (format attendu : fournisseur/modele, ex: openai/gpt-4o-mini)'));
+        if (model !== undefined && model !== null && model !== '' && !providerSettings.isValidModel(name, model)) {
+            return res.status(400).json(createErrorResponse(`Modèle invalide (${providerSettings.getModelFormatHint(name)})`));
         }
 
         if (apiKey !== undefined) {
-            // Vérifier la clé auprès d'OpenRouter avant de l'enregistrer
+            const { url, headers } = providerSettings.getCheckRequest(name, apiKey);
             let response;
             try {
-                response = await fetchWithTimeout(`${OPENROUTER_BASE_URL}/key`, {
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${apiKey}` }
-                }, 10000);
+                response = await fetchWithTimeout(url, { method: 'GET', headers }, 10000);
             } catch (fetchError) {
-                return res.status(502).json(createErrorResponse('OpenRouter injoignable, clé non vérifiée : ' + fetchError.message));
+                return res.status(502).json(createErrorResponse(`${label} injoignable, clé non vérifiée : ${fetchError.message}`));
             }
-            if (response.status === 401 || response.status === 403) {
-                return res.status(400).json(createErrorResponse('Clé refusée par OpenRouter'));
+            // Gemini répond 400 à une clé invalide, les autres 401 ou 403
+            if ([400, 401, 403].includes(response.status)) {
+                return res.status(400).json(createErrorResponse(`Clé refusée par ${label}`));
             }
             if (!response.ok) {
-                return res.status(502).json(createErrorResponse(`OpenRouter a répondu ${response.status}, clé non enregistrée`));
+                return res.status(502).json(createErrorResponse(`${label} a répondu ${response.status}, clé non enregistrée`));
             }
-            await openRouterConfig.setApiKey(apiKey);
+            await providerSettings.setApiKey(name, apiKey);
         }
 
         if (model !== undefined) {
-            await openRouterConfig.setModel(model || null);
+            await providerSettings.setModel(name, model || null);
         }
 
-        return res.status(200).json(createResponse('Configuration OpenRouter enregistrée', getOpenRouterConfigPayload()));
+        return res.status(200).json(createResponse(`Configuration ${label} enregistrée`, providerSettings.getPublicConfig(name)));
     } catch (error) {
-        console.error('❌ Erreur lors de l\'enregistrement de la configuration OpenRouter:', error);
-        return res.status(500).json(createErrorResponse('Erreur lors de l\'enregistrement de la configuration OpenRouter: ' + error.message));
+        console.error(`❌ Erreur lors de l'enregistrement de la configuration ${label}:`, error);
+        return res.status(500).json(createErrorResponse(`Erreur lors de l'enregistrement de la configuration ${label}: ${error.message}`));
     }
 }
 
 /**
- * Supprime la clé OpenRouter enregistrée depuis l'interface (retour à OPENROUTER_API_KEY du .env)
+ * Supprime la clé enregistrée depuis l'interface (retour à la clé du .env)
  */
-async function handleDeleteOpenRouterKey(req, res) {
-    console.log('🌐 handleDeleteOpenRouterKey: Début');
+async function handleDeleteProviderKey(name, res) {
+    console.log(`🔑 handleDeleteProviderKey: ${name}`);
+    const label = providerSettings.getLabel(name);
     try {
-        await openRouterConfig.setApiKey(null);
-        return res.status(200).json(createResponse('Clé OpenRouter supprimée', getOpenRouterConfigPayload()));
+        await providerSettings.setApiKey(name, null);
+        return res.status(200).json(createResponse(`Clé ${label} supprimée`, providerSettings.getPublicConfig(name)));
     } catch (error) {
-        console.error('❌ Erreur lors de la suppression de la clé OpenRouter:', error);
-        return res.status(500).json(createErrorResponse('Erreur lors de la suppression de la clé OpenRouter: ' + error.message));
+        console.error(`❌ Erreur lors de la suppression de la clé ${label}:`, error);
+        return res.status(500).json(createErrorResponse(`Erreur lors de la suppression de la clé ${label}: ${error.message}`));
+    }
+}
+
+/**
+ * Liste les modèles proposés par un provider (suggestions du champ « Modèle »)
+ */
+async function handleGetProviderModels(name, res) {
+    const label = providerSettings.getLabel(name);
+    if (!providerSettings.isConfigured(name)) {
+        return res.status(400).json(createErrorResponse(`Aucune clé ${label} configurée`));
+    }
+    try {
+        const { fetchWithTimeout } = require('./utils/fetch.js');
+        const { url, headers } = providerSettings.getModelsRequest(name);
+        const response = await fetchWithTimeout(url, { method: 'GET', headers }, 15000);
+        if (!response.ok) {
+            return res.status(502).json(createErrorResponse(`${label} a répondu ${response.status}`));
+        }
+        const models = providerSettings.parseModels(name, await response.json());
+        return res.status(200).json(createResponse(`Modèles ${label}`, { models }));
+    } catch (error) {
+        console.warn(`⚠️ Liste des modèles ${label} indisponible:`, error.message);
+        return res.status(502).json(createErrorResponse(`Liste des modèles ${label} indisponible : ${error.message}`));
     }
 }
 
@@ -1081,81 +1149,25 @@ async function handleGetProviders(req, res) {
     try {
         const { fetchWithTimeout } = require('./utils/fetch.js');
         const { isLocalLLMAvailable } = require('./utils/validation.js');
-        const { isValidOpenRouterKey } = require('./utils/validation.js');
-        const { OPENAI_BASE_URL, GEMINI_BASE_URL, DEEPSEEK_BASE_URL, GROQ_BASE_URL, MISTRAL_BASE_URL, KIMI_BASE_URL, OPENROUTER_BASE_URL } = require('./utils/constants.js');
 
-        // Définition des providers avec leur check
+        // LM Studio puis les providers à clé API, dans l'ordre de priorité
         const providerDefs = [
             {
                 name: 'LocalLLM',
                 label: 'LM Studio',
                 keyConfigured: isLocalLLMAvailable(),
                 model: localLLMConfig.getActiveModel(),
-                checkUrl: `${localLLMConfig.getBaseUrl()}/models`,
+                check: { url: `${localLLMConfig.getBaseUrl()}/models`, headers: {} },
                 timeout: 15000
             },
-            {
-                name: 'OpenAI',
-                label: 'OpenAI',
-                keyConfigured: !!(process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-') && process.env.OPENAI_API_KEY.length > 20),
-                model: 'gpt-4o',
-                checkUrl: `${OPENAI_BASE_URL}/models`,
-                checkHeaders: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
+            ...providerSettings.NAMES.map(name => ({
+                name,
+                label: providerSettings.getLabel(name),
+                keyConfigured: providerSettings.isConfigured(name),
+                model: providerSettings.getModel(name),
+                check: providerSettings.getCheckRequest(name),
                 timeout: 10000
-            },
-            {
-                name: 'Gemini',
-                label: 'Google Gemini',
-                keyConfigured: !!(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 20),
-                model: 'gemini-flash-latest',
-                checkUrl: `${GEMINI_BASE_URL}/models?key=${process.env.GEMINI_API_KEY || ''}`,
-                timeout: 10000
-            },
-            {
-                name: 'DeepSeek',
-                label: 'DeepSeek',
-                keyConfigured: !!(process.env.DEEPSEEK_API_KEY && process.env.DEEPSEEK_API_KEY.startsWith('sk-') && process.env.DEEPSEEK_API_KEY.length > 20),
-                model: 'deepseek-chat',
-                checkUrl: `${DEEPSEEK_BASE_URL}/models`,
-                checkHeaders: { 'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}` },
-                timeout: 10000
-            },
-            {
-                name: 'Groq',
-                label: 'Groq',
-                keyConfigured: !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.length > 20),
-                model: 'llama-3.3-70b-versatile',
-                checkUrl: `${GROQ_BASE_URL}/models`,
-                checkHeaders: { 'Authorization': `Bearer ${process.env.GROQ_API_KEY}` },
-                timeout: 10000
-            },
-            {
-                name: 'Mistral',
-                label: 'Mistral',
-                keyConfigured: !!(process.env.MISTRAL_API_KEY && process.env.MISTRAL_API_KEY.length > 20),
-                model: 'mistral-large-latest',
-                checkUrl: `${MISTRAL_BASE_URL}/models`,
-                checkHeaders: { 'Authorization': `Bearer ${process.env.MISTRAL_API_KEY}` },
-                timeout: 10000
-            },
-            {
-                name: 'Kimi',
-                label: 'Kimi (Moonshot)',
-                keyConfigured: !!(process.env.KIMI_API_KEY && process.env.KIMI_API_KEY.startsWith('sk-') && process.env.KIMI_API_KEY.length > 20),
-                model: 'moonshot-v1-8k',
-                checkUrl: `${KIMI_BASE_URL}/models`,
-                checkHeaders: { 'Authorization': `Bearer ${process.env.KIMI_API_KEY}` },
-                timeout: 10000
-            },
-            {
-                name: 'OpenRouter',
-                label: 'OpenRouter',
-                keyConfigured: isValidOpenRouterKey(openRouterConfig.getApiKey()),
-                model: openRouterConfig.getModel(),
-                checkUrl: `${OPENROUTER_BASE_URL}/key`,
-                checkHeaders: { 'Authorization': `Bearer ${openRouterConfig.getApiKey()}` },
-                timeout: 10000
-            }
+            }))
         ];
 
         // Vérifier la connectivité en parallèle pour chaque provider configuré
@@ -1166,9 +1178,9 @@ async function handleGetProviders(req, res) {
                 try {
                     const opts = {
                         method: 'GET',
-                        headers: { 'Content-Type': 'application/json', ...(def.checkHeaders || {}) }
+                        headers: { 'Content-Type': 'application/json', ...def.check.headers }
                     };
-                    const response = await fetchWithTimeout(def.checkUrl, opts, def.timeout);
+                    const response = await fetchWithTimeout(def.check.url, opts, def.timeout);
                     reachable = response.ok;
                 } catch (_e) {
                     reachable = false;

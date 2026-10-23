@@ -48,8 +48,8 @@ async function callChatCompletions({ baseUrl, apiKey, model, prompt, images, tim
     return data.choices?.[0]?.message?.content || '';
 }
 
-async function callGemini({ model, prompt, images, timeoutMs }) {
-    const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+async function callGemini({ apiKey, model, prompt, images, timeoutMs }) {
+    const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -78,12 +78,12 @@ function callProvider(provider, request) {
         return callChatCompletions({ ...request, baseUrl: provider.baseUrl, model: provider.model, label: 'LocalLLM (page de cours)' });
     }
     if (name === 'OpenAI') {
-        return callChatCompletions({ ...request, baseUrl: OPENAI_BASE_URL, apiKey: process.env.OPENAI_API_KEY, model: provider.model, label: 'OpenAI (page de cours)' });
+        return callChatCompletions({ ...request, baseUrl: OPENAI_BASE_URL, apiKey: provider.apiKey, model: provider.model, label: 'OpenAI (page de cours)' });
     }
     if (name === 'OpenRouter') {
         return callChatCompletions({ ...request, baseUrl: OPENROUTER_BASE_URL, apiKey: provider.apiKey, model: provider.model, label: 'OpenRouter (page de cours)', extraHeaders: { 'X-Title': 'TeachDigital' } });
     }
-    return callGemini({ ...request, model: provider.model });
+    return callGemini({ ...request, apiKey: provider.apiKey, model: provider.model });
 }
 
 /**

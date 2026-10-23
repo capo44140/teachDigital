@@ -6,13 +6,14 @@
 const AIProviderBase = require('./base.js');
 const { fetchWithTimeout } = require('../../utils/fetch.js');
 const { isValidGroqKey } = require('../../utils/validation.js');
-const { GROQ_BASE_URL, DEFAULT_GROQ_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } = require('../../utils/constants.js');
+const { GROQ_BASE_URL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } = require('../../utils/constants.js');
+const providerSettings = require('./providerSettings.js');
 
 class GroqProvider extends AIProviderBase {
     constructor() {
         super('Groq');
-        this.apiKey = process.env.GROQ_API_KEY;
-        this.model = DEFAULT_GROQ_MODEL;
+        this.apiKey = providerSettings.getApiKey('Groq');
+        this.model = providerSettings.getModel('Groq');
     }
 
     isAvailable() {

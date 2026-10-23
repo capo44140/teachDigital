@@ -1,29 +1,52 @@
 /**
- * Configuration runtime pour le LLM local (LM Studio / Ollama)
- * Permet de changer le modèle actif depuis l'interface sans modifier le .env
- * Le modèle revient au défaut du .env au redémarrage du serveur.
+ * Configuration du LLM local (LM Studio / Ollama) : URL et modèle actif modifiables depuis l'interface
+ * Enregistrés dans ai_settings (local_llm_url, local_llm_model), donc conservés au redémarrage.
+ * Priorité : valeur enregistrée depuis l'interface > .env (LOCAL_LLM_URL / LOCAL_LLM_MODEL) > défaut.
  */
 
+const { loadSettings, saveSetting } = require('../aiSettingsStore.js');
 const { DEFAULT_LOCAL_LLM_MODEL, LOCAL_LLM_BASE_URL } = require('../../utils/constants.js');
 
-// Variable runtime : null = utilise le défaut du .env
+const MODEL_SETTING = 'local_llm_model';
+const URL_SETTING = 'local_llm_url';
+
+// null = utilise le .env
 let activeModel = null;
+let uiBaseUrl = null;
+
+function getEnvModel() {
+    return process.env.LOCAL_LLM_MODEL || DEFAULT_LOCAL_LLM_MODEL;
+}
+
+function getEnvBaseUrl() {
+    return process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
+}
 
 module.exports = {
     /**
-     * Retourne le modèle actuellement actif
-     * Priorité : variable runtime > env LOCAL_LLM_MODEL > constante par défaut
+     * Charge l'URL et le modèle enregistrés depuis la base (appelé au démarrage du serveur)
      */
-    getActiveModel() {
-        return activeModel || process.env.LOCAL_LLM_MODEL || DEFAULT_LOCAL_LLM_MODEL;
+    async load() {
+        const settings = await loadSettings([MODEL_SETTING, URL_SETTING]);
+        activeModel = settings.get(MODEL_SETTING) || null;
+        uiBaseUrl = settings.get(URL_SETTING) || null;
     },
 
     /**
-     * Change le modèle actif en runtime (sans modifier le .env)
+     * Retourne le modèle actuellement actif
+     * Priorité : interface > env LOCAL_LLM_MODEL > constante par défaut
+     */
+    getActiveModel() {
+        return activeModel || getEnvModel();
+    },
+
+    /**
+     * Change le modèle actif (enregistré en base)
      * @param {string|null} modelId - ID du modèle, ou null pour revenir au défaut
      */
-    setActiveModel(modelId) {
-        activeModel = modelId;
+    async setActiveModel(modelId) {
+        await saveSetting(MODEL_SETTING, modelId || null);
+        activeModel = modelId || null;
         console.log(`🔄 LocalLLM modèle actif changé: ${modelId || '(défaut .env)'}`);
     },
 
@@ -35,16 +58,30 @@ module.exports = {
     },
 
     /**
-     * Retourne l'URL de base du LLM local
+     * Retourne l'URL de base du LLM local (vide = LLM local désactivé)
      */
     getBaseUrl() {
-        return process.env.LOCAL_LLM_URL || LOCAL_LLM_BASE_URL;
+        return uiBaseUrl || getEnvBaseUrl();
+    },
+
+    getBaseUrlSource() {
+        return uiBaseUrl ? 'ui' : 'env';
+    },
+
+    getEnvBaseUrl,
+
+    /**
+     * Change l'URL du LLM local (enregistrée en base)
+     * @param {string|null} baseUrl - URL de l'API compatible OpenAI (ex: http://192.168.1.20:1234/v1), ou null pour le .env
+     */
+    async setBaseUrl(baseUrl) {
+        await saveSetting(URL_SETTING, baseUrl || null);
+        uiBaseUrl = baseUrl || null;
+        console.log(`🔄 LocalLLM URL : ${baseUrl || '(défaut .env)'}`);
     },
 
     /**
      * Retourne le modèle défini dans le .env (pour le bouton "restaurer défaut")
      */
-    getEnvModel() {
-        return process.env.LOCAL_LLM_MODEL || DEFAULT_LOCAL_LLM_MODEL;
-    }
+    getEnvModel
 };

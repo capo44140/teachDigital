@@ -4,6 +4,7 @@
  */
 
 const { analyzeWithAI } = require('./aiProviders/index.js');
+const providerSettings = require('./aiProviders/providerSettings.js');
 
 /**
  * Extrait le texte d'une image en utilisant un LLM avec vision
@@ -68,7 +69,7 @@ async function extractTextWithVisionAPI(base64Image, prompt) {
     }
     
     // 2. Essayer OpenAI Vision (GPT-4 Vision)
-    if (process.env.OPENAI_API_KEY) {
+    if (providerSettings.isConfigured('OpenAI')) {
         try {
             console.log('🔄 Tentative d\'extraction OCR avec OpenAI Vision...');
             const result = await extractTextWithOpenAIVision(base64Image, prompt);
@@ -80,7 +81,7 @@ async function extractTextWithVisionAPI(base64Image, prompt) {
     }
     
     // 3. Essayer Gemini Vision
-    if (process.env.GEMINI_API_KEY) {
+    if (providerSettings.isConfigured('Gemini')) {
         try {
             console.log('🔄 Tentative d\'extraction OCR avec Gemini Vision...');
             const result = await extractTextWithGeminiVision(base64Image, prompt);
@@ -100,10 +101,10 @@ async function extractTextWithVisionAPI(base64Image, prompt) {
 async function extractTextWithOpenAIVision(base64Image, prompt) {
     const { fetchWithTimeout, handleOpenAIResponse } = require('../../utils/fetch.js');
     const { OPENAI_BASE_URL } = require('../../utils/constants.js');
-    const apiKey = process.env.OPENAI_API_KEY;
-    
-    // Utiliser gpt-4o ou gpt-4-turbo qui supportent la vision
-    const model = 'gpt-4o';
+    const apiKey = providerSettings.getApiKey('OpenAI');
+
+    // Modèle configuré (gpt-4o par défaut) : il doit savoir lire les images
+    const model = providerSettings.getModel('OpenAI');
     
     const response = await fetchWithTimeout(`${OPENAI_BASE_URL}/chat/completions`, {
         method: 'POST',
@@ -148,9 +149,10 @@ async function extractTextWithOpenAIVision(base64Image, prompt) {
 async function extractTextWithGeminiVision(base64Image, prompt) {
     const { fetchWithTimeout } = require('../../utils/fetch.js');
     const { GEMINI_BASE_URL } = require('../../utils/constants.js');
-    const apiKey = process.env.GEMINI_API_KEY;
-    
-    const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.5-flash-exp:generateContent?key=${apiKey}`, {
+    const apiKey = providerSettings.getApiKey('Gemini');
+    const model = providerSettings.getModel('Gemini');
+
+    const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

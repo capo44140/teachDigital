@@ -5,13 +5,14 @@
 const AIProviderBase = require('./base.js');
 const { fetchWithTimeout } = require('../../utils/fetch.js');
 const { isValidDeepSeekKey } = require('../../utils/validation.js');
-const { DEEPSEEK_BASE_URL, DEFAULT_DEEPSEEK_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } = require('../../utils/constants.js');
+const { DEEPSEEK_BASE_URL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } = require('../../utils/constants.js');
+const providerSettings = require('./providerSettings.js');
 
 class DeepSeekProvider extends AIProviderBase {
     constructor() {
         super('DeepSeek');
-        this.apiKey = process.env.DEEPSEEK_API_KEY;
-        this.model = DEFAULT_DEEPSEEK_MODEL;
+        this.apiKey = providerSettings.getApiKey('DeepSeek');
+        this.model = providerSettings.getModel('DeepSeek');
     }
 
     isAvailable() {

@@ -5,13 +5,14 @@
 const AIProviderBase = require('./base.js');
 const { fetchWithTimeout } = require('../../utils/fetch.js');
 const { isValidGeminiKey } = require('../../utils/validation.js');
-const { GEMINI_BASE_URL, DEFAULT_GEMINI_MODEL } = require('../../utils/constants.js');
+const { GEMINI_BASE_URL } = require('../../utils/constants.js');
+const providerSettings = require('./providerSettings.js');
 
 class GeminiProvider extends AIProviderBase {
     constructor() {
         super('Gemini');
-        this.apiKey = process.env.GEMINI_API_KEY;
-        this.model = DEFAULT_GEMINI_MODEL;
+        this.apiKey = providerSettings.getApiKey('Gemini');
+        this.model = providerSettings.getModel('Gemini');
         this.maxRetries = 1;
     }
 
@@ -29,7 +30,7 @@ class GeminiProvider extends AIProviderBase {
         console.log(`🤖 Gemini analyzeText: Début (retry: ${retryCount}, texte: ${extractedText.substring(0, 50)}...)`);
 
         try {
-            const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.5-flash-exp:generateContent?key=${this.apiKey}`, {
+            const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/${this.model}:generateContent?key=${this.apiKey}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -93,13 +94,14 @@ ${extractedText}`
      * @param {Object} analysis - Analyse du contenu
      * @param {Object} childProfile - Profil de l'enfant
      * @param {number} questionCount - Nombre de questions souhaitées (défaut: 5)
+     * @param {number} retryCount - Nombre de tentatives
      * @returns {Promise<Object>} Quiz généré
      */
-    async generateQuiz(analysis, childProfile, questionCount = 5) {
+    async generateQuiz(analysis, childProfile, questionCount = 5, retryCount = 0) {
         console.log(`🎲 Gemini generateQuiz: Début (${questionCount} questions)`);
 
         try {
-            const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/gemini-2.5-flash-exp:generateContent?key=${this.apiKey}`, {
+            const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/${this.model}:generateContent?key=${this.apiKey}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -148,14 +150,14 @@ Format de réponse: {"title": "...", "description": "...", "questions": [{"quest
             } catch (parseError) {
                 if (retryCount < this.maxRetries) {
                     await new Promise(resolve => setTimeout(resolve, 500));
-                    return this.generateQuiz(analysis, childProfile, retryCount + 1);
+                    return this.generateQuiz(analysis, childProfile, questionCount, retryCount + 1);
                 }
                 throw new Error('Impossible de parser la réponse de Gemini');
             }
         } catch (error) {
             if (retryCount < this.maxRetries && error.message.includes('tronquée')) {
                 await new Promise(resolve => setTimeout(resolve, 500));
-                return this.generateQuiz(analysis, childProfile, retryCount + 1);
+                return this.generateQuiz(analysis, childProfile, questionCount, retryCount + 1);
             }
             throw error;
         }

@@ -5,13 +5,14 @@
 const AIProviderBase = require('./base.js');
 const { fetchWithTimeout, handleOpenAIResponse } = require('../../utils/fetch.js');
 const { isValidOpenAIKey } = require('../../utils/validation.js');
-const { OPENAI_BASE_URL, DEFAULT_OPENAI_MODEL, DEFAULT_MAX_TOKENS } = require('../../utils/constants.js');
+const { OPENAI_BASE_URL, DEFAULT_MAX_TOKENS } = require('../../utils/constants.js');
+const providerSettings = require('./providerSettings.js');
 
 class OpenAIProvider extends AIProviderBase {
     constructor() {
         super('OpenAI');
-        this.apiKey = process.env.OPENAI_API_KEY;
-        this.model = DEFAULT_OPENAI_MODEL;
+        this.apiKey = providerSettings.getApiKey('OpenAI');
+        this.model = providerSettings.getModel('OpenAI');
     }
 
     isAvailable() {

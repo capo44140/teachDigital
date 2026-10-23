@@ -23,7 +23,7 @@
             </button>
             <div>
               <h1 class="text-2xl font-bold text-white">Configuration IA</h1>
-              <p class="text-sm text-white/60 hidden sm:block">Gestion du LLM local et des modèles</p>
+              <p class="text-sm text-white/60 hidden sm:block">Providers IA, clés API et modèles</p>
             </div>
           </div>
           <!-- Bouton rafraîchir -->
@@ -77,6 +77,57 @@
               {{ status.connected ? 'En ligne' : 'Hors ligne' }}
             </span>
           </div>
+
+          <!-- URL de LM Studio -->
+          <form class="p-4 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 mb-4" @submit.prevent="saveLocalLLMUrl(localLLMUrlInput.trim() || null)">
+            <div class="flex items-center justify-between mb-2">
+              <label for="local-llm-url" class="text-xs text-white/40 uppercase tracking-wider">URL de l'API</label>
+              <span :class="[
+                'text-xs px-3 py-1 rounded-full font-medium',
+                status.baseUrlSource === 'ui'
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                  : 'bg-slate-500/20 text-slate-300 border border-slate-500/30'
+              ]">
+                {{ status.baseUrlSource === 'ui' ? 'Depuis interface' : 'Depuis .env' }}
+              </span>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <input
+                id="local-llm-url"
+                v-model="localLLMUrlInput"
+                type="url"
+                autocomplete="off"
+                placeholder="http://192.168.1.20:1234/v1"
+                class="flex-1 min-w-0 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-all font-mono text-sm"
+              >
+              <button
+                type="submit"
+                :disabled="!localLLMUrlChanged || savingLocalLLMUrl"
+                :class="[
+                  'px-6 py-3 rounded-xl font-medium transition-all',
+                  (!localLLMUrlChanged || savingLocalLLMUrl)
+                    ? 'bg-white/5 text-white/30 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg hover:shadow-purple-500/50'
+                ]"
+              >
+                {{ savingLocalLLMUrl ? 'Enregistrement...' : 'Enregistrer' }}
+              </button>
+              <button
+                v-if="status.baseUrlSource === 'ui'"
+                type="button"
+                :disabled="savingLocalLLMUrl"
+                class="px-6 py-3 bg-white/10 border border-white/20 text-white rounded-xl hover:bg-white/20 hover:border-white/30 transition-all text-sm"
+                @click="saveLocalLLMUrl(null)"
+              >
+                Restaurer le défaut (.env)
+              </button>
+            </div>
+            <p class="text-xs text-white/30 mt-2">
+              API compatible OpenAI du poste qui fait tourner LM Studio.
+              <span v-if="status.baseUrlSource === 'ui'">Défaut .env : {{ status.envBaseUrl || 'aucun' }}</span>
+            </p>
+            <p v-if="localLLMUrlError" class="text-red-300 text-sm mt-2">{{ localLLMUrlError }}</p>
+          </form>
 
           <!-- Modèle actif -->
           <div class="p-4 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 mb-6">
@@ -198,156 +249,65 @@
           </div>
         </div>
 
-        <!-- Section Providers IA -->
+        <!-- Section Providers IA : statut + clé API et modèle de chaque provider -->
         <div class="glass-card-dashboard">
-          <h2 class="text-xl font-bold text-white mb-6 flex items-center">
+          <h2 class="text-xl font-bold text-white mb-2 flex items-center">
             <svg class="w-6 h-6 text-amber-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
             </svg>
             Providers IA
           </h2>
+          <p class="text-sm text-white/50 mb-6">Cliquez sur un provider pour régler sa clé API et son modèle.</p>
 
-          <!-- Chargement providers -->
-          <div v-if="loadingProviders" class="flex items-center justify-center py-6">
-            <svg class="animate-spin w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span class="ml-3 text-white/60 text-sm">Vérification des providers...</span>
+          <div v-if="providersConfigError" class="bg-red-500/20 border border-red-500/30 rounded-xl p-4 mb-4">
+            <p class="text-red-200 text-sm">{{ providersConfigError }}</p>
           </div>
 
-          <!-- Liste des providers -->
-          <div v-else class="space-y-3">
+          <div class="space-y-3">
             <div
-              v-for="provider in providers"
-              :key="provider.name"
-              class="flex items-center justify-between p-4 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20"
+              v-for="row in providerRows"
+              :key="row.name"
+              class="p-4 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20"
             >
-              <div class="flex items-center space-x-3">
-                <div :class="[
-                  'w-3 h-3 rounded-full flex-shrink-0',
-                  !provider.keyConfigured ? 'bg-slate-500' : (provider.reachable ? 'bg-green-400 shadow-lg shadow-green-400/50' : 'bg-red-400 shadow-lg shadow-red-400/50')
-                ]"></div>
-                <div>
-                  <p class="text-sm font-medium text-white">{{ provider.label }}</p>
-                  <p class="text-xs text-white/30">{{ provider.model }}</p>
+              <button
+                type="button"
+                :class="['w-full flex items-center justify-between gap-3 text-left', row.config ? 'cursor-pointer' : 'cursor-default']"
+                :disabled="!row.config"
+                :aria-expanded="expandedProvider === row.name"
+                @click="toggleProvider(row.name)"
+              >
+                <div class="flex items-center space-x-3 min-w-0">
+                  <div :class="['w-3 h-3 rounded-full flex-shrink-0', providerState(row).dot]"></div>
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium text-white">{{ row.label }}</p>
+                    <p class="text-xs text-white/30 font-mono truncate">
+                      {{ row.model }}<span v-if="!row.config"> · réglé dans la section LM Studio</span>
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <span :class="[
-                'text-xs px-3 py-1 rounded-full font-medium',
-                !provider.keyConfigured 
-                  ? 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
-                  : (provider.reachable 
-                    ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                    : 'bg-red-500/20 text-red-300 border border-red-500/30')
-              ]">
-                {{ !provider.keyConfigured ? 'Non configuré' : (provider.reachable ? 'En ligne' : 'Hors ligne') }}
-              </span>
+                <div class="flex items-center space-x-3 flex-shrink-0">
+                  <span :class="['text-xs px-3 py-1 rounded-full font-medium', providerState(row).badge]">
+                    {{ providerState(row).text }}
+                  </span>
+                  <svg
+                    v-if="row.config"
+                    :class="['w-4 h-4 text-white/40 transition-transform', expandedProvider === row.name ? 'rotate-180' : '']"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </div>
+              </button>
+
+              <AIProviderConfig
+                v-if="row.config && expandedProvider === row.name"
+                :config="row.config"
+                @saved="onProviderSaved"
+              />
             </div>
           </div>
 
           <p class="text-xs text-white/20 mt-4">Ordre de priorité : LocalLLM, OpenAI, Gemini, DeepSeek, Groq, Mistral, Kimi, OpenRouter</p>
-        </div>
-
-        <!-- Section OpenRouter -->
-        <div class="glass-card-dashboard">
-          <h2 class="text-xl font-bold text-white mb-6 flex items-center">
-            <svg class="w-6 h-6 text-indigo-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
-            </svg>
-            OpenRouter
-          </h2>
-
-          <!-- Statut de la clé -->
-          <div class="flex items-center justify-between p-4 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 mb-4">
-            <div class="flex items-center space-x-3">
-              <div :class="[
-                'w-3 h-3 rounded-full flex-shrink-0',
-                openRouter.keyConfigured ? 'bg-green-400 shadow-lg shadow-green-400/50' : 'bg-slate-500'
-              ]"></div>
-              <div>
-                <p class="text-sm font-medium text-white">
-                  {{ openRouter.keyConfigured ? 'Clé enregistrée' : 'Aucune clé' }}
-                </p>
-                <p class="text-xs text-white/40 font-mono">{{ openRouter.maskedKey || 'Ajoutez votre clé ci-dessous' }}</p>
-              </div>
-            </div>
-            <span v-if="openRouter.keySource" :class="[
-              'text-xs px-3 py-1 rounded-full font-medium',
-              openRouter.keySource === 'ui'
-                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                : 'bg-slate-500/20 text-slate-300 border border-slate-500/30'
-            ]">
-              {{ openRouter.keySource === 'ui' ? 'Depuis interface' : 'Depuis .env' }}
-            </span>
-          </div>
-
-          <!-- Formulaire -->
-          <form class="space-y-4" @submit.prevent="saveOpenRouter">
-            <div>
-              <label for="openrouter-key" class="block text-xs text-white/40 uppercase tracking-wider mb-2">
-                {{ openRouter.keyConfigured ? 'Remplacer la clé API' : 'Clé API' }}
-              </label>
-              <input
-                id="openrouter-key"
-                v-model="openRouterKeyInput"
-                type="password"
-                autocomplete="off"
-                placeholder="sk-or-v1-..."
-                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-all font-mono text-sm"
-              >
-              <p class="text-xs text-white/30 mt-1">
-                Créez une clé sur openrouter.ai/keys. Elle est vérifiée puis stockée chiffrée sur le serveur.
-              </p>
-            </div>
-
-            <div>
-              <label for="openrouter-model" class="block text-xs text-white/40 uppercase tracking-wider mb-2">Modèle</label>
-              <input
-                id="openrouter-model"
-                v-model="openRouterModelInput"
-                type="text"
-                autocomplete="off"
-                :placeholder="openRouter.defaultModel"
-                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-all font-mono text-sm"
-              >
-              <p class="text-xs text-white/30 mt-1">
-                Identifiant OpenRouter (ex : openai/gpt-4o-mini, anthropic/claude-sonnet-4.5). Vide = défaut : {{ openRouter.defaultModel }}
-              </p>
-            </div>
-
-            <div v-if="openRouterError" class="bg-red-500/20 border border-red-500/30 rounded-xl p-4">
-              <p class="text-red-200 text-sm">{{ openRouterError }}</p>
-            </div>
-
-            <div class="flex flex-col sm:flex-row gap-3">
-              <button
-                type="submit"
-                :disabled="!openRouterHasChanges || savingOpenRouter"
-                :class="[
-                  'flex-1 px-6 py-3 rounded-xl font-medium transition-all flex items-center justify-center space-x-2',
-                  (!openRouterHasChanges || savingOpenRouter)
-                    ? 'bg-white/5 text-white/30 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg hover:shadow-purple-500/50'
-                ]"
-              >
-                <svg v-if="savingOpenRouter" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>{{ savingOpenRouter ? 'Vérification...' : 'Enregistrer' }}</span>
-              </button>
-              <button
-                v-if="openRouter.keySource === 'ui'"
-                type="button"
-                :disabled="savingOpenRouter"
-                class="px-6 py-3 bg-white/10 border border-white/20 text-white rounded-xl hover:bg-red-500/20 hover:border-red-500/30 transition-all text-sm"
-                @click="deleteOpenRouterKey"
-              >
-                Supprimer la clé
-              </button>
-            </div>
-          </form>
         </div>
 
         <!-- Section Pages de cours -->
@@ -448,9 +408,13 @@
 
 <script>
 import { AIService } from '../services/aiService.js'
+import AIProviderConfig from './AIProviderConfig.vue'
 
 export default {
   name: 'AISettings',
+  components: {
+    AIProviderConfig
+  },
   data() {
     return {
       loading: false,
@@ -461,6 +425,8 @@ export default {
       status: {
         connected: false,
         baseUrl: '',
+        baseUrlSource: 'env',
+        envBaseUrl: '',
         activeModel: '',
         activeModelSource: 'env',
         envModel: '',
@@ -468,19 +434,14 @@ export default {
       },
       models: [],
       selectedModel: null,
+      localLLMUrlInput: '',
+      savingLocalLLMUrl: false,
+      localLLMUrlError: null,
+      // Statut réseau (lent) et configuration (clé masquée, modèle) des providers
       providers: [],
-      openRouter: {
-        keyConfigured: false,
-        keySource: null,
-        maskedKey: '',
-        model: '',
-        modelSource: 'env',
-        defaultModel: ''
-      },
-      openRouterKeyInput: '',
-      openRouterModelInput: '',
-      savingOpenRouter: false,
-      openRouterError: null,
+      providersConfig: [],
+      providersConfigError: null,
+      expandedProvider: null,
       coursePage: {
         provider: null,
         options: []
@@ -497,13 +458,31 @@ export default {
         ...this.coursePage.options.map(option => ({ ...option, description: option.model || '' }))
       ]
     },
-    // Modèle saisi tel qu'il sera enregistré (vide = défaut)
-    openRouterSavedModelInput() {
-      return this.openRouter.modelSource === 'ui' ? this.openRouter.model : ''
+    localLLMUrlChanged() {
+      const savedUrl = this.status.baseUrlSource === 'ui' ? this.status.baseUrl : ''
+      const input = this.localLLMUrlInput.trim()
+      return input !== '' && input !== savedUrl
     },
-    openRouterHasChanges() {
-      return this.openRouterKeyInput.trim() !== '' ||
-        this.openRouterModelInput.trim() !== this.openRouterSavedModelInput
+    // LM Studio (réglé dans sa propre section) puis les providers à clé API, avec leur statut réseau
+    providerRows() {
+      const statusByName = Object.fromEntries(this.providers.map(provider => [provider.name, provider]))
+      const localLLM = statusByName.LocalLLM
+      return [
+        {
+          name: 'LocalLLM',
+          label: 'LM Studio',
+          model: this.status.activeModel,
+          keyConfigured: localLLM ? localLLM.keyConfigured : !!this.status.baseUrl,
+          config: null
+        },
+        ...this.providersConfig.map(config => ({
+          name: config.name,
+          label: config.label,
+          model: config.model,
+          keyConfigured: config.keyConfigured,
+          config
+        }))
+      ].map(row => ({ ...row, reachable: statusByName[row.name]?.reachable ?? null }))
     }
   },
   async mounted() {
@@ -525,6 +504,8 @@ export default {
           this.status = {
             connected: data.connected,
             baseUrl: data.baseUrl,
+            baseUrlSource: data.baseUrlSource || 'env',
+            envBaseUrl: data.envBaseUrl || '',
             activeModel: data.activeModel,
             activeModelSource: data.activeModelSource,
             envModel: data.envModel,
@@ -532,6 +513,7 @@ export default {
           }
           this.models = data.models || []
           this.selectedModel = data.activeModel
+          this.localLLMUrlInput = data.baseUrl || ''
         }
 
         // Charger aussi le statut pour le mode OCR
@@ -549,16 +531,76 @@ export default {
         this.loading = false
       }
 
-      await this.loadOpenRouterConfig(aiService)
+      await this.loadProvidersConfig(aiService)
       await this.loadCoursePageProvider(aiService)
+      await this.refreshProvidersStatus(aiService)
+    },
 
-      // Charger les providers en parallèle (peut prendre quelques secondes)
+    // Statut réseau des providers (peut prendre quelques secondes)
+    async refreshProvidersStatus(aiService = new AIService()) {
+      this.loadingProviders = true
       try {
         this.providers = await aiService.getProvidersStatus()
       } catch (_e) {
         // Pas bloquant
       } finally {
         this.loadingProviders = false
+      }
+    },
+
+    async loadProvidersConfig(aiService = new AIService()) {
+      this.providersConfigError = null
+      try {
+        this.providersConfig = await aiService.getProvidersConfig()
+      } catch (err) {
+        this.providersConfigError = 'Impossible de charger la configuration des providers: ' + (err.message || 'erreur inconnue')
+      }
+    },
+
+    toggleProvider(name) {
+      this.expandedProvider = this.expandedProvider === name ? null : name
+    },
+
+    // Pastille et badge : non configuré, vérification en cours, en ligne ou hors ligne
+    providerState(row) {
+      if (!row.keyConfigured) {
+        return { dot: 'bg-slate-500', badge: 'bg-slate-500/20 text-slate-400 border border-slate-500/30', text: 'Non configuré' }
+      }
+      if (this.loadingProviders || row.reachable === null) {
+        return { dot: 'bg-slate-400 animate-pulse', badge: 'bg-slate-500/20 text-slate-300 border border-slate-500/30', text: 'Vérification…' }
+      }
+      return row.reachable
+        ? { dot: 'bg-green-400 shadow-lg shadow-green-400/50', badge: 'bg-green-500/20 text-green-300 border border-green-500/30', text: 'En ligne' }
+        : { dot: 'bg-red-400 shadow-lg shadow-red-400/50', badge: 'bg-red-500/20 text-red-300 border border-red-500/30', text: 'Hors ligne' }
+    },
+
+    async onProviderSaved(config, message) {
+      if (config) {
+        this.providersConfig = this.providersConfig.map(current => current.name === config.name ? config : current)
+      }
+      this.successMessage = message
+      setTimeout(() => { this.successMessage = null }, 4000)
+
+      const aiService = new AIService()
+      await this.loadCoursePageProvider(aiService)
+      await this.refreshProvidersStatus(aiService)
+    },
+
+    async saveLocalLLMUrl(baseUrl) {
+      this.savingLocalLLMUrl = true
+      this.localLLMUrlError = null
+      this.successMessage = null
+
+      try {
+        const result = await new AIService().setLocalLLMUrl(baseUrl)
+        // Recharger les modèles et le statut avec la nouvelle URL (loadData efface les messages)
+        await this.loadData()
+        this.successMessage = baseUrl ? `URL LM Studio enregistrée : ${result?.baseUrl}` : 'URL LM Studio restaurée au défaut (.env)'
+        setTimeout(() => { this.successMessage = null }, 4000)
+      } catch (err) {
+        this.localLLMUrlError = err.message || 'Erreur lors de l\'enregistrement de l\'URL'
+      } finally {
+        this.savingLocalLLMUrl = false
       }
     },
 
@@ -609,67 +651,6 @@ export default {
         this.error = 'Erreur lors de la restauration: ' + (err.message || 'erreur inconnue')
       } finally {
         this.applying = false
-      }
-    },
-
-    applyOpenRouterConfig(config) {
-      if (!config) return
-      this.openRouter = config
-      this.openRouterKeyInput = ''
-      this.openRouterModelInput = this.openRouterSavedModelInput
-    },
-
-    async loadOpenRouterConfig(aiService = new AIService()) {
-      try {
-        this.applyOpenRouterConfig(await aiService.getOpenRouterConfig())
-      } catch (err) {
-        this.openRouterError = 'Impossible de charger la configuration OpenRouter: ' + (err.message || 'erreur inconnue')
-      }
-    },
-
-    async saveOpenRouter() {
-      if (!this.openRouterHasChanges) return
-
-      this.savingOpenRouter = true
-      this.openRouterError = null
-      this.successMessage = null
-
-      const payload = {}
-      const apiKey = this.openRouterKeyInput.trim()
-      const model = this.openRouterModelInput.trim()
-      if (apiKey) payload.apiKey = apiKey
-      if (model !== this.openRouterSavedModelInput) payload.model = model || null
-
-      try {
-        const aiService = new AIService()
-        this.applyOpenRouterConfig(await aiService.saveOpenRouterConfig(payload))
-        this.successMessage = 'Configuration OpenRouter enregistrée'
-        setTimeout(() => { this.successMessage = null }, 4000)
-        await this.loadCoursePageProvider(aiService)
-        this.providers = await aiService.getProvidersStatus().catch(() => this.providers)
-      } catch (err) {
-        this.openRouterError = err.message || 'Erreur lors de l\'enregistrement'
-      } finally {
-        this.savingOpenRouter = false
-      }
-    },
-
-    async deleteOpenRouterKey() {
-      this.savingOpenRouter = true
-      this.openRouterError = null
-      this.successMessage = null
-
-      try {
-        const aiService = new AIService()
-        this.applyOpenRouterConfig(await aiService.deleteOpenRouterKey())
-        this.successMessage = 'Clé OpenRouter supprimée'
-        setTimeout(() => { this.successMessage = null }, 4000)
-        await this.loadCoursePageProvider(aiService)
-        this.providers = await aiService.getProvidersStatus().catch(() => this.providers)
-      } catch (err) {
-        this.openRouterError = err.message || 'Erreur lors de la suppression'
-      } finally {
-        this.savingOpenRouter = false
       }
     },
 

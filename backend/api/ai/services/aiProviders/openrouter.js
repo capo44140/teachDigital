@@ -4,7 +4,7 @@
  */
 
 const AIProviderBase = require('./base.js');
-const openRouterConfig = require('./openRouterConfig.js');
+const providerSettings = require('./providerSettings.js');
 const { fetchWithTimeout } = require('../../utils/fetch.js');
 const { isValidOpenRouterKey } = require('../../utils/validation.js');
 const { OPENROUTER_BASE_URL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } = require('../../utils/constants.js');
@@ -12,8 +12,8 @@ const { OPENROUTER_BASE_URL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } = require
 class OpenRouterProvider extends AIProviderBase {
     constructor() {
         super('OpenRouter');
-        this.apiKey = openRouterConfig.getApiKey();
-        this.model = openRouterConfig.getModel();
+        this.apiKey = providerSettings.getApiKey('OpenRouter');
+        this.model = providerSettings.getModel('OpenRouter');
     }
 
     isAvailable() {

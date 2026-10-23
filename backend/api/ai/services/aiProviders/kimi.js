@@ -6,13 +6,14 @@
 const AIProviderBase = require('./base.js');
 const { fetchWithTimeout } = require('../../utils/fetch.js');
 const { isValidKimiKey } = require('../../utils/validation.js');
-const { KIMI_BASE_URL, DEFAULT_KIMI_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } = require('../../utils/constants.js');
+const { KIMI_BASE_URL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } = require('../../utils/constants.js');
+const providerSettings = require('./providerSettings.js');
 
 class KimiProvider extends AIProviderBase {
     constructor() {
         super('Kimi');
-        this.apiKey = process.env.KIMI_API_KEY;
-        this.model = DEFAULT_KIMI_MODEL;
+        this.apiKey = providerSettings.getApiKey('Kimi');
+        this.model = providerSettings.getModel('Kimi');
     }
 
     isAvailable() {
