@@ -246,7 +246,108 @@
             </div>
           </div>
 
-          <p class="text-xs text-white/20 mt-4">Ordre de priorité : LocalLLM, OpenAI, Gemini, DeepSeek, Groq, Mistral</p>
+          <p class="text-xs text-white/20 mt-4">Ordre de priorité : LocalLLM, OpenAI, Gemini, DeepSeek, Groq, Mistral, Kimi, OpenRouter</p>
+        </div>
+
+        <!-- Section OpenRouter -->
+        <div class="glass-card-dashboard">
+          <h2 class="text-xl font-bold text-white mb-6 flex items-center">
+            <svg class="w-6 h-6 text-indigo-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+            </svg>
+            OpenRouter
+          </h2>
+
+          <!-- Statut de la clé -->
+          <div class="flex items-center justify-between p-4 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 mb-4">
+            <div class="flex items-center space-x-3">
+              <div :class="[
+                'w-3 h-3 rounded-full flex-shrink-0',
+                openRouter.keyConfigured ? 'bg-green-400 shadow-lg shadow-green-400/50' : 'bg-slate-500'
+              ]"></div>
+              <div>
+                <p class="text-sm font-medium text-white">
+                  {{ openRouter.keyConfigured ? 'Clé enregistrée' : 'Aucune clé' }}
+                </p>
+                <p class="text-xs text-white/40 font-mono">{{ openRouter.maskedKey || 'Ajoutez votre clé ci-dessous' }}</p>
+              </div>
+            </div>
+            <span v-if="openRouter.keySource" :class="[
+              'text-xs px-3 py-1 rounded-full font-medium',
+              openRouter.keySource === 'ui'
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                : 'bg-slate-500/20 text-slate-300 border border-slate-500/30'
+            ]">
+              {{ openRouter.keySource === 'ui' ? 'Depuis interface' : 'Depuis .env' }}
+            </span>
+          </div>
+
+          <!-- Formulaire -->
+          <form class="space-y-4" @submit.prevent="saveOpenRouter">
+            <div>
+              <label for="openrouter-key" class="block text-xs text-white/40 uppercase tracking-wider mb-2">
+                {{ openRouter.keyConfigured ? 'Remplacer la clé API' : 'Clé API' }}
+              </label>
+              <input
+                id="openrouter-key"
+                v-model="openRouterKeyInput"
+                type="password"
+                autocomplete="off"
+                placeholder="sk-or-v1-..."
+                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-all font-mono text-sm"
+              >
+              <p class="text-xs text-white/30 mt-1">
+                Créez une clé sur openrouter.ai/keys. Elle est vérifiée puis stockée chiffrée sur le serveur.
+              </p>
+            </div>
+
+            <div>
+              <label for="openrouter-model" class="block text-xs text-white/40 uppercase tracking-wider mb-2">Modèle</label>
+              <input
+                id="openrouter-model"
+                v-model="openRouterModelInput"
+                type="text"
+                autocomplete="off"
+                :placeholder="openRouter.defaultModel"
+                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-all font-mono text-sm"
+              >
+              <p class="text-xs text-white/30 mt-1">
+                Identifiant OpenRouter (ex : openai/gpt-4o-mini, anthropic/claude-sonnet-4.5). Vide = défaut : {{ openRouter.defaultModel }}
+              </p>
+            </div>
+
+            <div v-if="openRouterError" class="bg-red-500/20 border border-red-500/30 rounded-xl p-4">
+              <p class="text-red-200 text-sm">{{ openRouterError }}</p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+              <button
+                type="submit"
+                :disabled="!openRouterHasChanges || savingOpenRouter"
+                :class="[
+                  'flex-1 px-6 py-3 rounded-xl font-medium transition-all flex items-center justify-center space-x-2',
+                  (!openRouterHasChanges || savingOpenRouter)
+                    ? 'bg-white/5 text-white/30 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg hover:shadow-purple-500/50'
+                ]"
+              >
+                <svg v-if="savingOpenRouter" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>{{ savingOpenRouter ? 'Vérification...' : 'Enregistrer' }}</span>
+              </button>
+              <button
+                v-if="openRouter.keySource === 'ui'"
+                type="button"
+                :disabled="savingOpenRouter"
+                class="px-6 py-3 bg-white/10 border border-white/20 text-white rounded-xl hover:bg-red-500/20 hover:border-red-500/30 transition-all text-sm"
+                @click="deleteOpenRouterKey"
+              >
+                Supprimer la clé
+              </button>
+            </div>
+          </form>
         </div>
 
         <!-- Section Mode OCR -->
@@ -317,7 +418,29 @@ export default {
       },
       models: [],
       selectedModel: null,
-      providers: []
+      providers: [],
+      openRouter: {
+        keyConfigured: false,
+        keySource: null,
+        maskedKey: '',
+        model: '',
+        modelSource: 'env',
+        defaultModel: ''
+      },
+      openRouterKeyInput: '',
+      openRouterModelInput: '',
+      savingOpenRouter: false,
+      openRouterError: null
+    }
+  },
+  computed: {
+    // Modèle saisi tel qu'il sera enregistré (vide = défaut)
+    openRouterSavedModelInput() {
+      return this.openRouter.modelSource === 'ui' ? this.openRouter.model : ''
+    },
+    openRouterHasChanges() {
+      return this.openRouterKeyInput.trim() !== '' ||
+        this.openRouterModelInput.trim() !== this.openRouterSavedModelInput
     }
   },
   async mounted() {
@@ -362,6 +485,8 @@ export default {
       } finally {
         this.loading = false
       }
+
+      await this.loadOpenRouterConfig(aiService)
 
       // Charger les providers en parallèle (peut prendre quelques secondes)
       try {
@@ -420,6 +545,65 @@ export default {
         this.error = 'Erreur lors de la restauration: ' + (err.message || 'erreur inconnue')
       } finally {
         this.applying = false
+      }
+    },
+
+    applyOpenRouterConfig(config) {
+      if (!config) return
+      this.openRouter = config
+      this.openRouterKeyInput = ''
+      this.openRouterModelInput = this.openRouterSavedModelInput
+    },
+
+    async loadOpenRouterConfig(aiService = new AIService()) {
+      try {
+        this.applyOpenRouterConfig(await aiService.getOpenRouterConfig())
+      } catch (err) {
+        this.openRouterError = 'Impossible de charger la configuration OpenRouter: ' + (err.message || 'erreur inconnue')
+      }
+    },
+
+    async saveOpenRouter() {
+      if (!this.openRouterHasChanges) return
+
+      this.savingOpenRouter = true
+      this.openRouterError = null
+      this.successMessage = null
+
+      const payload = {}
+      const apiKey = this.openRouterKeyInput.trim()
+      const model = this.openRouterModelInput.trim()
+      if (apiKey) payload.apiKey = apiKey
+      if (model !== this.openRouterSavedModelInput) payload.model = model || null
+
+      try {
+        const aiService = new AIService()
+        this.applyOpenRouterConfig(await aiService.saveOpenRouterConfig(payload))
+        this.successMessage = 'Configuration OpenRouter enregistrée'
+        setTimeout(() => { this.successMessage = null }, 4000)
+        this.providers = await aiService.getProvidersStatus().catch(() => this.providers)
+      } catch (err) {
+        this.openRouterError = err.message || 'Erreur lors de l\'enregistrement'
+      } finally {
+        this.savingOpenRouter = false
+      }
+    },
+
+    async deleteOpenRouterKey() {
+      this.savingOpenRouter = true
+      this.openRouterError = null
+      this.successMessage = null
+
+      try {
+        const aiService = new AIService()
+        this.applyOpenRouterConfig(await aiService.deleteOpenRouterKey())
+        this.successMessage = 'Clé OpenRouter supprimée'
+        setTimeout(() => { this.successMessage = null }, 4000)
+        this.providers = await aiService.getProvidersStatus().catch(() => this.providers)
+      } catch (err) {
+        this.openRouterError = err.message || 'Erreur lors de la suppression'
+      } finally {
+        this.savingOpenRouter = false
       }
     },
 

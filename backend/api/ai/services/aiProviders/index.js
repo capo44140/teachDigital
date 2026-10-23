@@ -10,10 +10,11 @@ const DeepSeekProvider = require('./deepseek.js');
 const GroqProvider = require('./groq.js');
 const MistralProvider = require('./mistral.js');
 const KimiProvider = require('./kimi.js');
+const OpenRouterProvider = require('./openrouter.js');
 
 /**
  * Crée et retourne tous les providers disponibles dans l'ordre de priorité
- * Ordre: LocalLLM → OpenAI → Gemini → DeepSeek → Groq → Mistral
+ * Ordre: LocalLLM → OpenAI → Gemini → DeepSeek → Groq → Mistral → Kimi → OpenRouter
  * @returns {Array} Liste des providers disponibles
  */
 function getAvailableProviders() {
@@ -57,6 +58,9 @@ function getAvailableProviders() {
 
     // 7. Kimi / Moonshot (API compatible OpenAI)
     maybeAdd(new KimiProvider());
+
+    // 8. OpenRouter (clé et modèle configurables depuis l'interface)
+    maybeAdd(new OpenRouterProvider());
 
     // Si un ordre est fourni, re-trier selon cet ordre
     if (orderList.length > 0) {

@@ -18,6 +18,7 @@ const { validateApiKey, hasAtLeastOneValidKey } = require('./utils/validation.js
 const { validateAndNormalizeQuiz } = require('./utils/quizFormat.js');
 const { generateCoursePageFromImages, COURSE_PAGE_TIMEOUT_MS } = require('./services/coursePageGenerator.js');
 const localLLMConfig = require('./services/aiProviders/localLLMConfig.js');
+const openRouterConfig = require('./services/aiProviders/openRouterConfig.js');
 
 // ==================== CONFIGURATION OCR ====================
 
@@ -99,6 +100,19 @@ module.exports = async function handler(req, res) {
 
         if (pathname === '/local-llm/model' && method === 'POST') {
             return await handleSetLocalLLMModel(req, res);
+        }
+
+        // Routes OpenRouter (clé API et modèle enregistrés depuis l'interface)
+        if (pathname === '/openrouter/config' && method === 'GET') {
+            return await handleGetOpenRouterConfig(req, res);
+        }
+
+        if (pathname === '/openrouter/config' && method === 'POST') {
+            return await handleSetOpenRouterConfig(req, res);
+        }
+
+        if (pathname === '/openrouter/key' && method === 'DELETE') {
+            return await handleDeleteOpenRouterKey(req, res);
         }
 
         if (pathname === '/providers' && method === 'GET') {
@@ -897,6 +911,102 @@ async function handleSetLocalLLMModel(req, res) {
     }
 }
 
+// ==================== HANDLERS OPENROUTER ====================
+
+// Identifiant de modèle OpenRouter : "fournisseur/modele" éventuellement suffixé (ex: ":free")
+const OPENROUTER_MODEL_PATTERN = /^[\w.-]+\/[\w.:-]+$/;
+
+function getOpenRouterConfigPayload() {
+    return {
+        keyConfigured: !!openRouterConfig.getApiKey(),
+        keySource: openRouterConfig.getApiKeySource(),
+        maskedKey: openRouterConfig.getMaskedApiKey(),
+        model: openRouterConfig.getModel(),
+        modelSource: openRouterConfig.getModelSource(),
+        defaultModel: openRouterConfig.getDefaultModel()
+    };
+}
+
+/**
+ * Retourne la configuration OpenRouter (la clé n'est jamais renvoyée en clair)
+ */
+async function handleGetOpenRouterConfig(req, res) {
+    console.log('🌐 handleGetOpenRouterConfig: Début');
+    return res.status(200).json(createResponse('Configuration OpenRouter', getOpenRouterConfigPayload()));
+}
+
+/**
+ * Enregistre la clé API et/ou le modèle OpenRouter
+ * Body: { apiKey?: string, model?: string|null } (model null = retour au défaut)
+ */
+async function handleSetOpenRouterConfig(req, res) {
+    console.log('🌐 handleSetOpenRouterConfig: Début');
+    try {
+        const { isValidOpenRouterKey } = require('./utils/validation.js');
+        const { fetchWithTimeout } = require('./utils/fetch.js');
+        const { OPENROUTER_BASE_URL } = require('./utils/constants.js');
+
+        const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) || {};
+        const apiKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : undefined;
+        const model = typeof body.model === 'string' ? body.model.trim() : body.model;
+
+        if (apiKey === undefined && model === undefined) {
+            return res.status(400).json(createErrorResponse('apiKey ou model requis'));
+        }
+
+        if (apiKey !== undefined && !isValidOpenRouterKey(apiKey)) {
+            return res.status(400).json(createErrorResponse('Clé OpenRouter invalide (elle doit commencer par "sk-or-")'));
+        }
+
+        if (model !== undefined && model !== null && model !== '' && !OPENROUTER_MODEL_PATTERN.test(model)) {
+            return res.status(400).json(createErrorResponse('Modèle invalide (format attendu : fournisseur/modele, ex: openai/gpt-4o-mini)'));
+        }
+
+        if (apiKey !== undefined) {
+            // Vérifier la clé auprès d'OpenRouter avant de l'enregistrer
+            let response;
+            try {
+                response = await fetchWithTimeout(`${OPENROUTER_BASE_URL}/key`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${apiKey}` }
+                }, 10000);
+            } catch (fetchError) {
+                return res.status(502).json(createErrorResponse('OpenRouter injoignable, clé non vérifiée : ' + fetchError.message));
+            }
+            if (response.status === 401 || response.status === 403) {
+                return res.status(400).json(createErrorResponse('Clé refusée par OpenRouter'));
+            }
+            if (!response.ok) {
+                return res.status(502).json(createErrorResponse(`OpenRouter a répondu ${response.status}, clé non enregistrée`));
+            }
+            await openRouterConfig.setApiKey(apiKey);
+        }
+
+        if (model !== undefined) {
+            await openRouterConfig.setModel(model || null);
+        }
+
+        return res.status(200).json(createResponse('Configuration OpenRouter enregistrée', getOpenRouterConfigPayload()));
+    } catch (error) {
+        console.error('❌ Erreur lors de l\'enregistrement de la configuration OpenRouter:', error);
+        return res.status(500).json(createErrorResponse('Erreur lors de l\'enregistrement de la configuration OpenRouter: ' + error.message));
+    }
+}
+
+/**
+ * Supprime la clé OpenRouter enregistrée depuis l'interface (retour à OPENROUTER_API_KEY du .env)
+ */
+async function handleDeleteOpenRouterKey(req, res) {
+    console.log('🌐 handleDeleteOpenRouterKey: Début');
+    try {
+        await openRouterConfig.setApiKey(null);
+        return res.status(200).json(createResponse('Clé OpenRouter supprimée', getOpenRouterConfigPayload()));
+    } catch (error) {
+        console.error('❌ Erreur lors de la suppression de la clé OpenRouter:', error);
+        return res.status(500).json(createErrorResponse('Erreur lors de la suppression de la clé OpenRouter: ' + error.message));
+    }
+}
+
 // ==================== HANDLER PROVIDERS STATUS ====================
 
 /**
@@ -907,7 +1017,8 @@ async function handleGetProviders(req, res) {
     try {
         const { fetchWithTimeout } = require('./utils/fetch.js');
         const { isLocalLLMAvailable } = require('./utils/validation.js');
-        const { LOCAL_LLM_BASE_URL, OPENAI_BASE_URL, GEMINI_BASE_URL, DEEPSEEK_BASE_URL, GROQ_BASE_URL, MISTRAL_BASE_URL, KIMI_BASE_URL } = require('./utils/constants.js');
+        const { isValidOpenRouterKey } = require('./utils/validation.js');
+        const { OPENAI_BASE_URL, GEMINI_BASE_URL, DEEPSEEK_BASE_URL, GROQ_BASE_URL, MISTRAL_BASE_URL, KIMI_BASE_URL, OPENROUTER_BASE_URL } = require('./utils/constants.js');
 
         // Définition des providers avec leur check
         const providerDefs = [
@@ -970,6 +1081,15 @@ async function handleGetProviders(req, res) {
                 model: 'moonshot-v1-8k',
                 checkUrl: `${KIMI_BASE_URL}/models`,
                 checkHeaders: { 'Authorization': `Bearer ${process.env.KIMI_API_KEY}` },
+                timeout: 10000
+            },
+            {
+                name: 'OpenRouter',
+                label: 'OpenRouter',
+                keyConfigured: isValidOpenRouterKey(openRouterConfig.getApiKey()),
+                model: openRouterConfig.getModel(),
+                checkUrl: `${OPENROUTER_BASE_URL}/key`,
+                checkHeaders: { 'Authorization': `Bearer ${openRouterConfig.getApiKey()}` },
                 timeout: 10000
             }
         ];

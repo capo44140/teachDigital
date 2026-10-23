@@ -293,6 +293,52 @@ class AIService {
       throw error
     }
   }
+
+  /**
+   * Récupère la configuration OpenRouter (clé masquée, modèle actif)
+   * @returns {Promise<Object|null>} Configuration OpenRouter
+   */
+  async getOpenRouterConfig () {
+    try {
+      const response = await apiService.request('/api/ai/openrouter/config')
+      return response.data || null
+    } catch (error) {
+      console.error('Erreur lors de la récupération de la configuration OpenRouter:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Enregistre la clé API et/ou le modèle OpenRouter
+   * @param {Object} config - { apiKey?: string, model?: string|null } (model null = défaut)
+   * @returns {Promise<Object|null>} Configuration OpenRouter mise à jour
+   */
+  async saveOpenRouterConfig (config) {
+    try {
+      const response = await apiService.request('/api/ai/openrouter/config', {
+        method: 'POST',
+        body: JSON.stringify(config)
+      })
+      return response.data || null
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement de la configuration OpenRouter:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Supprime la clé OpenRouter enregistrée depuis l'interface
+   * @returns {Promise<Object|null>} Configuration OpenRouter mise à jour
+   */
+  async deleteOpenRouterKey () {
+    try {
+      const response = await apiService.request('/api/ai/openrouter/key', { method: 'DELETE' })
+      return response.data || null
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la clé OpenRouter:', error)
+      throw error
+    }
+  }
 }
 
 export { AIService }

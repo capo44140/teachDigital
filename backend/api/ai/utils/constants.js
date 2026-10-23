@@ -13,6 +13,7 @@ const DEEPSEEK_BASE_URL = 'https://api.deepseek.com/v1';
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const MISTRAL_BASE_URL = 'https://api.mistral.ai/v1';
 const KIMI_BASE_URL = 'https://api.moonshot.cn/v1';
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 // Le serveur coupe toute requête après 180s (server.timeout) : un appel IA plus long
 // ne peut de toute façon pas aboutir. On borne donc les timeouts juste en dessous.
@@ -34,6 +35,8 @@ const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
 const DEFAULT_DEEPSEEK_MODEL = 'deepseek-chat';
 const DEFAULT_MISTRAL_MODEL = 'mistral-large-latest';
 const DEFAULT_KIMI_MODEL = 'moonshot-v1-8k';
+// Modèle OpenRouter par défaut (surchargeable via OPENROUTER_MODEL ou depuis l'interface)
+const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-4o-mini';
 
 // Paramètres de génération
 const DEFAULT_MAX_TOKENS = 1000;
@@ -52,6 +55,7 @@ module.exports = {
     GROQ_BASE_URL,
     MISTRAL_BASE_URL,
     KIMI_BASE_URL,
+    OPENROUTER_BASE_URL,
 
     // Timeouts
     API_TIMEOUT_MS,
@@ -65,6 +69,7 @@ module.exports = {
     DEFAULT_DEEPSEEK_MODEL,
     DEFAULT_MISTRAL_MODEL,
     DEFAULT_KIMI_MODEL,
+    DEFAULT_OPENROUTER_MODEL,
 
     // Paramètres
     DEFAULT_MAX_TOKENS,

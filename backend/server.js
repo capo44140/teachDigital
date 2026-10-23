@@ -361,6 +361,25 @@ async function runAutoMigrations() {
   await ensureCoursePagesTable();
   await ensureQuizResultsCompletedColumn();
   await ensureActivitiesTable();
+  await ensureAiSettingsTable();
+}
+
+// Migration automatique : réglages IA enregistrés depuis l'interface (ex. clé OpenRouter chiffrée),
+// puis chargement en mémoire pour que les providers les utilisent dès le démarrage.
+async function ensureAiSettingsTable() {
+  try {
+    const { pool } = require('./lib/database.js');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ai_settings (
+        key VARCHAR(100) PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await require('./api/ai/services/aiProviders/openRouterConfig.js').load();
+  } catch (error) {
+    logger.warn('⚠️ Migration ai_settings (non bloquant):', error.message);
+  }
 }
 
 // Sauvegardes intermédiaires d'une page de cours : exclues des badges tant que la
