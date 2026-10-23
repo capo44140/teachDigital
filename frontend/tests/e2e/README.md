@@ -1,225 +1,28 @@
-# Tests End-to-End avec Playwright
+# Tests E2E (Playwright)
 
-Ce dossier contient les tests end-to-end (E2E) pour l'application TeachDigital utilisant Playwright.
+Parcours critiques de l'application, exécutés sur le serveur de développement Vite
+(`webServer` de `playwright.config.js`). L'API est entièrement simulée par `page.route('**/api/**')`
+(`support/api.js`) : ni backend ni base de données. Les sélecteurs passent par les rôles et
+libellés accessibles (`getByRole`, `getByLabel`), pas par des `data-testid`.
 
-## Structure des Tests
+| Fichier | Parcours |
+| --- | --- |
+| `family-gate.spec.js` | code familial → choix du profil → tableau de bord enfant (présentation guidée), code incorrect |
+| `child-quiz.spec.js` | quiz d'une leçon : seules les réponses partent, score et correction renvoyés par le serveur ; échec puis nouvel essai d'enregistrement |
+| `parent-pin.spec.js` | PIN parent (4 à 8 chiffres, Entrée ou « Valider ») → tableau de bord parent ; PIN incorrect (message du serveur) ; 429 `PIN_LOCKED` (compte à rebours) |
+| `parent-notifications.spec.js` | centre de notifications du parent : compteur de la cloche, panneau, « Marquer comme lue », suppression confirmée, « Tout marquer comme lu », erreur puis « Réessayer » |
+| `app-shell.spec.js` | page 404 ; bandeau hors ligne (`context.setOffline`) |
+| `course-page.spec.js` | page de cours : URL signée (`POST /api/course-pages/:id/view`) affichée dans une iframe isolée |
 
-```
-tests/e2e/
-├── auth/                    # Tests d'authentification
-│   ├── profile-selection.spec.js
-│   └── pin-authentication.spec.js
-├── dashboard/               # Tests des dashboards
-│   ├── parent-dashboard.spec.js
-│   └── user-dashboard.spec.js
-├── youtube/                 # Tests du visualiseur YouTube Kids
-│   └── youtube-kids-viewer.spec.js
-├── pwa/                     # Tests des fonctionnalités PWA
-│   └── pwa-functionality.spec.js
-├── profile/                 # Tests de gestion des profils
-│   └── profile-management.spec.js
-├── utils/                   # Utilitaires et helpers
-│   ├── test-helpers.js
-│   └── fixtures.js
-└── README.md               # Ce fichier
-```
+Projets : `chromium` (bureau) et `mobile` (Pixel 5), tous deux sur Chromium.
 
-## Commandes Disponibles
-
-### Tests E2E
 ```bash
-# Exécuter tous les tests E2E
-pnpm test:e2e
+pnpm exec playwright install chromium   # une fois (CI : --with-deps chromium)
+pnpm exec playwright test
 
-# Exécuter avec interface utilisateur
-pnpm test:e2e:ui
-
-# Exécuter en mode visible (headed)
-pnpm test:e2e:headed
-
-# Exécuter en mode debug
-pnpm test:e2e:debug
-
-# Afficher le rapport des tests
-pnpm test:e2e:report
-
-# Installer les navigateurs Playwright
-pnpm test:e2e:install
+# Sans navigateur Playwright installé : navigateur du système (vidéos désactivées)
+E2E_BROWSER_CHANNEL=msedge pnpm exec playwright test      # PowerShell : $env:E2E_BROWSER_CHANNEL='msedge'
 ```
 
-### Tests par Catégorie
-```bash
-# Tests d'authentification
-pnpm test:e2e:auth
-
-# Tests des dashboards
-pnpm test:e2e:dashboard
-
-# Tests YouTube Kids
-pnpm test:e2e:youtube
-
-# Tests PWA
-pnpm test:e2e:pwa
-
-# Tests de gestion des profils
-pnpm test:e2e:profile
-```
-
-### Tests Complets
-```bash
-# Exécuter tous les tests (unitaires + E2E)
-pnpm test:all
-```
-
-## Configuration
-
-La configuration Playwright se trouve dans `playwright.config.js` à la racine du projet.
-
-### Navigateurs Testés
-- **Chromium** (Desktop Chrome)
-- **Firefox** (Desktop Firefox)
-- **WebKit** (Desktop Safari)
-- **Mobile Chrome** (Pixel 5)
-- **Mobile Safari** (iPhone 12)
-- **iPad** (iPad Pro)
-
-### Variables d'Environnement
-- `CI`: Mode CI/CD (retry automatique, 1 worker)
-- `BASE_URL`: URL de base pour les tests (défaut: http://localhost:5173)
-- `E2E_FAMILY_CODE`: code d'entrée familial de l'environnement testé (toutes les pages et toutes les routes `/api/*` exigent le jeton famille obtenu sur `/family-gate`)
-
-## Utilitaires de Test
-
-### test-helpers.js
-Fonctions utilitaires pour les tests :
-- `waitForAppLoad()`: Attendre que l'application soit chargée
-- `passFamilyGate()`: Saisir le code familial (obligatoire avant toute autre page)
-- `mockFamilyGate()`: Simuler un code familial accepté (tests sans backend)
-- `loginAsParent()`: Se connecter en tant que parent
-- `loginAsChild()`: Se connecter en tant qu'enfant
-- `createTestProfile()`: Créer un profil de test
-- `waitForStableElement()`: Attendre qu'un élément soit stable
-- `expectNotification()`: Vérifier une notification
-- `waitForYouTubeVideo()`: Attendre qu'une vidéo YouTube soit chargée
-
-### fixtures.js
-Données de test et constantes :
-- `testProfiles`: Profils de test (parent, enfant, adolescent)
-- `testQuizzes`: Quiz de test
-- `testLessons`: Leçons de test
-- `testYouTubeVideos`: URLs de vidéos YouTube de test
-- `selectors`: Sélecteurs CSS pour les tests
-- `errorMessages`: Messages d'erreur attendus
-- `successMessages`: Messages de succès attendus
-
-## Bonnes Pratiques
-
-### 1. Sélecteurs de Test
-Utilisez des attributs `data-testid` pour identifier les éléments :
-```html
-<button data-testid="login-button">Se connecter</button>
-```
-
-### 2. Attentes et Assertions
-```javascript
-// Vérifier la visibilité
-await expect(page.locator('[data-testid="element"]')).toBeVisible()
-
-// Vérifier le contenu
-await expect(page.locator('[data-testid="element"]')).toContainText('Texte attendu')
-
-// Vérifier l'URL
-await expect(page).toHaveURL(/.*dashboard.*/)
-```
-
-### 3. Gestion des Erreurs
-```javascript
-// Intercepter les requêtes API
-await page.route('**/api/**', route => {
-  route.fulfill({
-    status: 500,
-    body: JSON.stringify({ error: 'Erreur serveur' })
-  })
-})
-```
-
-### 4. Tests Responsive
-```javascript
-// Tester sur mobile
-await page.setViewportSize({ width: 375, height: 667 })
-```
-
-### 5. Accessibilité
-```javascript
-// Navigation au clavier
-await page.keyboard.press('Tab')
-await expect(page.locator('[data-testid="element"]')).toBeFocused()
-```
-
-## Débogage
-
-### Mode Debug
-```bash
-pnpm test:e2e:debug
-```
-
-### Mode Headed
-```bash
-pnpm test:e2e:headed
-```
-
-### Interface Utilisateur
-```bash
-pnpm test:e2e:ui
-```
-
-### Captures d'Écran
-Les captures d'écran sont automatiquement prises en cas d'échec et sauvegardées dans `test-results/`.
-
-### Vidéos
-Les vidéos des tests en échec sont sauvegardées dans `test-results/`.
-
-### Traces
-Les traces Playwright sont générées pour les tests en échec et peuvent être visualisées avec :
-```bash
-npx playwright show-trace test-results/trace.zip
-```
-
-## Intégration CI/CD
-
-### GitHub Actions
-```yaml
-- name: Install Playwright
-  run: pnpm test:e2e:install
-
-- name: Run E2E tests
-  run: pnpm test:e2e
-
-- name: Upload test results
-  uses: actions/upload-artifact@v3
-  if: failure()
-  with:
-    name: playwright-report
-    path: playwright-report/
-```
-
-### Variables d'Environnement CI
-- `CI=true`: Active le mode CI (retry, 1 worker)
-- `PLAYWRIGHT_BROWSERS_PATH`: Chemin vers les navigateurs
-
-## Maintenance
-
-### Mise à Jour des Tests
-1. Mettre à jour les sélecteurs si l'UI change
-2. Ajouter de nouveaux tests pour les nouvelles fonctionnalités
-3. Maintenir les données de test à jour
-
-### Performance
-- Les tests doivent s'exécuter en moins de 5 minutes
-- Utiliser `page.waitForLoadState()` pour les pages lentes
-- Éviter les `page.waitForTimeout()` sauf cas exceptionnels
-
-### Fiabilité
-- Utiliser des sélecteurs stables (`data-testid`)
-- Attendre que les éléments soient visibles avant interaction
-- Nettoyer les données de test entre les tests
+`E2E_PORT` change le port du serveur de test (5173 par défaut) ; un serveur déjà lancé sur ce port
+est réutilisé hors CI.

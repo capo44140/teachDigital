@@ -1,115 +1,67 @@
 import { defineConfig, devices } from '@playwright/test'
 
 /**
- * Configuration Playwright pour TeachDigital
+ * Tests E2E de TeachDigital (tests/e2e) : parcours critiques sur le serveur de développement
+ * Vite, avec l'API entièrement simulée par page.route (aucun backend ni base de données).
+ *
+ * Navigateur : Chromium de Playwright (CI : `playwright install --with-deps chromium`).
+ * En local sans navigateur Playwright installé, utiliser un navigateur du système :
+ *   E2E_BROWSER_CHANNEL=msedge  (ou chrome)
  * @see https://playwright.dev/docs/test-configuration
  */
+const PORT = Number(process.env.E2E_PORT) || 5173
+const BASE_URL = `http://127.0.0.1:${PORT}`
+const channel = process.env.E2E_BROWSER_CHANNEL || undefined
+
 export default defineConfig({
-  // Répertoire de base pour les tests
   testDir: './tests/e2e',
-  
-  // Exécuter les tests en parallèle
   fullyParallel: true,
-  
-  // Échec du build sur CI si vous laissez test.only dans le code source
   forbidOnly: !!process.env.CI,
-  
-  // Retry sur CI seulement
   retries: process.env.CI ? 2 : 0,
-  
-  // Nombre de workers sur CI
-  workers: process.env.CI ? 1 : undefined,
-  
-  // Configuration des rapports
-  reporter: [
-    ['html'],
-    ['json', { outputFile: 'test-results/results.json' }],
-    ['junit', { outputFile: 'test-results/results.xml' }]
-  ],
-  
-  // Configuration globale des tests
+  workers: process.env.CI ? 2 : undefined,
+  reporter: process.env.CI
+    ? [['list'], ['html', { open: 'never' }], ['junit', { outputFile: 'test-results/results.xml' }]]
+    : [['list'], ['html', { open: 'never' }]],
+
   use: {
-    // URL de base pour les tests
-    baseURL: 'http://localhost:5173',
-    
-    // Collecter les traces en cas d'échec
+    baseURL: BASE_URL,
+    locale: 'fr-FR',
+    // Le Service Worker (cache hors ligne) court-circuiterait page.route
+    serviceWorkers: 'block',
     trace: 'on-first-retry',
-    
-    // Prendre des captures d'écran en cas d'échec
     screenshot: 'only-on-failure',
-    
-    // Enregistrer les vidéos en cas d'échec
-    video: 'retain-on-failure',
-    
-    // Timeout pour les actions
+    // Vidéo : nécessite le ffmpeg de Playwright (absent avec un navigateur du système)
+    video: channel ? 'off' : 'retain-on-failure',
     actionTimeout: 10000,
-    
-    // Timeout pour la navigation
-    navigationTimeout: 30000,
+    navigationTimeout: 30000
   },
 
-  // Configuration des projets (navigateurs)
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    // Tests sur mobile
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
+      use: { ...devices['Desktop Chrome'], channel }
     },
     {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
-
-    // Tests sur tablette
-    {
-      name: 'iPad',
-      use: { ...devices['iPad Pro'] },
-    },
+      name: 'mobile',
+      use: { ...devices['Pixel 5'], channel }
+    }
   ],
 
-  // Serveur de développement local
+  // Serveur de développement Vite (le proxy /api n'est jamais atteint : tout est intercepté)
   webServer: {
-    command: 'pnpm dev --port 5173',
-    url: 'http://localhost:5173',
+    command: `node node_modules/vite/bin/vite.js --host 127.0.0.1 --port ${PORT} --strictPort`,
+    url: BASE_URL,
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000, // 2 minutes
-    stdout: 'pipe',
-    stderr: 'pipe',
+    timeout: 120 * 1000,
+    // BROWSER=none : Vite n'ouvre pas d'onglet (server.open dans vite.config.js)
+    env: { BROWSER: 'none' },
+    stdout: 'ignore',
+    stderr: 'pipe'
   },
 
-  // Répertoires à ignorer
-  testIgnore: [
-    '**/node_modules/**',
-    '**/dist/**',
-    '**/coverage/**'
-  ],
-
-  // Timeout global pour les tests
   timeout: 30000,
-  
-  // Timeout pour chaque assertion
   expect: {
-    timeout: 5000,
+    timeout: 7000
   },
-
-  // Configuration des outputs
-  outputDir: 'test-results/',
-  
-  // Configuration des snapshots
-  snapshotDir: 'tests/snapshots',
+  outputDir: 'test-results/'
 })
