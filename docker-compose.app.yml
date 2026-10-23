@@ -41,27 +41,37 @@ services:
       dockerfile: Dockerfile
     container_name: teachdigital-api
     restart: unless-stopped
+    # tini en PID 1 : relaie SIGTERM à node (arrêt propre, cf. backend/lib/shutdown.js)
+    init: true
+    stop_grace_period: 30s
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-teachdigital}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}@postgres:5432/${POSTGRES_DB:-teachdigital}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env (openssl rand -hex 32)}
       NODE_ENV: production
       PORT: 3001
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      # Seul intermédiaire : le nginx du conteneur frontend (port 3001 non exposé au réseau local)
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      AI_SETTINGS_KEY: ${AI_SETTINGS_KEY:-}
+      TESSERACT_CACHE_DIR: /tesseract-cache
     ports:
-      # Publié sur l'hôte : frontend/nginx.conf (conteneur frontend) relaie /api/
-      # vers host.docker.internal:3001.
-      - "3001:3001"
+      # Uniquement sur l'hôte : frontend/nginx.conf (conteneur frontend) relaie /api/
+      # vers http://backend:3001 par le réseau Docker teachdigital-network.
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - tesseract_cache:/tesseract-cache
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - teachdigital-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      # Attente de PostgreSQL puis migrations au démarrage
+      start_period: 120s
 
   # Frontend (Vue.js + Nginx). Les variables VITE_* sont injectées AU BUILD (pas au runtime).
   frontend:
@@ -76,10 +86,9 @@ services:
       - "3000:80"
     depends_on:
       - backend
+    # nginx.conf relaie /api/ vers http://backend:3001 (nom du service sur teachdigital-network)
     networks:
       - teachdigital-network
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:80/"]
       interval: 30s
@@ -108,6 +117,9 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  # Données de langue Tesseract (OCR) conservées entre les redémarrages
+  tesseract_cache:
     driver: local
 
 networks:

@@ -8,7 +8,11 @@ name: Deploy to Synology
 #                (lit le .env du serveur : JWT_SECRET, DB_*...)
 #   - frontend : frontend/dist/ + frontend/nginx.conf + frontend/Dockerfile.prebuilt
 #                + frontend/docker-compose.yml -> FRONTEND_PATH
-# Le docker-compose.yml de la racine (stack Supabase optionnelle) n'est PAS déployé.
+#   - réseau Docker externe « teachdigital » partagé par les deux (créé s'il n'existe pas,
+#     sous-réseau fixe à autoriser dans pg_hba.conf, comme deploy.ps1 -DockerSubnet)
+#
+# Premier déploiement après la mise en place du réseau : déployer « both »
+# (cf. doc/DEPLOY-SYNOLOGY.md, « Mise à jour du déploiement »).
 #
 # Secrets requis : SYNOLOGY_SSH_KEY, SYNOLOGY_HOST, SYNOLOGY_USER
 # (l'ancien secret SYNOLOGY_DEPLOY_PATH n'est plus utilisé : chemins = inputs ci-dessous).
@@ -29,6 +33,10 @@ on:
         description: Dossier frontend sur le NAS
         type: string
         default: /volume1/docker/teachdigital/frontend
+      docker_subnet:
+        description: Sous-réseau du réseau Docker « teachdigital » (utilisé seulement à sa création, dans 172.16.0.0/12)
+        type: string
+        default: 172.30.240.0/24
 
 permissions:
   contents: read
@@ -52,6 +60,7 @@ jobs:
       SYNOLOGY_HOST: ${{ secrets.SYNOLOGY_HOST }}
       BACKEND_PATH: ${{ inputs.backend_path }}
       FRONTEND_PATH: ${{ inputs.frontend_path }}
+      DOCKER_SUBNET: ${{ inputs.docker_subnet }}
 
     steps:
       - name: Checkout code
@@ -80,10 +89,11 @@ jobs:
           set -euo pipefail
           cat > "$RUNNER_TEMP/compose-up.sh" <<'EOF'
           #!/bin/bash
-          # Usage: compose-up.sh <dossier> <url-healthcheck>
+          # Usage: compose-up.sh <dossier> <url-healthcheck> <sous-réseau du réseau teachdigital>
           set -euo pipefail
           DIR="$1"
           HEALTH_URL="$2"
+          SUBNET="$3"
 
           DOCKER=""
           for d in docker /usr/local/bin/docker /var/packages/ContainerManager/target/usr/bin/docker; do
@@ -99,6 +109,13 @@ jobs:
             done
             [ -n "$COMPOSE" ] || { echo "[ERREUR] docker compose introuvable sur le NAS"; exit 1; }
           fi
+
+          # Réseau externe partagé backend <-> frontend (idempotent)
+          if ! "$DOCKER" network inspect teachdigital >/dev/null 2>&1; then
+            echo "[NETWORK] Création du réseau Docker teachdigital ($SUBNET)"
+            "$DOCKER" network create --subnet "$SUBNET" teachdigital >/dev/null
+          fi
+          echo "[NETWORK] teachdigital : $("$DOCKER" network inspect teachdigital --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}')"
 
           cd "$DIR"
           [ -f docker-compose.yml ] || { echo "[ERREUR] docker-compose.yml introuvable dans $DIR"; exit 1; }
@@ -129,10 +146,11 @@ jobs:
         if: inputs.target != 'frontend'
         run: |
           set -euo pipefail
-          ssh "$SSH_TARGET" "mkdir -p '$BACKEND_PATH/logs' '$BACKEND_PATH/output' '$BACKEND_PATH/temp'"
+          ssh "$SSH_TARGET" "mkdir -p '$BACKEND_PATH/logs' '$BACKEND_PATH/output' '$BACKEND_PATH/temp' '$BACKEND_PATH/.cache/tesseract'"
           # --delete ne touche jamais aux chemins exclus : .env* (secrets du serveur),
-          # logs/, output/, temp/ (volumes), ssl/ (certificats).
+          # logs/, output/, temp/ (volumes), .cache/ (données de langue Tesseract), ssl/ (certificats).
           rsync -az --delete \
+            --exclude '.cache/' \
             --exclude 'node_modules/' \
             --exclude '.git/' \
             --exclude '*.log' \
@@ -146,7 +164,8 @@ jobs:
             --exclude 'coverage/' \
             -e ssh \
             backend/ "$SSH_TARGET:$BACKEND_PATH/"
-          ssh "$SSH_TARGET" bash -s -- "$BACKEND_PATH" "http://localhost:3001/health" < "$RUNNER_TEMP/compose-up.sh"
+          # /health/ready : base joignable et migrations appliquées
+          ssh "$SSH_TARGET" bash -s -- "$BACKEND_PATH" "http://localhost:3001/health/ready" "$DOCKER_SUBNET" < "$RUNNER_TEMP/compose-up.sh"
 
       - name: Deploy frontend
         if: inputs.target != 'backend'
@@ -163,7 +182,7 @@ jobs:
             --exclude 'ssl/' \
             -e ssh \
             "$STAGE/" "$SSH_TARGET:$FRONTEND_PATH/"
-          ssh "$SSH_TARGET" bash -s -- "$FRONTEND_PATH" "http://localhost:3000/" < "$RUNNER_TEMP/compose-up.sh"
+          ssh "$SSH_TARGET" bash -s -- "$FRONTEND_PATH" "http://localhost:3000/" "$DOCKER_SUBNET" < "$RUNNER_TEMP/compose-up.sh"
 
       - name: Deployment Summary
         if: always()

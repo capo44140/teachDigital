@@ -1,9 +1,12 @@
-# Image frontend à partir d'un dist/ déjà construit en local (../deploy.ps1 / ../deploy-frontend.ps1).
+# Image frontend à partir d'un dist/ déjà construit en local (../deploy.ps1) ou par la CI (deploy-synology.yml).
 # Contexte de build minimal : dist/, nginx.conf (cf. Dockerfile.prebuilt.dockerignore).
 FROM nginx:alpine
 
-# Copier la configuration Nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Configuration Nginx : modèle complété au démarrage par l'entrypoint de l'image
+# (envsubst des seules variables NGINX_*, écrit dans /etc/nginx/conf.d/default.conf)
+ENV NGINX_ENVSUBST_FILTER=^NGINX_
+ENV NGINX_TRUSTED_PROXY=127.0.0.1
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 # Copier les fichiers buildés (depuis le contexte local)
 COPY dist /usr/share/nginx/html

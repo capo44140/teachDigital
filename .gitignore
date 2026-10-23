@@ -45,6 +45,8 @@ ssl/
 # Sorties runtime du backend (volumes Docker)
 backend/output/
 backend/temp/
+# Cache des données de langue Tesseract (volume Docker / dev local)
+backend/.cache/
 
 # Vercel (historique)
 .vercel
