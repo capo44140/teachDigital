@@ -100,7 +100,6 @@ function isLocalLLMAvailable() {
  * @returns {Promise<boolean>} True si la clé est valide
  */
 async function validateApiKey(apiType) {
-    console.log(`🔑 validateApiKey: ${apiType}`);
     // require local : providerSettings importe ce module
     const providerSettings = require('../services/aiProviders/providerSettings.js');
     const name = providerSettings.resolveName(apiType);
@@ -112,7 +111,6 @@ async function validateApiKey(apiType) {
  * @returns {Promise<boolean>} True si au moins une clé est valide
  */
 async function hasAtLeastOneValidKey() {
-    console.log('🔑 hasAtLeastOneValidKey: Début');
     const providerSettings = require('../services/aiProviders/providerSettings.js');
     return providerSettings.NAMES.some(name => providerSettings.isConfigured(name));
 }

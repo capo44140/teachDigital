@@ -1,75 +1,69 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useProfileStore } from '../stores/profileStore.js'
-import { useApiStore } from '../stores/apiStore.js'
 import sessionService from '../services/sessionService.js'
 import familyGateService from '../services/familyGateService.js'
 import { apiService } from '../services/apiService.js'
 import { hasParentAccess } from '../services/parentAccessService.js'
 
-// Imports dynamiques optimisés avec chunking intelligent
-// Composants critiques (chargés immédiatement)
-const FamilyGate = () => import('../components/FamilyGate.vue')
-const ProfileSelector = () => import('../components/ProfileSelector.vue')
-const Dashboard = () => import('../components/Dashboard.vue')
-const UserDashboard = () => import('../components/UserDashboard.vue')
-const PinLock = () => import('../components/PinLock.vue')
+// Écrans (src/views) chargés à la demande : Vite crée un chunk par import dynamique
+const FamilyGate = () => import('../views/FamilyGate.vue')
+const ProfileSelector = () => import('../views/ProfileSelector.vue')
+const Dashboard = () => import('../views/Dashboard.vue')
+const UserDashboard = () => import('../views/UserDashboard.vue')
+const PinLock = () => import('../views/PinLock.vue')
+const NotFound = () => import('../views/NotFound.vue')
 
-// Composants de gestion des profils (chunk: profile-management)
-const ProfileManagement = () => import(/* webpackChunkName: "profile-management" */ '../components/ProfileManagement.vue')
-const EditProfilePage = () => import(/* webpackChunkName: "profile-management" */ '../components/EditProfilePage.vue')
-const ProfileSettings = () => import(/* webpackChunkName: "profile-management" */ '../components/ProfileSettings.vue')
-const PinSettings = () => import(/* webpackChunkName: "profile-management" */ '../components/PinSettings.vue')
+// Gestion des profils
+const ProfileManagement = () => import('../views/ProfileManagement.vue')
+const EditProfilePage = () => import('../views/EditProfilePage.vue')
+const PinSettings = () => import('../views/PinSettings.vue')
 
-// Composants lourds avec IA (chunk: ai-components)
-const LessonScanner = () => import(/* webpackChunkName: "ai-components" */ '../components/LessonScanner.vue')
-const QuizGenerator = () => import(/* webpackChunkName: "ai-components" */ '../components/QuizGenerator.vue')
-const TextQuizGenerator = () => import(/* webpackChunkName: "ai-components" */ '../components/TextQuizGenerator.vue')
+// Composants avec IA
+const LessonScanner = () => import('../views/LessonScanner.vue')
+const QuizGenerator = () => import('../views/QuizGenerator.vue')
+const TextQuizGenerator = () => import('../views/TextQuizGenerator.vue')
 
-// Composants YouTube (chunk: youtube-components)
-const YouTubeVideoManager = () => import(/* webpackChunkName: "youtube-components" */ '../components/YouTubeVideoManager.vue')
-const YouTubeKidsViewer = () => import(/* webpackChunkName: "youtube-components" */ '../components/YouTubeKidsViewerSimple.vue')
+// YouTube
+const YouTubeVideoManager = () => import('../views/YouTubeVideoManager.vue')
+const YouTubeKidsViewer = () => import('../views/YouTubeKidsViewerSimple.vue')
 
-// Composants de sécurité (chunk: security-components)
-const SecurityDashboard = () => import(/* webpackChunkName: "security-components" */ '../components/SecurityDashboard.vue')
-const SecurityTest = () => import(/* webpackChunkName: "security-components" */ '../components/SecurityTest.vue')
+// Sécurité
+const SecurityDashboard = () => import('../views/SecurityDashboard.vue')
 
-// Composants de suivi et analytics (chunk: tracking-components)
-const ProgressTracking = () => import(/* webpackChunkName: "tracking-components" */ '../components/ProgressTracking.vue')
-const ParentProgressTracking = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentProgressTracking.vue')
-const ParentQuizManagement = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentQuizManagement.vue')
-const ParentActivityManagement = () => import(/* webpackChunkName: "tracking-components" */ '../components/ParentActivityManagement.vue')
-const LessonDetails = () => import(/* webpackChunkName: "tracking-components" */ '../components/LessonDetails.vue')
-const CoursePageManager = () => import(/* webpackChunkName: "course-pages" */ '../components/CoursePageManager.vue')
-const CoursePageViewer = () => import(/* webpackChunkName: "course-pages" */ '../components/CoursePageViewer.vue')
-const BadgeManager = () => import(/* webpackChunkName: "tracking-components" */ '../components/BadgeManager.vue')
-const BadgeAdminManager = () => import(/* webpackChunkName: "tracking-components" */ '../components/BadgeAdminManager.vue')
+// Suivi
+const ProgressTracking = () => import('../views/ProgressTracking.vue')
+const ParentProgressTracking = () => import('../views/ParentProgressTracking.vue')
+const ParentQuizManagement = () => import('../views/ParentQuizManagement.vue')
+const ParentActivityManagement = () => import('../views/ParentActivityManagement.vue')
+const LessonDetails = () => import('../views/LessonDetails.vue')
+const CoursePageManager = () => import('../views/CoursePageManager.vue')
+const CoursePageViewer = () => import('../views/CoursePageViewer.vue')
+const BadgeManager = () => import('../views/BadgeManager.vue')
+const BadgeAdminManager = () => import('../views/BadgeAdminManager.vue')
 
-// Composants d'aide (chunk: help-components)
-const ChildHelp = () => import(/* webpackChunkName: "help-components" */ '../components/ChildHelp.vue')
+// Aide
+const ChildHelp = () => import('../views/ChildHelp.vue')
 
-// Composants de test et développement (chunk: dev-components)
-const ProfileTest = () => import(/* webpackChunkName: "dev-components" */ '../components/ProfileTest.vue')
-const NotificationTest = () => import(/* webpackChunkName: "dev-components" */ '../components/NotificationTest.vue')
-const PerformanceDashboard = () => import(/* webpackChunkName: "dev-components" */ '../components/PerformanceDashboard.vue')
-const LiquidGlassTest = () => import(/* webpackChunkName: "dev-components" */ '../components/LiquidGlassTest.vue')
+// Paramètres
+const ParentSettings = () => import('../views/ParentSettings.vue')
+const FamilyGateSettings = () => import('../views/FamilyGateSettings.vue')
+const ChildSettings = () => import('../views/ChildSettings.vue')
+const AISettings = () => import('../views/AISettings.vue')
 
-// Composants API (chunk: api-components)
-const ApiLoginForm = () => import(/* webpackChunkName: "api-components" */ '../components/ApiLoginForm.vue')
-const ApiDashboard = () => import(/* webpackChunkName: "api-components" */ '../components/ApiDashboard.vue')
-
-// Composants de paramètres (chunk: settings-components)
-const ParentSettings = () => import(/* webpackChunkName: "settings-components" */ '../components/ParentSettings.vue')
-const FamilyGateSettings = () => import(/* webpackChunkName: "settings-components" */ '../components/FamilyGateSettings.vue')
-const ChildSettings = () => import(/* webpackChunkName: "settings-components" */ '../components/ChildSettings.vue')
-const PWASettings = () => import(/* webpackChunkName: "settings-components" */ '../components/PWASettings.vue')
-const AISettings = () => import(/* webpackChunkName: "settings-components" */ '../components/AISettings.vue')
-
+/*
+ * Méta des routes :
+ * - public : accessible sans session famille ;
+ * - requiresAdmin : session parent (PIN) + jeton admin du même profil ;
+ * - requiresChildOrTeen : ?profile= ou ?childId= doit désigner un profil enfant/ado ;
+ * - disablePullToRefresh : pas de « tirer pour actualiser » (quiz en cours, pages de cours) ;
+ * - bgTone : teinte du fond animé partagé (AppBackground).
+ */
 const routes = [
   {
     path: '/family-gate',
     name: 'FamilyGate',
     component: FamilyGate,
-    // Seule route accessible sans session famille
+    // Seule route accessible sans session famille (avec la page 404)
     meta: { public: true }
   },
   {
@@ -109,13 +103,6 @@ const routes = [
     meta: { requiresAdmin: true }
   },
   {
-    path: '/profile-settings/:id',
-    name: 'ProfileSettings',
-    component: ProfileSettings,
-    props: true,
-    meta: { requiresAdmin: true }
-  },
-  {
     path: '/pin-settings',
     name: 'PinSettings',
     component: PinSettings,
@@ -128,38 +115,17 @@ const routes = [
     meta: { requiresAdmin: true }
   },
   {
+    // Quiz d'une leçon (?childId=&lessonId=) : passé par l'enfant, ou aperçu par le parent
+    // (en session parent, rien n'est enregistré). ?childId= doit être un profil enfant/ado.
     path: '/quiz-generator',
     name: 'QuizGenerator',
-    component: QuizGenerator
+    component: QuizGenerator,
+    meta: { requiresChildOrTeen: true, disablePullToRefresh: true, bgTone: 'green' }
   },
   {
     path: '/security-dashboard',
     name: 'SecurityDashboard',
     component: SecurityDashboard,
-    meta: { requiresAdmin: true }
-  },
-  {
-    path: '/profile-test',
-    name: 'ProfileTest',
-    component: ProfileTest,
-    meta: { requiresAdmin: true }
-  },
-  {
-    path: '/security-test',
-    name: 'SecurityTest',
-    component: SecurityTest,
-    meta: { requiresAdmin: true }
-  },
-  {
-    path: '/notification-test',
-    name: 'NotificationTest',
-    component: NotificationTest,
-    meta: { requiresAdmin: true }
-  },
-  {
-    path: '/performance-dashboard',
-    name: 'PerformanceDashboard',
-    component: PerformanceDashboard,
     meta: { requiresAdmin: true }
   },
   {
@@ -179,14 +145,14 @@ const routes = [
     path: '/course-page-manager',
     name: 'CoursePageManager',
     component: CoursePageManager,
-    meta: { requiresAdmin: true }
+    meta: { requiresAdmin: true, disablePullToRefresh: true }
   },
   {
     path: '/course-page/:id',
     name: 'CoursePageViewer',
     component: CoursePageViewer,
     props: true,
-    meta: { requiresChildOrTeen: true }
+    meta: { requiresChildOrTeen: true, disablePullToRefresh: true }
   },
   {
     path: '/parent-activity-management',
@@ -205,7 +171,7 @@ const routes = [
     name: 'ProgressTracking',
     component: ProgressTracking,
     // Page enfant (?childId=) : profil enfant/ado exigé, consultable aussi depuis l'espace parent
-    meta: { requiresChildOrTeen: true }
+    meta: { requiresChildOrTeen: true, bgTone: 'blue' }
   },
   {
     path: '/parent-progress-tracking',
@@ -218,6 +184,11 @@ const routes = [
     name: 'ParentSettings',
     component: ParentSettings,
     meta: { requiresAdmin: true }
+  },
+  {
+    // Ancienne page PWA : l'installation se gère désormais dans les paramètres parent
+    path: '/settings/pwa',
+    redirect: '/parent-settings'
   },
   {
     path: '/family-gate-settings',
@@ -241,7 +212,7 @@ const routes = [
     path: '/youtube-kids-viewer',
     name: 'YouTubeKidsViewer',
     component: YouTubeKidsViewer,
-    meta: { requiresChildOrTeen: true }
+    meta: { requiresChildOrTeen: true, bgTone: 'red' }
   },
   {
     path: '/child-help',
@@ -253,6 +224,8 @@ const routes = [
     path: '/badge-manager',
     name: 'BadgeManager',
     component: BadgeManager,
+    // Le composant attend la prop profileId (sinon les badges ne se chargeaient jamais)
+    props: route => ({ profileId: route.query.profile }),
     // Page enfant (?profile=) : profil enfant/ado exigé
     meta: { requiresChildOrTeen: true }
   },
@@ -262,34 +235,18 @@ const routes = [
     component: BadgeAdminManager,
     meta: { requiresAdmin: true }
   },
-  // Nouvelles routes API
-  {
-    path: '/api-login',
-    name: 'ApiLogin',
-    component: ApiLoginForm
-  },
-  {
-    path: '/api-dashboard',
-    name: 'ApiDashboard',
-    component: ApiDashboard,
-    meta: { requiresApiAuth: true }
-  },
-  {
-    path: '/liquid-glass-test',
-    name: 'LiquidGlassTest',
-    component: LiquidGlassTest
-  },
-  {
-    path: '/settings/pwa',
-    name: 'PWASettings',
-    component: PWASettings,
-    meta: { requiresAdmin: true }
-  },
   {
     path: '/ai-settings',
     name: 'AISettings',
     component: AISettings,
     meta: { requiresAdmin: true }
+  },
+  {
+    // Toute autre adresse : page 404 (publique, sans aucune donnée)
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: NotFound,
+    meta: { public: true }
   }
 ]
 
@@ -299,23 +256,24 @@ const router = createRouter({
 })
 
 /**
- * Retrouver un profil (id string ou number) dans le store, après chargement
+ * Retrouver un profil (id string ou number) dans le store, après chargement.
+ * Hors ligne (ou API injoignable), la liste déjà chargée en mémoire fait foi :
+ * les pages enfant restent consultables avec le précache du Service Worker.
  */
 async function findProfile (profileId) {
   const profileStore = useProfileStore()
-  await profileStore.loadProfiles()
-  return profileStore.getProfileById(profileId) ||
-    profileStore.getProfileById(Number(profileId)) ||
-    profileStore.getProfileById(String(profileId)) ||
-    null
+  try {
+    await profileStore.loadProfiles()
+  } catch (error) {
+    const known = profileStore.getProfileById(profileId)
+    if (known) return known
+    throw error
+  }
+  return profileStore.getProfileById(profileId)
 }
 
 // Accès parent : session parent déverrouillée ET jeton admin du même profil
 export { hasParentAccess }
-
-// Pages qui affichent du HTML généré (scripts inline) : elles nécessitent la CSP
-// dédiée servie par nginx pour /course-page* (voir frontend/nginx.conf).
-const FULL_PAGE_ROUTES = new Set(['CoursePageViewer', 'CoursePageManager'])
 
 /**
  * Guard de navigation.
@@ -324,20 +282,8 @@ const FULL_PAGE_ROUTES = new Set(['CoursePageViewer', 'CoursePageManager'])
  * guards pour une navigation dupliquée, et aucune redirection ci-dessous ne boucle
  * (/family-gate est public ; /pin-lock et / n'exigent que la session famille).
  */
-export async function navigationGuard (to, from) {
-  // Les pages de cours embarquent du JavaScript inline. La CSP servie pour
-  // /course-page* l'autorise, mais un document chargé depuis une autre route SPA
-  // conserve la CSP stricte de l'application : on force donc un chargement complet.
-  // (Au chargement initial du document, la bonne CSP a déjà été envoyée.)
-  if (FULL_PAGE_ROUTES.has(to.name)) {
-    const isInitialDocumentLoad = !from || !from.matched || from.matched.length === 0
-    if (!isInitialDocumentLoad) {
-      window.location.assign(to.fullPath || to.path)
-      return false
-    }
-  }
-
-  // Code d'entrée familial : seule page publique
+export async function navigationGuard (to) {
+  // Pages publiques : code d'entrée familial et page 404
   if (to.meta.public) {
     return true
   }
@@ -346,20 +292,6 @@ export async function navigationGuard (to, from) {
   if (!familyGateService.hasValidFamilySession()) {
     const query = to.fullPath && to.fullPath !== '/' ? { redirect: to.fullPath } : {}
     return { path: '/family-gate', query }
-  }
-
-  // Vérifier l'authentification API
-  if (to.meta.requiresApiAuth) {
-    const apiStore = useApiStore()
-
-    // Initialiser le store si nécessaire
-    if (!apiStore.isAuthenticated) {
-      await apiStore.initialize()
-    }
-
-    if (!apiStore.isAuthenticated) {
-      return { path: '/api-login' }
-    }
   }
 
   // Pages parent : session parent + jeton admin du même profil
@@ -419,7 +351,9 @@ apiService.setAuthErrorHandler(({ kind }) => {
   const current = router.currentRoute.value
   if (kind === 'family') {
     if (!current.meta?.public) {
-      router.replace({ path: '/family-gate' }).catch(() => {})
+      // Après le nouveau code familial, retour à la page en cours (FamilyGate valide redirect)
+      const query = current.fullPath && current.fullPath !== '/' ? { redirect: current.fullPath } : {}
+      router.replace({ path: '/family-gate', query }).catch(() => {})
     }
     return
   }

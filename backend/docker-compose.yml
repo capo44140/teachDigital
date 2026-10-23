@@ -1,5 +1,13 @@
 version: '3.8'
 
+# Backend TeachDigital déployé sur le Synology par ../deploy.ps1.
+#
+# Réseau : le backend rejoint le réseau Docker externe « teachdigital » (créé par deploy.ps1,
+# ou à la main : docker network create teachdigital), partagé avec le conteneur frontend dont
+# le nginx relaie /api/ vers http://backend:3001. Le port 3001 n'est publié que sur 127.0.0.1
+# (healthchecks depuis le NAS) : un poste du réseau local doit passer par nginx, qui ne croit
+# X-Forwarded-For que venant du reverse proxy DSM / de la passerelle Docker (cf. frontend/nginx.conf).
+
 services:
   # Backend API
   backend:
@@ -8,7 +16,11 @@ services:
       dockerfile: Dockerfile
     container_name: teachdigital-backend
     restart: unless-stopped
-    # Toutes les variables du .env (LOCAL_LLM_URL, KIMI_API_KEY, TRUST_PROXY, API_*...) sont
+    # tini en PID 1 : relaie SIGTERM à node (arrêt propre) et récupère les processus zombies
+    init: true
+    # docker stop : SIGTERM, puis SIGKILL après ce délai (> SHUTDOWN_TIMEOUT_MS = 15 s + nettoyage)
+    stop_grace_period: 30s
+    # Toutes les variables du .env (LOCAL_LLM_URL, KIMI_API_KEY, AI_SETTINGS_KEY, API_*...) sont
     # transmises au conteneur ; les clés listées sous « environment » ont la priorité.
     env_file:
       - .env
@@ -37,21 +49,26 @@ services:
       # Frontend URL pour CORS
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-}
+      # Proxy de confiance pour l'IP client : 1 = le nginx du conteneur frontend, seul
+      # intermédiaire possible (port 3001 non publié sur le réseau local)
+      TRUST_PROXY: ${TRUST_PROXY:-1}
       # Configuration des logs (volume monté en /logs)
       LOGS_DIR: /logs
       LOG_ENABLE_FILE: ${LOG_ENABLE_FILE:-true}
       LOG_DEBUG: ${LOG_DEBUG:-false}
       LOG_MAX_SIZE: ${LOG_MAX_SIZE:-10485760}
       LOG_MAX_FILES: ${LOG_MAX_FILES:-5}
+      # Données de langue Tesseract (OCR) conservées entre les redéploiements
+      TESSERACT_CACHE_DIR: /tesseract-cache
     ports:
-      - "${BACKEND_PORT:-3001}:3001"
-    # Si votre PostgreSQL est sur le même réseau Docker, décommentez la ligne suivante
-    # networks:
-    #   - teachdigital-network
-    # Si votre PostgreSQL est sur le réseau host, utilisez network_mode: host
-    network_mode: bridge
+      # Uniquement sur l'hôte (healthcheck de deploy.ps1, curl depuis le NAS)
+      - "127.0.0.1:${BACKEND_PORT:-3001}:3001"
+    networks:
+      teachdigital:
+        aliases:
+          - backend
     extra_hosts:
-      # Permet d'accéder au host depuis le conteneur
+      # Permet d'accéder au host depuis le conteneur (PostgreSQL du NAS : DB_HOST=host.docker.internal)
       - "host.docker.internal:host-gateway"
     volumes:
       # Volumes pour les fichiers de sortie (en dehors du conteneur)
@@ -61,16 +78,17 @@ services:
       - ${LOGS_VOLUME:-./logs}:/logs
       - ${OUTPUT_VOLUME:-./output}:/output
       - ${TEMP_VOLUME:-./temp}:/temp
+      - ${TESSERACT_CACHE_VOLUME:-./.cache/tesseract}:/tesseract-cache  # .cache/ est exclu du build (.dockerignore)
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)}).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      # Au démarrage : attente de PostgreSQL (jusqu'à DB_STARTUP_TIMEOUT_MS) puis migrations
+      start_period: 120s
 
-# Si votre PostgreSQL est sur le même réseau Docker, décommentez ceci
-# networks:
-#   teachdigital-network:
-#     external: true
-#     name: votre-reseau-postgresql
-
+# Réseau partagé avec le frontend (créé par deploy.ps1 : docker network create teachdigital)
+networks:
+  teachdigital:
+    external: true
+    name: teachdigital

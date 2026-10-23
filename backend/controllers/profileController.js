@@ -1,406 +1,299 @@
 const { NativeHashService } = require('../lib/nativeHash.js');
-const { default: sql } = require('../lib/database.js');
-const { authenticateToken, canActForProfile } = require('../lib/auth.js');
-const { pinFailures } = require('../lib/bruteForce.js');
-const { handleError, createErrorResponse } = require('../lib/response.js');
+const { pool } = require('../lib/database.js');
+const { generateToken, clearAuthCache } = require('../lib/auth.js');
+const { canAccessProfile } = require('../lib/scope.js');
+const { rejectIfPinLocked, recordPinSuccess, recordPinFailure, rehashLegacyPin } = require('../lib/pinAttempts.js');
+const { checkNewPin } = require('../lib/pinPolicy.js');
+const { notifyParents } = require('../lib/notify.js');
+const { withTransaction } = require('../lib/transaction.js');
+const { recordAuditEvent } = require('../lib/auditLog.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
+const { parseId, sendError, sendFailure } = require('../lib/http.js');
 const crypto = require('crypto');
 
-// Handler des profils
+// Colonnes renvoyées au client (jamais token_version ni les PIN)
+const PROFILE_COLUMNS = `
+  id, name, description, type, is_admin, is_child, is_teen,
+  is_active, is_locked, color, avatar_class, avatar_content,
+  image_url, image_data, image_type, level, created_at, updated_at
+`;
+
+// Indicateurs dérivés du type : un profil ne peut pas être « admin » sans être de type admin
+function flagsForType(type) {
+    return {
+        is_admin: type === 'admin',
+        is_child: type === 'child',
+        is_teen: type === 'teen'
+    };
+}
+
+function query(text, params, operation, timeout = TIMEOUTS.STANDARD) {
+    return withQueryTimeout(pool.query(text, params).then(result => result.rows), timeout, operation);
+}
+
+// GET /profiles (tout membre : sélecteur de profils) — POST /profiles (parent, profileCreateSchema)
 async function handleProfiles(req, res) {
     try {
         if (req.method === 'GET') {
-            // GET : tout membre (jeton famille ou profil) - sélecteur de profils
-            // Requête optimisée sans retry pour éviter les timeouts
-            const startTime = Date.now();
+            const profiles = await query(
+                `SELECT ${PROFILE_COLUMNS} FROM profiles ORDER BY created_at DESC`,
+                [],
+                'récupération des profils',
+                TIMEOUTS.DEFAULT
+            );
+            return res.status(200).json({
+                success: true,
+                message: 'Profils récupérés avec succès',
+                data: { profiles }
+            });
+        }
 
-            try {
-                // Timeout explicite sur la requête pour éviter les blocages
-                const profiles = await withQueryTimeout(
-                    sql`
-            SELECT 
-              id, name, description, type, is_admin, is_child, is_teen, 
-              is_active, is_locked, color, avatar_class, avatar_content, 
-              image_url, image_data, image_type, level, created_at, updated_at
-            FROM profiles 
-            ORDER BY created_at DESC
-          `,
-                    TIMEOUTS.DEFAULT,
-                    'récupération des profils'
-                );
-
-                const duration = Date.now() - startTime;
-                console.log(`✅ Profils récupérés: ${profiles.length} en ${duration}ms`);
-
-                res.status(200).json({
-                    success: true,
-                    message: 'Profils récupérés avec succès',
-                    data: { profiles }
-                });
-            } catch (error) {
-                const duration = Date.now() - startTime;
-                console.error(`❌ Erreur récupération profils après ${duration}ms:`, error.message);
-                throw error;
+        if (req.method === 'POST') {
+            // requireAdmin est appliqué par le routeur ; double garde ici
+            if (req.user?.isAdmin !== true) {
+                return sendFailure(res, 403, 'Accès refusé - Admin requis', 'FORBIDDEN');
             }
-
-        } else if (req.method === 'POST') {
-            // POST requiert l'authentification
-            const user = authenticateToken(req);
-
-            if (!user.isAdmin) {
-                res.status(403).json({
-                    success: false,
-                    message: 'Accès refusé - Admin requis'
-                });
-                return;
+            const body = req.body || {};
+            if (!body.name || !body.type) {
+                return sendFailure(res, 400, 'Nom et type requis', 'VALIDATION_ERROR');
             }
+            const flags = flagsForType(body.type);
 
-            const { name, description, type, color, avatar_class, avatar_content, level } = req.body;
-
-            if (!name || !type) {
-                res.status(400).json({
-                    success: false,
-                    message: 'Nom et type requis'
-                });
-                return;
-            }
-
-            const is_admin = type === 'admin';
-            const is_child = type === 'child';
-            const is_teen = type === 'teen';
-
-            const result = await withQueryTimeout(
-                sql`
-          INSERT INTO profiles (
-            name, description, type, color, avatar_class, avatar_content, 
-            level, is_admin, is_child, is_teen, is_active
-          )
-          VALUES (
-            ${name}, ${description}, ${type}, ${color || 'purple'}, 
-            ${avatar_class}, ${avatar_content}, ${level}, 
-            ${is_admin}, ${is_child}, ${is_teen}, true
-          )
-          RETURNING *
-        `,
-                TIMEOUTS.STANDARD,
+            const rows = await query(
+                `INSERT INTO profiles (
+                    name, description, type, color, avatar_class, avatar_content, level,
+                    image_url, image_data, image_type, is_admin, is_child, is_teen, is_active
+                 )
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, true)
+                 RETURNING ${PROFILE_COLUMNS}`,
+                [
+                    body.name, body.description ?? null, body.type, body.color || 'purple',
+                    body.avatar_class ?? null, body.avatar_content ?? null, body.level ?? null,
+                    body.image_url ?? null, body.image_data ?? null, body.image_type ?? null,
+                    flags.is_admin, flags.is_child, flags.is_teen
+                ],
                 'création du profil'
             );
+            // Un « profil inexistant » a pu être mis en cache pour cet id
+            if (rows[0]) clearAuthCache(rows[0].id);
 
-            res.status(201).json({
+            return res.status(201).json({
                 success: true,
                 message: 'Profil créé avec succès',
-                data: { profile: result[0] }
-            });
-        } else {
-            res.status(405).json({
-                success: false,
-                message: 'Méthode non autorisée'
+                data: { profile: rows[0] }
             });
         }
 
+        return sendFailure(res, 405, 'Méthode non autorisée', 'METHOD_NOT_ALLOWED');
     } catch (error) {
-        // Uniformiser le timeout au format standard (success/message/code/data)
-        if (error?.isTimeout === true || error?.code === 'GATEWAY_TIMEOUT' || error.message?.includes('Query timeout')) {
-            console.error('⏱️ Timeout lors de la récupération des profils:', error.message);
-            res.status(504).json(createErrorResponse(
-                'La requête a pris trop de temps. Veuillez réessayer.',
-                'GATEWAY_TIMEOUT'
-            ));
-            return;
-        }
-        const errorResponse = handleError(error, 'Erreur lors de la gestion des profils');
-        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+        return sendError(res, error, 'Erreur lors de la gestion des profils');
     }
 }
 
-// Handler d'un profil spécifique
+// Mise à jour partielle (profileUpdateSchema). Changer le type recalcule is_admin /
+// is_child / is_teen ; un changement de type ou une désactivation révoque les jetons
+// du profil (token_version + 1).
+async function updateProfile(req, res, id) {
+    if (req.user?.isAdmin !== true) {
+        return sendFailure(res, 403, 'Accès refusé - Admin requis', 'FORBIDDEN');
+    }
+    const body = req.body || {};
+    const type = body.type ?? null;
+    const isActive = typeof body.is_active === 'boolean' ? body.is_active : null;
+
+    const rows = await query(
+        `UPDATE profiles
+         SET
+           name = COALESCE($1, name),
+           description = COALESCE($2, description),
+           color = COALESCE($3, color),
+           avatar_class = COALESCE($4, avatar_class),
+           avatar_content = COALESCE($5, avatar_content),
+           level = COALESCE($6, level),
+           image_data = COALESCE($7, image_data),
+           image_type = COALESCE($8, image_type),
+           image_url = COALESCE($9, image_url),
+           type = COALESCE($10::varchar, type),
+           is_admin = CASE WHEN $10::varchar IS NULL THEN is_admin ELSE $10::varchar = 'admin' END,
+           is_child = CASE WHEN $10::varchar IS NULL THEN is_child ELSE $10::varchar = 'child' END,
+           is_teen = CASE WHEN $10::varchar IS NULL THEN is_teen ELSE $10::varchar = 'teen' END,
+           is_active = COALESCE($11::boolean, is_active),
+           token_version = token_version + CASE
+             WHEN $10::varchar IS NOT NULL AND $10::varchar IS DISTINCT FROM type THEN 1
+             WHEN $11::boolean = false AND is_active IS DISTINCT FROM false THEN 1
+             ELSE 0
+           END,
+           updated_at = CURRENT_TIMESTAMP
+         WHERE id = $12
+         RETURNING ${PROFILE_COLUMNS}`,
+        [
+            body.name ?? null, body.description ?? null, body.color ?? null,
+            body.avatar_class ?? null, body.avatar_content ?? null, body.level ?? null,
+            body.image_data ?? null, body.image_type ?? null, body.image_url ?? null,
+            type, isActive, id
+        ],
+        'mise à jour du profil'
+    );
+    clearAuthCache(id);
+
+    if (!rows[0]) {
+        return sendFailure(res, 404, 'Profil non trouvé', 'NOT_FOUND');
+    }
+    return res.status(200).json({
+        success: true,
+        message: 'Profil modifié avec succès',
+        data: { profile: rows[0] }
+    });
+}
+
+// GET / PUT / DELETE /profiles/:id
 async function handleProfile(req, res) {
     try {
-        const id = req.params.id;
-
+        const id = parseId(req.params?.id);
         if (!id) {
-            res.status(400).json({
-                success: false,
-                message: 'ID de profil requis'
-            });
-            return;
+            return sendFailure(res, 400, 'ID de profil invalide', 'BAD_REQUEST');
         }
 
-        // Note: Les routes imbriquées comme /pin sont maintenant gérées par le routeur principal
-        // qui appelle handlePin directement. Donc handleProfile ne gère que le profil lui-même.
-
-
-        // Gérer les routes standard du profil
         if (req.method === 'GET') {
-            console.log(`🔍 Récupération du profil ID: ${id} (type: ${typeof id})`);
-
-            try {
-                const profiles = await withQueryTimeout(
-                    sql`
-            SELECT 
-              id, name, description, type, is_admin, is_child, is_teen, 
-              is_active, is_locked, color, avatar_class, avatar_content, 
-              image_url, image_data, image_type, level, created_at, updated_at
-            FROM profiles 
-            WHERE id = ${parseInt(id)}
-          `,
-                    TIMEOUTS.STANDARD,
-                    'récupération du profil'
-                );
-
-                console.log(`✅ Profil récupéré: ${profiles.length} résultat(s)`);
-
-                if (!profiles[0]) {
-                    res.status(404).json({
-                        success: false,
-                        message: 'Profil non trouvé'
-                    });
-                    return;
-                }
-
-                res.status(200).json({
-                    success: true,
-                    message: 'Profil récupéré avec succès',
-                    data: { profile: profiles[0] }
-                });
-            } catch (sqlError) {
-                console.error('❌ Erreur SQL lors de la récupération du profil:', {
-                    message: sqlError.message,
-                    code: sqlError.code,
-                    detail: sqlError.detail,
-                    hint: sqlError.hint,
-                    id: id
-                });
-                throw sqlError;
+            // Mêmes informations que la liste du sélecteur de profils
+            const profiles = await query(`SELECT ${PROFILE_COLUMNS} FROM profiles WHERE id = $1`, [id], 'récupération du profil');
+            if (!profiles[0]) {
+                return sendFailure(res, 404, 'Profil non trouvé', 'NOT_FOUND');
             }
-
-        } else if (req.method === 'PUT') {
-            // Authentification requise pour PUT
-            const user = authenticateToken(req);
-
-            if (!user.isAdmin) {
-                res.status(403).json({
-                    success: false,
-                    message: 'Accès refusé - Admin requis'
-                });
-                return;
-            }
-
-            const { name, description, type, color, avatar_class, avatar_content, level, is_active, image_data, image_type, image_url } = req.body;
-
-            const result = await withQueryTimeout(
-                sql`
-          UPDATE profiles 
-          SET 
-            name = COALESCE(${name}, name),
-            description = COALESCE(${description}, description),
-            type = COALESCE(${type}, type),
-            color = COALESCE(${color}, color),
-            avatar_class = COALESCE(${avatar_class}, avatar_class),
-            avatar_content = COALESCE(${avatar_content}, avatar_content),
-            level = COALESCE(${level}, level),
-            is_active = COALESCE(${is_active}, is_active),
-            image_data = COALESCE(${image_data}, image_data),
-            image_type = COALESCE(${image_type}, image_type),
-            image_url = COALESCE(${image_url}, image_url),
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${id}
-          RETURNING *
-        `,
-                TIMEOUTS.STANDARD,
-                'mise à jour du profil'
-            );
-
-            if (!result[0]) {
-                res.status(404).json({
-                    success: false,
-                    message: 'Profil non trouvé'
-                });
-                return;
-            }
-
-            res.status(200).json({
+            return res.status(200).json({
                 success: true,
-                message: 'Profil modifié avec succès',
-                data: { profile: result[0] }
+                message: 'Profil récupéré avec succès',
+                data: { profile: profiles[0] }
             });
+        }
 
-        } else if (req.method === 'DELETE') {
-            // Authentification requise pour DELETE
-            const user = authenticateToken(req);
+        if (req.method === 'PUT') {
+            return await updateProfile(req, res, id);
+        }
 
-            if (!user.isAdmin) {
-                res.status(403).json({
-                    success: false,
-                    message: 'Accès refusé - Admin requis'
-                });
-                return;
+        if (req.method === 'DELETE') {
+            if (req.user?.isAdmin !== true) {
+                return sendFailure(res, 403, 'Accès refusé - Admin requis', 'FORBIDDEN');
             }
-
-            const result = await withQueryTimeout(
-                sql`
-          DELETE FROM profiles 
-          WHERE id = ${id}
-          RETURNING *
-        `,
-                TIMEOUTS.STANDARD,
-                'suppression du profil'
-            );
-
-            if (!result[0]) {
-                res.status(404).json({
-                    success: false,
-                    message: 'Profil non trouvé'
-                });
-                return;
+            const rows = await query(`DELETE FROM profiles WHERE id = $1 RETURNING ${PROFILE_COLUMNS}`, [id], 'suppression du profil');
+            clearAuthCache(id);
+            if (!rows[0]) {
+                return sendFailure(res, 404, 'Profil non trouvé', 'NOT_FOUND');
             }
-
-            res.status(200).json({
+            return res.status(200).json({
                 success: true,
                 message: 'Profil supprimé avec succès',
-                data: { profile: result[0] }
-            });
-
-        } else {
-            res.status(405).json({
-                success: false,
-                message: 'Méthode non autorisée'
+                data: { profile: rows[0] }
             });
         }
 
+        return sendFailure(res, 405, 'Méthode non autorisée', 'METHOD_NOT_ALLOWED');
     } catch (error) {
-        console.error('❌ Erreur dans handleProfile:', {
-            message: error.message,
-            stack: error.stack,
-            code: error.code,
-            pathname: req.url
-        });
-        const errorResponse = handleError(error, 'Erreur lors de la gestion du profil');
-        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+        return sendError(res, error, 'Erreur lors de la gestion du profil');
     }
 }
 
-// Handler des statistiques des profils
+// Handler des statistiques des profils (parent)
 async function handleProfileStats(req, res) {
     try {
         if (req.method !== 'GET') {
-            res.status(405).json(createErrorResponse('Méthode non autorisée', 'METHOD_NOT_ALLOWED'));
-            return;
+            return sendFailure(res, 405, 'Méthode non autorisée', 'METHOD_NOT_ALLOWED');
         }
 
-        const [totalProfiles, activeProfiles, childProfiles, teenProfiles, adminProfiles] = await Promise.all([
-            withQueryTimeout(sql`SELECT COUNT(*) as count FROM profiles`, TIMEOUTS.STANDARD, 'stats total profils'),
-            withQueryTimeout(sql`SELECT COUNT(*) as count FROM profiles WHERE is_active = true`, TIMEOUTS.STANDARD, 'stats profils actifs'),
-            withQueryTimeout(sql`SELECT COUNT(*) as count FROM profiles WHERE is_child = true`, TIMEOUTS.STANDARD, 'stats profils enfants'),
-            withQueryTimeout(sql`SELECT COUNT(*) as count FROM profiles WHERE is_teen = true`, TIMEOUTS.STANDARD, 'stats profils ados'),
-            withQueryTimeout(sql`SELECT COUNT(*) as count FROM profiles WHERE is_admin = true`, TIMEOUTS.STANDARD, 'stats profils admin')
-        ]);
+        const rows = await query(
+            `SELECT
+               COUNT(*)::int AS total,
+               COUNT(*) FILTER (WHERE is_active = true)::int AS active,
+               COUNT(*) FILTER (WHERE is_child = true)::int AS children,
+               COUNT(*) FILTER (WHERE is_teen = true)::int AS teens,
+               COUNT(*) FILTER (WHERE is_admin = true)::int AS admins
+             FROM profiles`,
+            [],
+            'statistiques des profils'
+        );
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: 'Statistiques des profils récupérées avec succès',
-            data: {
-                total: totalProfiles[0].count,
-                active: activeProfiles[0].count,
-                children: childProfiles[0].count,
-                teens: teenProfiles[0].count,
-                admins: adminProfiles[0].count
-            }
+            data: rows[0]
         });
-
     } catch (error) {
-        const errorResponse = handleError(error, 'Erreur lors de la récupération des statistiques des profils');
-        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+        return sendError(res, error, 'Erreur lors de la récupération des statistiques des profils');
     }
 }
 
 // Handler des statistiques d'apprentissage d'un profil (leçons/quiz)
-// Utilisé par l'admin parent pour voir les interrogations éligibles et le compteur de quiz par enfant.
+// Parent : tous les profils ; appareil familial : les enfants ; profil : le sien.
 async function handleProfileLearningStats(req, res) {
     try {
         if (req.method !== 'GET') {
-            res.status(405).json(createErrorResponse('Méthode non autorisée', 'METHOD_NOT_ALLOWED'));
-            return;
+            return sendFailure(res, 405, 'Méthode non autorisée', 'METHOD_NOT_ALLOWED');
         }
 
-        const id = req.params.id;
-        const profileIdNum = parseInt(id, 10);
-        if (!id || isNaN(profileIdNum)) {
-            res.status(400).json(createErrorResponse('ID de profil invalide', 'BAD_REQUEST'));
-            return;
+        const profileIdNum = parseId(req.params?.id);
+        if (!profileIdNum) {
+            return sendFailure(res, 400, 'ID de profil invalide', 'BAD_REQUEST');
+        }
+        if (!(await canAccessProfile(req.user, profileIdNum))) {
+            return sendFailure(res, 403, 'Accès refusé', 'FORBIDDEN');
         }
 
-        // Parent : tous les profils ; appareil familial : les enfants ; profil : le sien
-        if (!canActForProfile(req.user, profileIdNum)) {
-            res.status(403).json(createErrorResponse('Accès refusé', 'FORBIDDEN'));
-            return;
-        }
-
-        const [totalLessonsRes, quizzesCountRes, avgScoreRes, lessonsRes, quizHistoryRes] = await Promise.all([
-            withQueryTimeout(
-                sql`SELECT COUNT(*)::int as total_lessons FROM lessons WHERE is_published = true AND (target_profile_id = ${profileIdNum} OR target_profile_id IS NULL)`,
-                TIMEOUTS.STANDARD,
-                'stats (total lessons)'
+        const [totalsRes, lessonsRes, quizHistoryRes] = await Promise.all([
+            query(
+                `SELECT
+                   (SELECT COUNT(*)::int FROM lessons
+                     WHERE is_published = true AND (target_profile_id = $1 OR target_profile_id IS NULL)) AS total_lessons,
+                   (SELECT COUNT(*)::int FROM quiz_results WHERE profile_id = $1) AS total_quizzes_completed,
+                   (SELECT COALESCE(AVG(percentage), 0)::float FROM quiz_results WHERE profile_id = $1) AS average_score`,
+                [profileIdNum],
+                'stats (totaux)'
             ),
-            withQueryTimeout(
-                sql`SELECT COUNT(*)::int as total_quizzes_completed FROM quiz_results WHERE profile_id = ${profileIdNum}`,
-                TIMEOUTS.STANDARD,
-                'stats (total quizzes)'
+            query(
+                `SELECT
+                    l.id, l.title, l.description, l.subject, l.level,
+                    l.image_filename, l.is_published, l.created_at, l.updated_at,
+                    (COUNT(qr.id) > 0) as quiz_completed,
+                    COALESCE(MAX(qr.percentage), 0)::float as best_score,
+                    COUNT(qr.id)::int as total_attempts,
+                    MAX(qr.completed_at) as last_attempt
+                 FROM lessons l
+                 LEFT JOIN quiz_results qr
+                    ON qr.lesson_id = l.id
+                    AND qr.profile_id = $1
+                 WHERE l.is_published = true
+                    AND (l.target_profile_id = $1 OR l.target_profile_id IS NULL)
+                 GROUP BY l.id
+                 ORDER BY l.created_at DESC
+                 LIMIT 200`,
+                [profileIdNum],
+                'stats (lessons with completion)',
+                TIMEOUTS.LONG
             ),
-            withQueryTimeout(
-                sql`SELECT COALESCE(AVG(percentage), 0)::float as average_score FROM quiz_results WHERE profile_id = ${profileIdNum}`,
-                TIMEOUTS.STANDARD,
-                'stats (average score)'
-            ),
-            withQueryTimeout(
-                sql`
-                    SELECT 
-                        l.id, l.title, l.description, l.subject, l.level,
-                        l.image_filename, l.is_published, l.created_at, l.updated_at,
-                        (COUNT(qr.id) > 0) as quiz_completed,
-                        COALESCE(MAX(qr.percentage), 0)::float as best_score,
-                        COUNT(qr.id)::int as total_attempts,
-                        MAX(qr.completed_at) as last_attempt
-                    FROM lessons l
-                    LEFT JOIN quiz_results qr
-                        ON qr.lesson_id = l.id
-                        AND qr.profile_id = ${profileIdNum}
-                    WHERE l.is_published = true
-                        AND (l.target_profile_id = ${profileIdNum} OR l.target_profile_id IS NULL)
-                    GROUP BY l.id
-                    ORDER BY l.created_at DESC
-                    LIMIT 200
-                `,
-                TIMEOUTS.LONG,
-                'stats (lessons with completion)'
-            ),
-            withQueryTimeout(
-                sql`
-                    SELECT
-                        qr.id,
-                        qr.lesson_id,
-                        qr.course_page_id,
-                        COALESCE(l.title, cp.title) as lesson_title,
-                        qr.score,
-                        qr.total_questions,
-                        qr.percentage,
-                        qr.completed_at
-                    FROM quiz_results qr
-                    LEFT JOIN lessons l ON l.id = qr.lesson_id
-                    LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
-                    WHERE qr.profile_id = ${profileIdNum}
-                    ORDER BY qr.completed_at DESC
-                    LIMIT 20
-                `,
-                TIMEOUTS.STANDARD,
+            query(
+                `SELECT
+                    qr.id,
+                    qr.lesson_id,
+                    qr.course_page_id,
+                    COALESCE(l.title, cp.title) as lesson_title,
+                    qr.score,
+                    qr.total_questions,
+                    qr.percentage,
+                    qr.completed_at
+                 FROM quiz_results qr
+                 LEFT JOIN lessons l ON l.id = qr.lesson_id
+                 LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
+                 WHERE qr.profile_id = $1
+                 ORDER BY qr.completed_at DESC
+                 LIMIT 20`,
+                [profileIdNum],
                 'stats (quiz history)'
             )
         ]);
 
         const stats = {
-            total_lessons: totalLessonsRes?.[0]?.total_lessons ?? 0,
-            total_quizzes_completed: quizzesCountRes?.[0]?.total_quizzes_completed ?? 0,
-            average_score: avgScoreRes?.[0]?.average_score ?? 0
+            total_lessons: totalsRes?.[0]?.total_lessons ?? 0,
+            total_quizzes_completed: totalsRes?.[0]?.total_quizzes_completed ?? 0,
+            average_score: totalsRes?.[0]?.average_score ?? 0
         };
 
         // Format attendu par le frontend (camelCase + flags UI)
@@ -436,7 +329,7 @@ async function handleProfileLearningStats(req, res) {
             }))
         };
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: 'Statistiques d\'apprentissage récupérées avec succès',
             data: {
@@ -445,50 +338,171 @@ async function handleProfileLearningStats(req, res) {
             }
         });
     } catch (error) {
-        const errorResponse = handleError(error, 'Erreur lors de la récupération des statistiques d\'apprentissage');
-        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+        return sendError(res, error, 'Erreur lors de la récupération des statistiques d\'apprentissage');
     }
 }
 
-// Handler des codes PIN (route directe)
+// Profil + PIN courant (null si le profil ou son PIN n'existe pas)
+async function loadProfilePin(profileId) {
+    const rows = await query(
+        `SELECT p.id, p.name, p.is_admin, pc.pin_code
+         FROM profiles p
+         JOIN pin_codes pc ON pc.profile_id = p.id
+         WHERE p.id = $1
+         ORDER BY pc.created_at DESC
+         LIMIT 1`,
+        [profileId],
+        'récupération du PIN'
+    );
+    return rows[0] || null;
+}
+
+// POST /profiles/:id/pin : vérifie un PIN (mêmes compteurs de verrouillage que /auth/login)
+async function verifyPin(req, res, profileId) {
+    const { pin } = req.body || {};
+    if (!pin) {
+        return sendFailure(res, 400, 'Code PIN requis', 'BAD_REQUEST');
+    }
+    if (rejectIfPinLocked(req, res, profileId)) {
+        return;
+    }
+
+    const profilePin = await loadProfilePin(profileId);
+    if (!profilePin) {
+        return sendFailure(res, 404, 'Code PIN non trouvé', 'NOT_FOUND');
+    }
+
+    const isValidPin = await NativeHashService.verifyPin(pin, profilePin.pin_code);
+    if (isValidPin) {
+        recordPinSuccess(req, profileId);
+        rehashLegacyPin(pin, profilePin.pin_code, profileId);
+    } else {
+        recordPinFailure(req, profilePin);
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: isValidPin ? 'Code PIN valide' : 'Code PIN invalide',
+        data: { isValid: isValidPin }
+    });
+}
+
+/**
+ * PUT /profiles/:id/pin (requireAdmin + pinUpdateSchema sur la route).
+ * Corps : { newPin, currentPin? } — currentPin obligatoire pour changer son propre PIN.
+ * Politique : WEAK_PIN (code trivial), PIN_TOO_SHORT (profil parent < 6 chiffres).
+ * Les jetons du profil sont révoqués ; si le parent change son propre PIN, la réponse
+ * contient un nouveau jeton (data.token) qui remplace l'ancien.
+ */
+async function updatePin(req, res, profileId) {
+    const { newPin, currentPin } = req.body || {};
+    if (!newPin) {
+        return sendFailure(res, 400, 'Nouveau code PIN requis', 'BAD_REQUEST');
+    }
+
+    const targets = await query('SELECT id, name, type, is_admin FROM profiles WHERE id = $1', [profileId], 'récupération du profil');
+    const target = targets[0];
+    if (!target) {
+        return sendFailure(res, 404, 'Profil non trouvé', 'NOT_FOUND');
+    }
+
+    const policy = checkNewPin(newPin, { isAdmin: target.is_admin === true });
+    if (!policy.ok) {
+        return sendFailure(res, 400, policy.message, policy.code);
+    }
+
+    // Un parent peut réinitialiser le PIN d'un autre profil ; pour changer le sien,
+    // le PIN actuel est exigé (session parent laissée ouverte sur la tablette).
+    const isOwnProfile = parseId(req.user?.profileId) === profileId;
+    if (isOwnProfile && !currentPin) {
+        return sendFailure(res, 400, 'Code PIN actuel requis', 'CURRENT_PIN_REQUIRED');
+    }
+
+    if (currentPin) {
+        if (rejectIfPinLocked(req, res, profileId)) {
+            return;
+        }
+        const profilePin = await loadProfilePin(profileId);
+        if (profilePin) {
+            const isValidCurrentPin = await NativeHashService.verifyPin(currentPin, profilePin.pin_code);
+            if (!isValidCurrentPin) {
+                recordPinFailure(req, profilePin);
+                return sendFailure(res, 401, 'Code PIN actuel incorrect', 'INVALID_CURRENT_PIN');
+            }
+            recordPinSuccess(req, profileId);
+        }
+    }
+
+    const hashedPin = await NativeHashService.hashPin(newPin);
+
+    // PIN et révocation des jetons dans la même transaction
+    const { pinRow, tokenVersion } = await withTransaction(async (client) => {
+        const pinResult = await client.query(
+            `INSERT INTO pin_codes (profile_id, pin_code)
+             VALUES ($1, $2)
+             ON CONFLICT (profile_id) DO UPDATE SET
+               pin_code = EXCLUDED.pin_code,
+               updated_at = CURRENT_TIMESTAMP
+             RETURNING created_at, updated_at`,
+            [profileId, hashedPin]
+        );
+        const versionResult = await client.query(
+            'UPDATE profiles SET token_version = token_version + 1 WHERE id = $1 RETURNING token_version',
+            [profileId]
+        );
+        return { pinRow: pinResult.rows[0], tokenVersion: versionResult.rows[0]?.token_version };
+    }, { operation: 'mise à jour du PIN' });
+    clearAuthCache(profileId);
+
+    recordAuditEvent({
+        action: 'PIN_CHANGED',
+        category: 'security',
+        level: 'info',
+        userId: parseId(req.user?.profileId),
+        details: { profileId, ownProfile: isOwnProfile },
+        req
+    });
+
+    const data = {
+        profileId,
+        updatedAt: pinRow?.updated_at || pinRow?.created_at || null
+    };
+    if (isOwnProfile) {
+        data.token = generateToken({
+            profileId: target.id,
+            name: target.name,
+            type: target.type,
+            isAdmin: target.is_admin,
+            tokenVersion
+        });
+    }
+
+    // Ne jamais renvoyer le hash du PIN
+    return res.status(200).json({
+        success: true,
+        message: 'Code PIN mis à jour avec succès',
+        data
+    });
+}
+
+// Handler des codes PIN : GET (parent), POST (vérification), PUT (modification, parent)
 async function handlePin(req, res) {
     try {
-        // Utiliser req.params.id fourni par Express Router
-        const profileId = req.params.id;
-
-        // Validation et conversion de l'ID
-        const profileIdNum = parseInt(profileId, 10);
-
-        if (!profileId || isNaN(profileIdNum)) {
-            res.status(400).json({
-                success: false,
-                message: 'ID de profil invalide'
-            });
-            return;
+        const profileId = parseId(req.params?.id);
+        if (!profileId) {
+            return sendFailure(res, 400, 'ID de profil invalide', 'BAD_REQUEST');
         }
 
         if (req.method === 'GET') {
-            // Récupérer le code PIN (pour vérification)
-            const pinData = await withQueryTimeout(
-                sql`
-          SELECT pin_code, created_at, updated_at 
-          FROM pin_codes 
-          WHERE profile_id = ${profileIdNum} 
-          ORDER BY created_at DESC LIMIT 1
-        `,
-                TIMEOUTS.STANDARD,
+            const pinData = await query(
+                'SELECT created_at, updated_at FROM pin_codes WHERE profile_id = $1 ORDER BY created_at DESC LIMIT 1',
+                [profileId],
                 'récupération du PIN'
             );
-
             if (!pinData[0]) {
-                res.status(404).json({
-                    success: false,
-                    message: 'Code PIN non trouvé'
-                });
-                return;
+                return sendFailure(res, 404, 'Code PIN non trouvé', 'NOT_FOUND');
             }
-
-            res.status(200).json({
+            return res.status(200).json({
                 success: true,
                 message: 'Code PIN récupéré avec succès',
                 data: {
@@ -497,247 +511,59 @@ async function handlePin(req, res) {
                     updatedAt: pinData[0].updated_at
                 }
             });
-
-        } else if (req.method === 'POST') {
-            // Vérifier un code PIN
-            const { pin } = req.body;
-
-            if (!pin) {
-                res.status(400).json({
-                    success: false,
-                    message: 'Code PIN requis'
-                });
-                return;
-            }
-
-            const lockKey = `profile:${profileIdNum}`;
-            if (pinFailures.rejectIfLocked(lockKey, res)) {
-                return;
-            }
-
-            const pinData = await withQueryTimeout(
-                sql`SELECT pin_code FROM pin_codes WHERE profile_id = ${profileIdNum} ORDER BY created_at DESC LIMIT 1`,
-                TIMEOUTS.STANDARD,
-                'vérification du PIN'
-            );
-
-            if (!pinData[0]) {
-                res.status(404).json({
-                    success: false,
-                    message: 'Code PIN non trouvé'
-                });
-                return;
-            }
-
-            const isValidPin = await NativeHashService.verifyPin(pin, pinData[0].pin_code);
-            if (isValidPin) {
-                pinFailures.recordSuccess(lockKey);
-            } else {
-                pinFailures.recordFailure(lockKey);
-            }
-
-            // Migration transparente bcrypt (non-bloquant) si valide et legacy
-            if (isValidPin && NativeHashService.needsRehash(pinData[0].pin_code)) {
-                NativeHashService.hashPin(pin)
-                    .then(newHash => sql`UPDATE pin_codes SET pin_code = ${newHash} WHERE profile_id = ${profileIdNum}`)
-                    .catch(err => console.error('⚠️ Migration bcrypt PIN échouée (non-bloquant):', err?.message || err));
-            }
-
-            res.status(200).json({
-                success: true,
-                message: isValidPin ? 'Code PIN valide' : 'Code PIN invalide',
-                data: { isValid: isValidPin }
-            });
-
-        } else if (req.method === 'PUT') {
-            // Mettre à jour un code PIN
-            const { newPin, currentPin } = req.body;
-
-            if (!newPin) {
-                res.status(400).json({
-                    success: false,
-                    message: 'Nouveau code PIN requis'
-                });
-                return;
-            }
-
-            // requireAdmin + validate(pinUpdateSchema) sont appliqués par le routeur.
-            // Un parent peut réinitialiser le PIN d'un autre profil ; pour changer le sien,
-            // le PIN actuel est exigé (session parent laissée ouverte sur la tablette).
-            const isOwnProfile = String(req.user?.profileId) === String(profileIdNum);
-            if (isOwnProfile && !currentPin) {
-                res.status(400).json({
-                    success: false,
-                    message: 'Code PIN actuel requis'
-                });
-                return;
-            }
-
-            // Vérifier le code PIN actuel si fourni
-            if (currentPin) {
-                const pinData = await withQueryTimeout(
-                    sql`
-            SELECT pin_code 
-            FROM pin_codes 
-            WHERE profile_id = ${profileIdNum} 
-            ORDER BY created_at DESC LIMIT 1
-          `,
-                    TIMEOUTS.STANDARD,
-                    'vérification du PIN actuel'
-                );
-
-                if (pinData[0]) {
-                    const isValidCurrentPin = await NativeHashService.verifyPin(currentPin, pinData[0].pin_code);
-                    if (!isValidCurrentPin) {
-                        res.status(401).json({
-                            success: false,
-                            message: 'Code PIN actuel incorrect'
-                        });
-                        return;
-                    }
-                }
-            }
-
-            // Hacher le nouveau code PIN
-            const hashedPin = await NativeHashService.hashPin(newPin);
-
-            // Vérifier si un code PIN existe déjà
-            const existingPin = await withQueryTimeout(
-                sql`SELECT id FROM pin_codes WHERE profile_id = ${profileIdNum}`,
-                TIMEOUTS.STANDARD,
-                'vérification PIN existant'
-            );
-
-            let result;
-            if (existingPin[0]) {
-                // Mettre à jour le code PIN existant
-                result = await withQueryTimeout(
-                    sql`
-            UPDATE pin_codes 
-            SET pin_code = ${hashedPin}, updated_at = CURRENT_TIMESTAMP 
-            WHERE profile_id = ${profileIdNum} 
-            RETURNING *
-          `,
-                    TIMEOUTS.STANDARD,
-                    'mise à jour du PIN'
-                );
-            } else {
-                // Créer un nouveau code PIN
-                result = await withQueryTimeout(
-                    sql`
-            INSERT INTO pin_codes (profile_id, pin_code) 
-            VALUES (${profileIdNum}, ${hashedPin}) 
-            RETURNING *
-          `,
-                    TIMEOUTS.STANDARD,
-                    'création du PIN'
-                );
-            }
-
-            // Ne jamais renvoyer le hash du PIN
-            res.status(200).json({
-                success: true,
-                message: 'Code PIN mis à jour avec succès',
-                data: {
-                    profileId: profileIdNum,
-                    updatedAt: result[0]?.updated_at || result[0]?.created_at || null
-                }
-            });
-
-        } else {
-            res.status(405).json({
-                success: false,
-                message: 'Méthode non autorisée'
-            });
         }
+        if (req.method === 'POST') return await verifyPin(req, res, profileId);
+        if (req.method === 'PUT') return await updatePin(req, res, profileId);
 
+        return sendFailure(res, 405, 'Méthode non autorisée', 'METHOD_NOT_ALLOWED');
     } catch (error) {
-        const errorResponse = handleError(error, 'Erreur lors de la gestion du code PIN');
-        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+        return sendError(res, error, 'Erreur lors de la gestion du code PIN');
     }
 }
 
-// Demande publique de création de profil (pas d'auth) -> notification aux admins
+// Demande de création de profil (tout membre, profileCreationRequestSchema) -> notification
+// à chaque parent actif, dans une seule transaction (toutes ou aucune).
 async function handleProfileCreationRequest(req, res) {
     try {
         if (req.method !== 'POST') {
-            res.status(405).json({
-                success: false,
-                message: 'Méthode non autorisée'
-            });
-            return;
+            return sendFailure(res, 405, 'Méthode non autorisée', 'METHOD_NOT_ALLOWED');
         }
 
-        const rawName = req.body?.name;
-        const rawType = req.body?.type;
-
-        const name = (typeof rawName === 'string' ? rawName : String(rawName || '')).replace(/\r/g, '').trim();
-        const type = (typeof rawType === 'string' ? rawType : 'child').replace(/\r/g, '').trim() || 'child';
-
-        // Validation simple (sécurité + UX)
-        if (!name || name.length < 2 || name.length > 40) {
-            res.status(400).json(createErrorResponse(
-                'Nom invalide (2 à 40 caractères requis).',
-                'INVALID_NAME'
-            ));
-            return;
+        const { name, type } = req.body || {};
+        if (!name) {
+            return sendFailure(res, 400, 'Nom invalide (2 à 40 caractères requis).', 'INVALID_NAME');
         }
-        // Autoriser lettres (unicode), chiffres, espace, tiret, apostrophe, underscore
-        if (!/^[\p{L}0-9 _'’-]{2,40}$/u.test(name)) {
-            res.status(400).json(createErrorResponse(
-                'Nom invalide (caractères non autorisés).',
-                'INVALID_NAME'
-            ));
-            return;
-        }
-
-        const allowedTypes = new Set(['child', 'teen']);
-        const safeType = allowedTypes.has(type) ? type : 'child';
-
-        const admins = await withQueryTimeout(
-            sql`SELECT id FROM profiles WHERE is_admin = true AND is_active = true ORDER BY id ASC`,
-            TIMEOUTS.STANDARD,
-            'récupération des admins'
-        );
-
-        if (!admins || admins.length === 0) {
-            res.status(500).json(createErrorResponse(
-                'Aucun profil parent/admin disponible pour validation.',
-                'NO_ADMIN_AVAILABLE'
-            ));
-            return;
-        }
+        const safeType = type === 'teen' ? 'teen' : 'child';
 
         const requestId = (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex'));
-        const nowIso = new Date().toISOString();
-
-        const title = 'Demande de création de profil';
-        const message = `Un nouveau profil "${name}" a été demandé. Validation requise.`;
-        const data = {
-            requestId,
-            requestedName: name,
-            requestedType: safeType,
-            createdAt: nowIso
+        const notification = {
+            type: 'profile_request',
+            title: 'Demande de création de profil',
+            message: `Un nouveau profil "${name}" a été demandé. Validation requise.`,
+            data: {
+                requestId,
+                requestedName: name,
+                requestedType: safeType,
+                createdAt: new Date().toISOString()
+            }
         };
 
-        // Créer une notification pour chaque admin
-        await Promise.all(admins.map((a) => withQueryTimeout(
-            sql`
-        INSERT INTO notifications (profile_id, type, title, message, data)
-        VALUES (${a.id}, ${'profile_request'}, ${title}, ${message}, ${JSON.stringify(data)}::jsonb)
-      `,
-            TIMEOUTS.STANDARD,
-            'création notification profile_request'
-        )));
+        const adminIds = await withTransaction(
+            client => notifyParents(client, notification),
+            { operation: 'création des notifications profile_request' }
+        );
 
-        res.status(201).json({
+        if (adminIds.length === 0) {
+            return sendFailure(res, 500, 'Aucun profil parent/admin disponible pour validation.', 'NO_ADMIN_AVAILABLE');
+        }
+
+        return res.status(201).json({
             success: true,
             message: 'Demande envoyée au profil parent pour validation',
             data: { requestId }
         });
     } catch (error) {
-        const errorResponse = handleError(error, 'Erreur lors de l\'envoi de la demande de profil');
-        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+        return sendError(res, error, 'Erreur lors de l\'envoi de la demande de profil');
     }
 }
 

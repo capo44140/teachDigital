@@ -1,575 +1,244 @@
-# 🐳 Guide de Déploiement Docker sur Synology
+# 🐳 Déploiement Docker sur Synology
 
-Ce guide vous explique comment déployer TeachDigital Backend sur votre Synology avec Docker, en utilisant votre propre instance PostgreSQL.
+TeachDigital tourne sur le NAS dans deux conteneurs. Ils sont construits et lancés depuis un poste
+Windows par `deploy.ps1` (racine du dépôt). PostgreSQL n'est pas fourni : on utilise une instance
+existante, qui peut être le paquet du NAS, un conteneur ou une autre machine.
+
+> Première mise en production de cette version sur un NAS déjà installé : suivre d'abord la
+> [checklist « Mise à jour du déploiement »](#-mise-à-jour-du-déploiement-première-livraison-de-cette-version).
+
+## 🧭 Architecture
+
+```text
+Navigateur ──HTTPS──▶ reverse proxy DSM ──▶ 127.0.0.1:3000 (ou IP du NAS:3000)
+                                              │
+                         conteneur teachdigital-frontend (nginx, port 80)
+                         ├─ sert la SPA (frontend/dist) + en-têtes de sécurité (CSP…)
+                         └─ /api/*  ──▶ http://backend:3001   (réseau Docker « teachdigital »)
+                                              │
+                         conteneur teachdigital-backend (Express, 3001)
+                         ├─ publié uniquement sur 127.0.0.1:3001 (healthchecks depuis le NAS)
+                         └─ PostgreSQL (DB_HOST : hôte du NAS, conteneur ou autre machine)
+```
+
+- Le réseau Docker externe `teachdigital` est créé par `deploy.ps1` avec un sous-réseau fixe
+  (`-DockerSubnet`, défaut `172.30.240.0/24`, obligatoirement dans `172.16.0.0/12`). Le paramètre
+  ne sert qu'à la création : pour changer de sous-réseau, arrêter les deux stacks, supprimer le
+  réseau (`docker network rm teachdigital`) et redéployer.
+- Le port 3001 n'est **pas** joignable depuis le réseau local : tout passe par le nginx du
+  frontend.
+- nginx ne prend en compte `X-Forwarded-For` que s'il vient de `127.0.0.1`, de `172.16.0.0/12`
+  (passerelle Docker) ou de l'adresse indiquée dans `NGINX_TRUSTED_PROXY`. Le verrouillage des PIN
+  se fait par adresse IP, d'où cette précaution.
 
 ## 📋 Prérequis
 
-- Synology NAS avec DSM 7.0 ou supérieur
-- Docker installé via le Package Center
-- PostgreSQL déjà installé et configuré (conteneur Docker, package Synology, ou machine externe)
-- Au moins 2 Go de RAM disponible
-- Accès SSH à votre Synology (recommandé pour faciliter le déploiement)
+**Sur le NAS**
 
-## 🚀 Installation Rapide
+- DSM 7 avec Container Manager (`docker` et `docker compose`).
+- Accès SSH par clé, avec un utilisateur autorisé à lancer `docker` (voir
+  [SYNOLOGY_DOCKER_PERMISSIONS.md](SYNOLOGY_DOCKER_PERMISSIONS.md)).
+- PostgreSQL joignable depuis le réseau Docker, avec une base et un utilisateur dédiés.
+  Cet utilisateur doit être **propriétaire des tables**, car les migrations font des
+  `ALTER TABLE` et des `CREATE INDEX`.
 
-### Étape 1 : Préparer les fichiers
+**Sur le poste Windows**
 
-1. **Connectez-vous à votre Synology** via SSH ou File Station
-2. **Créez un dossier** pour votre projet :
-   ```bash
-   sudo mkdir -p /docker/teachdigital/backend
-   cd /docker/teachdigital/backend
-   ```
+- PowerShell, Git for Windows (Git Bash et `tar`), Node 22 et pnpm 9.15 pour le build du frontend.
+- Un alias `synology` dans `~/.ssh/config` (paramètre `-SshAlias` pour en utiliser un autre) :
 
-3. **Copiez les fichiers suivants** dans le dossier `backend/` :
-   - Tous les fichiers du dossier `backend/` du projet
-   - `docker-compose.yml`
-   - `env.docker.example` (renommez-le en `.env`)
+  ```text
+  Host synology
+      HostName 192.168.1.10
+      User mon-utilisateur
+      IdentityFile ~/.ssh/synology_deploy
+  ```
 
-### Étape 2 : Configurer les variables d'environnement
+- Les dossiers de destination :
+  - backend : `deployPath` dans `backend/.synology-deploy.json` (modèle
+    `backend/.synology-deploy.json.example`), ou paramètre `-BackendPath` ;
+  - frontend : `frontendDeployPath` dans `.synology-deploy.json` à la racine, ou paramètre
+    `-FrontendPath`. Valeur par défaut : `/volume1/docker/teachdigital/frontend`.
 
-1. **Copiez le fichier d'exemple** :
-   ```bash
-   cp env.docker.example .env
-   ```
+## 🔐 Configuration sur le NAS
 
-2. **Éditez le fichier `.env`** avec vos paramètres :
+### Backend : `.env` à côté de `docker-compose.yml`
 
-```env
-# ============================================
-# BASE DE DONNÉES POSTGRESQL EXTERNE
-# ============================================
-# IMPORTANT: Configurez selon votre installation PostgreSQL
+Copier `backend/env.docker.example` en `.env` dans le dossier backend du NAS et le remplir. Ce
+fichier n'est jamais transféré par `deploy.ps1` ni intégré à l'image.
 
-# Option A: PostgreSQL sur un autre conteneur Docker
-DB_HOST=nom-de-votre-conteneur-postgresql
-# Exemple: DB_HOST=postgresql-container
+| Variable | Rôle |
+| --- | --- |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` (ou `DATABASE_URL`) | Accès PostgreSQL |
+| `JWT_SECRET` | **Obligatoire**, au moins 32 caractères aléatoires (`openssl rand -hex 32`). Sans lui, `docker compose` refuse de démarrer |
+| `AI_SETTINGS_KEY` | Recommandée, au moins 32 caractères et différente de `JWT_SECRET` : chiffre les clés IA enregistrées depuis l'interface. Ne plus la changer ensuite |
+| `FRONTEND_URL`, `ALLOWED_ORIGIN` | Origines autorisées par CORS, par exemple `https://teachdigital.example` |
+| `OPENAI_API_KEY`, `GEMINI_API_KEY`… | Optionnelles. Elles peuvent aussi être saisies dans Configuration IA |
 
-# Option B: PostgreSQL sur le host Synology (package ou installation native)
-DB_HOST=host.docker.internal
+La liste complète, avec les valeurs par défaut, est dans
+[SYNOLOGY-ENV-VARIABLES.md](SYNOLOGY-ENV-VARIABLES.md).
 
-# Option C: PostgreSQL sur une autre machine
-DB_HOST=192.168.1.100
+### PostgreSQL
 
-DB_PORT=5432
-DB_USER=teachdigital
-DB_PASSWORD=VotreMotDePasseFort123!
-DB_NAME=teachdigital
+Trois choix de `DB_HOST` :
 
-# ============================================
-# SÉCURITÉ
-# ============================================
-# Générez un secret fort (voir section Sécurité)
-JWT_SECRET=<generate-with: openssl rand -hex 32>
+- **PostgreSQL sur l'hôte du NAS** (paquet ou installation native) : `DB_HOST=host.docker.internal`.
+  Le compose déclare `host.docker.internal:host-gateway`. PostgreSQL voit alors les connexions
+  arriver depuis le sous-réseau du réseau `teachdigital`, qu'il faut autoriser :
+  - `postgresql.conf` : `listen_addresses` doit inclure l'adresse de la passerelle Docker, ou `*` ;
+  - `pg_hba.conf` : `host  teachdigital  teachdigital  172.30.240.0/24  scram-sha-256`
+    (adapter la base, l'utilisateur et le sous-réseau `-DockerSubnet`), puis recharger PostgreSQL.
+- **PostgreSQL dans un conteneur** : le connecter au réseau
+  (`docker network connect teachdigital <conteneur-postgres>`) et mettre `DB_HOST=<conteneur-postgres>`.
+- **Autre machine** : `DB_HOST=<ip>`. Le pare-feu doit laisser passer le port 5432 depuis le NAS.
 
-# ============================================
-# FRONTEND
-# ============================================
-# URL de votre frontend pour CORS
-FRONTEND_URL=http://votre-synology-ip:3000
-# OU si vous utilisez un reverse proxy:
-# FRONTEND_URL=https://teachdigital.votre-domaine.com
+### Frontend : `.env` facultatif dans le dossier frontend
 
-# ============================================
-# API IA (Optionnel)
-# ============================================
-# Au moins une clé est recommandée pour la génération de quiz
-OPENAI_API_KEY=
-GEMINI_API_KEY=
-DEEPSEEK_API_KEY=
-GROQ_API_KEY=
-MISTRAL_API_KEY=
+Ce fichier est lu par `frontend/docker-compose.yml` :
+
+| Variable | Défaut | Rôle |
+| --- | --- | --- |
+| `FRONTEND_BIND_ADDRESS` | `0.0.0.0` | Mettre `127.0.0.1` (recommandé) quand le reverse proxy DSM vise `localhost:3000` : les postes du réseau local passent alors forcément par le reverse proxy |
+| `NGINX_TRUSTED_PROXY` | `127.0.0.1` | Adresse du reverse proxy DSM s'il vise l'IP réseau du NAS au lieu de `localhost:3000`. Sans elle, toutes les requêtes semblent venir du NAS |
+
+`nginx.conf` est un modèle : au démarrage, l'image nginx y remplace uniquement les variables
+`NGINX_*` (envsubst).
+
+## 🚀 Déployer
+
+Depuis la racine du dépôt :
+
+```powershell
+.\deploy.ps1                          # backend + frontend
+.\deploy.ps1 -Target backend          # backend uniquement
+.\deploy.ps1 -Target frontend         # frontend uniquement (build local puis envoi de frontend/dist/)
+.\deploy.ps1 -SkipBuild               # réutilise le frontend/dist/ existant
+.\deploy.ps1 -NoBuildCache            # docker compose build --no-cache
+.\deploy.ps1 -DockerSubnet 172.31.0.0/24   # sous-réseau du réseau Docker (à sa création seulement)
 ```
 
-### Étape 3 : Configurer l'accès PostgreSQL
+Pour chaque composant, le script :
 
-**IMPORTANT** : Votre PostgreSQL doit autoriser les connexions depuis le conteneur Docker.
+1. contrôle SSH et repère `docker` et `docker compose` sur le NAS ;
+2. **backend** : crée les volumes (`logs`, `output`, `temp`, `.cache/tesseract`) et envoie
+   `backend/`. Sont exclus : `node_modules`, `.env*`, `logs`, `output`, `temp`, `.cache` et
+   `.synology-deploy.json` ;
+3. **frontend** : lance `pnpm run build` en local, puis envoie `dist/`, `nginx.conf`,
+   `Dockerfile.prebuilt` et `docker-compose.yml` ;
+4. crée le réseau `teachdigital` s'il manque (`[NETWORK]`), puis enchaîne
+   `docker compose down`, `build` et `up -d`. Si le build échoue, les conteneurs restent arrêtés ;
+5. fait les vérifications suivantes :
+   - backend : `/health`, puis `/health/ready` (base joignable et migrations appliquées) ;
+   - frontend : `http://localhost:3000`, puis `/api/health` à travers nginx ;
+   - avec `-Target backend` : présence du frontend sur le réseau.
 
-#### 📦 Si PostgreSQL est sur un autre conteneur Docker
+Le backend applique seul les migrations au démarrage : il attend PostgreSQL jusqu'à 5 minutes,
+puis migre. **Une migration en échec arrête le conteneur (code 1)** : lire les logs.
 
-1. **Trouvez le nom de votre conteneur PostgreSQL** :
-   ```bash
-   docker ps | grep postgres
-   ```
-
-2. **Trouvez le réseau Docker utilisé** :
-   ```bash
-   docker inspect nom-conteneur-postgresql | grep -A 10 Networks
-   ```
-
-3. **Dans `.env`**, utilisez le nom du conteneur :
-   ```env
-   DB_HOST=nom-conteneur-postgresql
-   ```
-
-4. **Connectez les conteneurs au même réseau** (voir section "Réseau Docker" ci-dessous)
-
-#### 🖥️ Si PostgreSQL est sur le host Synology (package ou installation native)
-
-1. **Dans `.env`**, utilisez `host.docker.internal` :
-   ```env
-   DB_HOST=host.docker.internal
-   ```
-
-2. **Vérifiez la configuration PostgreSQL** :
-   - Modifiez `postgresql.conf` : `listen_addresses = '*'`
-   - Modifiez `pg_hba.conf` pour autoriser les connexions depuis Docker :
-     ```
-     host    all    all    172.17.0.0/16    md5
-     ```
-
-#### 🌐 Si PostgreSQL est sur une autre machine
-
-1. **Dans `.env`**, utilisez l'IP de la machine :
-   ```env
-   DB_HOST=192.168.1.100
-   ```
-
-2. **Vérifiez le pare-feu** pour autoriser le port 5432 depuis votre Synology
-
-### Étape 4 : Déployer avec Docker Compose
-
-#### Méthode 1 : Via SSH (Recommandé)
-
-1. **Connectez-vous en SSH** à votre Synology :
-   ```bash
-   ssh admin@votre-synology-ip
-   ```
-
-2. **Naviguez vers le dossier du projet** :
-   ```bash
-   cd /docker/teachdigital/backend
-   ```
-
-3. **Vérifiez que Docker Compose est disponible** :
-   ```bash
-   docker-compose --version
-   # OU pour les versions récentes:
-   docker compose version
-   ```
-   
-   Si ce n'est pas disponible, installez-le ou utilisez `docker compose` (sans tiret).
-
-4. **Construisez et démarrez le conteneur** :
-   ```bash
-   docker-compose up -d --build
-   ```
-
-5. **Vérifiez que le conteneur est démarré** :
-   ```bash
-   docker-compose ps
-   ```
-
-6. **Consultez les logs** pour vérifier que tout fonctionne :
-   ```bash
-   docker-compose logs -f backend
-   ```
-
-#### Méthode 2 : Via l'interface Synology Docker
-
-1. **Ouvrez Docker** dans le Package Center
-2. **Allez dans l'onglet "Image"**
-3. **Cliquez sur "Créer"** → **"Depuis un fichier"**
-4. **Sélectionnez le Dockerfile** dans `/docker/teachdigital/backend`
-5. **Créez le conteneur** avec les paramètres suivants :
-   - **Nom** : `teachdigital-backend`
-   - **Port** : `3001:3001`
-   - **Variables d'environnement** : Importez depuis `.env` ou configurez manuellement
-   - **Réseau** : Bridge (ou le réseau de votre PostgreSQL si applicable)
-
-### Étape 5 : Initialiser la base de données
-
-1. **Exécutez les scripts d'initialisation** dans le conteneur :
-   ```bash
-   docker-compose exec backend node scripts/init-db.js
-   docker-compose exec backend node scripts/init-badges.js
-   ```
-
-2. **Vérifiez la connexion** :
-   ```bash
-   docker-compose exec backend node scripts/test-connection.js
-   ```
-
-3. **Testez l'API** :
-   ```bash
-   curl http://votre-synology-ip:3001/health
-   ```
-
-## 🌐 Réseau Docker
-
-Si votre PostgreSQL est sur un autre conteneur Docker, vous devez les connecter au même réseau.
-
-### Option 1 : Utiliser un réseau existant
-
-1. **Trouvez le réseau de votre PostgreSQL** :
-   ```bash
-   docker inspect nom-conteneur-postgresql | grep -A 5 Networks
-   ```
-
-2. **Notez le nom du réseau** (ex: `bridge`, `postgres-network`, etc.)
-
-3. **Modifiez `docker-compose.yml`** pour utiliser ce réseau :
-   ```yaml
-   services:
-     backend:
-       networks:
-         - votre-reseau-postgresql
-   
-   networks:
-     votre-reseau-postgresql:
-       external: true
-       name: nom-du-reseau-trouve
-   ```
-
-4. **Redémarrez le conteneur** :
-   ```bash
-   docker-compose down
-   docker-compose up -d
-   ```
-
-### Option 2 : Créer un réseau partagé
-
-1. **Créez un réseau Docker** :
-   ```bash
-   docker network create teachdigital-network
-   ```
-
-2. **Connectez votre conteneur PostgreSQL à ce réseau** :
-   ```bash
-   docker network connect teachdigital-network nom-conteneur-postgresql
-   ```
-
-3. **Modifiez `docker-compose.yml`** :
-   ```yaml
-   services:
-     backend:
-       networks:
-         - teachdigital-network
-   
-   networks:
-     teachdigital-network:
-       external: true
-       name: teachdigital-network
-   ```
-
-4. **Redémarrez le conteneur** :
-   ```bash
-   docker-compose down
-   docker-compose up -d
-   ```
-
-## 🔧 Configuration
-
-### Changer le port du backend
-
-1. **Modifiez le fichier `.env`** :
-   ```env
-   BACKEND_PORT=8080
-   ```
-
-2. **Modifiez `docker-compose.yml`** :
-   ```yaml
-   ports:
-     - "8080:3001"  # Port externe:Port interne
-   ```
-
-3. **Redémarrez le conteneur** :
-   ```bash
-   docker-compose restart
-   ```
-
-### Configurer CORS pour le frontend
-
-Dans `.env`, configurez l'URL de votre frontend :
-```env
-FRONTEND_URL=http://votre-synology-ip:3000
-# OU avec reverse proxy:
-FRONTEND_URL=https://teachdigital.votre-domaine.com
-```
-
-## 🌐 Accès à l'API
-
-Une fois déployé, votre API sera accessible à :
-
-- **Local** : `http://votre-synology-ip:3001`
-- **Réseau local** : `http://192.168.x.x:3001`
-- **Externe** : Si vous avez configuré un reverse proxy
-
-### Test de santé
-
-Testez que l'API fonctionne :
-```bash
-curl http://votre-synology-ip:3001/health
-```
-
-Réponse attendue :
-```json
-{
-  "status": "ok",
-  "timestamp": "2024-01-01T12:00:00.000Z",
-  "uptime": 123.456
-}
-```
-
-### Test des endpoints
+### Première installation
 
 ```bash
-# Liste des profils
-curl http://votre-synology-ip:3001/api/profiles
-
-# Health check
-curl http://votre-synology-ip:3001/health
+# Sur le NAS, après le premier déploiement
+docker exec -it teachdigital-backend node scripts/init-family-gate.js <code à 4-8 chiffres>
+docker exec -it teachdigital-backend node scripts/init-default-pins.js <PIN>   # profils sans PIN
+docker exec -it teachdigital-backend node scripts/init-badges.js                # badges par défaut
 ```
 
-## 🔄 Mise à jour
+- Sans code familial, personne ne peut se connecter, le parent compris. Un avertissement apparaît
+  dans les logs au démarrage.
+- Les codes triviaux (suites, répétitions, codes courants) sont refusés. Un profil parent exige
+  un PIN d'au moins 6 chiffres.
+- Pour un PIN parent oublié : `node scripts/reset-pin.js <id profil> <PIN>`. Les sessions du
+  profil sont alors révoquées.
 
-Pour mettre à jour l'application :
+## ✅ Mise à jour du déploiement (première livraison de cette version)
 
-1. **Arrêtez le conteneur** :
-   ```bash
-   docker-compose down
+Cette version change le réseau Docker, l'exposition des ports, la configuration nginx et le
+schéma de la base, qui passe désormais par des migrations. Pour la première livraison sur un NAS
+existant :
+
+1. **Sauvegarder la base**
+   `pg_dump -Fc -h <hôte> -U <utilisateur> <base> > teachdigital-avant-maj.dump`
+2. **Vérifier le propriétaire des tables** : les migrations doivent pouvoir les modifier.
+
+   ```sql
+   SELECT tablename, tableowner FROM pg_tables WHERE schemaname = 'public';
+   -- si besoin, en superutilisateur : ALTER TABLE <table> OWNER TO <DB_USER>;
    ```
 
-2. **Récupérez les dernières modifications** :
-   ```bash
-   # Via Git
-   git pull
-   
-   # OU copiez les nouveaux fichiers via File Station
-   ```
+3. **Compléter le `.env` du backend sur le NAS**
+   - ajouter `AI_SETTINGS_KEY` (`openssl rand -hex 32`, différente de `JWT_SECRET`). Les clés IA
+     déjà enregistrées sont rechiffrées automatiquement au premier démarrage ;
+   - **supprimer** `API_JSON_BODY_LIMIT=10mb` s'il est présent. La limite par défaut est désormais
+     100 ko, et 10 Mo uniquement sur les routes qui en ont besoin ;
+   - **supprimer** toute ancienne ligne `TRUST_PROXY`. Le compose fixe `1`, car le nginx du
+     frontend est le seul intermédiaire.
+4. **PostgreSQL sur l'hôte du NAS** : autoriser le sous-réseau du réseau Docker dans
+   `pg_hba.conf` (`172.30.240.0/24` par défaut), puis recharger PostgreSQL. Voir plus haut.
+5. **Reverse proxy DSM** : il doit viser `localhost:3000`, et non plus le port 3001. Mettre
+   `FRONTEND_BIND_ADDRESS=127.0.0.1` dans le `.env` du dossier frontend. S'il vise l'IP réseau du
+   NAS, renseigner `NGINX_TRUSTED_PROXY` avec cette IP (voir [HTTPS-SYNOLOGY-SETUP.md](HTTPS-SYNOLOGY-SETUP.md)).
+6. **Déployer les deux composants ensemble** : `.\deploy.ps1`, **sans** `-Target`. Les deux
+   conteneurs doivent rejoindre le nouveau réseau, et l'ancien frontend ne joint plus le backend.
+7. **Lire la sortie du script**
+   - `[NETWORK] Reseau teachdigital : sous-reseau 172.30.240.0/24` ;
+   - `[OK] Base de donnees joignable et migrations appliquees (/health/ready)` ;
+   - `[OK] /api/health repond via le nginx du frontend`.
+8. **Vérifier les migrations** :
+   `docker exec teachdigital-backend node scripts/migrate.js --status`. Les migrations
+   `0001_baseline` à `0102_deactivate_learning_time_badges` doivent être appliquées, sans aucune
+   en attente.
+9. **Vérifier que le port 3001 n'est plus exposé**
+   - depuis un poste du réseau local, `curl -m 5 http://<ip-du-nas>:3001/health` doit **échouer** ;
+   - depuis le NAS, `curl http://127.0.0.1:3001/health` doit répondre.
+10. **Contrôle fonctionnel** : saisir le code familial, se connecter au profil parent avec son PIN,
+    puis ouvrir une page de cours. Les PIN existants restent valides. Un PIN trivial, ou un PIN
+    parent de moins de 6 chiffres, sera refusé au prochain changement. Les badges
+    « temps d'apprentissage » sont désactivés par la migration 0102.
 
-3. **Reconstruisez et redémarrez** :
-   ```bash
-   docker-compose up -d --build
-   ```
+En cas de problème : `docker logs --tail=100 teachdigital-backend`. Pour revenir en arrière,
+restaurer la sauvegarde (`pg_restore`) et redéployer l'ancienne version des **deux** composants.
 
-4. **Vérifiez les logs** :
-   ```bash
-   docker-compose logs -f backend
-   ```
-
-## 📊 Gestion des conteneurs
-
-### Voir les logs
-```bash
-# Logs en temps réel
-docker-compose logs -f backend
-
-# Dernières 100 lignes
-docker-compose logs --tail=100 backend
-
-# Logs depuis une date
-docker-compose logs --since="2024-01-01T00:00:00" backend
-```
-
-### Arrêter le conteneur
-```bash
-docker-compose stop
-```
-
-### Démarrer le conteneur
-```bash
-docker-compose start
-```
-
-### Redémarrer le conteneur
-```bash
-docker-compose restart
-```
-
-### Supprimer le conteneur (⚠️ Attention)
-```bash
-# Arrête et supprime le conteneur (les données sont conservées)
-docker-compose down
-
-# Supprime aussi les volumes (⚠️⚠️⚠️ Supprime TOUTES les données)
-docker-compose down -v
-```
-
-### Accéder au shell du conteneur
-```bash
-docker-compose exec backend sh
-```
-
-## 🔒 Sécurité
-
-### Recommandations importantes
-
-1. **Changez tous les mots de passe par défaut** dans `.env`
-2. **Générez un JWT_SECRET fort** (au moins 32 caractères aléatoires)
-3. **Utilisez un reverse proxy** (Nginx, Traefik) pour HTTPS
-4. **Limitez l'accès** au port 3001 via le pare-feu Synology
-5. **Sauvegardez régulièrement** votre base de données PostgreSQL
-
-### Configuration HTTPS
-
-Pour configurer HTTPS sur votre Synology, consultez le guide détaillé :
-- **[Guide HTTPS Synology](HTTPS-SYNOLOGY-SETUP.md)** - Configuration complète HTTPS avec Let's Encrypt
-
-### Générer un JWT_SECRET fort
+## 📊 Exploitation
 
 ```bash
-# Sur Linux/Mac
-openssl rand -base64 32
+# Logs et état (dossier backend du NAS ; docker-helper.sh est déployé par deploy.ps1)
+./docker-helper.sh logs | status | restart | shell | rebuild
+docker logs -f teachdigital-backend
+docker logs -f teachdigital-frontend
 
-# Sur Windows PowerShell
-[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
-
-# Depuis le conteneur
-docker-compose exec backend node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+# Santé
+curl http://127.0.0.1:3001/health         # liveness (ne touche pas la base)
+curl http://127.0.0.1:3001/health/ready   # readiness : 503 si PostgreSQL est injoignable
+curl http://127.0.0.1:3000/api/health     # chaîne nginx -> backend
 ```
 
-### Configuration du pare-feu Synology
+- Logs du backend : sortie standard (Docker) et fichiers dans le volume `logs/`, avec rotation.
+  Les PIN, jetons, clés et mots de passe sont masqués. Chaque erreur renvoyée au client porte un
+  `requestId`, qu'on retrouve dans les logs et dans l'en-tête `X-Request-Id`.
+- Arrêt : `docker stop` laisse jusqu'à 15 s aux requêtes en cours (`stop_grace_period: 30s`).
+- Les verrouillages après des PIN incorrects sont gardés en mémoire :
+  `docker restart teachdigital-backend` les lève.
+- Une variable du `.env` modifiée n'est prise en compte qu'à la recréation du conteneur
+  (`docker compose up -d`, ou un nouveau déploiement) ; `docker compose restart` ne la recharge pas.
 
-1. **Ouvrez "Pare-feu"** dans le Panneau de configuration
-2. **Créez une règle** pour autoriser le port 3001 uniquement depuis votre réseau local
-3. **Bloquez l'accès externe** si vous n'utilisez pas de reverse proxy
+## 🤖 Déploiement par GitHub Actions (optionnel)
+
+`.github/workflows/deploy-synology.yml` se lance à la main (Actions > Deploy to Synology > Run
+workflow), après la CI. Il envoie les mêmes fichiers par `rsync` et utilise les secrets
+`SYNOLOGY_SSH_KEY`, `SYNOLOGY_HOST` et `SYNOLOGY_USER`. Ce workflow ne crée **pas** le réseau
+`teachdigital` : il ne fonctionne que si le réseau existe déjà, c'est-à-dire après un premier
+`deploy.ps1`.
 
 ## 🐛 Dépannage
 
-### Le backend ne démarre pas
-
-1. **Vérifiez les logs** :
-   ```bash
-   docker-compose logs backend
-   ```
-
-2. **Vérifiez l'état du conteneur** :
-   ```bash
-   docker-compose ps
-   ```
-
-3. **Vérifiez les variables d'environnement** :
-   ```bash
-   docker-compose exec backend env | grep -E "DB_|JWT_|PORT"
-   ```
-
-4. **Vérifiez que le port n'est pas déjà utilisé** :
-   ```bash
-   netstat -tuln | grep 3001
-   ```
-
-### Erreur de connexion à la base de données
-
-1. **Testez la connectivité réseau** :
-   ```bash
-   # Depuis le conteneur backend
-   docker-compose exec backend ping ${DB_HOST}
-   
-   # Testez le port PostgreSQL
-   docker-compose exec backend nc -zv ${DB_HOST} ${DB_PORT}
-   ```
-
-2. **Testez la connexion PostgreSQL** :
-   ```bash
-   docker-compose exec backend node -e "
-   const {Pool}=require('pg');
-   const p=new Pool({
-     host:process.env.DB_HOST,
-     port:process.env.DB_PORT,
-     user:process.env.DB_USER,
-     password:process.env.DB_PASSWORD,
-     database:process.env.DB_NAME
-   });
-   p.query('SELECT 1').then(()=>console.log('✅ Connexion OK')).catch(e=>console.error('❌ ERREUR:',e.message));
-   "
-   ```
-
-3. **Vérifiez les variables d'environnement** :
-   ```bash
-   docker-compose exec backend env | grep DB_
-   ```
-
-4. **Vérifiez la configuration PostgreSQL** :
-   - Si PostgreSQL est sur un autre conteneur : vérifiez qu'ils sont sur le même réseau
-   - Si PostgreSQL est sur le host : vérifiez `postgresql.conf` et `pg_hba.conf`
-   - Si PostgreSQL est sur une autre machine : vérifiez le pare-feu
-
-5. **Testez depuis votre machine** :
-   ```bash
-   psql -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} -d ${DB_NAME}
-   ```
-
-### Le port est déjà utilisé
-
-1. **Trouvez quel processus utilise le port** :
-   ```bash
-   netstat -tuln | grep 3001
-   # OU
-   lsof -i :3001
-   ```
-
-2. **Changez le port** dans `.env` et `docker-compose.yml`
-
-### Problèmes de permissions
-
-Si vous avez des erreurs de permissions :
-
-```bash
-# Donnez les permissions au dossier
-sudo chmod -R 755 /docker/teachdigital
-
-# Vérifiez le propriétaire
-sudo chown -R admin:users /docker/teachdigital
-```
-
-### Le conteneur redémarre en boucle
-
-1. **Consultez les logs** pour identifier l'erreur :
-   ```bash
-   docker-compose logs --tail=50 backend
-   ```
-
-2. **Vérifiez les variables d'environnement** requises
-3. **Vérifiez la connexion à PostgreSQL**
-
-### Erreur "Cannot connect to the Docker daemon"
-
-1. **Vérifiez que Docker est démarré** :
-   ```bash
-   sudo systemctl status docker
-   ```
-
-2. **Redémarrez Docker** si nécessaire :
-   ```bash
-   sudo systemctl restart docker
-   ```
-
-## 📝 Notes importantes
-
-- **PostgreSQL est indépendant** : Ce déploiement n'inclut PAS PostgreSQL, vous devez utiliser votre propre instance
-- **Les logs** sont stockés dans `./logs` (si configuré)
-- **Le backend** redémarre automatiquement en cas de crash (restart: unless-stopped)
-- **Les données** sont stockées dans votre PostgreSQL externe
-- **Le fichier `.env`** contient des informations sensibles, ne le partagez jamais
-
-## 🔗 Liens utiles
-
-- Documentation Docker : https://docs.docker.com/
-- Documentation Synology Docker : https://kb.synology.com/
-- Support PostgreSQL : https://www.postgresql.org/docs/
-- Documentation Express : https://expressjs.com/
-
-## 💡 Astuces
-
-1. **Utilisez Portainer** (via Package Center) pour une interface graphique de gestion Docker
-2. **Configurez un reverse proxy** avec Nginx (via Package Center) pour HTTPS
-3. **Sauvegardez régulièrement** votre base de données PostgreSQL avec Hyper Backup
-4. **Surveillez les ressources** via Resource Monitor dans DSM
-5. **Utilisez Watchtower** pour mettre à jour automatiquement les images Docker
-
-## 📞 Support
-
-Si vous rencontrez des problèmes :
-
-1. **Consultez les logs** : `docker-compose logs -f backend`
-2. **Vérifiez la documentation** ci-dessus
-3. **Créez une issue** sur le dépôt du projet avec :
-   - Les logs d'erreur
-   - Votre configuration (sans les mots de passe)
-   - Les étapes pour reproduire le problème
-
----
-
-**Version** : 1.0  
-**Dernière mise à jour** : 2024
+| Symptôme | Piste |
+| --- | --- |
+| Le backend redémarre en boucle, « PostgreSQL injoignable » | `DB_HOST`/`DB_PORT`, `pg_hba.conf` (sous-réseau Docker), `listen_addresses` |
+| « Migrations de la base en échec » | Le message indique le fichier fautif. Cause probable : l'utilisateur n'est pas propriétaire des tables |
+| `/api/...` en 502 via nginx | Le backend n'est pas lancé ou n'est pas sur le réseau `teachdigital` (`docker network inspect teachdigital`) |
+| `[WARNING] Le conteneur frontend n est pas sur le reseau` | Redéployer le frontend : `.\deploy.ps1 -Target frontend` |
+| « Code d'entrée familial non configuré » (503) | `node scripts/init-family-gate.js <code>` |
+| Les erreurs CORS | `FRONTEND_URL` / `ALLOWED_ORIGIN` doivent contenir l'URL publique exacte (https) |
+| Génération IA interrompue au bout d'environ 60 s | Augmenter les délais du reverse proxy DSM (voir le guide HTTPS) |
+| `permission denied ... docker.sock` | [SYNOLOGY_DOCKER_PERMISSIONS.md](SYNOLOGY_DOCKER_PERMISSIONS.md) |

@@ -8,6 +8,7 @@
 #    .\deploy.ps1 -Target frontend         # Frontend uniquement
 #    .\deploy.ps1 -SkipBuild               # Saute le build front (reuse dist/)
 #    .\deploy.ps1 -NoBuildCache            # docker compose build --no-cache
+#    .\deploy.ps1 -DockerSubnet 10.42.0.0/24  # Sous-reseau du reseau Docker partage (creation)
 #
 #  Optimisations vs scripts separes :
 #    - Detection docker / docker-compose mise en cache (1x par run)
@@ -25,6 +26,12 @@ param(
     [string]$BackendPath,
     [string]$FrontendPath,
     [string]$SshAlias = 'synology',
+
+    # Sous-reseau fixe du reseau Docker « teachdigital » (utilise seulement a sa creation) :
+    # a autoriser dans pg_hba.conf si PostgreSQL tourne sur l'hote du NAS. Doit rester dans
+    # 172.16.0.0/12 : c'est la plage de proxys de confiance de frontend/nginx.conf.
+    [ValidatePattern('^172\.(1[6-9]|2[0-9]|3[01])\.\d{1,3}\.\d{1,3}/\d{1,2}$')]
+    [string]$DockerSubnet = '172.30.240.0/24',
 
     [switch]$SkipBuild,
     [switch]$NoBuildCache
@@ -203,13 +210,20 @@ function Show-RemoteOutput($lines) {
     }
 }
 
+# ----- Reseau Docker partage backend <-> frontend -------------------------
+# Le nginx du conteneur frontend joint le backend par http://backend:3001 sur ce reseau
+# externe (cf. backend/docker-compose.yml et frontend/docker-compose.yml) ; le port 3001
+# n'est plus publie que sur 127.0.0.1 du NAS. Sous-reseau fixe : -DockerSubnet.
+$Script:DockerNetwork = 'teachdigital'
+
 # ----- Genere le bloc bash docker-compose down/build/up + healthcheck -----
 function New-ComposeRunScript {
     param(
         [string]$RemoteDir,
         [string]$HealthCmd,
         [string]$ComponentName,
-        [string]$LogService = ''
+        [string]$LogService = '',
+        [string]$PostCheck = ''
     )
     $rebuild = if ($NoBuildCache) { '--no-cache' } else { '' }
     $logsTail = if ($LogService) { "$Script:DockerComposeCmd logs --tail=20 $LogService" } else { "$Script:DockerComposeCmd logs --tail=20" }
@@ -221,6 +235,15 @@ if [ ! -f docker-compose.yml ]; then
     echo '[ERREUR] docker-compose.yml introuvable dans $RemoteDir'
     exit 1
 fi
+# Reseau externe partage (idempotent : cree seulement s'il n'existe pas encore)
+if ! $Script:DockerCmd network inspect $Script:DockerNetwork >/dev/null 2>&1; then
+    echo '[NETWORK] Creation du reseau Docker $Script:DockerNetwork'
+    if ! $Script:DockerCmd network create --subnet $DockerSubnet $Script:DockerNetwork >/dev/null 2>&1 && ! $Script:DockerCmd network inspect $Script:DockerNetwork >/dev/null 2>&1; then
+        echo '[ERREUR] Impossible de creer le reseau Docker $Script:DockerNetwork'
+        exit 1
+    fi
+fi
+echo "[NETWORK] Reseau $Script:DockerNetwork : sous-reseau `$($Script:DockerCmd network inspect $Script:DockerNetwork --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}')"
 $Script:DockerComposeCmd down
 echo '[BUILD] Image...'
 $Script:DockerComposeCmd build $rebuild
@@ -253,6 +276,7 @@ while [ `$retry -lt `$max_retries ]; do
         fi
     fi
 done
+$PostCheck
 "@
 }
 
@@ -308,23 +332,47 @@ function Publish-Backend {
     Write-Info "Destination : $script:BackendPath"
 
     # Volumes accessibles a Docker non-root (1 seul ssh)
-    Invoke-Ssh "mkdir -p $script:BackendPath/logs $script:BackendPath/output $script:BackendPath/temp && chmod 777 $script:BackendPath/logs $script:BackendPath/output $script:BackendPath/temp" | Out-Null
+    # .cache/tesseract : donnees de langue OCR (volume /tesseract-cache), conservees entre deploiements
+    Invoke-Ssh "mkdir -p $script:BackendPath/logs $script:BackendPath/output $script:BackendPath/temp $script:BackendPath/.cache/tesseract && chmod 777 $script:BackendPath/logs $script:BackendPath/output $script:BackendPath/temp $script:BackendPath/.cache/tesseract" | Out-Null
 
     Send-Tarball `
         -LocalDir (Join-Path $ProjectRoot 'backend') `
         -RemoteDir $script:BackendPath `
-        -Excludes @('node_modules', '.git', '*.log', '.env', '.env.*', '.synology-deploy.json', 'dist', '.vscode', '.idea', '.cursor', 'logs', 'output', 'temp', 'ssl', 'coverage')
+        -Excludes @('node_modules', '.git', '*.log', '.env', '.env.*', '.synology-deploy.json', 'dist', '.vscode', '.idea', '.cursor', 'logs', 'output', 'temp', 'ssl', 'coverage', '.cache')
 
     if (-not (Test-Ssh "test -f $script:BackendPath/docker-compose.yml")) {
         Write-Warn "   docker-compose.yml introuvable, etape Docker sautee"
         return
     }
 
+    # Apres le demarrage : base joignable + migrations appliquees (readiness)
+    $backendPostCheck = @"
+if curl -fs http://localhost:3001/health/ready > /dev/null 2>&1; then
+    echo '[OK] Base de donnees joignable et migrations appliquees (/health/ready)'
+else
+    echo '[WARNING] /health/ready en echec : PostgreSQL injoignable ou migration en echec. Derniers logs :'
+    $Script:DockerComposeCmd logs --tail=30 backend
+fi
+"@
+    # Backend seul : le frontend deja en place doit etre rattache au reseau partage
+    # (sinon son nginx ne joint plus l'API). Avec -Target both, il est redeploye juste apres.
+    if ($Target -eq 'backend') {
+        $backendPostCheck += @"
+
+if $Script:DockerCmd network inspect $Script:DockerNetwork --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | grep -q 'teachdigital-frontend'; then
+    echo '[OK] Conteneur frontend present sur le reseau $Script:DockerNetwork'
+else
+    echo '[WARNING] Le conteneur frontend n est pas sur le reseau $Script:DockerNetwork : redeployez-le (.\deploy.ps1 -Target frontend), sinon /api ne repond plus'
+fi
+"@
+    }
+
     $bashScript = New-ComposeRunScript `
         -RemoteDir $script:BackendPath `
         -ComponentName 'Backend' `
         -LogService 'backend' `
-        -HealthCmd 'curl -f http://localhost:3001/health > /dev/null 2>&1'
+        -HealthCmd 'curl -f http://localhost:3001/health > /dev/null 2>&1' `
+        -PostCheck $backendPostCheck
 
     $r = Invoke-RemoteBashScript $bashScript
     Show-RemoteOutput $r.Output
@@ -384,10 +432,20 @@ function Publish-Frontend {
 
     Send-Tarball -LocalDir $FrontendRoot -RemoteDir $script:FrontendPath -IncludePaths $files
 
+    # Le nginx du frontend doit joindre le backend par le reseau partage (http://backend:3001)
+    $frontendPostCheck = @"
+if wget --quiet --tries=1 -O /dev/null http://localhost:3000/api/health > /dev/null 2>&1; then
+    echo '[OK] /api/health repond via le nginx du frontend (reseau $Script:DockerNetwork)'
+else
+    echo '[WARNING] /api/health ne repond pas via le nginx du frontend : verifiez que le backend tourne et rejoint le reseau $Script:DockerNetwork ($Script:DockerCmd network inspect $Script:DockerNetwork)'
+fi
+"@
+
     $bashScript = New-ComposeRunScript `
         -RemoteDir $script:FrontendPath `
         -ComponentName 'Frontend' `
-        -HealthCmd 'wget --quiet --tries=1 --spider http://localhost:3000 > /dev/null 2>&1'
+        -HealthCmd 'wget --quiet --tries=1 --spider http://localhost:3000 > /dev/null 2>&1' `
+        -PostCheck $frontendPostCheck
 
     $r = Invoke-RemoteBashScript $bashScript
     Show-RemoteOutput $r.Output

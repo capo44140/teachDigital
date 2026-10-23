@@ -9,16 +9,14 @@ const mockProfiles = vi.hoisted(() => [
 ])
 
 const mockProfileService = vi.hoisted(() => ({
-  getAllProfiles: vi.fn(),
-  getProfileStats: vi.fn()
+  getAllProfiles: vi.fn()
 }))
 
 vi.mock('../../src/services/profile/index.js', () => ({
-  ProfileService: mockProfileService,
-  PinService: {}
+  ProfileService: mockProfileService
 }))
 
-const { navigationGuard } = await import('../../src/router/index.js')
+const { navigationGuard, default: router } = await import('../../src/router/index.js')
 
 const PROFILE_TOKEN_KEY = 'auth_token'
 
@@ -34,7 +32,6 @@ describe('router - guard de navigation', () => {
     localStorage.clear()
     setActivePinia(createPinia())
     mockProfileService.getAllProfiles.mockResolvedValue(mockProfiles)
-    mockProfileService.getProfileStats.mockResolvedValue(null)
   })
 
   describe('code familial', () => {
@@ -131,6 +128,32 @@ describe('router - guard de navigation', () => {
         .toEqual({ path: '/' })
       expect(await navigationGuard(route('/user-dashboard', { profile: '99' }, { requiresChildOrTeen: true })))
         .toEqual({ path: '/' })
+    })
+  })
+
+  describe('table des routes', () => {
+    it('envoie toute adresse inconnue vers la page 404 publique', () => {
+      const resolved = router.resolve('/une/page/inexistante')
+      expect(resolved.name).toBe('NotFound')
+      expect(resolved.meta.public).toBe(true)
+    })
+
+    it('protège le quiz : profil enfant exigé, sans tirer-pour-actualiser', () => {
+      const resolved = router.resolve('/quiz-generator?childId=2&lessonId=5')
+      expect(resolved.meta.requiresChildOrTeen).toBe(true)
+      expect(resolved.meta.disablePullToRefresh).toBe(true)
+    })
+
+    it('n\'expose plus les pages de test ni les pages API', () => {
+      for (const path of ['/security-test', '/notification-test', '/profile-test', '/performance-dashboard', '/liquid-glass-test', '/api-login', '/api-dashboard']) {
+        expect(router.resolve(path).name).toBe('NotFound')
+      }
+    })
+
+    it('refuse un quiz pour un profil administrateur', async () => {
+      storeFamilySession()
+      const result = await navigationGuard(route('/quiz-generator', { childId: '1', lessonId: '5' }, { requiresChildOrTeen: true }))
+      expect(result).toEqual({ path: '/' })
     })
   })
 })

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ProfileService, PinService } from '../services/profile/index.js'
+import { ProfileService } from '../services/profile/index.js'
 
 const SELECTED_PROFILE_KEY = 'selectedProfile'
 
@@ -14,6 +14,12 @@ function toSelectedProfile (profile) {
     is_child: !!profile.is_child,
     is_teen: !!profile.is_teen
   }
+}
+
+// Les identifiants arrivent en nombre (API) ou en chaîne (URL, localStorage) : comparer en chaîne
+export function sameProfileId (a, b) {
+  if (a === undefined || a === null || a === '' || b === undefined || b === null || b === '') return false
+  return String(a) === String(b)
 }
 
 function readSelectedProfile () {
@@ -65,12 +71,12 @@ export const useProfileStore = defineStore('profile', {
       profile.is_active && !profile.is_admin && (profile.is_child || profile.is_teen)
     ),
 
-    // Récupérer un profil par ID
-    getProfileById: (state) => (id) => state.profiles.find(profile => profile.id === id),
+    // Récupérer un profil par ID (nombre ou chaîne : '2' et 2 désignent le même profil)
+    getProfileById: (state) => (id) => state.profiles.find(profile => sameProfileId(profile.id, id)) || null,
 
     // Vérifier si un profil est verrouillé
     isProfileLocked: (state) => (id) => {
-      const profile = state.profiles.find(profile => profile.id === id)
+      const profile = state.profiles.find(profile => sameProfileId(profile.id, id))
       return profile ? profile.is_locked : false
     }
   },
@@ -99,7 +105,6 @@ export const useProfileStore = defineStore('profile', {
     async loadProfiles (force = false) {
       // Si un chargement est déjà en cours, retourner la même promesse
       if (this.loadingPromise && !force) {
-        console.log('⏳ Chargement déjà en cours, réutilisation de la promesse existante')
         return this.loadingPromise
       }
 
@@ -135,68 +140,40 @@ export const useProfileStore = defineStore('profile', {
     },
 
     // Charger les statistiques
+    // Statistiques calculées à partir de la liste des profils : GET /api/profiles/stats est
+    // réservé au parent, et ce chargement a lieu aussi côté enfant (jeton famille → 403)
     async loadStats () {
-      try {
-        const statsData = await ProfileService.getProfileStats()
-        if (statsData) {
-          this.stats = {
-            total: statsData.total || 0,
-            active: statsData.active || 0,
-            children: statsData.children || 0,
-            teens: statsData.teens || 0,
-            admins: statsData.admins || 0
-          }
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des statistiques:', error)
+      const profiles = Array.isArray(this.profiles) ? this.profiles : []
+      this.stats = {
+        total: profiles.length,
+        active: profiles.filter(profile => profile.is_active).length,
+        children: profiles.filter(profile => profile.is_child).length,
+        teens: profiles.filter(profile => profile.is_teen).length,
+        admins: profiles.filter(profile => profile.is_admin).length
       }
     },
 
-    // Charger un profil spécifique
+    // Charger un profil spécifique (store local d'abord, puis API)
     async loadProfile (id) {
       this.isLoading = true
       this.error = null
 
       try {
-        // Convertir l'ID en nombre si nécessaire
-        const profileId = typeof id === 'string' ? parseInt(id, 10) : id
-
-        // Essayer d'abord de charger depuis le store local (plus rapide)
-        const localProfile = this.getProfileById(profileId)
+        const localProfile = this.getProfileById(id)
         if (localProfile) {
           this.currentProfile = localProfile
-          this.isLoading = false
           return localProfile
         }
 
-        // Si pas dans le store, charger depuis l'API
-        this.currentProfile = await ProfileService.getProfileById(profileId)
-
-        if (!this.currentProfile) {
-          // Dernier recours : chercher dans le store avec différents formats
-          const fallbackProfile = this.getProfileById(String(profileId)) ||
-                                  this.getProfileById(Number(profileId))
-          if (fallbackProfile) {
-            this.currentProfile = fallbackProfile
-            return fallbackProfile
-          }
+        const profile = await ProfileService.getProfileById(id)
+        if (!profile) {
           throw new Error('Profil non trouvé')
         }
-        return this.currentProfile
+        this.currentProfile = profile
+        return profile
       } catch (error) {
         this.error = error.message
         console.error('Erreur lors du chargement du profil:', error)
-
-        // Fallback : essayer de trouver dans le store local même en cas d'erreur API
-        const profileId = typeof id === 'string' ? parseInt(id, 10) : id
-        const fallbackProfile = this.getProfileById(profileId) ||
-                                this.getProfileById(String(profileId)) ||
-                                this.getProfileById(Number(profileId))
-        if (fallbackProfile) {
-          this.currentProfile = fallbackProfile
-          return fallbackProfile
-        }
-
         throw error
       } finally {
         this.isLoading = false
@@ -232,13 +209,13 @@ export const useProfileStore = defineStore('profile', {
         const updatedProfile = await ProfileService.updateProfile(id, profileData)
 
         // Mettre à jour dans la liste
-        const index = this.profiles.findIndex(profile => profile.id === id)
+        const index = this.profiles.findIndex(profile => sameProfileId(profile.id, id))
         if (index !== -1) {
           this.profiles[index] = updatedProfile
         }
 
         // Mettre à jour le profil actuel si c'est le même
-        if (this.currentProfile && this.currentProfile.id === id) {
+        if (this.currentProfile && sameProfileId(this.currentProfile.id, id)) {
           this.currentProfile = updatedProfile
         }
 
@@ -262,10 +239,10 @@ export const useProfileStore = defineStore('profile', {
         await ProfileService.deleteProfile(id)
 
         // Retirer de la liste
-        this.profiles = this.profiles.filter(profile => profile.id !== id)
+        this.profiles = this.profiles.filter(profile => !sameProfileId(profile.id, id))
 
         // Nettoyer le profil actuel si c'est le même
-        if (this.currentProfile && this.currentProfile.id === id) {
+        if (this.currentProfile && sameProfileId(this.currentProfile.id, id)) {
           this.currentProfile = null
         }
 
@@ -285,7 +262,7 @@ export const useProfileStore = defineStore('profile', {
         const updatedProfile = await ProfileService.toggleProfileStatus(id)
 
         // Mettre à jour dans la liste
-        const index = this.profiles.findIndex(profile => profile.id === id)
+        const index = this.profiles.findIndex(profile => sameProfileId(profile.id, id))
         if (index !== -1) {
           this.profiles[index] = updatedProfile
         }
@@ -305,7 +282,7 @@ export const useProfileStore = defineStore('profile', {
         const updatedProfile = await ProfileService.toggleProfileLock(id)
 
         // Mettre à jour dans la liste
-        const index = this.profiles.findIndex(profile => profile.id === id)
+        const index = this.profiles.findIndex(profile => sameProfileId(profile.id, id))
         if (index !== -1) {
           this.profiles[index] = updatedProfile
         }
@@ -318,36 +295,9 @@ export const useProfileStore = defineStore('profile', {
       }
     },
 
-    // Mettre à jour le code PIN avec validation de sécurité
-    async updatePin (profileId, newPin) {
-      try {
-        // Valider le format du code PIN
-        const validation = PinService.validatePin(newPin)
-        if (!validation.isValid) {
-          throw new Error(validation.message)
-        }
-
-        await PinService.updatePin(profileId, newPin)
-      } catch (error) {
-        this.error = error.message
-        console.error('Erreur lors de la mise à jour du code PIN:', error)
-        throw error
-      }
-    },
-
-    // Générer un code PIN sécurisé
-    generateSecurePin (length = 4) {
-      return PinService.generateSecurePin(length)
-    },
-
-    // Analyser la force d'un code PIN
-    analyzePinStrength (pin) {
-      return PinService.analyzePinStrength(pin)
-    },
-
-    // Valider un code PIN
-    validatePin (pin) {
-      return PinService.validatePin(pin)
+    // Oublier le cache (rafraîchissement manuel : le prochain chargement interroge l'API)
+    invalidateCache () {
+      this.lastLoadTime = null
     },
 
     // Nettoyer les erreurs

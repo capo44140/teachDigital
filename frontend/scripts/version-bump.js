@@ -109,11 +109,15 @@ function commitVersionChange(newVersion) {
 }
 
 function main() {
-  const versionType = process.argv[2] || 'patch'
-  
+  const args = process.argv.slice(2)
+  const versionType = args.find(arg => !arg.startsWith('--')) || 'patch'
+  // --no-commit : depuis le hook pre-commit, le commit en cours inclura les fichiers de
+  // version (un « git commit » ici créerait un commit imbriqué avec tout l'index)
+  const noCommit = args.includes('--no-commit')
+
   if (!VERSION_TYPES[versionType]) {
     console.error(`❌ Type de version invalide: ${versionType}`)
-    console.log('Usage: node scripts/version-bump.js [patch|minor|major]')
+    console.log('Usage: node scripts/version-bump.js [patch|minor|major] [--no-commit]')
     process.exit(1)
   }
   
@@ -130,10 +134,11 @@ function main() {
   updateManifestJson(newVersion)
   createVersionFile(newVersion)
   
+  console.log(`\n🎉 Version incrémentée avec succès: ${currentVersion} -> ${newVersion}`)
+  if (noCommit) return
+
   // Créer un commit automatique
   commitVersionChange(newVersion)
-  
-  console.log(`\n🎉 Version incrémentée avec succès: ${currentVersion} -> ${newVersion}`)
   console.log('💡 Pour pousser les changements: git push')
 }
 

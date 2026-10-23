@@ -1,54 +1,59 @@
 ---
-globs: src/services/*.js,src/config/*.js,backend/**/*.js
+globs: frontend/src/services/**/*.js,frontend/src/config/*.js,backend/**/*.js
 description: Guidelines de sécurité pour TeachDigital
 ---
 
 # Guidelines de Sécurité - TeachDigital
 
+Détails et exemples : [advanced-security-practices.mdc](mdc:.cursor/rules/advanced-security-practices.mdc).
+
 ## Sécurité des Données
 
-### Chiffrement et Hachage
-- **Service de chiffrement** : [src/services/encryptionService.js](mdc:frontend/src/services/encryptionService.js)
-- **Service de hachage** : [src/services/hashService.js](mdc:frontend/src/services/hashService.js)
-- **Sécurité des PINs** : Voir [PIN-SECURITY.md](mdc:PIN-SECURITY.md)
-
-### Gestion des mots de passe et PINs
-- Utiliser bcryptjs pour le hachage des mots de passe
-- Implémenter la validation des PINs selon [src/config/pinConfig.js](mdc:frontend/src/config/pinConfig.js)
-- Tester la sécurité des PINs avec [scripts/test-pin-security.js](mdc:frontend/scripts/test-pin-security.js)
+### Hachage des PINs (backend uniquement)
+- **Hachage** : [backend/lib/nativeHash.js](mdc:backend/lib/nativeHash.js) — bcrypt (bcryptjs, coût 10) ;
+  anciennes empreintes `$native$` vérifiées puis réhachées à la connexion
+- **Politique** : [backend/lib/pinPolicy.js](mdc:backend/lib/pinPolicy.js) (4 à 8 chiffres, pas de PIN trivial,
+  parent ≥ 6 chiffres), appliquée au changement de PIN ; miroir UX [frontend/src/utils/pinPolicy.js](mdc:frontend/src/utils/pinPolicy.js)
+- **Verrouillage** : [backend/lib/bruteForce.js](mdc:backend/lib/bruteForce.js) (15 min → 1 h → 24 h, 429 `PIN_LOCKED`)
+- Le frontend ne hache ni ne chiffre rien ; [frontend/src/config/pinConfig.js](mdc:frontend/src/config/pinConfig.js)
+  ne contient que des messages (aucun PIN par défaut)
 
 ### Authentification et Sessions
-- **Service d'authentification** : [src/services/sessionService.js](mdc:frontend/src/services/sessionService.js)
-- **Store d'authentification** : [src/stores/authStore.js](mdc:frontend/src/stores/authStore.js)
-- **Backend auth** : [backend/lib/auth.js](mdc:backend/lib/auth.js)
+- **Backend auth** : [backend/lib/auth.js](mdc:backend/lib/auth.js) (jetons famille / profil, `token_version`,
+  `requireMember`, `requireAdmin`, `requireAdminForWrites`) et [backend/lib/scope.js](mdc:backend/lib/scope.js) (isolation par profil)
+- **Frontend** : [authService.js](mdc:frontend/src/services/authService.js), [sessionService.js](mdc:frontend/src/services/sessionService.js)
+  (session parent 30 min), [parentAccessService.js](mdc:frontend/src/services/parentAccessService.js) (`hasParentAccess`),
+  [familyGateService.js](mdc:frontend/src/services/familyGateService.js)
 
 ### Validation des données
-- **Service de validation d'images** : [src/services/imageValidationService.js](mdc:frontend/src/services/imageValidationService.js)
-- Valider toutes les entrées utilisateur
-- Sanitizer les données avant stockage
+- Validation serveur obligatoire : Zod via `validate(schema)` ([backend/lib/validation.js](mdc:backend/lib/validation.js),
+  [backend/lib/schemas.js](mdc:backend/lib/schemas.js))
+- Pré-validation UX côté client : [imageValidationService.js](mdc:frontend/src/services/imageValidationService.js),
+  `utils/pinPolicy.js`, `constants/aiLimits.js`
+- Pas de `v-html` : avatars via `v-safe-html` (DOMPurify, `utils/sanitizeHtml.js`)
 
 ### CORS et Headers de sécurité
-- Configuration CORS : [backend/lib/cors.js](mdc:backend/lib/cors.js)
-- Headers de sécurité appropriés
-- Limitation des requêtes : [src/services/rateLimitService.js](mdc:frontend/src/services/rateLimitService.js)
+- Configuration CORS : [backend/lib/cors.js](mdc:backend/lib/cors.js) (liste blanche `FRONTEND_URL` / `ALLOWED_ORIGIN`)
+- Headers : helmet dans [backend/app.js](mdc:backend/app.js) ; CSP stricte et en-têtes de sécurité dans
+  [frontend/nginx.conf](mdc:frontend/nginx.conf) ; CSP `sandbox` dédiée aux pages de cours (`backend/lib/coursePageView.js`)
+- Limitation des requêtes : [backend/lib/rateLimit.js](mdc:backend/lib/rateLimit.js) (limiteurs déclarés dans `backend/api/index.js`)
 
 ### Audit et Logging
-- **Service d'audit** : [src/services/auditLogService.js](mdc:frontend/src/services/auditLogService.js)
-- Logger toutes les actions sensibles
-- Surveiller les tentatives d'accès non autorisées
+- **Serveur** : [backend/lib/auditLog.js](mdc:backend/lib/auditLog.js) (`recordAuditEvent` pour les événements d'authentification / sécurité),
+  [backend/lib/logger.js](mdc:backend/lib/logger.js) (masquage PIN, jetons, clés API, mots de passe, texte OCR)
+- **Client** : [auditLogService.js](mdc:frontend/src/services/auditLogService.js) (`POST /api/audit/logs`, jeton requis,
+  actions limitées à `CLIENT_AUDIT_ACTIONS`)
+- Réponses d'erreur génériques avec `requestId` ; détails uniquement dans les logs
 
 ### Variables d'environnement
 - Ne jamais commiter les secrets
-- Utiliser [env.example](mdc:frontend/env.example) comme template
-- Rotation régulière des clés API
-
-### Reconnaissance faciale
-- **Service de reconnaissance** : [src/services/faceRecognitionService.js](mdc:frontend/src/services/faceRecognitionService.js)
-- Traitement local des données biométriques
-- Pas de stockage des données faciales sensibles
+- Templates : [backend/env.example](mdc:backend/env.example) (local), [backend/env.docker.example](mdc:backend/env.docker.example) (NAS),
+  [frontend/env.example](mdc:frontend/env.example) (variables `VITE_*` publiques uniquement)
+- Clés IA uniquement côté backend (ou enregistrées chiffrées via `AI_SETTINGS_KEY`), jamais en `VITE_*`
+- Rotation régulière de `JWT_SECRET` et des clés API (changer `JWT_SECRET` invalide toutes les sessions)
 
 ### Bonnes pratiques
-- Utiliser HTTPS en production
-- Implémenter la validation côté serveur
-- Tester régulièrement la sécurité avec `pnpm run security:check`
-- Maintenir les dépendances à jour avec `pnpm run update:deps:check`
+- Utiliser HTTPS en production (reverse proxy DSM devant le conteneur frontend)
+- Implémenter la validation et les contrôles d'accès côté serveur
+- Tester régulièrement la sécurité avec `pnpm run security:check` (frontend) et `pnpm test` (backend)
+- Maintenir les dépendances à jour avec `pnpm run update:deps:check` (frontend)

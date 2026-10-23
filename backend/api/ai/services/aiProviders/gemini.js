@@ -3,10 +3,14 @@
  */
 
 const AIProviderBase = require('./base.js');
-const { fetchWithTimeout } = require('../../utils/fetch.js');
 const { isValidGeminiKey } = require('../../utils/validation.js');
-const { GEMINI_BASE_URL } = require('../../utils/constants.js');
+const { callGeminiGenerateContent } = require('../../utils/gemini.js');
+const { isAbortError, throwIfAborted } = require('../../utils/requestContext.js');
+const { buildAnalysisPrompt, buildQuizSystemPrompt, buildQuizUserPrompt } = require('../../prompts/quiz.js');
 const providerSettings = require('./providerSettings.js');
+const logger = require('../../../../lib/logger.js');
+
+const GENERATION_DEFAULTS = { temperature: 0.7, topP: 0.8, topK: 40 };
 
 class GeminiProvider extends AIProviderBase {
     constructor() {
@@ -17,76 +21,52 @@ class GeminiProvider extends AIProviderBase {
     }
 
     isAvailable() {
-        return isValidGeminiKey(this.apiKey);
+        return !!isValidGeminiKey(this.apiKey);
+    }
+
+    /**
+     * Appelle Gemini et parse le JSON ; une nouvelle tentative si la réponse est illisible
+     * @param {string} prompt
+     * @param {number} maxOutputTokens
+     * @param {Function} isValid - Vérifie la structure du JSON parsé
+     * @param {Object} [ctx] - Contexte de la requête
+     */
+    async generateJson(prompt, maxOutputTokens, isValid, ctx) {
+        for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+            throwIfAborted(ctx);
+            // Erreur HTTP / réseau / annulation : propagée telle quelle (pas de nouvelle tentative)
+            const text = await callGeminiGenerateContent({
+                apiKey: this.apiKey,
+                model: this.model,
+                parts: [{ text: prompt }],
+                generationConfig: { maxOutputTokens, ...GENERATION_DEFAULTS },
+                ctx
+            });
+            try {
+                const parsed = this.parseJSONResponse(text);
+                if (isValid(parsed)) return parsed;
+            } catch (parseError) {
+                if (isAbortError(parseError)) throw parseError;
+            }
+            logger.debug('Gemini : réponse illisible', { attempt: attempt + 1 });
+        }
+        throw new Error('Impossible de parser la réponse de Gemini');
     }
 
     /**
      * Analyse un texte extrait d'une image avec Gemini
      * @param {string} extractedText - Texte extrait de l'image par OCR
-     * @param {number} retryCount - Nombre de tentatives
+     * @param {Object} [ctx] - Contexte de la requête
      * @returns {Promise<Object>} Analyse structurée du contenu
      */
-    async analyzeText(extractedText, retryCount = 0) {
-        console.log(`🤖 Gemini analyzeText: Début (retry: ${retryCount}, texte: ${extractedText.substring(0, 50)}...)`);
-
-        try {
-            const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/${this.model}:generateContent?key=${this.apiKey}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: `Analysez ce texte extrait d'une image de leçon et extrayez les concepts clés, les informations importantes et les sujets abordés. Répondez en français au format JSON. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"titre_principal": "...", "concepts_cles": [...], "informations_importantes": [...], "niveau": "...", "matiere": "..."}
-
-Texte extrait de l'image:
-${extractedText}`
-                        }]
-                    }],
-                    generationConfig: {
-                        maxOutputTokens: 2000,
-                        temperature: 0.7,
-                        topP: 0.8,
-                        topK: 40
-                    }
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Erreur Gemini: ${response.status} - ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-                throw new Error('Réponse Gemini incomplète');
-            }
-
-            const responseText = data.candidates[0].content.parts[0].text;
-
-            try {
-                const parsed = this.parseJSONResponse(responseText);
-
-                if (!parsed.titre_principal && !parsed.concepts_cles) {
-                    throw new Error('Structure JSON invalide');
-                }
-
-                return parsed;
-            } catch (parseError) {
-                if (retryCount < this.maxRetries) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    return this.analyzeText(extractedText, retryCount + 1);
-                }
-                throw new Error('Impossible de parser la réponse de Gemini');
-            }
-        } catch (error) {
-            if (retryCount < this.maxRetries && error.message.includes('tronquée')) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                return this.analyzeText(extractedText, retryCount + 1);
-            }
-            throw error;
-        }
+    async analyzeText(extractedText, ctx) {
+        logger.debug('Gemini analyzeText', { model: this.model, textLength: String(extractedText || '').length });
+        return this.generateJson(
+            buildAnalysisPrompt(extractedText),
+            2000,
+            parsed => !!(parsed && (parsed.titre_principal || parsed.concepts_cles)),
+            ctx
+        );
     }
 
     /**
@@ -94,73 +74,18 @@ ${extractedText}`
      * @param {Object} analysis - Analyse du contenu
      * @param {Object} childProfile - Profil de l'enfant
      * @param {number} questionCount - Nombre de questions souhaitées (défaut: 5)
-     * @param {number} retryCount - Nombre de tentatives
+     * @param {Object} [ctx] - Contexte de la requête
      * @returns {Promise<Object>} Quiz généré
      */
-    async generateQuiz(analysis, childProfile, questionCount = 5, retryCount = 0) {
-        console.log(`🎲 Gemini generateQuiz: Début (${questionCount} questions)`);
-
-        try {
-            const response = await fetchWithTimeout(`${GEMINI_BASE_URL}/models/${this.model}:generateContent?key=${this.apiKey}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: `Vous êtes un enseignant expert qui crée des interrogations adaptées à l'âge des enfants. L'enfant a ${childProfile.age || 8} ans et son niveau est ${childProfile.level || 'primaire'}. Générez exactement ${questionCount} questions avec 4 options chacune.
-
-Basé sur cette analyse de leçon: ${JSON.stringify(analysis)}, générez un quiz de ${questionCount} questions avec 4 options chacune.
-
-IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire.
-
-Format de réponse: {"title": "...", "description": "...", "questions": [{"question": "...", "options": [...], "correctAnswer": 0, "explanation": "..."}]}`
-                        }]
-                    }],
-                    generationConfig: {
-                        maxOutputTokens: Math.max(3000, questionCount * 400),
-                        temperature: 0.7,
-                        topP: 0.8,
-                        topK: 40
-                    }
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Erreur Gemini: ${response.status} - ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-                throw new Error('Réponse Gemini incomplète');
-            }
-
-            const responseText = data.candidates[0].content.parts[0].text;
-
-            try {
-                const parsed = this.parseJSONResponse(responseText);
-
-                if (!parsed.questions || !Array.isArray(parsed.questions)) {
-                    throw new Error('Structure de quiz invalide');
-                }
-
-                return parsed;
-            } catch (parseError) {
-                if (retryCount < this.maxRetries) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    return this.generateQuiz(analysis, childProfile, questionCount, retryCount + 1);
-                }
-                throw new Error('Impossible de parser la réponse de Gemini');
-            }
-        } catch (error) {
-            if (retryCount < this.maxRetries && error.message.includes('tronquée')) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                return this.generateQuiz(analysis, childProfile, questionCount, retryCount + 1);
-            }
-            throw error;
-        }
+    async generateQuiz(analysis, childProfile, questionCount = 5, ctx) {
+        logger.debug('Gemini generateQuiz', { model: this.model, questionCount });
+        const prompt = `${buildQuizSystemPrompt(childProfile, questionCount)}\n\n${buildQuizUserPrompt(analysis, questionCount)}`;
+        return this.generateJson(
+            prompt,
+            Math.max(3000, questionCount * 400),
+            parsed => !!(parsed && Array.isArray(parsed.questions)),
+            ctx
+        );
     }
 }
 

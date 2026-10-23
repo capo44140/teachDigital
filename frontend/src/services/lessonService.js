@@ -5,16 +5,76 @@
  * ⚠️ IMPORTANT: Ce service communique via l'API backend, pas d'accès direct DB
  */
 
-import { apiService } from './apiService.js'
+import { apiService, buildQuery } from './apiService.js'
 import { auditLogService } from './auditLogService.js'
-import { NotificationService } from './notificationService.js'
 import { MAX_HISTORY_LIMIT } from './progressService.js'
+
+/**
+ * Normaliser un résultat de quiz renvoyé par le serveur (colonnes SQL ou camelCase)
+ * @returns {{ score: number, totalQuestions: number, percentage: number }|null}
+ */
+export function normalizeQuizResult (result) {
+  if (!result || typeof result !== 'object') return null
+  const score = Number(result.score)
+  const totalQuestions = Number(result.totalQuestions ?? result.total_questions)
+  if (!Number.isFinite(score) || !Number.isFinite(totalQuestions) || totalQuestions <= 0) return null
+  const percentage = Number.isFinite(Number(result.percentage))
+    ? Number(result.percentage)
+    : Math.round((score / totalQuestions) * 100)
+  return { score, totalQuestions, percentage }
+}
+
+// Endpoints /api/lessons (réponses { success, data: { lessons | lesson } })
+const lessonApi = {
+  async list (filters = {}) {
+    const response = await apiService.request(`/api/lessons${buildQuery(filters)}`)
+    return response.success ? response.data.lessons : []
+  },
+  async get (id) {
+    const response = await apiService.request(`/api/lessons/${id}`)
+    return response.success ? response.data.lesson : null
+  },
+  async create (lessonData) {
+    const response = await apiService.request('/api/lessons', {
+      method: 'POST',
+      body: JSON.stringify(lessonData)
+    })
+    return response.success ? response.data.lesson : null
+  },
+  async remove (id) {
+    const response = await apiService.request(`/api/lessons/${id}`, { method: 'DELETE' })
+    return response.success
+  },
+  // POST { profileId, answers } : le serveur recalcule le score
+  // → { score, totalQuestions, percentage, result, correction, unlockedBadges? }
+  async saveQuizResult (lessonId, resultData) {
+    const response = await apiService.request(`/api/lessons/${lessonId}/quiz-results`, {
+      method: 'POST',
+      body: JSON.stringify(resultData)
+    })
+    return response.success ? (response.data || null) : null
+  }
+}
+
+/**
+ * Normaliser la correction renvoyée après enregistrement d'un quiz
+ * (tableau aligné sur les questions : { correctAnswer, explanation })
+ * @returns {Array<{ correctAnswer: number|null, explanation: string|null }>|null}
+ */
+export function normalizeCorrection (correction) {
+  if (!Array.isArray(correction)) return null
+  return correction.map(item => ({
+    correctAnswer: Number.isInteger(item?.correctAnswer) ? item.correctAnswer : null,
+    explanation: typeof item?.explanation === 'string' && item.explanation ? item.explanation : null
+  }))
+}
 
 export class LessonService {
   /**
-   * Sauvegarde une leçon générée en base de données
+   * Sauvegarde une leçon générée en base de données (un seul POST : pas de nouvel essai
+   * automatique, qui créerait des doublons si la première requête a abouti)
    * @param {Object} lessonData - Données de la leçon
-   * @param {number} profileId - ID du profil
+   * @param {number} profileId - ID du profil enfant ciblé
    * @param {File|Array<File>} files - Fichier(s) (optionnel)
    * @returns {Promise<Object>} Leçon sauvegardée
    */
@@ -26,7 +86,7 @@ export class LessonService {
       if (files) {
         if (Array.isArray(files)) {
           // Utiliser le premier fichier image comme image principale
-          const firstImage = files.find(f => f.type.startsWith('image/'))
+          const firstImage = files.find(f => f.type && f.type.startsWith('image/'))
           if (firstImage) {
             imageFilename = firstImage.name
           }
@@ -36,16 +96,21 @@ export class LessonService {
         }
       }
 
-      const result = await apiService.createLesson({
-        title: lessonData.title,
+      const result = await lessonApi.create({
+        title: lessonData.title || 'Quiz sans titre',
         description: lessonData.description || '',
         subject: lessonData.subject || '',
         level: lessonData.level || '',
         imageFilename,
         // imageData non envoyé - trop lourd, le backend ne le stocke pas
         quizData: lessonData,
-        isPublished: true
+        isPublished: true,
+        // Enfant destinataire (sinon le serveur cible le parent créateur)
+        targetProfileId: profileId ?? undefined
       })
+      if (!result?.id) {
+        throw new Error('La leçon n\'a pas pu être enregistrée')
+      }
 
       // Enregistrer la création de la leçon dans les logs d'audit
       auditLogService.logDataAccess(
@@ -80,7 +145,7 @@ export class LessonService {
   static async getLessonsByProfile (profileId) {
     try {
       // Utiliser targetProfileId pour récupérer les quiz destinés à ce profil
-      const lessons = await apiService.getLessons({
+      const lessons = await lessonApi.list({
         targetProfileId: profileId,
         published: true
       })
@@ -98,7 +163,7 @@ export class LessonService {
    */
   static async getAllAvailableLessons () {
     try {
-      const lessons = await apiService.getLessons({
+      const lessons = await lessonApi.list({
         published: true
       })
 
@@ -116,7 +181,7 @@ export class LessonService {
    */
   static async getLessonById (lessonId) {
     try {
-      const result = await apiService.getLesson(lessonId)
+      const result = await lessonApi.get(lessonId)
 
       if (!result) {
         throw new Error('Leçon non trouvée')
@@ -130,48 +195,37 @@ export class LessonService {
   }
 
   /**
-   * Sauvegarde les résultats d'un quiz
+   * Enregistre les réponses d'un quiz. Le serveur recalcule le score, crée la notification
+   * parent et l'entrée d'audit : le client n'envoie que les réponses.
    * @param {number} lessonId - ID de la leçon
-   * @param {number} profileId - ID du profil
-   * @param {Object} results - Résultats du quiz
-   * @returns {Promise<Object>} Résultats sauvegardés
+   * @param {number} profileId - ID du profil enfant
+   * @param {Array<number|null>} answers - Index de l'option choisie par question (null si aucune)
+   * @returns {Promise<{ result: Object|null, correction: Array|null, unlockedBadges: Array }>}
+   *   Résultat calculé par le serveur et correction (les bonnes réponses ne sont pas envoyées
+   *   aux profils enfants avant l'enregistrement)
    */
-  static async saveQuizResults (lessonId, profileId, results) {
-    try {
-      const result = await apiService.saveQuizResult(lessonId, {
-        profileId,
-        score: results.score,
-        totalQuestions: results.totalQuestions,
-        percentage: results.percentage,
-        answers: results.answers
-      })
-
-      // Enregistrer les résultats dans les logs d'audit
-      auditLogService.logDataAccess(
-        profileId,
-        'quiz_completion',
-        'QUIZ_COMPLETED',
-        {
-          lessonId,
-          score: results.score,
-          percentage: results.percentage
-        }
-      )
-
-      // Récupérer les informations de la leçon pour la notification
-      const lesson = await this.getLessonById(lessonId)
-      await NotificationService.createQuizCompletionNotification(profileId, {
-        score: results.score,
-        totalQuestions: results.totalQuestions,
-        percentage: results.percentage,
-        lessonTitle: lesson?.title || 'Quiz'
-      })
-
-      return result
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde des résultats:', error)
-      throw error
+  static async saveQuizResults (lessonId, profileId, answers) {
+    const data = await lessonApi.saveQuizResult(lessonId, {
+      profileId,
+      answers: Array.isArray(answers) ? answers.map(a => (Number.isInteger(a) ? a : null)) : []
+    })
+    // Score calculé par le serveur : champs { score, totalQuestions, percentage } ou ligne SQL `result`
+    const computed = data && data.score !== undefined && data.score !== null ? data : data?.result
+    return {
+      result: normalizeQuizResult(computed),
+      correction: normalizeCorrection(data?.correction),
+      unlockedBadges: Array.isArray(data?.unlockedBadges) ? data.unlockedBadges : []
     }
+  }
+
+  /**
+   * Statistiques d'apprentissage détaillées d'un enfant (leçons, historique, moyenne)
+   * @param {number} childId - ID du profil enfant
+   * @returns {Promise<Object|null>}
+   */
+  static async getLearningStats (childId) {
+    const response = await apiService.request(`/api/profiles/${childId}/learning-stats`)
+    return response?.data?.detailedStats || null
   }
 
   /**
@@ -183,7 +237,7 @@ export class LessonService {
   static async getQuizResults (lessonId, profileId) {
     try {
       const results = await apiService.request(
-        `/api/lessons/${lessonId}/quiz-results?profileId=${profileId}`,
+        `/api/lessons/${lessonId}/quiz-results${buildQuery({ profileId })}`,
         { method: 'GET' }
       )
 
@@ -382,7 +436,7 @@ export class LessonService {
    */
   static async deleteLesson (lessonId, profileId) {
     try {
-      const result = await apiService.deleteLesson(lessonId)
+      const result = await lessonApi.remove(lessonId)
 
       if (!result) {
         throw new Error('Leçon non trouvée ou non autorisée')

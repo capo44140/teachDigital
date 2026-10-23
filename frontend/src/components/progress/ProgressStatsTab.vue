@@ -5,7 +5,7 @@
       <!-- Score moyen par type de quiz -->
       <div class="glass-stat-card">
         <h4 class="text-lg font-bold text-white mb-4 flex items-center">
-          <div class="w-8 h-8 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-lg flex items-center justify-center mr-3">
+          <div aria-hidden="true" class="w-8 h-8 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-lg flex items-center justify-center mr-3">
             <span class="text-blue-300">📊</span>
           </div>
           Score moyen par type
@@ -16,7 +16,14 @@
               <span class="text-white/80 font-medium">{{ type.type }}</span>
               <span class="text-white font-bold">{{ type.averageScore }}%</span>
             </div>
-            <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+            <div
+              class="w-full bg-white/10 rounded-full h-2 overflow-hidden"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              :aria-valuenow="type.averageScore"
+              :aria-label="`Score moyen en ${type.type}`"
+            >
               <div
                 class="bg-gradient-to-r from-blue-500 to-cyan-500 h-full rounded-full transition-all duration-500"
                 :style="{ width: type.averageScore + '%' }"
@@ -29,7 +36,7 @@
       <!-- Progrès mensuel -->
       <div class="glass-stat-card">
         <h4 class="text-lg font-bold text-white mb-4 flex items-center">
-          <div class="w-8 h-8 bg-gradient-to-br from-green-500/30 to-emerald-500/30 rounded-lg flex items-center justify-center mr-3">
+          <div aria-hidden="true" class="w-8 h-8 bg-gradient-to-br from-green-500/30 to-emerald-500/30 rounded-lg flex items-center justify-center mr-3">
             <span class="text-green-300">📅</span>
           </div>
           Progrès mensuel
@@ -38,7 +45,7 @@
           <div v-for="month in monthlyProgress" :key="month.month" class="flex justify-between items-center p-3 bg-white/5 rounded-xl">
             <div>
               <span class="text-white font-medium">{{ month.month }}</span>
-              <p class="text-white/60 text-sm">{{ month.quizCount }} quiz</p>
+              <p class="text-white/70 text-sm">{{ month.quizCount }} quiz</p>
             </div>
             <div class="text-right">
               <span class="text-white font-bold">{{ month.averageScore }}%</span>
@@ -50,7 +57,7 @@
       <!-- Série & niveau -->
       <div class="glass-stat-card">
         <h4 class="text-lg font-bold text-white mb-4 flex items-center">
-          <div class="w-8 h-8 bg-gradient-to-br from-orange-500/30 to-red-500/30 rounded-lg flex items-center justify-center mr-3">
+          <div aria-hidden="true" class="w-8 h-8 bg-gradient-to-br from-orange-500/30 to-red-500/30 rounded-lg flex items-center justify-center mr-3">
             <span class="text-orange-300">🔥</span>
           </div>
           Série & niveau
@@ -58,11 +65,11 @@
         <div class="grid grid-cols-2 gap-4">
           <div class="text-center p-4 bg-white/5 rounded-xl">
             <div class="text-2xl font-bold text-white mb-1">{{ summary?.streaks?.current || 0 }}</div>
-            <div class="text-white/60 text-sm">Jours de suite</div>
+            <div class="text-white/70 text-sm">Jours de suite</div>
           </div>
           <div class="text-center p-4 bg-white/5 rounded-xl">
             <div class="text-2xl font-bold text-white mb-1">{{ summary?.streaks?.best || 0 }}</div>
-            <div class="text-white/60 text-sm">Meilleure série</div>
+            <div class="text-white/70 text-sm">Meilleure série</div>
           </div>
         </div>
 
@@ -70,13 +77,20 @@
           <div class="flex items-center justify-between mb-2">
             <div class="text-white font-bold">
               Niveau {{ summary?.xp?.level || 1 }}
-              <span class="text-white/60 font-medium ml-2">({{ summary?.xp?.total || 0 }} XP)</span>
+              <span class="text-white/70 font-medium ml-2">({{ summary?.xp?.total || 0 }} XP)</span>
             </div>
             <div class="text-white/80 text-sm">
               {{ summary?.xp?.xpInLevel || 0 }}/{{ summary?.xp?.xpForNextLevel || 500 }}
             </div>
           </div>
-          <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+          <div
+            class="w-full bg-white/10 rounded-full h-2 overflow-hidden"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-valuenow="summary?.xp?.levelProgressPercent || 0"
+            aria-label="Progression vers le niveau suivant"
+          >
             <div
               class="bg-gradient-to-r from-orange-500 to-red-500 h-full rounded-full transition-all duration-500"
               :style="{ width: (summary?.xp?.levelProgressPercent || 0) + '%' }"
@@ -88,12 +102,12 @@
       <!-- Objectifs hebdo -->
       <div class="glass-stat-card">
         <h4 class="text-lg font-bold text-white mb-4 flex items-center">
-          <div class="w-8 h-8 bg-gradient-to-br from-cyan-500/30 to-blue-500/30 rounded-lg flex items-center justify-center mr-3">
+          <div aria-hidden="true" class="w-8 h-8 bg-gradient-to-br from-cyan-500/30 to-blue-500/30 rounded-lg flex items-center justify-center mr-3">
             <span class="text-cyan-300">🎯</span>
           </div>
           Objectifs de la semaine
         </h4>
-        <div v-if="!summary?.weeklyGoals || summary.weeklyGoals.length === 0" class="text-white/60">
+        <div v-if="!summary?.weeklyGoals || summary.weeklyGoals.length === 0" class="text-white/70">
           Aucun objectif défini.
         </div>
         <div v-else class="space-y-4">
@@ -101,14 +115,21 @@
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-white font-bold">{{ goal.title }}</div>
-                <div class="text-white/60 text-sm">{{ goal.description }}</div>
+                <div class="text-white/70 text-sm">{{ goal.description }}</div>
               </div>
               <div class="text-right">
                 <div class="text-white font-bold">{{ goal.current }}/{{ goal.target }}</div>
-                <div class="text-white/60 text-xs">+{{ goal.rewardXp }} XP</div>
+                <div class="text-white/70 text-xs">+{{ goal.rewardXp }} XP</div>
               </div>
             </div>
-            <div class="mt-3 w-full bg-white/10 rounded-full h-2 overflow-hidden">
+            <div
+              class="mt-3 w-full bg-white/10 rounded-full h-2 overflow-hidden"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              :aria-valuenow="goal.progressPercent || 0"
+              :aria-label="`Progression de l'objectif « ${goal.title} »`"
+            >
               <div
                 class="bg-gradient-to-r from-cyan-500 to-blue-500 h-full rounded-full transition-all duration-500"
                 :style="{ width: (goal.progressPercent || 0) + '%' }"
@@ -121,32 +142,45 @@
       <!-- Objectifs et récompenses -->
       <div class="glass-stat-card">
         <h4 class="text-lg font-bold text-white mb-4 flex items-center">
-          <div class="w-8 h-8 bg-gradient-to-br from-yellow-500/30 to-orange-500/30 rounded-lg flex items-center justify-center mr-3">
+          <div aria-hidden="true" class="w-8 h-8 bg-gradient-to-br from-yellow-500/30 to-orange-500/30 rounded-lg flex items-center justify-center mr-3">
             <span class="text-yellow-300">🏆</span>
           </div>
           Objectifs et récompenses
         </h4>
         <div class="space-y-4">
           <div v-for="achievement in achievements" :key="achievement.id" class="flex items-center space-x-4 p-4 bg-white/5 rounded-xl">
-            <div :class="[
-              'w-12 h-12 rounded-xl flex items-center justify-center text-2xl',
-              achievement.unlocked
-                ? 'bg-gradient-to-br from-yellow-500/30 to-orange-500/30'
-                : 'bg-white/10'
-            ]">
+            <div
+              aria-hidden="true"
+              :class="[
+                'w-12 h-12 rounded-xl flex items-center justify-center text-2xl',
+                achievement.unlocked
+                  ? 'bg-gradient-to-br from-yellow-500/30 to-orange-500/30'
+                  : 'bg-white/10'
+              ]"
+            >
               {{ achievement.icon }}
             </div>
             <div class="flex-1">
-              <h5 class="text-white font-bold">{{ achievement.title }}</h5>
-              <p class="text-white/60 text-sm">{{ achievement.description }}</p>
+              <h5 class="text-white font-bold">
+                {{ achievement.title }}
+                <span class="sr-only">{{ achievement.unlocked ? '(débloqué)' : '(pas encore débloqué)' }}</span>
+              </h5>
+              <p class="text-white/70 text-sm">{{ achievement.description }}</p>
               <div v-if="!achievement.unlocked" class="mt-2">
-                <div class="w-full bg-white/10 rounded-full h-1 overflow-hidden">
+                <div
+                  class="w-full bg-white/10 rounded-full h-1 overflow-hidden"
+                  role="progressbar"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  :aria-valuenow="achievement.progress || 0"
+                  :aria-label="`Progression de « ${achievement.title} »`"
+                >
                   <div
                     class="bg-gradient-to-r from-yellow-500 to-orange-500 h-full rounded-full transition-all duration-500"
                     :style="{ width: achievement.progress + '%' }"
                   ></div>
                 </div>
-                <span class="text-white/60 text-xs mt-1">{{ achievement.progress }}%</span>
+                <span class="text-white/70 text-xs mt-1">{{ achievement.progress }}%</span>
               </div>
             </div>
           </div>
@@ -167,28 +201,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-.glass-stat-card {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 1.5rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  padding: 1.5rem;
-}
-
-.glass-stat-card:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
-}
-
-@media (max-width: 768px) {
-  .glass-stat-card { padding: 1.5rem; border-radius: 1.5rem; }
-}
-@media (max-width: 480px) {
-  .glass-stat-card { padding: 1rem; border-radius: 1rem; }
-}
-</style>

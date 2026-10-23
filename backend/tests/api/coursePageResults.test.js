@@ -5,7 +5,8 @@
 
 jest.mock('../../lib/database.js', () => ({
   pool: { query: jest.fn() },
-  default: jest.fn()
+  // Vérification d'accès aux profils (lib/auth.js) : seul le profil 1 est un parent
+  default: jest.fn((strings, ...values) => Promise.resolve([{ is_admin: values[0] === 1, is_active: true, token_version: 0 }]))
 }));
 jest.mock('../../lib/nativeHash.js', () => ({ NativeHashService: {} }));
 jest.mock('../../lib/badgeService.js', () => ({ checkAndUnlockBadges: jest.fn() }));
@@ -14,6 +15,7 @@ const { pool } = require('../../lib/database.js');
 const badgeService = require('../../lib/badgeService.js');
 const { handleCoursePageResults } = require('../../controllers/coursePageController.js');
 const { createMockRequest, createMockResponse, familyAuthHeader, profileAuthHeader } = require('../helpers/testHelpers.js');
+const { coursePageResultSchema } = require('../../lib/schemas.js');
 
 const PAGE = { id: 12, subject: 'SVT' };
 const body = { profileId: 7, score: 4, totalQuestions: 5, answers: { bestStreak: 3 } };
@@ -131,6 +133,23 @@ describe('Résultats de page de cours', () => {
 
     expect(res.statusCode).toBe(403);
     expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  it('refuse au jeton famille d\'enregistrer pour un profil parent', async () => {
+    const req = createMockRequest('POST', '/api/course-pages/12/results', { ...body, profileId: 1 }, familyAuthHeader(), { id: '12' });
+    const res = createMockResponse();
+
+    await handleCoursePageResults(req, res);
+
+    expect(res.statusCode).toBe(403);
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  it('coursePageResultSchema borne les valeurs (400 via le routeur)', () => {
+    expect(coursePageResultSchema.safeParse({ ...body, score: 6 }).success).toBe(false);
+    expect(coursePageResultSchema.safeParse({ ...body, totalQuestions: 5000, score: 1 }).success).toBe(false);
+    expect(coursePageResultSchema.safeParse({ ...body, answers: { blob: 'x'.repeat(30000) } }).success).toBe(false);
+    expect(coursePageResultSchema.safeParse({ ...body, score: '4' }).data.score).toBe(4);
   });
 
   it('sauvegarde même si la vérification des badges échoue', async () => {

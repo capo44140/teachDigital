@@ -1,206 +1,122 @@
-# 🔐 Sécurité des codes PIN - TeachDigital
+# 🔐 Authentification : code familial, codes PIN et jetons
 
-## Vue d'ensemble
+Ce document décrit l'accès à TeachDigital tel qu'il est implémenté. Côté backend :
+`backend/lib/auth.js`, `lib/bruteForce.js`, `lib/pinAttempts.js`, `lib/pinPolicy.js` et
+`controllers/authController.js`. Côté frontend : `src/services/authService.js`,
+`familyGateService.js`, `sessionService.js`, `parentAccessService.js` et `src/router/index.js`.
 
-Ce document décrit les améliorations de sécurité implémentées pour la gestion des codes PIN dans l'application TeachDigital.
+## 1. Parcours
 
-## 🚀 Améliorations apportées
-
-### 1. Hachage sécurisé avec bcrypt
-
-- **Avant** : Codes PIN stockés en clair dans la base de données
-- **Après** : Codes PIN hachés avec bcrypt (12 rounds de salt)
-- **Avantage** : Même si la base de données est compromise, les codes PIN restent sécurisés
-
-### 2. Validation renforcée
-
-- **Format** : Codes PIN de 4 à 8 chiffres uniquement
-- **Sécurité** : Rejet des codes PIN trop simples (0000, 1111, 1234, etc.)
-- **Séquences** : Interdiction des séquences (1234, 4321, etc.)
-- **Longueur** : Support des codes PIN de 4, 6 et 8 chiffres
-
-### 3. Analyse de la force
-
-- **Score** : Évaluation de 0 à 5 points
-- **Critères** :
-  - Longueur du code PIN
-  - Diversité des chiffres
-  - Absence de répétitions excessives
-- **Niveaux** : Faible, Moyen, Fort
-
-### 4. Génération sécurisée
-
-- **Algorithme** : Génération de codes PIN aléatoires
-- **Validation** : Vérification automatique de la sécurité
-- **Évitement** : Exclusion des codes PIN faibles
-
-## 🛠️ Services implémentés
-
-### HashService
-
-Service principal pour le hachage et la validation des codes PIN.
-
-```javascript
-// Hacher un code PIN
-const hashedPin = await HashService.hashPin('1234');
-
-// Vérifier un code PIN
-const isValid = await HashService.verifyPin('1234', hashedPin);
-
-// Valider le format
-const validation = HashService.validatePinFormat('1234');
-
-// Analyser la force
-const strength = HashService.getPinStrength('1234');
-
-// Générer un code PIN sécurisé
-const securePin = HashService.generateSecurePin(4);
+```text
+/family-gate ── POST /api/auth/family-gate { pin } ──▶ jeton « famille » (24 h)
+     │
+     ▼
+/ (choix du profil)
+     ├─ profil enfant / ado ──▶ /user-dashboard?profile=<id>   (jeton famille, sans PIN)
+     └─ profil parent ──▶ /pin-lock ── POST /api/auth/login { profileId, pin } ──▶ jeton « profil » (4 h)
+                                         (exige le jeton famille dans Authorization)
+                                         ──▶ /dashboard  (session parent de 30 min glissantes)
 ```
 
-### PinService (mis à jour)
+1. **Code d'entrée familial** (`POST /api/auth/family-gate`, public, limité par IP). Il délivre un
+   jeton JWT de scope `family`. Ce jeton donne l'accès « enfant » à l'API : uniquement les profils
+   **actifs et non parents**, jamais les données d'un parent. Sans code configuré, le serveur
+   répond 503 `FAMILY_GATE_NOT_CONFIGURED` et personne ne peut se connecter.
+2. **Connexion à un profil par PIN** (`POST /api/auth/login`). Elle exige un jeton famille (ou
+   profil) valide : le code familial passe toujours en premier. Elle délivre un jeton de scope
+   `profile`.
+3. **Espace parent**. Le guard du router exige à la fois une session parent déverrouillée
+   (`sessionService`, 30 min glissantes) et un jeton profil administrateur **du même profil**
+   (`hasParentAccess`). Les paramètres `?profile=` et `?unlocked=true` ne donnent aucun droit.
+   Côté serveur, `requireAdmin` revérifie en base que le profil est actif et administrateur.
+4. **Jetons utilisés par le client** (`apiService`) : le jeton profil d'abord, à défaut le jeton
+   famille. Sur un 401, le client renvoie au code familial (jeton famille refusé) ou au PIN
+   (espace parent).
 
-Service de gestion des codes PIN avec sécurité intégrée.
+Autres routes : `GET /api/auth/verify` (validité du jeton au démarrage) et `POST /api/auth/logout`.
+Les jetons sont sans état : la déconnexion supprime le jeton côté client.
 
-```javascript
-// Mettre à jour un code PIN (avec hachage automatique)
-await PinService.updatePin(profileId, '1234');
+## 2. Révocation des jetons (`token_version`)
 
-// Vérifier un code PIN (avec hachage)
-const isValid = await PinService.verifyPin(profileId, '1234');
+Chaque jeton porte une version (`tokenVersion`), comparée à chaque requête avec
+`profiles.token_version` (jeton profil) ou `family_gate.token_version` (jeton famille). La version
+est incrémentée, ce qui invalide tous les jetons déjà émis, dans les cas suivants :
 
-// Générer un code PIN sécurisé
-const securePin = PinService.generateSecurePin(6);
-```
+| Événement | Jetons révoqués |
+| --- | --- |
+| Changement du code familial (`PUT /api/auth/family-gate`, `init-family-gate.js`) | tous les jetons famille. La réponse fournit un nouveau jeton à l'appareil du parent |
+| Changement de PIN (`PUT /api/profiles/:id/pin`, `reset-pin.js`) | jetons du profil. Le parent qui change son propre PIN reçoit un nouveau jeton |
+| Désactivation ou changement de type d'un profil | jetons du profil |
 
-## 📊 Scripts de migration
+Le serveur garde ces versions en cache 30 s (`AUTH_CACHE_TTL_MS`). Les changements faits par
+l'API vident le cache aussitôt ; ceux faits directement en base ou par script sont pris en compte
+au plus tard 30 s après. Un jeton émis avant la migration `0100_token_version` vaut la version 0.
 
-### Migration de la base de données
+## 3. Verrouillage après des codes incorrects
 
-```bash
-# Migrer la structure de la base de données
-pnpm run migrate-db
+Les compteurs sont partagés par `POST /api/auth/login` et `POST /api/profiles/:id/pin`, ainsi que
+par la vérification du PIN actuel lors d'un changement. Le code familial a ses propres compteurs,
+selon les mêmes règles.
 
-# Vérifier l'état de la base de données
-pnpm run check-db
-```
+- **Par (profil, adresse IP)** : 10 échecs en 15 min verrouillent l'accès pendant **15 min**, puis
+  **1 h**, puis **24 h** si les verrouillages se répètent. Un succès remet le compteur à zéro, et
+  l'escalade est oubliée 24 h après le dernier verrouillage. Un enfant qui tape au hasard sur la
+  tablette ne bloque ainsi que sa propre adresse.
+- **Plafond global par profil** (toutes IP confondues) : 100 échecs en 1 h verrouillent pendant
+  15 min, **sans escalade**, pour qu'il ne devienne pas un moyen de bloquer la famille.
+- Réponse : HTTP 429 avec le code `PIN_LOCKED` (ou `FAMILY_GATE_LOCKED`), l'en-tête `Retry-After`
+  et `retryAfterSeconds`. L'écran PIN affiche un compte à rebours.
+- Chaque verrouillage est journalisé (`PIN_LOCKED`). Quand il s'agit d'un **PIN parent**, une
+  notification `security_alert` est aussi créée pour les parents, dans la table `notifications`.
+  Elle s'affiche dans le centre de notifications du tableau de bord parent (cloche de l'en-tête).
+- Les compteurs sont **en mémoire** : un redémarrage du backend lève tous les verrouillages
+  (`docker restart teachdigital-backend`).
+- S'y ajoutent des limites de débit par IP : `API_RATE_LIMIT_LOGIN_*`, `API_RATE_LIMIT_PIN_*` et
+  `API_RATE_LIMIT_FAMILY_GATE_*` (voir [SYNOLOGY-ENV-VARIABLES.md](SYNOLOGY-ENV-VARIABLES.md)).
 
-### Migration des codes PIN
+L'IP prise en compte est celle que transmet le nginx du frontend. Pour le réglage du proxy de
+confiance, voir [HTTPS-SYNOLOGY-SETUP.md](HTTPS-SYNOLOGY-SETUP.md).
 
-```bash
-# Migrer les codes PIN existants vers le hachage
-pnpm run migrate-pins
+## 4. Politique des codes
 
-# Vérifier l'état de la migration
-pnpm run check-pins
-```
+Elle est appliquée **uniquement lors d'un changement** de code : `PUT /api/profiles/:id/pin`,
+`PUT /api/auth/family-gate` et les scripts d'initialisation. Les codes existants continuent de
+fonctionner à la connexion, même s'ils ne respectent plus la politique.
 
-### Tests de sécurité
+| Règle | Code d'erreur (400) |
+| --- | --- |
+| 4 à 8 chiffres | `INVALID_PIN` |
+| Profil parent : au moins **6 chiffres** | `PIN_TOO_SHORT` |
+| Pas de code trivial : suite (`1234`, `9876`), répétition (`0000`, `1212`, `123123`) ou code courant (`2580`, `1004`…) | `WEAK_PIN` |
 
-```bash
-# Exécuter tous les tests de sécurité
-pnpm run test-pin-security
-```
+Pour modifier son propre PIN, le PIN actuel est demandé (`CURRENT_PIN_REQUIRED`). Un parent peut
+réinitialiser le PIN d'un autre profil sans le connaître. Pour le code familial, le code actuel
+est demandé dès qu'un code existe. Le frontend applique les mêmes règles avant l'envoi
+(`src/utils/pinPolicy.js`), mais c'est le serveur qui fait foi.
 
-## 🔧 Configuration
+## 5. Stockage
 
-### Variables d'environnement
+- PIN et code familial sont hachés avec **bcrypt** (coût 10, `lib/nativeHash.js`). Les anciens
+  hachages `$native$` (SHA-256 salé) sont encore acceptés, puis rehachés en bcrypt à la première
+  connexion réussie.
+- Un seul PIN par profil : contrainte unique sur `pin_codes.profile_id` (migration 0101).
+- Le hachage n'est jamais renvoyé par l'API.
 
-Aucune configuration supplémentaire requise. Le service utilise les variables d'environnement existantes.
+## 6. Journal d'audit
 
-### Base de données
+Le serveur journalise lui-même les événements sensibles dans `audit_logs` (`lib/auditLog.js`) :
+`LOGIN_SUCCESS`, `LOGIN_FAILED`, `FAMILY_GATE_SUCCESS`, `FAMILY_GATE_FAILED`,
+`FAMILY_GATE_LOCKED`, `FAMILY_GATE_CHANGED`, `PIN_LOCKED` et `PIN_CHANGED`. Les journaux envoyés
+par le client (`POST /api/audit/logs`) exigent un jeton et sont limités par IP et globalement.
+L'utilisateur est déduit du jeton, et l'IP et le user-agent sont fixés par le serveur. Seuls les
+parents peuvent lire, compter et exporter le journal (écran « Sécurité », `/security-dashboard`).
 
-La colonne `pin_code` a été modifiée de `VARCHAR(4)` à `VARCHAR(255)` pour supporter les codes PIN hachés.
+## 7. Scripts d'administration (dans `backend/`, ou `docker exec -it teachdigital-backend ...`)
 
-## 🧪 Tests
+| Commande | Rôle |
+| --- | --- |
+| `node scripts/init-family-gate.js <code>` | Définit ou remplace le code familial et révoque les jetons famille |
+| `node scripts/init-default-pins.js <PIN>` | Donne ce PIN aux profils qui n'en ont pas (6 chiffres minimum si l'un d'eux est parent) |
+| `node scripts/reset-pin.js <id profil> <PIN>` | Réinitialise un PIN oublié et révoque les sessions du profil |
 
-### Composant de test
-
-Un composant `PinSecurityTest.vue` est disponible pour tester toutes les fonctionnalités :
-
-- Validation des codes PIN
-- Analyse de la force
-- Test de hachage
-- Test de vérification
-- Génération de codes PIN sécurisés
-
-### Scripts de test
-
-- **test-pin-security.js** : Tests automatisés complets
-- **migrate-pins.js** : Migration des codes PIN existants
-- **migrate-database.js** : Migration de la structure de la base de données
-
-## 📈 Performances
-
-### Temps de hachage
-
-- **4 chiffres** : ~520ms
-- **6 chiffres** : ~520ms
-- **8 chiffres** : ~520ms
-
-### Temps de vérification
-
-- **Vérification** : ~1ms
-- **Comparaison** : Instantanée
-
-## 🔒 Sécurité
-
-### Niveaux de protection
-
-1. **Hachage bcrypt** : Protection contre les attaques par dictionnaire
-2. **Salt unique** : Protection contre les attaques par table arc-en-ciel
-3. **Validation stricte** : Prévention des codes PIN faibles
-4. **Rounds élevés** : Résistance aux attaques par force brute
-
-### Bonnes pratiques
-
-- Utiliser des codes PIN de 6 chiffres ou plus
-- Éviter les codes PIN prévisibles
-- Changer régulièrement les codes PIN
-- Ne pas partager les codes PIN
-
-## 🚨 Dépannage
-
-### Problèmes courants
-
-1. **Erreur de migration** : Vérifier que la base de données est accessible
-2. **Codes PIN invalides** : Vérifier le format (4-8 chiffres uniquement)
-3. **Hachage échoué** : Vérifier que bcryptjs est installé
-
-### Logs
-
-Tous les services incluent des logs détaillés :
-- ✅ Succès
-- ❌ Erreurs
-- ℹ️ Informations
-
-## 📝 Changelog
-
-### Version 1.0.0
-- Implémentation du hachage bcrypt
-- Validation renforcée des codes PIN
-- Analyse de la force
-- Génération sécurisée
-- Scripts de migration
-- Tests automatisés
-
-## 🤝 Contribution
-
-Pour contribuer aux améliorations de sécurité :
-
-1. Tester les nouvelles fonctionnalités
-2. Signaler les problèmes de sécurité
-3. Proposer des améliorations
-4. Respecter les bonnes pratiques de sécurité
-
-## 📞 Support
-
-Pour toute question concernant la sécurité des codes PIN :
-
-1. Consulter ce document
-2. Exécuter les tests de sécurité
-3. Vérifier les logs d'erreur
-4. Contacter l'équipe de développement
-
----
-
-**Note** : Cette implémentation respecte les standards de sécurité modernes et est recommandée pour les applications de production.
+Après `reset-pin.js`, si la connexion reste bloquée par un verrouillage, redémarrer le conteneur.

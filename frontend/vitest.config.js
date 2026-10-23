@@ -22,12 +22,15 @@ export default defineConfig({
         '**/coverage/**',
         '**/public/**',
         '**/scripts/**'
-      ]
-      // Pas de seuils de couverture pour l'instant : l'ancienne clé `thresholds.global`
-      // (syntaxe Jest) était ignorée par Vitest, et la couverture réelle de src/ est
-      // très faible (quelques services seulement). Réintroduire des seuils réalistes
-      // au niveau racine quand la couverture aura progressé, par ex. :
-      // thresholds: { lines: 20, functions: 20, branches: 20, statements: 20 }
+      ],
+      // Seuils = couverture mesurée (arrondie à l'entier inférieur) : elle ne peut pas régresser.
+      // À relever quand des tests sont ajoutés (vitest run --coverage).
+      thresholds: {
+        statements: 70,
+        branches: 72,
+        functions: 39,
+        lines: 70
+      }
     },
     include: [
       'src/**/*.{test,spec}.{js,ts}',

@@ -1,5 +1,5 @@
 ---
-globs: public/*.js,src/main.js,vite.config.js
+globs: frontend/public/*.js,frontend/src/main.js,frontend/vite.config.js
 description: Guidelines pour PWA et Service Workers
 ---
 
@@ -8,19 +8,23 @@ description: Guidelines pour PWA et Service Workers
 ## Configuration PWA
 
 ### Manifest et Icônes
-- **Manifest** : [public/manifest.json](mdc:frontend/public/manifest.json)
-- **Icônes** : Générées automatiquement par [scripts/generate-icons.js](mdc:frontend/scripts/generate-icons.js)
-- **Configuration Vite PWA** : Définie dans [vite.config.js](mdc:frontend/vite.config.js)
+- **Manifest** : [frontend/public/manifest.json](mdc:frontend/public/manifest.json) (fichier statique, validé par `pnpm run validate-manifest`)
+- **Icônes** : générées par [frontend/scripts/generate-icons.js](mdc:frontend/scripts/generate-icons.js) (Sharp) dans `public/icons/`
+- **Pas de vite-plugin-pwa** : il générait un second service worker concurrent ; [vite.config.js](mdc:frontend/vite.config.js)
+  ne fait qu'écrire `dist/version.json` et `dist/.vite/manifest.json`
 
 ### Service Worker
-- **Service Worker principal** : [public/sw.js](mdc:frontend/public/sw.js)
-- **Génération automatique** : [scripts/generate-sw.js](mdc:frontend/scripts/generate-sw.js)
-- **Enregistrement** : Dans [src/main.js](mdc:frontend/src/main.js)
+- **Service Worker unique** : [frontend/public/sw.js](mdc:frontend/public/sw.js) (template)
+- **Génération au build** : [frontend/scripts/generate-sw.js](mdc:frontend/scripts/generate-sw.js), lancé par `pnpm run build`,
+  injecte `BUILD_VERSION` (depuis `dist/version.json`) et `PRECACHE_ASSETS` (depuis `dist/.vite/manifest.json`) dans `dist/sw.js`
+- **Enregistrement** : dans [frontend/src/main.js](mdc:frontend/src/main.js), après l'événement `load`
 
 ### Gestion des mises à jour
-- **Service de mise à jour** : [src/services/updateService.js](mdc:frontend/src/services/updateService.js)
-- **Composant de notification** : [src/components/UpdateNotification.vue](mdc:frontend/src/components/UpdateNotification.vue)
-- **Vérification automatique** : Toutes les 30 secondes
+- **Service de mise à jour** : [frontend/src/services/updateService.js](mdc:frontend/src/services/updateService.js) — compare le build
+  exécuté (`__APP_VERSION__`) à `/version.json` (jamais mis en cache)
+- **Composant de notification** : [frontend/src/components/UpdateNotification.vue](mdc:frontend/src/components/UpdateNotification.vue), monté dans `App.vue`
+- **Vérification** : 5 s après l'enregistrement, puis toutes les 30 minutes, au retour au premier plan
+  (`visibilitychange`) et quand un nouveau Service Worker est installé
 
 ### Configuration du Service Worker
 ```javascript
@@ -30,28 +34,30 @@ navigator.serviceWorker.register('/sw.js', {
 })
 ```
 
-### Cache Strategy
-- **Cache First** : Pour les assets statiques (CSS, JS, images)
-- **Network First** : Pour les données API
-- **Stale While Revalidate** : Pour les ressources critiques
+### Cache Strategy (public/sw.js)
+- **API (`/api/*`)** : réseau uniquement, **jamais de cache** ; hors ligne → réponse JSON 503 `OFFLINE`
+- **Navigation** : réseau d'abord, `index.html` précaché en secours (hors ligne)
+- **Assets hachés `/assets/*`** : cache d'abord (immuables, conservés entre builds dans la limite d'un nombre d'entrées)
+- **Ressources statiques listées** (icônes, manifest) : réseau d'abord, cache en secours
+- `version.json` et `sw.js` : jamais mis en cache
 
 ### Offline Support
-- Mise en cache des ressources essentielles
-- Gestion des erreurs réseau
-- Interface utilisateur adaptée au mode hors ligne
+- Précache de tout le build (navigation hors ligne vers une page jamais visitée)
+- Bandeau [OfflineBanner.vue](mdc:frontend/src/components/OfflineBanner.vue)
+- Aucune donnée API stockée hors ligne (jetons, PIN, progression)
 
 ### Installation PWA
-- **Guide d'installation** : [PWA-INSTALL.md](mdc:PWA-INSTALL.md)
-- **Bouton d'installation** : Intégré dans l'interface
-- **Prompt d'installation** : Géré par le navigateur
+- **Service** : [frontend/src/services/installService.js](mdc:frontend/src/services/installService.js) (capture de `beforeinstallprompt`, guide par plateforme)
+- **Bouton d'installation** : carte [InstallAppCard.vue](mdc:frontend/src/components/InstallAppCard.vue) dans les paramètres parent (`/parent-settings` ; `/settings/pwa` y redirige)
+- **Pas de notifications push**
 
 ### Bonnes pratiques
-- Tester le Service Worker en mode développement
-- Vérifier la compatibilité des navigateurs
-- Optimiser la taille du cache
-- Gérer les mises à jour de manière transparente
+- Tester le Service Worker sur un build (`pnpm run build && pnpm run preview`) : en dev, `public/sw.js` n'est pas versionné
+- Ne jamais mettre en cache les réponses de l'API
+- Garder un seul Service Worker ; toute évolution passe par `public/sw.js` + `scripts/generate-sw.js`
+- Gérer les mises à jour de manière transparente (`UpdateNotification`, rechargement unique après chunk manquant)
 
 ### Scripts utiles
 - `pnpm run generate-icons` : Générer les icônes PWA
-- `pnpm run generate-sw` : Générer le Service Worker
-- `pnpm run build` : Build complet avec PWA
+- `pnpm run validate-manifest` : Valider le manifest
+- `pnpm run build` : Build complet (Vite + génération de `dist/sw.js`)

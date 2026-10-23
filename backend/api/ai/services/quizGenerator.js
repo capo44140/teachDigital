@@ -4,30 +4,33 @@
  */
 
 const { generateQuizWithAI } = require('./aiProviders/index.js');
+const logger = require('../../../lib/logger.js');
 
 /**
  * Génère un quiz basé sur une analyse
  * @param {Object} analysis - Analyse du contenu
  * @param {Object} childProfile - Profil de l'enfant
+ * @param {number} questionCount - Nombre de questions souhaitées
+ * @param {Object} [ctx] - Contexte de la requête (signal d'annulation, délai)
  * @returns {Promise<Object>} Quiz généré
  */
-async function generateQuizFromAnalysis(analysis, childProfile, questionCount = 5) {
-    console.log('🎯 generateQuizFromAnalysis: Début (age: ' + (childProfile?.age || 'N/A') + ', level: ' + (childProfile?.level || 'N/A') + ', questions: ' + questionCount + ')');
-
-    return await generateQuizWithAI(analysis, childProfile, questionCount);
+async function generateQuizFromAnalysis(analysis, childProfile, questionCount = 5, ctx) {
+    logger.debug('generateQuizFromAnalysis', { level: childProfile?.level || null, questionCount });
+    return generateQuizWithAI(analysis, childProfile, questionCount, ctx);
 }
 
 /**
  * Génère un quiz à partir de plusieurs analyses
  * Combine les analyses et génère un quiz unifié
- * 
+ *
  * @param {Array} analyses - Liste des analyses
  * @param {Object} childProfile - Profil de l'enfant
  * @param {number} questionCount - Nombre de questions souhaitées
+ * @param {Object} [ctx] - Contexte de la requête (signal d'annulation, délai)
  * @returns {Promise<Object>} Quiz généré
  */
-async function generateQuizFromMultipleAnalyses(analyses, childProfile, questionCount) {
-    console.log(`🎯 generateQuizFromMultipleAnalyses: Début (${analyses.length} analyses, ${questionCount} questions)`);
+async function generateQuizFromMultipleAnalyses(analyses, childProfile, questionCount, ctx) {
+    logger.debug('generateQuizFromMultipleAnalyses', { analyses: analyses.length, questionCount });
 
     // Combiner toutes les analyses en une seule
     const combinedAnalysis = {
@@ -50,21 +53,13 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
       return t.length > maxChars ? (t.slice(0, maxChars) + '…') : t;
     };
 
+    const asArray = (value) => (Array.isArray(value) ? value : []);
+
     // Agréger les concepts et points clés de toutes les analyses
     for (const item of analyses) {
-        const analysis = item.analysis;
-        if (analysis.concepts) {
-            combinedAnalysis.concepts.push(...analysis.concepts);
-        }
-        if (analysis.concepts_cles) {
-            combinedAnalysis.concepts.push(...analysis.concepts_cles);
-        }
-        if (analysis.keyPoints) {
-            combinedAnalysis.keyPoints.push(...analysis.keyPoints);
-        }
-        if (analysis.informations_importantes) {
-            combinedAnalysis.keyPoints.push(...analysis.informations_importantes);
-        }
+        const analysis = item.analysis || {};
+        combinedAnalysis.concepts.push(...asArray(analysis.concepts), ...asArray(analysis.concepts_cles));
+        combinedAnalysis.keyPoints.push(...asArray(analysis.keyPoints), ...asArray(analysis.informations_importantes));
 
         // IMPORTANT: utiliser aussi le texte OCR (source brute) pour la génération du quiz.
         // Cela aide le LLM à garder les détails exacts présents dans le document.
@@ -82,21 +77,23 @@ async function generateQuizFromMultipleAnalyses(analyses, childProfile, question
     combinedAnalysis.keyPoints = [...new Set(combinedAnalysis.keyPoints)];
 
     // Générer le quiz avec l'analyse combinée et le nombre de questions demandé
-    return await generateQuizWithAI(combinedAnalysis, childProfile, questionCount);
+    return generateQuizWithAI(combinedAnalysis, childProfile, questionCount, ctx);
 }
 
 /**
  * Génère un quiz à partir d'un texte brut
  * Analyse d'abord le texte puis génère le quiz
- * 
+ *
  * @param {string} inputText - Texte source
  * @param {Object} childProfile - Profil de l'enfant
- * @param {Object} options - Options de génération
+ * @param {Object} options - Options de génération (questionCount, subject)
+ * @param {Object} [ctx] - Contexte de la requête (signal d'annulation, délai)
  * @returns {Promise<Object>} Quiz généré
  */
-async function generateQuizFromTextWithAI(inputText, childProfile, options = {}) {
+async function generateQuizFromTextWithAI(inputText, childProfile, options = {}, ctx) {
     const questionCount = options.questionCount || 5;
-    console.log(`📝 generateQuizFromTextWithAI: Début (texte: ${inputText.substring(0, 50)}..., questions: ${questionCount})`);
+    // Le texte de l'enfant n'est pas journalisé, seulement sa longueur
+    logger.debug('generateQuizFromTextWithAI', { textLength: String(inputText || '').length, questionCount });
 
     // Créer une analyse simple à partir du texte
     const analysis = {
@@ -107,7 +104,7 @@ async function generateQuizFromTextWithAI(inputText, childProfile, options = {})
         keyPoints: [inputText]
     };
 
-    return await generateQuizWithAI(analysis, childProfile, questionCount);
+    return generateQuizWithAI(analysis, childProfile, questionCount, ctx);
 }
 
 module.exports = {

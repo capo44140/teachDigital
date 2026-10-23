@@ -1,7 +1,7 @@
 {
   "name": "TeachDigital - Apprentissage Numérique",
   "short_name": "TeachDigital",
-  "description": "Application éducative interactive pour l'apprentissage numérique des enfants et adolescents avec reconnaissance faciale et quiz personnalisés",
+  "description": "Application éducative familiale : quiz personnalisés générés à partir des leçons, pages de cours, vidéos éducatives et suivi des progrès des enfants et adolescents",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0F172A",

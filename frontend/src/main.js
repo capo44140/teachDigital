@@ -5,58 +5,16 @@ import App from './App.vue'
 import router from './router'
 import UpdateNotification from './components/UpdateNotification.vue'
 import { updateService, isChunkLoadError, reloadOnceAfterChunkError } from './services/updateService.js'
-import { useApiStore } from './stores/apiStore.js'
-
-// Services PWA avancés
-import installService from './services/installService.js'
-import mobileOptimizationService from './services/mobileOptimizationService.js'
 import { safeHtmlDirective } from './utils/sanitizeHtml.js'
 import { useToastStore } from './stores/toastStore.js'
+import { useSettingsStore } from './stores/settingsStore.js'
+import { confirmAction } from './composables/useConfirm.js'
+import { reportClientError } from './services/clientErrorReporter.js'
 
-// Filtrer les avertissements Radix UI/Dialog de la console
-const originalConsoleWarn = console.warn
-const originalConsoleError = console.error
-
-function safeConsoleArgToString (arg) {
-  try {
-    if (typeof arg === 'string') return arg
-    if (arg instanceof Error) return arg.stack || arg.message || String(arg)
-    // Éviter la coercition implicite (peut throw sur certains proxys)
-    return JSON.stringify(arg)
-  } catch (_e) {
-    try {
-      return String(arg)
-    } catch (_e2) {
-      return Object.prototype.toString.call(arg)
-    }
-  }
-}
-
-console.warn = function (...args) {
-  const message = args.map(safeConsoleArgToString).join(' ')
-  // Ignorer les avertissements Radix UI concernant DialogContent/DialogTitle
-  if (message.includes('DialogContent') ||
-    message.includes('DialogTitle') ||
-    message.includes('requires a `DialogTitle`') ||
-    message.includes('VisuallyHidden') ||
-    message.includes('radix-ui.com/primitives/docs/components/dialog')) {
-    return // Ignorer cet avertissement
-  }
-  originalConsoleWarn.apply(console, args)
-}
-
-console.error = function (...args) {
-  const message = args.map(safeConsoleArgToString).join(' ')
-  // Ignorer les erreurs Radix UI concernant DialogContent/DialogTitle
-  if (message.includes('DialogContent') ||
-    message.includes('DialogTitle') ||
-    message.includes('requires a `DialogTitle`') ||
-    message.includes('VisuallyHidden') ||
-    message.includes('radix-ui.com/primitives/docs/components/dialog')) {
-    return // Ignorer cette erreur
-  }
-  originalConsoleError.apply(console, args)
-}
+// Service d'installation PWA : chargé à part, mais tôt (il doit capter beforeinstallprompt)
+import('./services/installService.js')
+  .then(({ initInstallService }) => initInstallService())
+  .catch((error) => console.warn('Service d\'installation indisponible:', error))
 
 // Créer l'instance Pinia
 const pinia = createPinia()
@@ -103,7 +61,7 @@ if ('serviceWorker' in navigator) {
         })
       })
       .catch((error) => {
-        // Échec de l'enregistrement du Service Worker
+        console.warn('Échec de l\'enregistrement du Service Worker:', error)
       })
   })
 
@@ -131,13 +89,14 @@ router.onError((error, to) => {
 
 // Fournir les services globalement
 app.provide('updateService', updateService)
-app.provide('installService', installService)
-app.provide('mobileOptimizationService', mobileOptimizationService)
 
 app.use(pinia).use(router)
 
+// Préférences d'affichage : nettoyage des anciennes clés et état par défaut dès le démarrage
+useSettingsStore(pinia).initialize()
+
 // Exposer $toast globalement pour les composants Options API
-// Usage : this.$toast.success('Profil créé') / this.$toast.error('Échec')
+// Usage : this.$toast.success('Profil créé') / this.$toast.errorFrom(error, 'Échec')
 const toastStore = useToastStore(pinia)
 app.config.globalProperties.$toast = {
   show:    (msg, opts) => toastStore.show(msg, 'info', opts),
@@ -145,68 +104,44 @@ app.config.globalProperties.$toast = {
   info:    (msg, opts) => toastStore.info(msg, opts),
   warning: (msg, opts) => toastStore.warning(msg, opts),
   error:   (msg, opts) => toastStore.error(msg, opts),
+  errorFrom: (err, fallback, opts) => toastStore.errorFrom(err, fallback, opts),
   dismiss: (id) => toastStore.dismiss(id),
   clear:   () => toastStore.clear()
 }
 
-// Capter les erreurs Vue non gérées et les afficher en toast (filet de sécurité)
+// Confirmation accessible (remplace window.confirm) : await this.$confirm({ … })
+app.config.globalProperties.$confirm = confirmAction
+
+// Erreurs non gérées : toast (filet de sécurité) + remontée CLIENT_ERROR limitée
+const UNEXPECTED_ERROR_MESSAGE = 'Une erreur inattendue est survenue. Si le problème persiste, rechargez la page.'
+
+/**
+ * Erreur non interceptée (hook de composant ou promesse) :
+ * - erreur d'API : ce n'est pas un bug JavaScript, pas de remontée CLIENT_ERROR. Les refus 4xx
+ *   (session expirée ou révoquée, droits…) sont déjà gérés par le router ; toast seulement
+ *   hors ligne (statut 0) ou pour une erreur serveur (≥ 500) ;
+ * - autre erreur : remontée CLIENT_ERROR (limitée) et toast.
+ */
+function handleUncaughtError (error, context) {
+  if (error?.name === 'ApiError') {
+    if (!(error.status > 0 && error.status < 500)) {
+      toastStore.errorFrom(error, UNEXPECTED_ERROR_MESSAGE)
+    }
+    return
+  }
+  reportClientError(error, context)
+  toastStore.error(UNEXPECTED_ERROR_MESSAGE)
+}
+
 app.config.errorHandler = (err, _instance, info) => {
   console.error('[Vue error]', info, err)
-  const msg = err?.message || 'Une erreur inattendue est survenue'
-  toastStore.error(msg)
+  handleUncaughtError(err, { source: 'vue', info })
 }
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[Promesse non gérée]', event.reason)
+  handleUncaughtError(event.reason, { source: 'unhandledrejection' })
+})
 
 // Monter l'app immédiatement pour un affichage rapide
 app.mount('#app')
-
-// Polyfill pour requestIdleCallback (non supporté par Safari)
-const scheduleIdleTask = window.requestIdleCallback || ((cb) => setTimeout(cb, 1))
-
-// Initialiser les services de manière asynchrone après le premier rendu
-// Cela améliore le temps de premier affichage (FCP - First Contentful Paint)
-scheduleIdleTask(() => {
-  initializeServicesAsync()
-})
-
-/**
- * Initialise les services de manière asynchrone après le montage de l'app
- * Optimise le chemin critique en différant les requêtes non essentielles
- */
-async function initializeServicesAsync() {
-  // Étape 1 : Initialiser l'apiStore depuis le cache local (rapide)
-  const apiStore = useApiStore()
-  apiStore.initialize()
-
-  // Étape 2 : Initialiser les autres services en arrière-plan
-  // Sans bloquer l'interface utilisateur
-  scheduleIdleTask(() => {
-    initializePWAServices()
-  })
-}
-
-/**
- * Initialise les services PWA en arrière-plan
- */
-async function initializePWAServices() {
-  const services = [
-    { name: 'Optimisation Mobile', init: () => mobileOptimizationService.init() },
-    { name: 'Installation', init: () => installService.checkInstallationStatus() }
-  ]
-
-  const results = await Promise.allSettled(
-    services.map(service => service.init())
-  )
-
-  const successful = results.filter(result => result.status === 'fulfilled').length
-  const failed = results.filter(result => result.status === 'rejected').length
-
-  if (failed > 0) {
-    results.forEach((result, index) => {
-      if (result.status === 'rejected') {
-        console.warn(`Échec de l'initialisation ${services[index].name}:`, result.reason)
-      }
-    })
-  } else {
-    // Services PWA initialisés
-  }
-}

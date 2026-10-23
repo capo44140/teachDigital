@@ -36,14 +36,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps
+      # Seul navigateur utilisé par playwright.config.js (projets « chromium » et « mobile »)
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
 
-      - name: Build application
-        run: pnpm build
-
+      # Serveur de développement Vite lancé par Playwright (webServer), API simulée par page.route :
+      # ni build ni backend nécessaires
       - name: Run Playwright tests
-        run: pnpm test:e2e
+        run: pnpm exec playwright test
         env:
           CI: true
 

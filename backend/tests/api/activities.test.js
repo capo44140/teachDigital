@@ -66,8 +66,10 @@ describeWithDb('API Endpoints - Activités', () => {
     testActivityIds.push(res.body.data.activity.id);
   });
 
-  it('GET /:id renvoie l\'activité', async () => {
-    const req = createMockRequest('GET', `/api/activities/${testActivityIds[0]}`);
+  it('GET /:id renvoie l\'activité à l\'enfant concerné', async () => {
+    const req = createMockRequest('GET', `/api/activities/${testActivityIds[0]}`, {}, {
+      authorization: `Bearer ${generateTestToken(testProfile)}`
+    });
     const res = createMockResponse();
 
     await handleActivity(req, res);

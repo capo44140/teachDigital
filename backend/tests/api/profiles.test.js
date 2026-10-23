@@ -120,7 +120,8 @@ describeWithDb('API Endpoints - Profils', () => {
 
       await handleProfiles(req, res);
 
-      expect(res.statusCode).toBe(401);
+      // Le 401 (jeton manquant) est renvoyé par le routeur ; le contrôleur refuse l'action
+      expect(res.statusCode).toBe(403);
     });
 
     it('devrait refuser la création sans nom', async () => {
@@ -199,7 +200,8 @@ describeWithDb('API Endpoints - Profils', () => {
 
       await handleProfile(req, res);
 
-      expect(res.statusCode).toBe(401);
+      // Le 401 (jeton manquant) est renvoyé par le routeur ; le contrôleur refuse l'action
+      expect(res.statusCode).toBe(403);
     });
   });
 

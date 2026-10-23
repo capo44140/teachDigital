@@ -12,119 +12,146 @@ alwaysApply: true
 **Le frontend ne fait QUE des appels API au backend. Aucune logique métier dans le frontend.**
 
 ```
-Frontend (Vue.js 3)
-    ↓ Appels HTTP uniquement (via apiService)
-Backend API (Vercel Functions)
-    ↓ Logique métier + Base de données
-PostgreSQL Database
+Frontend (Vue.js 3, PWA servie par nginx — conteneur teachdigital-frontend)
+    ↓ HTTP uniquement (services de domaine → apiService)
+nginx : /api/ relayé vers http://backend:3001 (réseau Docker « teachdigital »)
+    ↓
+Backend API (Express — conteneur teachdigital-backend)
+    ↓ Logique métier + base de données
+PostgreSQL (NAS)
 ```
+
+Exemples de logique strictement serveur : score des quiz (le score envoyé par un client est ignoré),
+déblocage des badges, isolation des données par profil, politique et verrouillage des PIN,
+appels aux fournisseurs d'IA.
 
 ## 📁 Structure du Projet
 
-### Frontend (`src/`)
-- **Composants** : `src/components/` - Composants Vue.js uniquement UI
-- **Services** : `src/services/` - Uniquement des appels API, pas de logique métier
-- **Stores** : `src/stores/` - Gestion d'état Pinia (données depuis API)
-- **Router** : `src/router/` - Navigation Vue Router
+### Frontend (`frontend/src/`)
+- **Écrans** : `views/` - pages routées, chargées à la demande par `router/index.js`
+- **Composants** : `components/` - composants UI partagés (+ sous-dossiers par domaine)
+- **Services** : `services/` - un service par domaine, appels via `apiService.js` (client HTTP)
+- **Stores** : `stores/` - état Pinia (données issues de l'API, préférences d'affichage)
+- **Router** : `router/` - navigation et guard d'accès (`navigationGuard`)
 
 ### Backend (`backend/`)
-- **API** : `backend/api/` - Endpoints Vercel Functions
-- **Lib** : `backend/lib/` - Utilitaires (database, auth, cors, etc.)
-- **Logique métier** : Toute la logique métier est dans le backend
+- **Cycle de vie** : `server.js` (attente PostgreSQL → migrations → réglages IA → écoute 3001, arrêt propre)
+- **Application** : `app.js` (requestId, helmet, CORS, limites de corps, multipart IA, `/health`, gestionnaire d'erreurs)
+- **Routeur** : `api/index.js` - routes, middlewares d'accès et validation Zod
+- **Contrôleurs** : `controllers/` (+ `api/badges.js`, `api/ai/**`) - logique métier par domaine
+- **Lib** : `lib/` - database, queries, transaction, http, auth, scope, logger, migrate...
+- **Migrations** : `migrations/*.sql` - seule source du schéma (aucun DDL dans `server.js`)
 
 ## 🔌 Communication Frontend/Backend
 
-### Service API Principal
-Tous les appels backend passent par `src/services/apiService.js` :
+### Services de domaine
+Les composants appellent un service de domaine (`authService`, `lessonService`, `coursePageService`,
+`profile/profileService`, `activityService`, `badgeService`, `youtubeVideoService`, `aiService`,
+`auditLogService`...), qui appelle `apiService.request()` :
 
 ```javascript
-import { apiService } from './apiService.js'
+// Dans un écran de src/views/ (imports relatifs : l'alias @ n'existe pas dans vite.config.js)
+import badgeService from '../services/badgeService.js'
+import { LessonService } from '../services/lessonService.js'
 
-// Exemple d'utilisation
-const profiles = await apiService.getProfiles()
-const profile = await apiService.getProfile(id)
-await apiService.createProfile(profileData)
+const badges = await badgeService.getAllBadges()
+const lessons = await LessonService.getLessonsByProfile(profileId)
 ```
+
+`apiService.js` ne contient **aucun endpoint métier** : URL de base, choix du jeton, délais,
+erreurs (`ApiError`), gestion des 401 et `buildQuery`.
 
 ### Format des Réponses Backend
-Le backend retourne toujours ce format :
 ```javascript
-{
-  success: true|false,
-  message: "Message descriptif",
-  data: { /* données */ }
-}
+// Succès
+{ success: true, message: 'Message descriptif', data: { /* données */ } }
+
+// Erreur (lib/response.js createErrorResponse, lib/http.js sendFailure / sendError)
+{ success: false, message: 'Message générique', code: 'FORBIDDEN', data: null, requestId: '…' }
 ```
+- `requestId` (aussi en en-tête `X-Request-Id`) relie l'erreur aux logs serveur ; jamais de détail
+  technique (message SQL, stack) dans la réponse.
+- Validation Zod refusée : 400 `VALIDATION_ERROR` + `errors: [{ path, code, message }]`.
 
 ## 🗄️ Base de Données
 
 ### Configuration
-- **Type** : PostgreSQL (pas Neon)
-- **Variable** : `DATABASE_URL` (format PostgreSQL standard)
-- **Pool** : Utilise `pg` (Pool PostgreSQL natif)
-- **Backend uniquement** : Le frontend n'accède JAMAIS à la base de données
+- **Type** : PostgreSQL, accès **backend uniquement**
+- **Variables** : `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` (prioritaires) ou `DATABASE_URL`
+- **Pool** : `pg` — `lib/database.js` exporte `pool` et le helper `sql`
+- **Schéma** : migrations SQL de `backend/migrations/` (voir database-patterns.mdc)
 
 ### Accès Base de Données
 ```javascript
-// ✅ BON - Backend uniquement
-const { sql } = require('../lib/database.js')
-const profiles = await sql`SELECT * FROM profiles`
+// ✅ BON - Backend uniquement (CommonJS)
+const { sql, pool } = require('../lib/database.js')
+const profiles = await sql`SELECT id, name FROM profiles WHERE is_active = ${true}`
+const { rows } = await pool.query('SELECT id, name FROM profiles WHERE id = $1', [id])
 
 // ❌ MAUVAIS - Frontend
-import sql from '@/config/database.js' // INTERDIT
+import sql from '@/config/database.js' // INTERDIT : aucun accès base côté frontend
 ```
 
 ## 🚫 Règles Strictes
 
 ### Frontend - INTERDICTIONS
 1. ❌ **Aucun accès direct à la base de données**
-2. ❌ **Aucune logique métier** (calculs, validations complexes, etc.)
+2. ❌ **Aucune logique métier** (score, badges, droits d'accès, etc.)
 3. ❌ **Aucune requête SQL** dans le frontend
-4. ❌ **Aucun import de `database.js`** dans le frontend
+4. ❌ **Aucun secret** (variables `VITE_*` publiques, clés IA uniquement côté backend)
 
 ### Frontend - AUTORISATIONS
-1. ✅ **Appels API uniquement** via `apiService`
-2. ✅ **Validation UI simple** (format, champs requis)
+1. ✅ **Appels API uniquement** via les services de domaine et `apiService`
+2. ✅ **Validation UI simple** (format, champs requis ; ex. `utils/pinPolicy.js`, miroir de la politique serveur pour l'UX — le serveur revalide toujours)
 3. ✅ **Gestion d'état** avec Pinia
 4. ✅ **Formatage d'affichage** (dates, nombres, etc.)
 
 ### Backend - RESPONSABILITÉS
 1. ✅ **Toute la logique métier**
-2. ✅ **Validation des données**
+2. ✅ **Validation des données** (Zod, `lib/schemas.js`)
 3. ✅ **Accès à la base de données**
 4. ✅ **Authentification et autorisation**
-5. ✅ **Gestion des erreurs**
+5. ✅ **Gestion des erreurs** (réponses génériques, détail dans les logs)
 
 ## 📝 Exemples de Code
 
 ### ✅ Frontend - Appel API
 ```javascript
-// src/services/badgeService.js
+// frontend/src/services/badgeService.js
 import { apiService } from './apiService.js'
 
 export class BadgeService {
-  async getAllBadges() {
+  async getAllBadges () {
     const response = await apiService.request('/api/badges')
     return response.data || []
   }
 }
+
+export default new BadgeService()
 ```
 
-### ✅ Backend - Logique Métier
+### ✅ Backend - Route + contrôleur
 ```javascript
-// backend/api/badges.js
-const { sql } = require('../lib/database.js')
+// backend/api/index.js
+router.get('/youtube-videos', handleYoutubeVideos)
+router.post('/youtube-videos', requireAdmin, validate(schemas.youtubeVideoCreateSchema), handleYoutubeVideos)
 
-async function handleGetAllBadges(req, res) {
-  const badges = await sql`
-    SELECT * FROM badges 
-    ORDER BY category, condition_value ASC
-  `
-  return res.status(200).json({
-    success: true,
-    message: 'Badges récupérés avec succès',
-    data: badges
-  })
+// backend/controllers/youtubeController.js
+const { pool } = require('../lib/database.js')
+const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js')
+const { sendError } = require('../lib/http.js')
+
+async function handleYoutubeVideos (req, res) {
+  try {
+    const { rows } = await withQueryTimeout(
+      pool.query('SELECT id, title, video_id FROM youtube_videos WHERE is_active = true ORDER BY created_at DESC'),
+      TIMEOUTS.DEFAULT,
+      'récupération des vidéos YouTube'
+    )
+    return res.status(200).json({ success: true, message: 'Vidéos YouTube récupérées avec succès', data: { videos: rows } })
+  } catch (error) {
+    return sendError(res, error, 'Erreur lors de la gestion des vidéos YouTube')
+  }
 }
 ```
 
@@ -132,66 +159,68 @@ async function handleGetAllBadges(req, res) {
 ```javascript
 // ❌ INTERDIT - Accès direct DB
 import sql from '@/config/database.js'
-const profiles = await sql`SELECT * FROM profiles`
 
-// ❌ INTERDIT - Logique métier
-function calculateBadgeProgress(badge) {
-  // Calculs complexes...
-}
+// ❌ INTERDIT - Logique métier (le serveur calcule le score à partir des réponses)
+function computeQuizScore (answers, questions) { /* ... */ }
 
-// ❌ INTERDIT - Validation serveur
-function validateProfile(profile) {
-  // Validation complexe...
-}
+// ❌ INTERDIT - Décider des droits côté client à partir de l'URL
+if (route.query.unlocked === 'true') { /* accès parent */ }
 ```
 
 ## 🔐 Authentification
 
-### Frontend
-```javascript
-// Token stocké dans localStorage
-const token = localStorage.getItem('auth_token')
+### Jetons (backend/lib/auth.js)
+- **Jeton famille** (`scope: 'family'`, 24 h) : `POST /api/auth/family-gate` avec le code d'entrée
+  familial. Accès aux profils NON admin actifs uniquement, jamais aux données parent.
+- **Jeton profil** (`scope: 'profile'`, 4 h) : `POST /api/auth/login` avec le PIN — exige déjà un
+  jeton famille (ou profil). Un jeton profil admin donne les droits parent.
+- **Révocation** : claim `token_version` comparé à `profiles.token_version` / `family_gate.token_version`
+  (changement de code familial, de PIN, désactivation ou changement de type du profil).
+- **Déconnexion** : côté client (JWT sans état).
 
-// Ajouté automatiquement par apiService
-apiService.request('/api/profiles', {
-  headers: { 'Authorization': `Bearer ${token}` }
-})
-```
+### Frontend
+- `apiService` ajoute lui-même `Authorization` : jeton profil valide en priorité (`authStorage.js`),
+  sinon jeton famille (`familyGateService`). Ne jamais construire l'en-tête à la main.
+- Option `auth: 'profile'` (jeton profil obligatoire) ou `auth: 'none'` de `apiService.request()`.
+- Espace parent : `hasParentAccess(profileId)` (`parentAccessService.js`) = session parent
+  déverrouillée (PIN, 30 min glissantes, `sessionService`) ET jeton profil admin du même profil.
+  `?profile=` / `?unlocked=true` ne donnent aucun droit.
 
 ### Backend
 ```javascript
-// backend/lib/auth.js
-const { authenticateToken } = require('../lib/auth.js')
-
-const user = authenticateToken(req)
-if (!user.isAdmin) {
-  return res.status(403).json({ success: false, message: 'Accès refusé' })
-}
+// backend/api/index.js — routes publiques d'abord, puis :
+router.use(requireMember) // tout ce qui suit exige un jeton famille ou profil non révoqué
+router.post('/lessons', requireAdmin, validate(schemas.lessonCreateSchema), handleLessons) // parent (admin revérifié en base)
+router.get('/profiles/:id/progress-summary', requireProfileAccess('id'), handleProfileProgressSummary)
 ```
+Dans un contrôleur, `req.user` porte le jeton décodé (`scope`, `profileId`, `isAdmin`...) ;
+filtrer les données avec `lib/scope.js` (`visibleProfileCondition`, `canAccessProfile`).
 
 ## 🎯 Bonnes Pratiques
 
 ### Services Frontend
 - **Uniquement des appels API**
 - **Pas de logique métier**
-- **Gestion d'erreurs simple** (catch et throw)
+- **Gestion d'erreurs simple** (catch et throw ; affichage via `utils/apiErrors.js` / toasts)
 - **Formatage des données pour l'affichage uniquement**
 
-### Services Backend
+### Backend
 - **Toute la logique métier**
-- **Validation complète des données**
-- **Gestion d'erreurs robuste**
-- **Logs d'audit pour les actions sensibles**
+- **Validation complète des données** (`validate(schema)` sur la route)
+- **Requêtes paramétrées avec timeout** (`withQueryTimeout`)
+- **Journal d'audit** des événements d'authentification / sécurité côté serveur (`lib/auditLog.js`)
 
 ### Composants Vue
-- **Appelent les services frontend**
+- **Appellent les services frontend**
 - **Gèrent l'état UI uniquement**
 - **Pas de logique métier**
 - **Validation UI simple** (champs requis, format)
 
 ## 📚 Références
 
-- **API Service** : [src/services/apiService.js](mdc:frontend/src/services/apiService.js)
+- **Client HTTP** : [frontend/src/services/apiService.js](mdc:frontend/src/services/apiService.js)
+- **Routeur API** : [backend/api/index.js](mdc:backend/api/index.js)
+- **Application Express** : [backend/app.js](mdc:backend/app.js)
 - **Database Backend** : [backend/lib/database.js](mdc:backend/lib/database.js)
-- **Exemple API** : [backend/api/badges.js](mdc:backend/api/badges.js)
-- **Exemple Service Frontend** : [src/services/badgeService.js](mdc:frontend/src/services/badgeService.js)
+- **Auth Backend** : [backend/lib/auth.js](mdc:backend/lib/auth.js), [backend/lib/scope.js](mdc:backend/lib/scope.js)
+- **Exemple Service Frontend** : [frontend/src/services/badgeService.js](mdc:frontend/src/services/badgeService.js)

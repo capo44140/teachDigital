@@ -67,17 +67,6 @@ const defaultBadges = [
     color: "#EF4444",
     is_active: true
   },
-  {
-    name: "Marathonien",
-    description: "Passe 2 heures à apprendre",
-    icon: "⏰",
-    category: "progression",
-    condition_type: "learning_time",
-    condition_value: 120,
-    points: 60,
-    color: "#06B6D4",
-    is_active: true
-  },
 
   // Badges Excellence
   {
@@ -135,17 +124,6 @@ const defaultBadges = [
     condition_value: 30,
     points: 150,
     color: "#3B82F6",
-    is_active: true
-  },
-  {
-    name: "Marathon Temporel",
-    description: "Passe 10 heures à apprendre",
-    icon: "⏳",
-    category: "temps",
-    condition_type: "learning_time",
-    condition_value: 600,
-    points: 80,
-    color: "#F59E0B",
     is_active: true
   },
 

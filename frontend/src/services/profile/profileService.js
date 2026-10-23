@@ -1,6 +1,35 @@
 import { apiService } from '../apiService.js'
-import { EncryptionService } from '../encryptionService.js'
 import { auditLogService } from '../auditLogService.js'
+
+// Endpoints /api/profiles (réponses { success, data: { profiles | profile } })
+const profileApi = {
+  async list () {
+    const response = await apiService.request('/api/profiles')
+    return response.success ? response.data.profiles : []
+  },
+  async get (id) {
+    const response = await apiService.request(`/api/profiles/${id}`)
+    return response.success ? response.data.profile : null
+  },
+  async create (profileData) {
+    const response = await apiService.request('/api/profiles', {
+      method: 'POST',
+      body: JSON.stringify(profileData)
+    })
+    return response.success ? response.data.profile : null
+  },
+  async update (id, profileData) {
+    const response = await apiService.request(`/api/profiles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(profileData)
+    })
+    return response.success ? response.data.profile : null
+  },
+  async remove (id) {
+    const response = await apiService.request(`/api/profiles/${id}`, { method: 'DELETE' })
+    return response.success
+  }
+}
 
 /**
  * Service principal pour la gestion des profils
@@ -9,12 +38,10 @@ import { auditLogService } from '../auditLogService.js'
  * ⚠️ IMPORTANT: Ce service communique via l'API backend, pas d'accès direct DB
  */
 export class ProfileService {
-  static encryptionService = new EncryptionService()
-
   // Récupérer tous les profils
   static async getAllProfiles () {
     try {
-      const profiles = await apiService.getProfiles()
+      const profiles = await profileApi.list()
       return profiles
     } catch (error) {
       console.error('Erreur lors de la récupération des profils:', error)
@@ -25,7 +52,7 @@ export class ProfileService {
   // Récupérer un profil par ID
   static async getProfileById (id) {
     try {
-      const profile = await apiService.getProfile(id)
+      const profile = await profileApi.get(id)
       return profile || null
     } catch (error) {
       console.error('Erreur lors de la récupération du profil:', error)
@@ -34,7 +61,7 @@ export class ProfileService {
   }
 
   // Créer un nouveau profil
-  static async createProfile (profileData, masterPassword = null) {
+  static async createProfile (profileData) {
     try {
       const {
         name,
@@ -49,37 +76,15 @@ export class ProfileService {
         level
       } = profileData
 
-      // Chiffrer les données sensibles si un mot de passe maître est fourni
-      let encryptedDescription = description
-      let encryptedAvatarContent = avatarContent
-      let encryptedImageData = imageData
-
-      if (masterPassword) {
-        try {
-          if (description) {
-            encryptedDescription = await this.encryptionService.encryptWithPassword(description, masterPassword)
-          }
-          if (avatarContent) {
-            encryptedAvatarContent = await this.encryptionService.encryptWithPassword(avatarContent, masterPassword)
-          }
-          if (imageData) {
-            encryptedImageData = await this.encryptionService.encryptWithPassword(imageData, masterPassword)
-          }
-        } catch (encryptionError) {
-          console.warn('Erreur lors du chiffrement des données sensibles:', encryptionError)
-          // Continuer sans chiffrement en cas d'erreur
-        }
-      }
-
-      const result = await apiService.createProfile({
+      const result = await profileApi.create({
         name,
-        description: encryptedDescription,
+        description,
         type,
         color,
         avatar_class: avatarClass,
-        avatar_content: encryptedAvatarContent,
+        avatar_content: avatarContent,
         image_url: imageUrl,
-        image_data: encryptedImageData,
+        image_data: imageData,
         image_type: imageType,
         level
       })
@@ -90,8 +95,7 @@ export class ProfileService {
         'PROFILE_CREATED',
         {
           name: result.name,
-          type: result.type,
-          encrypted: !!masterPassword
+          type: result.type
         }
       )
 
@@ -125,7 +129,7 @@ export class ProfileService {
         level
       } = profileData
 
-      const result = await apiService.updateProfile(id, {
+      const result = await profileApi.update(id, {
         name,
         description,
         type,
@@ -150,7 +154,7 @@ export class ProfileService {
   // Supprimer un profil
   static async deleteProfile (id) {
     try {
-      const result = await apiService.deleteProfile(id)
+      const result = await profileApi.remove(id)
       return result
     } catch (error) {
       console.error('Erreur lors de la suppression du profil:', error)
@@ -188,17 +192,6 @@ export class ProfileService {
       return result
     } catch (error) {
       console.error('Erreur lors du basculement du verrouillage:', error)
-      throw error
-    }
-  }
-
-  // Récupérer les statistiques globales des profils
-  static async getProfileStats () {
-    try {
-      const stats = await apiService.getProfileStats()
-      return stats
-    } catch (error) {
-      console.error('Erreur lors de la récupération des statistiques:', error)
       throw error
     }
   }
@@ -264,9 +257,11 @@ export class ProfileService {
     return allowedTypes.includes(file.type)
   }
 
-  // Valider la taille du fichier (max 5MB)
+  // Valider la taille du fichier : le serveur limite image_data (data URL base64) à 2 Mo,
+  // soit environ 1,5 Mo d'image avant encodage
   static validateImageSize (file) {
-    const maxSize = 5 * 1024 * 1024 // 5MB
-    return file.size <= maxSize
+    const MAX_ENCODED_LENGTH = 2 * 1024 * 1024
+    const encodedLength = Math.ceil(file.size / 3) * 4 + 64 // base64 + préfixe « data:…;base64, »
+    return encodedLength <= MAX_ENCODED_LENGTH
   }
 }

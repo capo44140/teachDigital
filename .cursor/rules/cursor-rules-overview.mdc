@@ -5,120 +5,41 @@ description: Vue d'ensemble complète des règles Cursor pour TeachDigital
 
 # Vue d'Ensemble des Règles Cursor - TeachDigital
 
-## Règles Générées
+Ces règles décrivent le code **tel qu'il est** : frontend Vue 3 / Vite (PWA) dans `frontend/`,
+API Express / PostgreSQL dans `backend/`, déploiement Docker sur un NAS Synology (`deploy.ps1`).
+En cas de doute, **le code fait foi** : vérifier les fichiers cités avant de reproduire un exemple.
 
-J'ai créé un ensemble complet de règles Cursor pour optimiser votre développement avec TeachDigital :
+## Règles toujours actives (alwaysApply: true)
+- **[project-structure.mdc](mdc:.cursor/rules/project-structure.mdc)** - Structure du dépôt, points d'entrée, variables d'environnement
+- **[architecture-overview.mdc](mdc:.cursor/rules/architecture-overview.mdc)** - Frontend = appels API, backend = logique métier ; jetons ; format des réponses
+- **[frontend-services-patterns.mdc](mdc:.cursor/rules/frontend-services-patterns.mdc)** - `apiService` (client HTTP) + services de domaine
+- **[forcefrancaisgitmessage.mdc](mdc:.cursor/rules/forcefrancaisgitmessage.mdc)** - Messages de commit en français
+- **cursor-rules-overview.mdc** - Ce fichier
 
-### 🚀 Performance et Optimisation
-- **[vue-performance-optimization.mdc](mdc:.cursor/rules/vue-performance-optimization.mdc)** - Optimisations Vue.js avancées
-  - Configuration Vite optimisée avec Terser
-  - Code splitting intelligent et lazy loading
-  - Métriques de performance et monitoring
-  - Optimisations spécifiques TeachDigital (reconnaissance faciale, YouTube)
+## Règles par type de fichier (globs)
+| Règle | Fichiers ciblés | Contenu |
+| --- | --- | --- |
+| [vue-coding-standards.mdc](mdc:.cursor/rules/vue-coding-standards.mdc) | `*.vue`, `*.js` | Conventions Vue/JS, Pinia, erreurs, ESLint |
+| [vue-component-architecture.mdc](mdc:.cursor/rules/vue-component-architecture.mdc) | `frontend/src/views`, `components`, `stores` | Écrans vs composants, BaseModal, confirmations, toasts, stores |
+| [vue-performance-optimization.mdc](mdc:.cursor/rules/vue-performance-optimization.mdc) | `*.vue`, services, `vite.config.js` | Lazy loading, chunks, Terser, analyse de bundle |
+| [api-integration-patterns.mdc](mdc:.cursor/rules/api-integration-patterns.mdc) | services frontend, `backend/api`, `backend/controllers` | Client HTTP, erreurs, routes Express, contrôleurs |
+| [database-patterns.mdc](mdc:.cursor/rules/database-patterns.mdc) | `backend/**`, migrations | Accès PostgreSQL, conventions, migrations |
+| [advanced-database-patterns.mdc](mdc:.cursor/rules/advanced-database-patterns.mdc) | `backend/lib/database.js`, `migrate.js`, `migrations/` | Helper `sql`, timeouts, transactions, runner de migrations |
+| [security-guidelines.mdc](mdc:.cursor/rules/security-guidelines.mdc) | services, config, `backend/**` | Résumé sécurité |
+| [advanced-security-practices.mdc](mdc:.cursor/rules/advanced-security-practices.mdc) | auth / PIN / session, `nginx.conf` | Jetons, révocation, PIN, verrouillage, CSP, audit |
+| [pwa-guidelines.mdc](mdc:.cursor/rules/pwa-guidelines.mdc) | `public/*.js`, `main.js`, `vite.config.js` | Service worker unique, mises à jour |
+| [pwa-advanced-development.mdc](mdc:.cursor/rules/pwa-advanced-development.mdc) | `public/`, update/install, bandeaux | Cache, hors ligne, installation |
+| [testing-standards.mdc](mdc:.cursor/rules/testing-standards.mdc) | `frontend/tests`, `backend/tests`, configs | Standards de test |
+| [comprehensive-testing-guidelines.mdc](mdc:.cursor/rules/comprehensive-testing-guidelines.mdc) | `frontend/tests`, `backend/tests`, configs | Vitest, Playwright (API simulée), Jest |
+| [version-deployment.mdc](mdc:.cursor/rules/version-deployment.mdc) | `frontend/scripts`, `package.json`, `deploy.ps1`, compose | Versions, build, déploiement Synology |
 
-### 🔌 Intégration API et Services
-- **[api-integration-patterns.mdc](mdc:.cursor/rules/api-integration-patterns.mdc)** - Patterns d'intégration API
-  - Architecture des services avec pattern Repository
-  - Configuration API et gestion d'erreurs centralisée
-  - Backend Vercel Functions avec authentification JWT
-  - Services spécialisés (cache, reconnaissance faciale, YouTube)
+## Règle par description
+- **[application-features.mdc](mdc:.cursor/rules/application-features.mdc)** - Fonctionnalités de l'application et fichiers associés
 
-### 📱 Développement PWA Avancé
-- **[pwa-advanced-development.mdc](mdc:.cursor/rules/pwa-advanced-development.mdc)** - Guidelines PWA complètes
-  - Configuration Service Worker avec stratégies de cache
-  - Gestion des mises à jour et installation
-  - Services PWA spécialisés (offline, installation, mobile)
-  - Tests PWA et monitoring
-
-### 🏗️ Architecture des Composants
-- **[vue-component-architecture.mdc](mdc:.cursor/rules/vue-component-architecture.mdc)** - Architecture Vue.js
-  - Structure standard des composants Vue 3
-  - Gestion d'état avec Pinia et patterns avancés
-  - Composants spécialisés (dashboard, gestion, configuration)
-  - Communication entre composants et bonnes pratiques
-
-### 🧪 Guidelines de Test Complètes
-- **[comprehensive-testing-guidelines.mdc](mdc:.cursor/rules/comprehensive-testing-guidelines.mdc)** - Tests complets
-  - Tests unitaires avec Vitest et Vue Test Utils
-  - Tests E2E avec Playwright
-  - Tests de performance et de sécurité
-  - Scripts de test et bonnes pratiques
-
-### 🔒 Bonnes Pratiques de Sécurité
-- **[advanced-security-practices.mdc](mdc:.cursor/rules/advanced-security-practices.mdc)** - Sécurité avancée
-  - Chiffrement et hachage sécurisé
-  - Authentification JWT et gestion des sessions
-  - Validation et sanitisation des données
-  - Sécurité des PINs et reconnaissance faciale
-
-### 🗄️ Patterns de Base de Données
-- **[advanced-database-patterns.mdc](mdc:.cursor/rules/advanced-database-patterns.mdc)** - Base de données avancée
-  - Pattern Repository avec Neon Database
-  - Repositories spécialisés et migrations
-  - Gestion des transactions et optimisations
-  - Scripts utilitaires et bonnes pratiques
-
-## Règles Existantes Complémentaires
-
-Vos règles existantes restent valides et complètent parfaitement les nouvelles :
-
-- **[project-structure.mdc](mdc:.cursor/rules/project-structure.mdc)** - Structure générale du projet
-- **[vue-coding-standards.mdc](mdc:.cursor/rules/vue-coding-standards.mdc)** - Standards de codage Vue.js
-- **[pwa-guidelines.mdc](mdc:.cursor/rules/pwa-guidelines.mdc)** - Guidelines PWA de base
-- **[security-guidelines.mdc](mdc:.cursor/rules/security-guidelines.mdc)** - Guidelines de sécurité de base
-- **[testing-standards.mdc](mdc:.cursor/rules/testing-standards.mdc)** - Standards de test de base
-- **[database-patterns.mdc](mdc:.cursor/rules/database-patterns.mdc)** - Patterns de base de données de base
-- **[forcefrancaisgitmessage.mdc](mdc:.cursor/rules/forcefrancaisgitmessage.mdc)** - Messages Git en français
-
-## Utilisation des Règles
-
-### Règles Automatiques (alwaysApply: true)
-Ces règles s'appliquent automatiquement à chaque requête :
-- Structure du projet
-- Messages Git en français
-- Vue d'ensemble des règles
-
-### Règles par Type de Fichier (globs)
-Ces règles s'appliquent selon les fichiers modifiés :
-- `*.vue, src/components/*.vue` → Architecture des composants
-- `src/services/*.js` → Intégration API et sécurité
-- `tests/**/*.js` → Guidelines de test
-- `backend/api/*.js` → Patterns de base de données
-
-### Règles par Description
-Ces règles peuvent être récupérées manuellement :
-- Optimisations de performance Vue.js
-- Développement PWA avancé
-- Bonnes pratiques de sécurité
-- Patterns de base de données avancés
-
-## Bénéfices des Nouvelles Règles
-
-### 🎯 Développement Plus Efficace
-- Patterns éprouvés pour Vue.js 3 et Pinia
-- Optimisations de performance intégrées
-- Architecture cohérente et maintenable
-
-### 🔧 Qualité de Code Améliorée
-- Standards de test complets
-- Bonnes pratiques de sécurité
-- Gestion d'erreurs centralisée
-
-### 📈 Performance Optimisée
-- Code splitting intelligent
-- Cache et lazy loading
-- Métriques de performance intégrées
-
-### 🛡️ Sécurité Renforcée
-- Chiffrement et validation avancés
-- Authentification sécurisée
-- Audit et logging complets
-
-## Prochaines Étapes
-
-1. **Testez les règles** en développant de nouvelles fonctionnalités
-2. **Adaptez les règles** selon vos besoins spécifiques
-3. **Ajoutez des règles** pour des domaines spécifiques si nécessaire
-4. **Partagez les règles** avec votre équipe pour une cohérence
-
-Ces règles Cursor vous permettront de développer plus efficacement avec TeachDigital en suivant les meilleures pratiques et en optimisant automatiquement votre code selon les standards du projet.
+## À ne pas réintroduire
+Ces éléments ont été supprimés du code ; ne pas les recommander ni les recréer :
+Vercel Functions, Neon, Supabase, vite-plugin-pwa, notifications push (VAPID), Iconify,
+`components/ui/*` (GlassCard...), `apiStore`, `offlineDataService`, `mobileOptimizationService`,
+`encryptionService`, `hashService`, `rateLimitService`, `profile/pinService`, pattern Repository
+côté frontend, scripts de base de données dans `frontend/scripts`, `deploy-frontend.ps1`,
+écrans de test/diagnostic (SecurityTest, NotificationTest, MigrationControl, PWADiagnostics...).

@@ -4,6 +4,7 @@
       <h3 class="text-xl font-bold text-white mb-3 sm:mb-0">Historique des Quiz</h3>
       <select
         :value="period"
+        aria-label="Période de l'historique"
         class="px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all w-full sm:w-auto"
         @change="$emit('update:period', $event.target.value)"
       >
@@ -16,10 +17,10 @@
 
     <div v-if="filteredHistory.length === 0" class="text-center py-12">
       <div class="w-20 h-20 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-        <span class="text-4xl">📚</span>
+        <span class="text-4xl" aria-hidden="true">📚</span>
       </div>
       <h4 class="text-xl font-bold text-white mb-2">Aucun quiz trouvé</h4>
-      <p class="text-white/60">Commencez par faire des quiz pour voir votre historique ici.</p>
+      <p class="text-white/70">Commencez par faire des quiz pour voir votre historique ici.</p>
     </div>
 
     <div v-else class="space-y-4">
@@ -34,7 +35,7 @@
               {{ quiz.lessonTitle || 'Quiz' }}
               <span v-if="quiz.source === 'course_page'" class="ml-2 align-middle text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200">Page de cours</span>
             </h4>
-            <p class="text-white/60 text-sm">{{ formatDate(quiz.completedAt) }}</p>
+            <p class="text-white/70 text-sm">{{ formatDate(quiz.completedAt) }}</p>
           </div>
           <div class="text-right">
             <div :class="['px-4 py-2 rounded-xl font-bold text-lg', getScoreClass(quiz.percentage)]">
@@ -43,13 +44,20 @@
           </div>
         </div>
         <div class="flex items-center justify-between mb-3">
-          <div class="flex space-x-4 text-white/60 text-sm">
+          <div class="flex space-x-4 text-white/70 text-sm">
             <span>{{ quiz.score }}/{{ quiz.totalQuestions }} questions</span>
             <span>{{ formatDuration(quiz.duration) }}</span>
-            <span v-if="getBestStreak(quiz.answers) >= 2" title="Meilleure série de bonnes réponses">🔥 Série max : {{ getBestStreak(quiz.answers) }}</span>
+            <span v-if="getBestStreak(quiz.answers) >= 2" title="Meilleure série de bonnes réponses"><span aria-hidden="true">🔥</span> Série max : {{ getBestStreak(quiz.answers) }}</span>
           </div>
         </div>
-        <div class="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+        <div
+          class="w-full bg-white/10 rounded-full h-2 overflow-hidden"
+          role="progressbar"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          :aria-valuenow="formatPercentage(quiz.percentage)"
+          :aria-label="`Score du quiz « ${quiz.lessonTitle || 'Quiz'} »`"
+        >
           <div
             class="bg-gradient-to-r from-blue-500 to-cyan-500 h-full rounded-full transition-all duration-500"
             :style="{ width: formatPercentage(quiz.percentage) + '%' }"

@@ -5,6 +5,7 @@
  */
 
 const { loadSettings, saveSetting } = require('./aiSettingsStore.js');
+const logger = require('../../../lib/logger.js');
 
 const PROVIDER_SETTING = 'course_page_provider';
 
@@ -18,7 +19,7 @@ module.exports = {
     VISION_PROVIDERS,
 
     /**
-     * Charge la configuration enregistrée depuis la base (appelé au démarrage du serveur)
+     * Charge la configuration enregistrée depuis la base (cf. aiSettingsLoader.js)
      */
     async load() {
         const value = (await loadSettings([PROVIDER_SETTING])).get(PROVIDER_SETTING);
@@ -42,6 +43,6 @@ module.exports = {
         }
         await saveSetting(PROVIDER_SETTING, provider || null);
         selectedProvider = provider || null;
-        console.log(`📝 Provider des pages de cours : ${provider || 'automatique'}`);
+        logger.info(`Provider des pages de cours : ${provider || 'automatique'}`);
     }
 };

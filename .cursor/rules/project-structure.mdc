@@ -5,43 +5,56 @@ description: Guide de structure du projet TeachDigital
 
 # Structure du Projet TeachDigital
 
-Le dépôt est découpé en deux applications indépendantes, chacune avec son `package.json` (pnpm) :
+Le dépôt est découpé en deux applications indépendantes, chacune avec son `package.json` (pnpm 9.15, Node 22) :
 
-- `frontend/` — application Vue.js 3 (Composition API) + Vite 7, Pinia, Vue Router, PWA
-- `backend/` — API Node.js / Express + PostgreSQL (`pg`), déployée en Docker sur Synology
+- `frontend/` — application Vue.js 3 + Vite 7, Pinia, Vue Router, Tailwind CSS 4, PWA (service worker maison)
+- `backend/` — API Node.js / Express 4 + PostgreSQL (`pg`), déployée en Docker sur Synology
 
 Les commandes `pnpm ...` se lancent dans le dossier concerné (`cd frontend` ou `cd backend`).
 
 ### Points d'entrée principaux
-- **Application principale** : [frontend/src/main.js](mdc:frontend/src/main.js) - Point d'entrée avec configuration Pinia, router et Service Worker
-- **Composant racine** : [frontend/src/App.vue](mdc:frontend/src/App.vue) - Composant principal avec router-view
-- **Configuration Vite** : [frontend/vite.config.js](mdc:frontend/vite.config.js) - Configuration build, chunks, proxy `/api` et variables d'environnement
-- **Serveur API** : [backend/server.js](mdc:backend/server.js) - Express, routes `backend/api/`, contrôleurs `backend/controllers/`
+- **Application principale** : [frontend/src/main.js](mdc:frontend/src/main.js) - Pinia, router, enregistrement du Service Worker, `$toast` / `$confirm`, directive `v-safe-html`
+- **Composant racine** : [frontend/src/App.vue](mdc:frontend/src/App.vue) - router-view + composants globaux (toasts, confirmation, bandeau hors ligne, mise à jour)
+- **Router** : [frontend/src/router/index.js](mdc:frontend/src/router/index.js) - écrans chargés à la demande, guard `navigationGuard`
+- **Configuration Vite** : [frontend/vite.config.js](mdc:frontend/vite.config.js) - build, chunks, proxy `/api` en dev, `__APP_VERSION__` et `dist/version.json`
+- **Serveur API** : [backend/server.js](mdc:backend/server.js) (cycle de vie : attente PostgreSQL → migrations → réglages IA → écoute 3001 ; arrêt propre) et [backend/app.js](mdc:backend/app.js) (application Express)
+- **Routeur API** : [backend/api/index.js](mdc:backend/api/index.js) - routes, contrôle d'accès et validation ; contrôleurs dans `backend/controllers/`
 
 ### Structure des dossiers
-- `frontend/src/components/` - Composants Vue réutilisables
-- `frontend/src/services/` - Services métier (API, profils, cours, PWA...)
-- `frontend/src/stores/` - Stores Pinia pour la gestion d'état
-- `frontend/src/router/` - Configuration Vue Router
-- `frontend/public/` - Assets statiques, `manifest.json`, template du service worker `sw.js`
-- `frontend/scripts/` - Scripts utilitaires (build `generate-sw.js`, versioning, migrations DB)
-- `frontend/tests/` - Tests Vitest (`tests/services`) et Playwright (`tests/e2e`)
-- `backend/api/`, `backend/controllers/`, `backend/lib/` - Routes, contrôleurs et bibliothèques de l'API
-- `backend/scripts/`, `backend/tests/` - Scripts d'initialisation et tests Jest
-- `doc/` - Documentation détaillée
-- Racine : `deploy.ps1`, `docker-compose.app.yml`, `nginx.conf`, workflows GitHub Actions
+Frontend (`frontend/`) :
+- `src/views/` - Écrans routés (FamilyGate, ProfileSelector, PinLock, Dashboard, UserDashboard, ParentSettings...)
+- `src/components/` - Composants partagés (BaseModal, ConfirmDialog, PinPad, ToastContainer...) et sous-dossiers `quiz/`, `lesson-scanner/`, `course-pages/`, `badges/`, `dashboard/`, `progress/`
+- `src/composables/` - `useParentNavigation`, `useQuizGeneration`, `useConfirm`
+- `src/services/` - `apiService.js` (client HTTP) + un service par domaine (auth, leçons, pages de cours, profils, badges, IA, mise à jour / installation PWA...)
+- `src/stores/` - Stores Pinia (`badgeStore`, `onboardingStore`, `profileStore`, `settingsStore`, `toastStore`)
+- `src/utils/`, `src/constants/`, `src/config/` - erreurs API, JWT, politique PIN, formatage, sanitisation HTML ; limites IA, niveaux scolaires ; `pinConfig.js`
+- `src/style.css`, `src/styles/` - Tailwind, `liquid-glass.css`, `preferences.css`
+- `public/` - Assets statiques, `manifest.json`, `version.json` (dev), template du service worker `sw.js`
+- `scripts/` - Build et maintenance du front (`generate-sw.js`, `version-bump.js`, `generate-icons.js`, `validate-manifest.js`, analyse de bundle, git hooks) — aucun script de base de données
+- `tests/` - Vitest (`services/`, `components/`, `stores/`, `utils/`) et Playwright (`e2e/`)
+
+Backend (`backend/`) :
+- `api/` - Routeur (`index.js`), badges (`badges.js`), routes IA (`api/ai/**`)
+- `controllers/` - Contrôleurs métier (auth, profils, leçons, pages de cours, notifications, activités, YouTube, audit, progression)
+- `lib/` - database, queries, transaction, http, response, auth, scope, validation/schemas, logger, migrate...
+- `migrations/` - Schéma de la base : fichiers `NNNN_description.sql`
+- `scripts/` - CLI : `migrate.js`, `init-family-gate.js`, `init-default-pins.js`, `reset-pin.js`, `init-badges.js`
+- `tests/` - Jest
+
+Racine : `deploy.ps1` (déploiement Synology), `docker-compose.app.yml` + `nginx.conf` (stack tout-en-un optionnelle, pas le chemin de déploiement du NAS), `doc/` (documentation détaillée, parfois en retard : le code fait foi), `.github/workflows/` (CI, E2E, déploiement manuel).
 
 ### Fichiers Docker / déploiement
 - `frontend/Dockerfile` + `frontend/.dockerignore` - build complet du front (utilisé par `docker-compose.app.yml`)
-- `frontend/Dockerfile.prebuilt`, `frontend/nginx.conf`, `frontend/docker-compose.yml` - image déployée sur le NAS à partir de `frontend/dist/`
+- `frontend/Dockerfile.prebuilt`, `frontend/nginx.conf` (modèle : seules les variables `NGINX_*` sont substituées), `frontend/docker-compose.yml` - image nginx déployée sur le NAS à partir de `frontend/dist/`
 - `backend/Dockerfile`, `backend/docker-compose.yml` - image et stack du backend
 
 ### Technologies clés
-- **Frontend** : Vue 3, Pinia, Vue Router, Tailwind CSS 4
-- **Backend** : Node.js, Express, PostgreSQL, JWT, Zod
-- **PWA** : Service Worker, Manifest, Cache
+- **Frontend** : Vue 3, Pinia, Vue Router, Tailwind CSS 4, DOMPurify
+- **Backend** : Node.js 22, Express 4, PostgreSQL (`pg`), JWT, Zod, bcryptjs, helmet
+- **PWA** : Service Worker unique (`public/sw.js`), manifest, détection de mise à jour par `version.json`
 - **Tests** : Vitest, Playwright (frontend), Jest (backend), ESLint
 
 ### Variables d'environnement
-- Frontend : [frontend/env.example](mdc:frontend/env.example) (copier en `frontend/.env`, uniquement des variables `VITE_*` publiques)
-- Backend : [backend/env.example](mdc:backend/env.example) (copier en `backend/.env` : `DB_*`, `JWT_SECRET`, clés IA)
+- Frontend : [frontend/env.example](mdc:frontend/env.example) (copier en `frontend/.env`) - uniquement des variables `VITE_*`, publiques (intégrées au JavaScript livré) : jamais de secret
+- Backend : [backend/env.example](mdc:backend/env.example) (copier en `backend/.env` : `DB_*` ou `DATABASE_URL`, `JWT_SECRET`, `AI_SETTINGS_KEY`, clés IA)
+- NAS : `.env` à côté de `backend/docker-compose.yml` (modèle [backend/env.docker.example](mdc:backend/env.docker.example))

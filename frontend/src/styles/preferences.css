@@ -1,0 +1,122 @@
+/* ============================================
+   PRÉFÉRENCES D'AFFICHAGE (profil enfant/ado)
+   Classes posées sur <html> par src/stores/settingsStore.js.
+   Règles volontairement hors @layer : elles priment sur les utilitaires Tailwind.
+   ============================================ */
+
+/* --- Taille du texte (l'interface est en rem : tout suit) --- */
+html.td-font-small {
+  font-size: 87.5%;
+}
+
+html.td-font-large,
+html.td-easy-read {
+  font-size: 112.5%;
+}
+
+html.td-font-large.td-easy-read {
+  font-size: 125%;
+}
+
+/* --- Lecture facile : police lisible, espacements et interlignage augmentés --- */
+html.td-easy-read body {
+  font-family: Verdana, 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: 0.03em;
+  word-spacing: 0.12em;
+}
+
+html.td-easy-read :is(p, li, label, dd, dt, td, th, blockquote, button, a, span) {
+  line-height: 1.75;
+}
+
+html.td-easy-read :is(h1, h2, h3, h4, h5, h6) {
+  line-height: 1.35;
+}
+
+/* --- Contraste élevé : textes opaques, fonds pleins, bordures nettes, sans flou --- */
+html.td-high-contrast {
+  --lg-glass-light: rgba(2, 6, 23, 0.94);
+  --lg-glass-medium: rgba(2, 6, 23, 0.96);
+  --lg-glass-heavy: rgba(2, 6, 23, 0.98);
+  --lg-glass-border: rgba(255, 255, 255, 0.75);
+}
+
+html.td-high-contrast {
+  background: #000;
+}
+
+html.td-high-contrast *,
+html.td-high-contrast *::before,
+html.td-high-contrast *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  text-shadow: none !important;
+}
+
+html.td-high-contrast [class*="text-white/"] {
+  color: #fff !important;
+}
+
+html.td-high-contrast [class*="placeholder-white/"]::placeholder {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+html.td-high-contrast [class*="border-white/"] {
+  border-color: rgba(255, 255, 255, 0.75) !important;
+}
+
+html.td-high-contrast [class*="bg-white/"],
+html.td-high-contrast [class*="glass-card"],
+html.td-high-contrast [class*="glass-button"],
+html.td-high-contrast [class*="glass-quiz"],
+html.td-high-contrast [class*="glass-stat"],
+html.td-high-contrast [class*="glass-video"] {
+  background-color: rgba(2, 6, 23, 0.94) !important;
+  background-image: none !important;
+  border-color: rgba(255, 255, 255, 0.75) !important;
+}
+
+html.td-high-contrast :focus-visible {
+  outline: 3px solid #fde047 !important;
+  outline-offset: 3px;
+}
+
+html.td-high-contrast .app-background {
+  background: #000;
+}
+
+html.td-high-contrast .app-background__blob {
+  display: none;
+}
+
+/* --- Animations désactivées (même effet que prefers-reduced-motion) --- */
+html.td-reduce-motion *,
+html.td-reduce-motion *::before,
+html.td-reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* ============================================
+   COÛT GPU : pas de flou d'arrière-plan sur petit écran
+   ni quand l'utilisateur demande moins de transparence.
+   (Le fond y est statique : le rendu reste quasi identique.)
+   ============================================ */
+@media (max-width: 640px), (prefers-reduced-transparency: reduce) {
+  *,
+  *::before,
+  *::after {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --lg-glass-light: rgba(15, 23, 42, 0.9);
+    --lg-glass-medium: rgba(15, 23, 42, 0.93);
+    --lg-glass-heavy: rgba(15, 23, 42, 0.96);
+  }
+}

@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { describeError } from '../utils/apiErrors.js'
 
 let nextId = 1
 
@@ -26,6 +27,8 @@ export const useToastStore = defineStore('toast', {
         message: String(message),
         type,
         title: options.title ?? null,
+        // Ligne discrète sous le message (ex. référence de requête « Réf. abc123 »)
+        meta: options.meta ?? null,
         action: options.action ?? null,
         createdAt: Date.now(),
         duration
@@ -48,6 +51,12 @@ export const useToastStore = defineStore('toast', {
     warning(message, options) { return this.show(message, 'warning', options) },
     error(message, options)   { return this.show(message, 'error', options) },
 
+    // Erreur d'API : message de l'erreur (ou repli) + référence de requête discrète
+    errorFrom(error, fallback, options = {}) {
+      const { message, requestId } = describeError(error, fallback)
+      return this.show(message, 'error', requestId ? { ...options, meta: `Réf. ${requestId}` } : options)
+    },
+
     dismiss(id) {
       const idx = this.items.findIndex(t => t.id === id)
       if (idx !== -1) this.items.splice(idx, 1)
@@ -67,6 +76,7 @@ export function useToast() {
     info:    (msg, opts) => store.info(msg, opts),
     warning: (msg, opts) => store.warning(msg, opts),
     error:   (msg, opts) => store.error(msg, opts),
+    errorFrom: (err, fallback, opts) => store.errorFrom(err, fallback, opts),
     dismiss: (id) => store.dismiss(id),
     clear:   () => store.clear()
   }

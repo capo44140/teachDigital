@@ -47,6 +47,41 @@ describeWithDb('API Endpoints - Vidéos YouTube', () => {
       expect(res.body.data.videos).toBeDefined();
       expect(Array.isArray(res.body.data.videos)).toBe(true);
     });
+
+    describe('vidéos désactivées', () => {
+      const { default: sql } = require('../../lib/database.js');
+      let inactiveId;
+
+      beforeAll(async () => {
+        const rows = await sql`
+          INSERT INTO youtube_videos (url, video_id, title, category, is_active)
+          VALUES ('https://www.youtube.com/watch?v=testInact01', 'testInact01', 'Vidéo désactivée (test)', 'Test', false)
+          RETURNING id
+        `;
+        inactiveId = rows[0].id;
+      });
+
+      afterAll(async () => {
+        await sql`DELETE FROM youtube_videos WHERE id = ${inactiveId}`;
+      });
+
+      async function list(user, query) {
+        const req = createMockRequest('GET', `/api/youtube-videos${query}`);
+        req.user = user;
+        const res = createMockResponse();
+        await handleYoutubeVideos(req, res);
+        return res.body.data.videos.map(video => video.id);
+      }
+
+      it('incluses pour un parent avec ?includeInactive=true (gestion des vidéos)', async () => {
+        expect(await list({ scope: 'profile', profileId: 1, isAdmin: true }, '?includeInactive=true')).toContain(inactiveId);
+      });
+
+      it('jamais pour un enfant, ni pour un parent sans le paramètre', async () => {
+        expect(await list({ scope: 'family', isAdmin: false }, '?includeInactive=true')).not.toContain(inactiveId);
+        expect(await list({ scope: 'profile', profileId: 1, isAdmin: true }, '')).not.toContain(inactiveId);
+      });
+    });
   });
 });
 

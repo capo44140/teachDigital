@@ -62,13 +62,17 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
+      // dist/.vite/manifest.json : liste des fichiers construits, lue par scripts/generate-sw.js
+      // pour précacher toute l'application (navigation hors ligne vers une page jamais visitée)
+      manifest: true,
       sourcemap: false,
       minify: 'terser',
       chunkSizeWarningLimit: 1000,
       terserOptions: {
         compress: {
           // ✅ Optimisations de production activées
-          drop_console: true, // Supprimer console.log en production
+          // Seuls console.log/info/debug sont retirés : console.warn/error restent visibles
+          // en production (drop_console supprimerait aussi les erreurs)
           drop_debugger: true, // Supprimer debugger en production
           pure_funcs: ['console.log', 'console.info', 'console.debug'], // Fonctions à supprimer
           // ✅ Optimisations sécurisées
@@ -116,20 +120,11 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks: (id) => {
-            // Stratégie ultra-simplifiée : tout regrouper par type de dépendance
-
+            // Regrouper les dépendances : Vue et son écosystème d'un côté, le reste de l'autre
             if (id.includes('node_modules')) {
-              // Vue.js et son écosystème
               if (id.includes('vue') || id.includes('@vue') || id.includes('vue-router') || id.includes('pinia')) {
                 return 'vue-vendor'
               }
-
-              // Base de données
-              if (id.includes('postgres') || id.includes('@neondatabase')) {
-                return 'database'
-              }
-
-              // Toutes les autres dépendances
               return 'vendor'
             }
           },
@@ -137,7 +132,11 @@ export default defineConfig(({ mode }) => {
           chunkFileNames: (chunkInfo) => {
             const facadeModuleId = chunkInfo.facadeModuleId
             if (facadeModuleId) {
-              // Noms plus lisibles pour les chunks de composants
+              // Noms plus lisibles pour les chunks d'écrans et de composants
+              if (facadeModuleId.includes('src/views/')) {
+                const viewName = facadeModuleId.split('/').pop().replace('.vue', '')
+                return `assets/views/${viewName}-[hash].js`
+              }
               if (facadeModuleId.includes('src/components/')) {
                 const componentName = facadeModuleId.split('/').pop().replace('.vue', '')
                 return `assets/components/${componentName}-[hash].js`

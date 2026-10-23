@@ -6,9 +6,12 @@
 jest.mock('../../lib/database.js', () => {
   const sql = jest.fn((strings, ...values) => {
     const text = Array.isArray(strings) ? strings.join('?') : String(strings);
-    // Vérification admin de requireAdmin : seul le profil 1 est un parent actif
-    if (text.includes('SELECT is_admin, is_active FROM profiles')) {
-      return Promise.resolve(values[0] === 1 ? [{ is_admin: true, is_active: true }] : [{ is_admin: false, is_active: true }]);
+    // Vérification des jetons : seul le profil 1 est un parent actif, les autres sont des enfants
+    if (text.includes('SELECT is_admin, is_active, token_version FROM profiles')) {
+      return Promise.resolve([{ is_admin: values[0] === 1, is_active: true, token_version: 0 }]);
+    }
+    if (text.includes('SELECT token_version FROM family_gate')) {
+      return Promise.resolve([{ token_version: 0 }]);
     }
     return Promise.resolve([]);
   });
@@ -20,25 +23,17 @@ jest.mock('../../lib/nativeHash.js', () => ({
 // Le module IA charge l'OCR et les providers : remplacé par un handler neutre
 jest.mock('../../api/ai/index.js', () => (req, res) => res.status(200).json({ success: true }));
 
-const express = require('express');
-const router = require('../../api/index.js');
 const { generateToken, generateFamilyToken } = require('../../lib/auth.js');
+const { startApp } = require('./support/app.js');
 
-let server;
-let baseUrl;
+let app;
 
 beforeAll(async () => {
-  const app = express();
-  app.use(express.json());
-  app.use('/api', router);
-  await new Promise(resolve => {
-    server = app.listen(0, '127.0.0.1', resolve);
-  });
-  baseUrl = `http://127.0.0.1:${server.address().port}/api`;
+  app = await startApp();
 });
 
 afterAll(async () => {
-  await new Promise(resolve => server.close(resolve));
+  await app.close();
 });
 
 const tokens = {
@@ -51,31 +46,29 @@ const tokens = {
 };
 
 async function call(method, path, tokenKind, body) {
-  const headers = { 'content-type': 'application/json' };
   const factory = tokens[tokenKind];
-  const token = factory ? factory() : null;
-  if (token) headers.authorization = `Bearer ${token}`;
-  const response = await fetch(`${baseUrl}${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body)
-  });
-  return response.status;
+  const { status } = await app.call(method, path, { token: factory ? factory() : null, body });
+  return status;
 }
 
 describe('Routes publiques', () => {
   it.each([
-    ['POST', '/auth/login', { profileId: 1, pin: 'abcd' }],
     ['POST', '/auth/family-gate', { pin: 'x' }],
-    ['POST', '/auth/logout', {}],
-    ['POST', '/audit/logs', {}]
+    ['POST', '/auth/logout', {}]
   ])('%s %s ne demande pas de jeton', async (method, path, body) => {
     expect(await call(method, path, 'none', body)).not.toBe(401);
+  });
+
+  it('GET /auth/verify répond lui-même (401 sans jeton, 200 avec)', async () => {
+    expect(await call('GET', '/auth/verify', 'none')).toBe(401);
+    expect(await call('GET', '/auth/verify', 'family')).toBe(200);
   });
 });
 
 describe('Sans jeton : 401', () => {
   it.each([
+    ['POST', '/auth/login'],
+    ['POST', '/audit/logs'],
     ['GET', '/profiles'],
     ['GET', '/lessons'],
     ['GET', '/lessons/1/quiz-results?profileId=7'],
@@ -95,9 +88,26 @@ describe('Sans jeton : 401', () => {
     ['PUT', '/youtube-videos/1'],
     ['DELETE', '/youtube-videos/1'],
     ['POST', '/notifications/mark-all-read'],
+    ['POST', '/notifications'],
+    ['PUT', '/notifications/1'],
+    ['DELETE', '/notifications/1'],
+    ['POST', '/profiles'],
+    ['PUT', '/profiles/1'],
+    ['POST', '/profiles/requests'],
+    ['POST', '/lessons'],
+    ['PUT', '/lessons/1'],
+    ['DELETE', '/lessons/1'],
+    ['POST', '/course-pages'],
     ['GET', '/route-inconnue']
   ])('%s %s', async (method, path) => {
     expect(await call(method, path, 'none', method === 'GET' ? undefined : {})).toBe(401);
+  });
+
+  it('la connexion à un profil passe avec un jeton famille', async () => {
+    // PIN incorrect (mock) : 401 du contrôleur, après le contrôle du jeton
+    const { status, body } = await app.call('POST', '/auth/login', { token: tokens.family(), body: { profileId: 7, pin: '4826' } });
+    expect(status).toBe(401);
+    expect(body.code).toBe('INVALID_CREDENTIALS');
   });
 });
 
@@ -131,7 +141,8 @@ describe('Jeton famille ou enfant sur une action parent : 403', () => {
     ['GET', '/ai/providers'],
     ['POST', '/ai/local-llm/model'],
     ['GET', '/audit/logs'],
-    ['GET', '/audit/stats']
+    ['GET', '/audit/stats'],
+    ['POST', '/audit/export']
   ];
 
   it.each(adminRoutes)('famille : %s %s', async (method, path) => {
@@ -147,11 +158,33 @@ describe('Jeton famille ou enfant sur une action parent : 403', () => {
   });
 });
 
+describe('Données d\'un parent : interdites au jeton famille et aux enfants', () => {
+  it.each([
+    ['GET', '/notifications?profileId=1'],
+    ['GET', '/badges/profile/1'],
+    ['GET', '/badges/profile/1/stats'],
+    ['GET', '/profiles/1/stats'],
+    ['GET', '/profiles/1/progress-summary'],
+    ['GET', '/lessons?targetProfileId=1'],
+    ['GET', '/course-pages?targetProfileId=1'],
+    ['GET', '/activities?child_id=1'],
+    ['GET', '/lessons/1/quiz-results?profileId=1']
+  ])('%s %s', async (method, path) => {
+    expect(await call(method, path, 'family')).toBe(403);
+    expect(await call(method, path, 'child')).toBe(403);
+  });
+
+  it('marquer comme lues les notifications d\'un parent', async () => {
+    expect(await call('POST', '/notifications/mark-all-read', 'family', { profileId: 1 })).toBe(403);
+  });
+});
+
 describe('Accès autorisés', () => {
   it.each([
     ['GET', '/profiles'],
     ['GET', '/lessons'],
     ['GET', '/badges'],
+    ['GET', '/badges/profile/7'],
     ['GET', '/course-pages?targetProfileId=7'],
     ['GET', '/notifications?profileId=7'],
     ['GET', '/activities'],
@@ -164,22 +197,24 @@ describe('Accès autorisés', () => {
     expect(status).not.toBe(403);
   });
 
-  it('famille : marque toutes les notifications d\'un profil comme lues', async () => {
+  it('famille : marque toutes les notifications d\'un enfant comme lues', async () => {
     const status = await call('POST', '/notifications/mark-all-read', 'family', { profileId: 7 });
     expect(status).not.toBe(401);
     expect(status).not.toBe(403);
   });
 
+  // Chaque ligne a 3 valeurs : sinon Jest prend le 3e paramètre pour un callback done()
   it.each([
-    ['GET', '/ai/providers'],
-    ['GET', '/profiles/stats'],
-    ['GET', '/audit/stats'],
-    ['PUT', '/activities/1'],
-    ['DELETE', '/activities/1'],
-    ['PUT', '/youtube-videos/1'],
-    ['DELETE', '/youtube-videos/1']
-  ])('parent : %s %s', async (method, path) => {
-    const status = await call(method, path, 'admin');
+    ['GET', '/ai/providers', undefined],
+    ['GET', '/profiles/stats', undefined],
+    ['GET', '/audit/stats', undefined],
+    ['GET', '/notifications?profileId=7', undefined],
+    ['PUT', '/activities/1', { status: 'completed' }],
+    ['DELETE', '/activities/1', undefined],
+    ['PUT', '/youtube-videos/1', { title: 'Nouvelle' }],
+    ['DELETE', '/youtube-videos/1', undefined]
+  ])('parent : %s %s', async (method, path, body) => {
+    const status = await call(method, path, 'admin', body);
     expect(status).not.toBe(401);
     expect(status).not.toBe(403);
   });
@@ -189,8 +224,7 @@ describe('Entrées hostiles', () => {
   it('rejette un profileId objet (tentative d\'injection SQL) sur les résultats de quiz', async () => {
     const body = {
       profileId: { text: 'CAST((SELECT pin_code FROM pin_codes LIMIT 1) AS int)', params: [] },
-      score: 1,
-      totalQuestions: 1
+      answers: [0]
     };
     expect(await call('POST', '/lessons/1/quiz-results', 'family', body)).toBe(400);
   });

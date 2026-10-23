@@ -13,15 +13,46 @@ export function formatNumber(value) {
   return Math.round(Number(value)) || 0
 }
 
-export function formatDate(dateString) {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+/**
+ * Date lisible en français (formateur unique de l'application)
+ * @param {string|number|Date} value
+ * @param {{ month?: 'long'|'short'|'2-digit', time?: boolean, fallback?: string }} options
+ *   - month : forme du mois (« 3 mars 2025 » / « 3 mars 2025 » abrégé…), long par défaut
+ *   - time : ajouter l'heure (vrai par défaut)
+ *   - fallback : texte si la date est absente ou invalide
+ * @returns {string}
+ */
+export function formatDate(value, { month = 'long', time = true, fallback = '—' } = {}) {
+  if (value === null || value === undefined || value === '') return fallback
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return fallback
+  const options = { day: 'numeric', month, year: 'numeric' }
+  if (time) {
+    options.hour = '2-digit'
+    options.minute = '2-digit'
+  }
+  return date.toLocaleDateString('fr-FR', options)
+}
+
+/**
+ * Date relative en français (« à l'instant », « il y a 5 minutes », « hier »…) jusqu'à une
+ * semaine, puis date absolue courte (formatDate, « 3 mars 2025 »)
+ * @param {string|number|Date} value
+ * @param {{ now?: number|Date, fallback?: string }} options - now : instant de référence
+ * @returns {string}
+ */
+export function formatRelativeDate(value, { now = Date.now(), fallback = '—' } = {}) {
+  if (value === null || value === undefined || value === '') return fallback
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return fallback
+  const seconds = Math.round((date.getTime() - Number(now)) / 1000)
+  const elapsed = Math.abs(seconds)
+  if (elapsed < 60) return 'à l\'instant'
+  const relative = new Intl.RelativeTimeFormat('fr', { numeric: 'auto' })
+  if (elapsed < 3600) return relative.format(Math.round(seconds / 60), 'minute')
+  if (elapsed < 86400) return relative.format(Math.round(seconds / 3600), 'hour')
+  if (elapsed < 7 * 86400) return relative.format(Math.round(seconds / 86400), 'day')
+  return formatDate(date, { month: 'short', time: false })
 }
 
 export function formatDuration(minutes) {

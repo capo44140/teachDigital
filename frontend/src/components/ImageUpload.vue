@@ -1,13 +1,12 @@
 <template>
   <div class="image-upload-container">
-    <!-- Zone de drop ou bouton d'upload -->
-    <div 
+    <!-- Zone de drop ; l'ouverture du sélecteur passe par de vrais boutons (clavier) -->
+    <div
       :class="[
         'upload-zone',
         isDragOver ? 'drag-over' : '',
         hasImage ? 'has-image' : ''
       ]"
-      @click="triggerFileInput"
       @dragover.prevent
       @drop.prevent="handleDrop"
     >
@@ -15,21 +14,25 @@
       <div v-if="imagePreview" class="image-preview">
         <img :src="imagePreview" :alt="altText" class="preview-image">
         <div class="image-overlay">
-          <button 
+          <button
+            type="button"
             class="remove-btn"
             title="Supprimer l'image"
+            aria-label="Supprimer l'image"
             @click.stop="removeImage"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg aria-hidden="true" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
-          <button 
+          <button
+            type="button"
             class="change-btn"
             title="Changer l'image"
+            aria-label="Changer l'image"
             @click.stop="triggerFileInput"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg aria-hidden="true" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
           </button>
@@ -37,33 +40,35 @@
       </div>
 
       <!-- Zone d'upload vide -->
-      <div v-else class="upload-placeholder">
-        <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <button v-else type="button" class="upload-placeholder" @click="triggerFileInput">
+        <svg aria-hidden="true" class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
         </svg>
-        <p class="text-gray-400 text-sm mt-2">Cliquez ou glissez une image</p>
-        <p class="text-gray-500 text-xs">JPG, PNG, GIF, WebP (max 5MB)</p>
-      </div>
+        <span class="block text-gray-300 text-sm mt-2">Cliquez ou glissez une image</span>
+        <span class="block text-gray-400 text-xs">JPG, PNG, GIF, WebP (1,5 Mo maximum)</span>
+      </button>
 
       <!-- Indicateur de chargement -->
-      <div v-if="isUploading" class="upload-loading">
-        <div class="spinner"></div>
+      <div v-if="isUploading" class="upload-loading" role="status">
+        <div class="spinner" aria-hidden="true"></div>
         <p class="text-white text-sm mt-2">Upload en cours...</p>
       </div>
     </div>
 
     <!-- Input file caché -->
-    <input 
+    <input
       ref="fileInput"
       type="file"
       accept="image/*"
       class="hidden"
+      tabindex="-1"
+      aria-label="Choisir une image"
       @change="handleFileSelect"
     />
 
     <!-- Messages d'erreur -->
-    <div v-if="error" class="error-message">
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+    <div v-if="error" class="error-message" role="alert">
+      <svg aria-hidden="true" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
       </svg>
       {{ error }}
@@ -169,18 +174,18 @@ export default {
 
         // Valider la taille
         if (!ProfileService.validateImageSize(file)) {
-          throw new Error('Fichier trop volumineux. Taille maximum : 5MB.')
+          throw new Error('Fichier trop volumineux. Taille maximum : 1,5 Mo.')
         }
 
         // Convertir en base64
         const imageData = await ProfileService.fileToBase64(file)
-        
+
         // Mettre à jour l'image du profil
         await ProfileService.updateProfileImage(this.profileId, imageData, file.type)
-        
+
         // Mettre à jour l'aperçu
         this.imagePreview = imageData
-        
+
         // Émettre l'événement de succès
         this.$emit('image-uploaded', {
           imageData,
@@ -201,10 +206,10 @@ export default {
       try {
         await ProfileService.removeProfileImage(this.profileId)
         this.imagePreview = null
-        
+
         // Émettre l'événement de suppression
         this.$emit('image-removed')
-        
+
       } catch (error) {
         this.error = error.message
         console.error('Erreur lors de la suppression:', error)
@@ -318,11 +323,17 @@ export default {
 }
 
 .image-overlay:hover .remove-btn,
-.image-overlay:hover .change-btn {
+.image-overlay:hover .change-btn,
+.image-overlay:focus-within .remove-btn,
+.image-overlay:focus-within .change-btn {
   opacity: 1;
 }
 
 .upload-placeholder {
+  width: 100%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;

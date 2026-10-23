@@ -1,216 +1,143 @@
-import { apiService } from './apiService.js'
-import { auditLogService } from './auditLogService.js'
+/**
+ * Notifications de l'espace parent, créées par le serveur (backend/lib/notify.js) :
+ * - quiz_completed : un enfant a terminé un quiz (data : childProfileId, childName, lessonTitle, score…) ;
+ * - security_alert : code PIN parent verrouillé après trop d'essais (data : lockMinutes, ip…) ;
+ * - profile_request : un enfant demande un nouveau profil (data : requestedName, requestedType) ;
+ * - info : information générale.
+ *
+ * Endpoints /api/notifications (jeton parent, envoyé automatiquement par apiService) :
+ * - GET    /api/notifications?profileId=&isRead=&type=  → 500 au plus, les plus récentes d'abord
+ * - PUT    /api/notifications/:id          { isRead }
+ * - POST   /api/notifications/mark-all-read { profileId }
+ * - DELETE /api/notifications/:id
+ */
+
+import { apiService, buildQuery } from './apiService.js'
+
+export const NOTIFICATION_TYPES = Object.freeze({
+  QUIZ_COMPLETED: 'quiz_completed',
+  SECURITY_ALERT: 'security_alert',
+  PROFILE_REQUEST: 'profile_request',
+  INFO: 'info'
+})
+
+const isPlainObject = value => !!value && typeof value === 'object' && !Array.isArray(value)
+
+// Colonne JSONB : objet renvoyé par pg (une chaîne JSON reste tolérée)
+function parseData (data) {
+  if (isPlainObject(data)) return data
+  if (typeof data !== 'string' || !data) return {}
+  try {
+    const parsed = JSON.parse(data)
+    return isPlainObject(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
 
 /**
- * Service de gestion des notifications
- *
- * ⚠️ IMPORTANT: Ce service communique via l'API backend, pas d'accès direct DB
+ * Notification telle qu'affichée (champs du serveur en camelCase, `data` toujours un objet)
+ * @param {Object} raw - ligne renvoyée par l'API (is_read, created_at…)
+ * @returns {{ id: number, type: string, title: string, message: string, data: Object, isRead: boolean, createdAt: string|null }}
  */
-export class NotificationService {
-  /**
-   * Créer une notification
-   * @param {number} profileId - ID du profil
-   * @param {string} type - Type de notification
-   * @param {string} title - Titre de la notification
-   * @param {string} message - Message de la notification
-   * @param {Object} data - Données supplémentaires (optionnel)
-   * @returns {Promise<Object>} Notification créée
-   */
-  static async createNotification (profileId, type, title, message, data = null) {
-    try {
-      const result = await apiService.request('/api/notifications', {
-        method: 'POST',
-        body: JSON.stringify({
-          profileId,
-          type,
-          title,
-          message,
-          data
-        })
-      })
-
-      if (result.success) {
-        // Enregistrer dans les logs d'audit
-        auditLogService.logDataAccess(
-          profileId,
-          'notification_created',
-          'NOTIFICATION_CREATED',
-          {
-            notificationId: result.data.notification.id,
-            type,
-            title
-          }
-        )
-
-        console.log('✅ Notification créée avec succès')
-        return result.data.notification
-      } else {
-        throw new Error(result.message || 'Erreur lors de la création de la notification')
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de la création de la notification:', error)
-      throw error
-    }
+export function normalizeNotification (raw = {}) {
+  return {
+    id: raw.id,
+    type: raw.type || NOTIFICATION_TYPES.INFO,
+    title: raw.title || '',
+    message: raw.message || '',
+    data: parseData(raw.data),
+    isRead: raw.is_read === true,
+    createdAt: raw.created_at || null
   }
+}
 
-  /**
-   * Récupérer les notifications d'un profil
-   * @param {number} profileId - ID du profil
-   * @param {boolean} unreadOnly - Récupérer seulement les non lues
-   * @returns {Promise<Array>} Liste des notifications
-   */
-  static async getNotifications (profileId, unreadOnly = false) {
-    try {
-      const notifications = await apiService.getNotifications({
-        profileId,
-        isRead: unreadOnly ? false : undefined
-      })
-      return notifications
-    } catch (error) {
-      console.error('❌ Erreur lors de la récupération des notifications:', error)
-      throw error
-    }
-  }
+/**
+ * Notifications d'un profil parent, les plus récentes d'abord
+ * @param {string|number} profileId - profil parent de la session
+ * @param {{ isRead?: boolean, type?: string }} filters
+ * @returns {Promise<Array>} notifications normalisées
+ */
+export async function getNotifications (profileId, { isRead, type } = {}) {
+  const response = await apiService.request(`/api/notifications${buildQuery({ profileId, isRead, type })}`)
+  const list = response?.data?.notifications
+  return Array.isArray(list) ? list.map(normalizeNotification) : []
+}
 
-  /**
-   * Marquer une notification comme lue
-   * @param {number} notificationId - ID de la notification
-   * @returns {Promise<Object>} Notification mise à jour
-   */
-  static async markAsRead (notificationId) {
-    try {
-      const result = await apiService.markNotificationAsRead(notificationId)
+/**
+ * Nombre de notifications non lues
+ * @returns {Promise<number>}
+ */
+export async function getUnreadCount (profileId) {
+  const unread = await getNotifications(profileId, { isRead: false })
+  return unread.length
+}
 
-      console.log('✅ Notification marquée comme lue')
-      return result
-    } catch (error) {
-      console.error('❌ Erreur lors du marquage de la notification:', error)
-      throw error
-    }
-  }
+/**
+ * Marquer une notification comme lue (ou non lue)
+ * @returns {Promise<Object|null>} notification mise à jour
+ */
+export async function setNotificationRead (id, isRead = true) {
+  const response = await apiService.request(`/api/notifications/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ isRead })
+  })
+  const notification = response?.data?.notification
+  return notification ? normalizeNotification(notification) : null
+}
 
-  /**
-   * Marquer toutes les notifications d'un profil comme lues
-   * @param {number} profileId - ID du profil
-   * @returns {Promise<number>} Nombre de notifications mises à jour
-   */
-  static async markAllAsRead (profileId) {
-    try {
-      const result = await apiService.markAllNotificationsAsRead(profileId)
+/**
+ * Marquer comme lues toutes les notifications d'un profil
+ * @returns {Promise<number>} nombre de notifications modifiées
+ */
+export async function markAllNotificationsRead (profileId) {
+  const response = await apiService.request('/api/notifications/mark-all-read', {
+    method: 'POST',
+    body: JSON.stringify({ profileId })
+  })
+  return Number(response?.data?.updated) || 0
+}
 
-      console.log('✅ Notifications marquées comme lues')
-      return result
-    } catch (error) {
-      console.error('❌ Erreur lors du marquage des notifications:', error)
-      throw error
-    }
-  }
+/**
+ * Supprimer une notification
+ * @returns {Promise<boolean>}
+ */
+export async function deleteNotification (id) {
+  const response = await apiService.request(`/api/notifications/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  return response?.success !== false
+}
 
-  /**
-   * Supprimer une notification
-   * @param {number} notificationId - ID de la notification
-   * @returns {Promise<boolean>} Succès de la suppression
-   */
-  static async deleteNotification (notificationId) {
-    try {
-      const result = await apiService.request(`/api/notifications/${notificationId}`, {
-        method: 'DELETE'
-      })
+// ─── Affichage ───────────────────────────────────────────────────────────────
 
-      if (result.success) {
-        console.log('✅ Notification supprimée')
-        return true
-      } else {
-        throw new Error(result.message || 'Erreur lors de la suppression')
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de la suppression de la notification:', error)
-      throw error
-    }
-  }
+/**
+ * Profil demandé par un enfant (profile_request), ou null
+ * (profileController : data.requestedName, data.requestedType 'child' | 'teen')
+ * @returns {{ name: string, type: 'child'|'teen' }|null}
+ */
+export function getProfileRequestDetails (notification) {
+  if (notification?.type !== NOTIFICATION_TYPES.PROFILE_REQUEST) return null
+  const name = typeof notification.data?.requestedName === 'string' ? notification.data.requestedName.trim() : ''
+  if (!name) return null
+  return { name, type: notification.data.requestedType === 'teen' ? 'teen' : 'child' }
+}
 
-  /**
-   * Supprimer toutes les notifications lues d'un profil
-   * @param {number} profileId - ID du profil
-   * @returns {Promise<number>} Nombre de notifications supprimées
-   */
-  static async deleteReadNotifications (profileId) {
-    try {
-      const notifications = await apiService.getNotifications({
-        profileId,
-        isRead: true
-      })
+/**
+ * Enfant concerné par un quiz terminé (lien vers sa page de progrès), ou null
+ * (lessonController : data.childProfileId, data.childName)
+ * @returns {{ id: string, name: string }|null}
+ */
+export function getQuizCompletedChild (notification) {
+  if (notification?.type !== NOTIFICATION_TYPES.QUIZ_COMPLETED) return null
+  const id = notification.data?.childProfileId
+  if (id === undefined || id === null || id === '') return null
+  const name = typeof notification.data.childName === 'string' ? notification.data.childName.trim() : ''
+  return { id: String(id), name }
+}
 
-      let deletedCount = 0
-      for (const notification of notifications) {
-        await this.deleteNotification(notification.id)
-        deletedCount++
-      }
-
-      console.log(`✅ ${deletedCount} notifications supprimées`)
-      return deletedCount
-    } catch (error) {
-      console.error('❌ Erreur lors de la suppression des notifications:', error)
-      throw error
-    }
-  }
-
-  /**
-   * Créer une notification de quiz terminé
-   * @param {number} profileId - ID du profil
-   * @param {Object} quizData - Données du quiz
-   * @returns {Promise<Object>} Notification créée
-   */
-  static async createQuizCompletionNotification (profileId, quizData) {
-    const { score, totalQuestions, percentage, lessonTitle } = quizData
-
-    let title, message
-
-    if (percentage >= 80) {
-      title = '🎉 Excellent travail !'
-      message = `Félicitations ! Vous avez obtenu ${score}/${totalQuestions} (${percentage}%) à votre quiz "${lessonTitle}". Continuez comme ça !`
-    } else if (percentage >= 60) {
-      title = '👍 Bon travail !'
-      message = `Bravo ! Vous avez obtenu ${score}/${totalQuestions} (${percentage}%) à votre quiz "${lessonTitle}". Vous progressez bien !`
-    } else {
-      title = '💪 Continuez vos efforts !'
-      message = `Vous avez obtenu ${score}/${totalQuestions} (${percentage}%) à votre quiz "${lessonTitle}". N'hésitez pas à réviser et réessayer !`
-    }
-
-    return await this.createNotification(
-      profileId,
-      'quiz_completed',
-      title,
-      message,
-      {
-        score,
-        totalQuestions,
-        percentage,
-        lessonTitle,
-        completedAt: new Date().toISOString()
-      }
-    )
-  }
-
-  /**
-   * Récupérer les statistiques des notifications
-   * @param {number} profileId - ID du profil
-   * @returns {Promise<Object>} Statistiques des notifications
-   */
-  static async getNotificationStats (profileId) {
-    try {
-      const notifications = await apiService.getNotifications({ profileId })
-
-      const stats = {
-        total: notifications.length,
-        unread: notifications.filter(n => !n.is_read).length,
-        quiz_notifications: notifications.filter(n => n.type === 'quiz_completed').length
-      }
-
-      return stats
-    } catch (error) {
-      console.error('❌ Erreur lors de la récupération des statistiques:', error)
-      throw error
-    }
-  }
+export default {
+  getNotifications,
+  getUnreadCount,
+  setNotificationRead,
+  markAllNotificationsRead,
+  deleteNotification
 }

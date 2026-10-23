@@ -3,63 +3,58 @@
  * Toute la logique d'IA est gérée par le backend
  */
 
-import { apiService } from './apiService.js'
+import { apiService, ApiError } from './apiService.js'
+import { AI_TIMEOUT_MESSAGE, AI_UNAVAILABLE_MESSAGE } from '../constants/aiLimits.js'
+
+// Erreurs à transmettre telles quelles : leur message (serveur ou apiService) est déjà parlant,
+// et le statut sert à l'interface (429 + retryAfterSeconds, 415 format refusé, session expirée…)
+const MEANINGFUL_STATUSES = new Set([400, 401, 403, 404, 413, 415, 429])
+const MEANINGFUL_CODES = new Set(['TIMEOUT', 'NETWORK_ERROR', 'SESSION_EXPIRED', 'OFFLINE', 'UNSUPPORTED_FILE_TYPE'])
+
+/**
+ * Conserver les erreurs utiles, remplacer les autres par un message générique
+ * (en gardant statut, code et référence de requête)
+ * - 504 AI_TIMEOUT : délai global de génération dépassé ;
+ * - 503 AI_UNAVAILABLE : aucun service d'IA n'a répondu (y compris quand aucun document n'a pu être
+ *   analysé) — le serveur ne détaille plus la cause (plus de champ « reason »).
+ */
+function toAiError (error, fallbackMessage) {
+  if (error instanceof ApiError) {
+    const keep = { status: error.status, code: error.code, data: error.data, requestId: error.requestId, cause: error }
+    if (error.code === 'AI_TIMEOUT' || (error.status === 504 && !error.code)) {
+      return new ApiError(AI_TIMEOUT_MESSAGE, { ...keep, code: 'AI_TIMEOUT' })
+    }
+    if (error.code === 'AI_UNAVAILABLE') {
+      return new ApiError(error.message || AI_UNAVAILABLE_MESSAGE, keep)
+    }
+    if (MEANINGFUL_STATUSES.has(error.status) || MEANINGFUL_CODES.has(error.code)) {
+      return error
+    }
+    return new ApiError(fallbackMessage, keep)
+  }
+  return new Error(fallbackMessage)
+}
+
+function appendFiles (formData, files) {
+  files.forEach((file, index) => {
+    formData.append(`file_${index}`, file)
+    formData.append(`file_${index}_name`, file.name)
+    formData.append(`file_${index}_type`, file.type)
+  })
+}
 
 class AIService {
   /**
-   * Génère un quiz à partir d'une image de leçon (via backend)
-   */
-  async generateQuizFromImage (imageFile, childProfile) {
-    try {
-      // Convertir l'image en base64 pour l'envoyer en JSON
-      const base64Image = await this.fileToBase64(imageFile)
-
-      const response = await apiService.request('/api/ai/generate-quiz-from-image', {
-        method: 'POST',
-        body: JSON.stringify({
-          image: base64Image,
-          childProfile
-        })
-      })
-
-      return response.data?.quiz || null
-    } catch (error) {
-      console.error('Erreur lors de la génération du quiz:', error)
-      throw new Error('Impossible de générer le quiz. Veuillez réessayer.')
-    }
-  }
-
-  /**
-   * Convertit un fichier en base64
-   */
-  fileToBase64 (file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.readAsDataURL(file)
-      reader.onload = () => resolve(reader.result)
-      reader.onerror = error => reject(error)
-    })
-  }
-
-  /**
    * Extrait le texte des documents (OCR uniquement - étape 1)
-   * Retourne les textes extraits et les analyses
-   * @param {File[]} files - Fichiers à traiter
+   * Les routes IA n'acceptent que des images (PDF refusés : 415 UNSUPPORTED_FILE_TYPE).
+   * @param {File[]} files - Images à traiter
    * @param {boolean} useLLMOCR - Si true, utilise LLM Vision au lieu de Tesseract
    */
   async extractTextFromDocuments (files, useLLMOCR = true) {
     try {
-      // Utiliser FormData au lieu de JSON pour éviter les erreurs 413
+      // FormData plutôt que JSON/base64 pour éviter les erreurs 413
       const formData = new FormData()
-
-      // Ajouter les fichiers directement (plus efficace que base64)
-      files.forEach((file, index) => {
-        formData.append(`file_${index}`, file)
-        formData.append(`file_${index}_name`, file.name)
-        formData.append(`file_${index}_type`, file.type)
-      })
-
-      // Ajouter les métadonnées
+      appendFiles(formData, files)
       formData.append('fileCount', files.length.toString())
       formData.append('useLLMOCR', useLLMOCR.toString())
 
@@ -71,13 +66,7 @@ class AIService {
       return response.data?.extractions || null
     } catch (error) {
       console.error('Erreur lors de l\'extraction OCR:', error)
-
-      // Message d'erreur plus explicite pour 413
-      if (error.message.includes('413') || error.message.includes('Content Too Large')) {
-        throw new Error('Les fichiers sont trop volumineux. Veuillez réduire la taille des images ou utiliser moins de fichiers.')
-      }
-
-      throw new Error('Impossible d\'extraire le texte des documents. Veuillez réessayer.')
+      throw toAiError(error, 'Impossible d\'extraire le texte des documents. Veuillez réessayer.')
     }
   }
 
@@ -91,11 +80,7 @@ class AIService {
    */
   async generateCoursePage (files, childProfile, { subject = '', topic = '', instructions = '' } = {}) {
     const formData = new FormData()
-    files.forEach((file, index) => {
-      formData.append(`file_${index}`, file)
-      formData.append(`file_${index}_name`, file.name)
-      formData.append(`file_${index}_type`, file.type)
-    })
+    appendFiles(formData, files)
     formData.append('fileCount', files.length.toString())
     formData.append('childProfile', JSON.stringify({ name: childProfile.name, level: childProfile.level }))
     formData.append('subject', subject)
@@ -110,10 +95,12 @@ class AIService {
       return response.data
     } catch (error) {
       console.error('Erreur lors de la génération de la page de cours:', error)
-      if (error.message.includes('413') || error.message.includes('Content Too Large')) {
-        throw new Error('Les photos sont trop volumineuses (25 Mo au total maximum). Réduisez leur taille ou leur nombre.')
+      if (error?.status === 413) {
+        throw new ApiError('Les photos sont trop volumineuses (25 Mo au total maximum). Réduisez leur taille ou leur nombre.', {
+          status: 413, code: error.code, requestId: error.requestId, cause: error
+        })
       }
-      throw new Error(error.message || 'Impossible de générer la page. Veuillez réessayer.')
+      throw toAiError(error, error?.message || 'Impossible de générer la page. Veuillez réessayer.')
     }
   }
 
@@ -135,53 +122,7 @@ class AIService {
       return response.data?.quiz || null
     } catch (error) {
       console.error('Erreur lors de la génération du quiz depuis analyses:', error)
-
-      // Si tous les services IA ont échoué
-      if (error.message.includes('Tous les services IA ont échoué')) {
-        throw new Error('Impossible de générer le quiz. Tous les services d\'intelligence artificielle ont échoué. Veuillez réessayer plus tard.')
-      }
-
-      throw new Error('Impossible de générer le quiz. Veuillez réessayer.')
-    }
-  }
-
-  /**
-   * Génère un quiz à partir de plusieurs documents (images et PDF) (via backend)
-   * Utilise FormData pour éviter les erreurs 413 (Content Too Large)
-   * MÉTHODE LEGACY - Utilisez extractTextFromDocuments + generateQuizFromAnalyses pour éviter les timeouts
-   */
-  async generateQuizFromDocuments (files, childProfile, questionCount = 5) {
-    try {
-      // Utiliser FormData au lieu de JSON pour éviter les erreurs 413
-      const formData = new FormData()
-
-      // Ajouter les fichiers directement (plus efficace que base64)
-      files.forEach((file, index) => {
-        formData.append(`file_${index}`, file)
-        formData.append(`file_${index}_name`, file.name)
-        formData.append(`file_${index}_type`, file.type)
-      })
-
-      // Ajouter les métadonnées
-      formData.append('childProfile', JSON.stringify(childProfile))
-      formData.append('questionCount', questionCount.toString())
-      formData.append('fileCount', files.length.toString())
-
-      const response = await apiService.request('/api/ai/generate-quiz-from-documents', {
-        method: 'POST',
-        body: formData
-      })
-
-      return response.data?.quiz || null
-    } catch (error) {
-      console.error('Erreur lors de la génération du quiz multi-documents:', error)
-
-      // Message d'erreur plus explicite pour 413
-      if (error.message.includes('413') || error.message.includes('Content Too Large')) {
-        throw new Error('Les fichiers sont trop volumineux. Veuillez réduire la taille des images ou utiliser moins de fichiers.')
-      }
-
-      throw new Error('Impossible de générer le quiz. Veuillez réessayer.')
+      throw toAiError(error, 'Impossible de générer le quiz. Veuillez réessayer.')
     }
   }
 
@@ -202,7 +143,7 @@ class AIService {
       return response.data?.quiz || null
     } catch (error) {
       console.error('Erreur lors de la génération du quiz depuis le texte:', error)
-      throw new Error('Impossible de générer le quiz. Veuillez réessayer.')
+      throw toAiError(error, 'Impossible de générer le quiz. Veuillez réessayer.')
     }
   }
 

@@ -16,6 +16,9 @@ jest.setTimeout(30000);
 // Empêche lib/loadEnv.js de charger backend/.env (ou env)
 global.__TEACHDIGITAL_BACKEND_ENV_LOADED = true;
 
+// Logs sur la console uniquement (pas de fichiers backend/logs/*.log pendant les tests)
+process.env.LOG_ENABLE_FILE = 'false';
+
 for (const key of ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_DATABASE', 'DB_USERNAME', 'DB_SSL']) {
   delete process.env[key];
 }

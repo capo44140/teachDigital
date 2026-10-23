@@ -27,8 +27,11 @@ RUN pnpm run build
 # Stage 2: Production avec Nginx
 FROM nginx:alpine
 
-# Copier la configuration Nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Configuration Nginx : modèle complété au démarrage par l'entrypoint de l'image
+# (envsubst des seules variables NGINX_*, écrit dans /etc/nginx/conf.d/default.conf)
+ENV NGINX_ENVSUBST_FILTER=^NGINX_
+ENV NGINX_TRUSTED_PROXY=127.0.0.1
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 # Copier les fichiers buildés
 COPY --from=builder /app/dist /usr/share/nginx/html

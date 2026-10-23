@@ -1,507 +1,145 @@
 /**
- * Service de gestion de l'installation PWA
- * Gère les prompts d'installation et l'expérience utilisateur
+ * Installation de la PWA (carte « Installer l'application » des paramètres parent).
+ *
+ * Chargé dynamiquement par main.js au démarrage (hors du bundle initial).
+ * L'événement beforeinstallprompt est conservé pour pouvoir appeler prompt() depuis le bouton,
+ * mais preventDefault() — qui supprime la bannière d'installation native de Chrome — n'est
+ * appelé que si l'interface d'installation est affichée au moment où l'événement arrive.
  */
 
-class InstallService {
-  constructor () {
-    this.deferredPrompt = null
-    this.isInstalled = false
-    this.isInstallable = false
-    this.installPromptShown = false
-    this.installPromptDismissed = false
+import { reactive, readonly } from 'vue'
 
-    // Écouter les événements d'installation
-    this.setupEventListeners()
+const state = reactive({
+  // Le navigateur a fourni un prompt d'installation utilisable
+  canPrompt: false,
+  // Application lancée en mode installé (écran d'accueil)
+  isInstalled: false,
+  // Nombre d'interfaces d'installation affichées
+  visibleUiCount: 0
+})
 
-    // Vérifier l'état d'installation
-    this.checkInstallationStatus()
-  }
+let deferredPrompt = null
+let initialized = false
 
-  /**
-   * Configure les écouteurs d'événements
-   */
-  setupEventListeners () {
-    // Événement avant l'installation
-    window.addEventListener('beforeinstallprompt', (e) => {
-      console.log('📱 Prompt d\'installation disponible')
-      // Intercepter l'événement pour contrôler quand afficher le prompt
-      // L'avertissement du navigateur est normal : on appelle prompt() plus tard
-      e.preventDefault()
-      this.deferredPrompt = e
-      this.isInstallable = true
-      this.installPromptShown = false
-      this.installPromptDismissed = false
-
-      // Déclencher un événement personnalisé pour que les composants puissent afficher le prompt
-      this.dispatchInstallEvent('installable')
-
-      // Note: L'avertissement "Banner not shown" est normal ici.
-      // On contrôle manuellement quand afficher le prompt via showInstallPrompt()
-    })
-
-    // Événement après l'installation
-    window.addEventListener('appinstalled', () => {
-      console.log('✅ PWA installée avec succès')
-      this.isInstalled = true
-      this.isInstallable = false
-      this.deferredPrompt = null
-
-      // Déclencher un événement personnalisé
-      this.dispatchInstallEvent('installed')
-
-      // Sauvegarder l'état d'installation
-      this.saveInstallationState()
-    })
-
-    // Détecter si l'app est lancée depuis l'écran d'accueil
-    window.addEventListener('load', () => {
-      this.detectStandaloneMode()
-    })
-  }
-
-  /**
-   * Vérifie l'état d'installation
-   */
-  checkInstallationStatus () {
-    // Vérifier si l'app est déjà installée
-    this.isInstalled = this.isAppInstalled()
-
-    // Vérifier si l'app peut être installée
-    this.isInstallable = this.canInstallApp()
-
-    console.log('📱 État d\'installation:', {
-      isInstalled: this.isInstalled,
-      isInstallable: this.isInstallable
-    })
-  }
-
-  /**
-   * Vérifie si l'app est installée
-   */
-  isAppInstalled () {
-    // Vérifier le mode standalone
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      return true
-    }
-
-    // Vérifier si l'app est lancée depuis l'écran d'accueil (iOS)
-    if (window.navigator.standalone === true) {
-      return true
-    }
-
-    // Vérifier les paramètres sauvegardés
-    const savedState = this.getInstallationState()
-    return savedState.isInstalled || false
-  }
-
-  /**
-   * Vérifie si l'app peut être installée
-   */
-  canInstallApp () {
-    return this.deferredPrompt !== null
-  }
-
-  /**
-   * Détecte le mode standalone
-   */
-  detectStandaloneMode () {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-                        window.navigator.standalone === true
-
-    if (isStandalone && !this.isInstalled) {
-      this.isInstalled = true
-      this.saveInstallationState()
-      this.dispatchInstallEvent('installed')
-    }
-  }
-
-  /**
-   * Affiche le prompt d'installation
-   * Cette méthode doit être appelée en réponse à une action utilisateur
-   * (clique sur un bouton) pour éviter l'avertissement du navigateur
-   */
-  async showInstallPrompt () {
-    if (!this.deferredPrompt) {
-      console.warn('⚠️ Prompt d\'installation non disponible. L\'app peut déjà être installée ou le navigateur ne supporte pas l\'installation.')
-      throw new Error('Prompt d\'installation non disponible')
-    }
-
-    try {
-      console.log('📱 Affichage du prompt d\'installation natif...')
-      // Afficher le prompt natif (cela résout l'avertissement du navigateur)
-      this.deferredPrompt.prompt()
-
-      // Attendre la réponse de l'utilisateur
-      const { outcome } = await this.deferredPrompt.userChoice
-
-      console.log('📱 Résultat du prompt d\'installation:', outcome)
-
-      if (outcome === 'accepted') {
-        console.log('✅ Utilisateur a accepté l\'installation')
-        this.installPromptShown = true
-        this.dispatchInstallEvent('prompt-accepted')
-      } else {
-        console.log('❌ Utilisateur a refusé l\'installation')
-        this.installPromptDismissed = true
-        this.dispatchInstallEvent('prompt-dismissed')
-      }
-
-      // Nettoyer le prompt (important pour éviter les fuites mémoire)
-      this.deferredPrompt = null
-      this.isInstallable = false
-
-      // Sauvegarder l'état
-      this.saveInstallationState()
-
-      return outcome
-    } catch (error) {
-      console.error('❌ Erreur lors de l\'affichage du prompt d\'installation:', error)
-      // Nettoyer le prompt même en cas d'erreur
-      this.deferredPrompt = null
-      this.isInstallable = false
-      throw error
-    }
-  }
-
-  /**
-   * Affiche un guide d'installation personnalisé
-   */
-  showInstallGuide () {
-    const userAgent = navigator.userAgent.toLowerCase()
-    let guide = null
-
-    if (userAgent.includes('chrome') || userAgent.includes('edge')) {
-      guide = this.getChromeInstallGuide()
-    } else if (userAgent.includes('firefox')) {
-      guide = this.getFirefoxInstallGuide()
-    } else if (userAgent.includes('safari')) {
-      guide = this.getSafariInstallGuide()
-    } else {
-      guide = this.getGenericInstallGuide()
-    }
-
-    this.dispatchInstallEvent('show-guide', { guide })
-    return guide
-  }
-
-  /**
-   * Guide d'installation pour Chrome/Edge
-   */
-  getChromeInstallGuide () {
-    return {
-      title: 'Installer TeachDigital',
-      steps: [
-        {
-          icon: '🔽',
-          text: 'Cliquez sur l\'icône "Installer" dans la barre d\'adresse'
-        },
-        {
-          icon: '📱',
-          text: 'Ou utilisez le menu (⋮) > "Installer TeachDigital"'
-        },
-        {
-          icon: '✅',
-          text: 'Confirmez l\'installation dans la popup'
-        }
-      ],
-      browser: 'Chrome/Edge'
-    }
-  }
-
-  /**
-   * Guide d'installation pour Firefox
-   */
-  getFirefoxInstallGuide () {
-    return {
-      title: 'Installer TeachDigital',
-      steps: [
-        {
-          icon: '➕',
-          text: 'Cliquez sur l\'icône "+" dans la barre d\'adresse'
-        },
-        {
-          icon: '📱',
-          text: 'Ou utilisez le menu (☰) > "Installer"'
-        },
-        {
-          icon: '✅',
-          text: 'Confirmez l\'installation'
-        }
-      ],
-      browser: 'Firefox'
-    }
-  }
-
-  /**
-   * Guide d'installation pour Safari (iOS)
-   */
-  getSafariInstallGuide () {
-    return {
-      title: 'Ajouter à l\'écran d\'accueil',
-      steps: [
-        {
-          icon: '📤',
-          text: 'Appuyez sur le bouton de partage (📤)'
-        },
-        {
-          icon: '🏠',
-          text: 'Sélectionnez "Ajouter à l\'écran d\'accueil"'
-        },
-        {
-          icon: '✏️',
-          text: 'Modifiez le nom si souhaité'
-        },
-        {
-          icon: '✅',
-          text: 'Appuyez sur "Ajouter"'
-        }
-      ],
-      browser: 'Safari (iOS)'
-    }
-  }
-
-  /**
-   * Guide d'installation générique
-   */
-  getGenericInstallGuide () {
-    return {
-      title: 'Installer TeachDigital',
-      steps: [
-        {
-          icon: '🔍',
-          text: 'Recherchez l\'option "Installer" dans votre navigateur'
-        },
-        {
-          icon: '📱',
-          text: 'Suivez les instructions pour ajouter l\'app à votre écran d\'accueil'
-        },
-        {
-          icon: '✅',
-          text: 'Lancez l\'app depuis votre écran d\'accueil'
-        }
-      ],
-      browser: 'Générique'
-    }
-  }
-
-  /**
-   * Vérifie si l'utilisateur a déjà vu le prompt
-   */
-  hasSeenInstallPrompt () {
-    const state = this.getInstallationState()
-    return state.promptShown || state.promptDismissed
-  }
-
-  /**
-   * Détermine si le prompt doit être affiché
-   */
-  shouldShowInstallPrompt () {
-    // Ne pas afficher si déjà installé
-    if (this.isInstalled) {
-      return false
-    }
-
-    // Ne pas afficher si pas installable
-    if (!this.isInstallable) {
-      return false
-    }
-
-    // Ne pas afficher si déjà vu
-    if (this.hasSeenInstallPrompt()) {
-      return false
-    }
-
-    // Vérifier les conditions d'affichage
-    return this.checkInstallConditions()
-  }
-
-  /**
-   * Vérifie les conditions d'affichage du prompt
-   */
-  checkInstallConditions () {
-    // Attendre que l'utilisateur ait interagi avec l'app
-    const sessionTime = Date.now() - (window.sessionStartTime || Date.now())
-    const minSessionTime = 30 * 1000 // 30 secondes
-
-    if (sessionTime < minSessionTime) {
-      return false
-    }
-
-    // Vérifier le nombre de visites
-    const visitCount = this.getVisitCount()
-    if (visitCount < 2) {
-      return false
-    }
-
-    // Vérifier si l'utilisateur a effectué des actions significatives
-    const hasSignificantActivity = this.hasSignificantActivity()
-    if (!hasSignificantActivity) {
-      return false
-    }
-
-    return true
-  }
-
-  /**
-   * Vérifie si l'utilisateur a effectué des actions significatives
-   */
-  hasSignificantActivity () {
-    const state = this.getInstallationState()
-    return state.hasCreatedProfile ||
-           state.hasCompletedQuiz ||
-           state.hasViewedLessons ||
-           state.sessionCount > 3
-  }
-
-  /**
-   * Incrémente le compteur de visites
-   */
-  incrementVisitCount () {
-    const state = this.getInstallationState()
-    state.visitCount = (state.visitCount || 0) + 1
-    state.lastVisit = Date.now()
-    this.saveInstallationState(state)
-  }
-
-  /**
-   * Marque une activité significative
-   */
-  markSignificantActivity (activityType) {
-    const state = this.getInstallationState()
-
-    switch (activityType) {
-      case 'profile_created':
-        state.hasCreatedProfile = true
-        break
-      case 'quiz_completed':
-        state.hasCompletedQuiz = true
-        break
-      case 'lessons_viewed':
-        state.hasViewedLessons = true
-        break
-    }
-
-    this.saveInstallationState(state)
-  }
-
-  /**
-   * Sauvegarde l'état d'installation
-   */
-  saveInstallationState (customState = null) {
-    const state = customState || this.getInstallationState()
-
-    state.isInstalled = this.isInstalled
-    state.promptShown = this.installPromptShown
-    state.promptDismissed = this.installPromptDismissed
-    state.lastUpdated = Date.now()
-
-    try {
-      localStorage.setItem('teachdigital_install_state', JSON.stringify(state))
-    } catch (error) {
-      console.warn('Impossible de sauvegarder l\'état d\'installation:', error)
-    }
-  }
-
-  /**
-   * Récupère l'état d'installation
-   */
-  getInstallationState () {
-    try {
-      const stored = localStorage.getItem('teachdigital_install_state')
-      return stored
-        ? JSON.parse(stored)
-        : {
-            isInstalled: false,
-            promptShown: false,
-            promptDismissed: false,
-            visitCount: 0,
-            sessionCount: 0,
-            hasCreatedProfile: false,
-            hasCompletedQuiz: false,
-            hasViewedLessons: false,
-            lastVisit: null,
-            lastUpdated: null
-          }
-    } catch (error) {
-      console.warn('Impossible de charger l\'état d\'installation:', error)
-      return {
-        isInstalled: false,
-        promptShown: false,
-        promptDismissed: false,
-        visitCount: 0,
-        sessionCount: 0,
-        hasCreatedProfile: false,
-        hasCompletedQuiz: false,
-        hasViewedLessons: false,
-        lastVisit: null,
-        lastUpdated: null
-      }
-    }
-  }
-
-  /**
-   * Récupère le nombre de visites
-   */
-  getVisitCount () {
-    const state = this.getInstallationState()
-    return state.visitCount || 0
-  }
-
-  /**
-   * Déclenche un événement personnalisé
-   */
-  dispatchInstallEvent (eventType, detail = {}) {
-    const event = new CustomEvent('install-event', {
-      detail: {
-        type: eventType,
-        ...detail
-      }
-    })
-    window.dispatchEvent(event)
-  }
-
-  /**
-   * Obtient les statistiques d'installation
-   */
-  getStats () {
-    const state = this.getInstallationState()
-
-    return {
-      isInstalled: this.isInstalled,
-      isInstallable: this.isInstallable,
-      hasSeenPrompt: this.hasSeenInstallPrompt(),
-      shouldShowPrompt: this.shouldShowInstallPrompt(),
-      visitCount: state.visitCount || 0,
-      sessionCount: state.sessionCount || 0,
-      hasSignificantActivity: this.hasSignificantActivity(),
-      lastVisit: state.lastVisit,
-      userAgent: navigator.userAgent,
-      displayMode: window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser'
-    }
-  }
-
-  /**
-   * Réinitialise l'état d'installation (pour les tests)
-   */
-  resetInstallationState () {
-    localStorage.removeItem('teachdigital_install_state')
-    this.isInstalled = false
-    this.installPromptShown = false
-    this.installPromptDismissed = false
-    this.deferredPrompt = null
-    this.isInstallable = false
+function detectInstalled () {
+  try {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+  } catch {
+    return false
   }
 }
 
-// Instance singleton
-const installService = new InstallService()
+function onBeforeInstallPrompt (event) {
+  // Interface visible : éviter la bannière native en double
+  if (state.visibleUiCount > 0) {
+    event.preventDefault()
+  }
+  deferredPrompt = event
+  state.canPrompt = true
+}
 
-// Initialiser le temps de session
-window.sessionStartTime = Date.now()
+function onAppInstalled () {
+  deferredPrompt = null
+  state.canPrompt = false
+  state.isInstalled = true
+}
 
-// Incrémenter le compteur de visites au chargement
-installService.incrementVisitCount()
+/**
+ * Écouter les événements d'installation (idempotent)
+ */
+export function initInstallService () {
+  if (initialized || typeof window === 'undefined') return
+  initialized = true
+  state.isInstalled = detectInstalled()
+  window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
+  window.addEventListener('appinstalled', onAppInstalled)
+}
 
-export default installService
-export { InstallService }
+/**
+ * Signaler qu'une interface d'installation est affichée
+ * @returns {Function} à appeler quand l'interface disparaît
+ */
+export function registerInstallUi () {
+  initInstallService()
+  state.visibleUiCount++
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    state.visibleUiCount = Math.max(0, state.visibleUiCount - 1)
+  }
+}
+
+/**
+ * Afficher le prompt d'installation natif (à appeler depuis un clic)
+ * @returns {Promise<'accepted'|'dismissed'|'unavailable'>}
+ */
+export async function promptInstall () {
+  if (!deferredPrompt) return 'unavailable'
+  const event = deferredPrompt
+  // Un prompt ne sert qu'une fois
+  deferredPrompt = null
+  state.canPrompt = false
+  await event.prompt()
+  const choice = await event.userChoice
+  if (choice?.outcome === 'accepted') {
+    state.isInstalled = true
+    return 'accepted'
+  }
+  return 'dismissed'
+}
+
+/**
+ * Consignes d'installation manuelle selon le navigateur
+ * @returns {{ browser: string, steps: string[] }}
+ */
+export function getInstallGuide () {
+  const ua = (navigator.userAgent || '').toLowerCase()
+  const isIOS = /iphone|ipad|ipod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
+  if (isIOS) {
+    return {
+      browser: 'Safari (iPhone / iPad)',
+      steps: [
+        'Ouvrez TeachDigital dans Safari.',
+        'Touchez le bouton Partager (carré avec une flèche vers le haut).',
+        'Choisissez « Sur l\'écran d\'accueil », puis « Ajouter ».'
+      ]
+    }
+  }
+  if (ua.includes('firefox') && !ua.includes('android')) {
+    return {
+      browser: 'Firefox',
+      steps: [
+        'Firefox pour ordinateur ne permet pas d\'installer l\'application.',
+        'Ouvrez TeachDigital dans Chrome, Edge ou Safari pour l\'installer.'
+      ]
+    }
+  }
+  if (ua.includes('android')) {
+    return {
+      browser: 'Android',
+      steps: [
+        'Ouvrez le menu du navigateur (⋮).',
+        'Choisissez « Installer l\'application » ou « Ajouter à l\'écran d\'accueil ».'
+      ]
+    }
+  }
+  return {
+    browser: 'Chrome / Edge',
+    steps: [
+      'Cliquez sur l\'icône d\'installation à droite de la barre d\'adresse,',
+      'ou ouvrez le menu (⋮) puis « Installer TeachDigital ».'
+    ]
+  }
+}
+
+export const installState = readonly(state)
+
+export default {
+  init: initInstallService,
+  registerInstallUi,
+  promptInstall,
+  getInstallGuide,
+  state: installState
+}

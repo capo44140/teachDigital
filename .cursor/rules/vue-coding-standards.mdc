@@ -5,55 +5,79 @@ description: Standards de codage Vue.js et JavaScript pour TeachDigital
 
 # Standards de Codage Vue.js et JavaScript
 
-## Vue.js 3 - Composition API
+## Vue.js 3
 
 ### Structure des composants Vue
+Deux styles coexistent ; suivre celui du fichier modifié :
+- **Écrans (`src/views/`) et la plupart des composants existants** : Options API (`data`, `computed`,
+  `methods`) avec un petit `setup()` pour les composables / stores.
+- **Petits composants partagés récents** (`BaseModal`, `ConfirmDialog`, `PinPad`, `OfflineBanner`,
+  `InstallAppCard`...) : `<script setup>`. À privilégier pour un nouveau composant partagé.
+
 ```vue
 <template>
-  <!-- Template avec classes TailwindCSS -->
+  <!-- Template avec classes Tailwind (et classes liquid-glass de styles/liquid-glass.css) -->
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
-import { useStore } from '@/stores/storeName'
+import { useParentNavigation } from '../composables/useParentNavigation.js'
+import { authService } from '../services/authService.js'
 
 export default {
   name: 'ComponentName',
-  setup() {
-    // Composition API setup
-    const store = useStore()
-    
-    return {
-      // Exposer les variables réactives
+  setup () {
+    const parentNav = useParentNavigation()
+    return { parentNav }
+  },
+  data () {
+    return { isLoading: false }
+  },
+  methods: {
+    async save () {
+      try {
+        this.isLoading = true
+        // appel d'un service de domaine
+        this.$toast.success('Enregistré')
+      } catch (error) {
+        this.$toast.errorFrom(error, 'Enregistrement impossible')
+      } finally {
+        this.isLoading = false
+      }
     }
   }
 }
 </script>
 
 <style scoped>
-/* Styles spécifiques au composant */
+/* Styles spécifiques au composant (pas de @apply : utiliser les classes Tailwind dans le template) */
 </style>
 ```
 
 ### Règles de nommage
-- **Composants** : PascalCase (ex: `UserProfile.vue`)
+- **Composants** : PascalCase (ex: `UserDashboard.vue`) ; écrans routés dans `src/views/`, composants réutilisables dans `src/components/`
 - **Variables réactives** : camelCase (ex: `userData`, `isLoading`)
 - **Fonctions** : camelCase (ex: `handleSubmit`, `fetchUserData`)
-- **Constantes** : UPPER_SNAKE_CASE (ex: `API_BASE_URL`)
+- **Constantes** : UPPER_SNAKE_CASE (ex: `AI_MAX_DOCUMENTS`)
+- **Imports** : chemins relatifs dans `src/` (`../services/authService.js`) — l'alias `@` n'est défini
+  que dans `vitest.config.js`, pas dans `vite.config.js`
 
 ### Gestion d'état avec Pinia
-- Utiliser les stores Pinia pour l'état global
-- Préférer la composition API dans les stores
-- Exemple de store : [src/stores/profileStore.js](mdc:frontend/src/stores/profileStore.js)
+- Stores Pinia pour l'état partagé uniquement : `badgeStore`, `onboardingStore`, `profileStore`, `settingsStore`, `toastStore`
+- Les stores existants sont des « option stores » (`defineStore('profile', { state, getters, actions })`) ;
+  rester cohérent avec ce style
+- Exemple de store : [frontend/src/stores/profileStore.js](mdc:frontend/src/stores/profileStore.js)
 
 ### Services et API
-- Organiser les services dans `src/services/`
-- Utiliser le pattern Repository pour l'accès aux données
-- Exemple : [src/repositories/profileRepository.js](mdc:frontend/src/repositories/profileRepository.js)
+- Organiser les appels API dans les services de domaine de `src/services/` (voir frontend-services-patterns.mdc)
+- Pas de pattern Repository ni d'accès base de données côté frontend
+- `apiService.js` = client HTTP uniquement
 
 ### Gestion des erreurs
-- Toujours gérer les erreurs avec try/catch
-- Utiliser le service d'erreur centralisé : [src/services/errorService.js](mdc:frontend/src/services/errorService.js)
+- Toujours gérer les erreurs avec try/catch autour des appels de service
+- Affichage : `this.$toast.errorFrom(error, 'message de secours')` (Options API) ou `useToast()`,
+  et `describeError` / `errorToastOptions` de [frontend/src/utils/apiErrors.js](mdc:frontend/src/utils/apiErrors.js)
+- Confirmations : `this.$confirm({ ... })` / `useConfirm()` (jamais `window.confirm`)
+- Les erreurs non gérées sont captées dans `main.js` (toast + `clientErrorReporter`)
 
 ### Commentaires et documentation
 - Commenter en français
@@ -61,7 +85,9 @@ export default {
 - Utiliser JSDoc pour les fonctions publiques
 
 ### ESLint Configuration
-Le projet utilise ESLint avec les règles définies dans [eslint.config.js](mdc:frontend/eslint.config.js) :
-- Pas de console.log en production (warn)
-- Variables non utilisées interdites
-- Noms de composants multi-mots désactivés
+Le projet utilise ESLint (flat config) défini dans [frontend/eslint.config.js](mdc:frontend/eslint.config.js),
+lancé sur `src/` (`pnpm run lint` / `pnpm run lint:check`) :
+- `no-console` : `warn` quand `NODE_ENV=production`, sinon désactivé (le build retire `console.log/info/debug`)
+- `no-unused-vars` / `vue/no-unused-vars` : `warn`
+- `no-undef` : `error`
+- Règles `vue3-recommended`, `vue/multi-word-component-names` désactivée

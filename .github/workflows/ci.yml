@@ -39,8 +39,8 @@ jobs:
       - name: Lint
         run: pnpm run lint:check
 
-      - name: Unit tests
-        run: pnpm exec vitest run
+      - name: Unit tests (+ seuils de couverture de vitest.config.js)
+        run: pnpm exec vitest run --coverage
 
       - name: Build
         run: pnpm run build
@@ -59,8 +59,8 @@ jobs:
     defaults:
       run:
         working-directory: backend
-    # Base dédiée aux tests : le schéma est créé par tests/schema.sql
-    # (aucune donnée de production n'est utilisée).
+    # Base dédiée aux tests : le schéma est créé par les migrations (backend/migrations),
+    # exactement comme au démarrage du serveur (aucune donnée de production n'est utilisée).
     services:
       postgres:
         image: postgres:16-alpine
@@ -93,11 +93,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Initialiser le schéma de test
+      - name: Initialiser le schéma de test (migrations)
         run: pnpm run test:db:init
+
+      - name: Migrations à jour (CLI, rien à rejouer)
+        # Même runner que le serveur ; l'idempotence des fichiers SQL est testée par tests/lib/migrate.test.js
+        run: pnpm run migrate
+        env:
+          DATABASE_URL: postgresql://teachdigital:teachdigital@localhost:5432/teachdigital_test
 
       - name: Tests (unitaires + intégration DB)
         # --runInBand : une seule suite à la fois sur la même base de test
-        run: pnpm test -- --runInBand
+        # --coverage : applique les seuils de package.json (mesurés avec la base de test)
+        run: pnpm test -- --runInBand --coverage
         env:
           CI: true

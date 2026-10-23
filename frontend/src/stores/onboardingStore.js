@@ -101,13 +101,13 @@ export const useOnboardingStore = defineStore('onboarding', {
         localStorage.setItem(storageKey(profileId), JSON.stringify({
           completedAt: new Date().toISOString()
         }))
-      } catch (_) { /* localStorage indispo (mode privé) : on ignore */ }
+      } catch { /* localStorage indispo (mode privé) : on ignore */ }
     },
 
     hasCompleted(profileId) {
       try {
         return !!localStorage.getItem(storageKey(profileId))
-      } catch (_) {
+      } catch {
         return false
       }
     },
@@ -116,7 +116,7 @@ export const useOnboardingStore = defineStore('onboarding', {
     reset(profileId) {
       try {
         localStorage.removeItem(storageKey(profileId))
-      } catch (_) { /* idem */ }
+      } catch { /* idem */ }
     }
   }
 })

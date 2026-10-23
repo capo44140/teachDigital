@@ -32,6 +32,19 @@ export function storeProfileToken (token, profile = null) {
 }
 
 /**
+ * Profil associé au jeton profil (enregistré à la connexion), ou null
+ * @returns {Object|null}
+ */
+export function readProfileUser () {
+  try {
+    const raw = localStorage.getItem(PROFILE_USER_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Supprimer le jeton profil (droits parent) et le profil associé
  */
 export function clearProfileToken () {

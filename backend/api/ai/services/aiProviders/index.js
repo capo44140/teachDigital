@@ -11,6 +11,8 @@ const GroqProvider = require('./groq.js');
 const MistralProvider = require('./mistral.js');
 const KimiProvider = require('./kimi.js');
 const OpenRouterProvider = require('./openrouter.js');
+const { isAbortError, throwIfAborted, callTimeout, toAbortError, isDeadlineReached, createAiTimeoutError } = require('../../utils/requestContext.js');
+const logger = require('../../../../lib/logger.js');
 
 /**
  * Crée et retourne tous les providers disponibles dans l'ordre de priorité
@@ -21,7 +23,7 @@ function getAvailableProviders() {
     const providers = [];
 
     // Configuration optionnelle:
-    // - AI_PROVIDER=Localúscm (ex: "LocalLLM") => force un seul provider
+    // - AI_PROVIDER=LocalLLM => force un seul provider
     // - AI_PROVIDERS_ORDER="LocalLLM,OpenAI,..." => définit l'ordre + filtre
     // - AI_DISABLE_PROVIDERS="DeepSeek,OpenAI" => exclut certains providers
     const normalizeName = (s) => String(s || '').trim().toLowerCase();
@@ -40,25 +42,18 @@ function getAvailableProviders() {
 
     // 1. LLM Local (si disponible, priorité maximale pour économiser les coûts)
     maybeAdd(new LocalLLMProvider());
-
     // 2. OpenAI (haute qualité, bon fallback)
     maybeAdd(new OpenAIProvider());
-
     // 3. Gemini (bonne alternative à OpenAI)
     maybeAdd(new GeminiProvider());
-
     // 4. DeepSeek (bon rapport qualité/prix)
     maybeAdd(new DeepSeekProvider());
-
     // 5. Groq (très rapide avec Llama 3.3)
     maybeAdd(new GroqProvider());
-
-    // 6. Mistral (dernier fallback avant le mode démo)
+    // 6. Mistral
     maybeAdd(new MistralProvider());
-
     // 7. Kimi / Moonshot (API compatible OpenAI)
     maybeAdd(new KimiProvider());
-
     // 8. OpenRouter (clé et modèle configurables depuis l'interface)
     maybeAdd(new OpenRouterProvider());
 
@@ -92,20 +87,23 @@ function getProviderByName(name) {
     return ProviderClass ? new ProviderClass() : null;
 }
 
-// Le message contient « Tous les services IA ont échoué » : reconnu par les routes (api/ai/index.js) → 503
+// Le message contient « Tous les services IA ont échoué » ; code AI_UNAVAILABLE → 503 côté routes
 function createAllProvidersFailedError(reason) {
-    console.warn(`⚠️ ${reason}`);
+    logger.warn(reason);
     const error = new Error(`Tous les services IA ont échoué : ${reason}`);
     error.code = 'AI_UNAVAILABLE';
     return error;
 }
 
 /**
- * Analyse un texte avec fallback automatique entre providers
- * @param {string} extractedText - Texte à analyser
- * @returns {Promise<Object>} Analyse du texte
+ * Essaie chaque provider disponible jusqu'au premier succès.
+ * S'arrête immédiatement si la requête est annulée (délai global dépassé, client parti) :
+ * le provider suivant n'est pas tenté, et aucun provider n'est lancé avec trop peu de temps restant.
+ * @param {string} operation - Libellé pour les logs (analyse, quiz)
+ * @param {Object} [ctx] - Contexte de la requête
+ * @param {Function} call - (provider) => Promise
  */
-async function analyzeWithAI(extractedText) {
+async function runWithFallback(operation, ctx, call) {
     const providers = getAvailableProviders();
 
     if (providers.length === 0) {
@@ -113,19 +111,35 @@ async function analyzeWithAI(extractedText) {
     }
 
     for (const provider of providers) {
+        // Lève une erreur d'annulation si la requête est annulée ou s'il ne reste presque plus de temps
+        callTimeout(ctx, Infinity);
         try {
-            console.log(`🔄 Tentative d'analyse avec ${provider.getName()}...`);
-            const result = await provider.analyzeText(extractedText);
-            console.log(`✅ Analyse réussie avec ${provider.getName()}`);
+            logger.debug(`Tentative ${operation} avec ${provider.getName()}`);
+            const result = await call(provider);
+            logger.info(`${operation} réussie avec ${provider.getName()}`);
             return result;
         } catch (error) {
-            console.warn(`⚠️ Erreur ${provider.getName()}, tentative avec le provider suivant:`, error.message);
-            // Continue avec le provider suivant
+            if (isAbortError(error)) throw error;
+            if (ctx && ctx.signal && ctx.signal.aborted) throw toAbortError(ctx.signal.reason);
+            // Échec dû au délai global (timeout de l'appel = temps restant) : « délai dépassé »
+            if (isDeadlineReached(ctx)) throw createAiTimeoutError();
+            logger.warn(`Échec ${operation} avec ${provider.getName()}, provider suivant`, { error: error.message });
         }
     }
 
     // Ne pas renvoyer un faux contenu « démo » comme s'il venait de l'IA : la route répond 503
-    throw createAllProvidersFailedError('Tous les providers IA ont échoué (analyse)');
+    throw createAllProvidersFailedError(`Tous les providers IA ont échoué (${operation})`);
+}
+
+/**
+ * Analyse un texte avec fallback automatique entre providers
+ * @param {string} extractedText - Texte à analyser
+ * @param {Object} [ctx] - Contexte de la requête (signal, délai)
+ * @returns {Promise<Object>} Analyse du texte
+ */
+async function analyzeWithAI(extractedText, ctx) {
+    throwIfAborted(ctx);
+    return runWithFallback('analyse', ctx, provider => provider.analyzeText(extractedText, ctx));
 }
 
 /**
@@ -133,31 +147,13 @@ async function analyzeWithAI(extractedText) {
  * @param {Object} analysis - Analyse du contenu
  * @param {Object} childProfile - Profil de l'enfant
  * @param {number} questionCount - Nombre de questions souhaitées (défaut: 5)
+ * @param {Object} [ctx] - Contexte de la requête (signal, délai)
  * @returns {Promise<Object>} Quiz généré
  */
-async function generateQuizWithAI(analysis, childProfile, questionCount = 5) {
-    const providers = getAvailableProviders();
-
-    if (providers.length === 0) {
-        throw createAllProvidersFailedError('Aucun provider IA configuré');
-    }
-
-    console.log(`🎯 Génération de quiz avec ${questionCount} questions demandées`);
-
-    for (const provider of providers) {
-        try {
-            console.log(`🔄 Tentative de génération de quiz avec ${provider.getName()}...`);
-            const result = await provider.generateQuiz(analysis, childProfile, questionCount);
-            console.log(`✅ Quiz généré avec succès avec ${provider.getName()}`);
-            return result;
-        } catch (error) {
-            console.warn(`⚠️ Erreur ${provider.getName()}, tentative avec le provider suivant:`, error.message);
-            // Continue avec le provider suivant
-        }
-    }
-
-    // Ne pas renvoyer un faux quiz « démo » comme s'il venait de l'IA : la route répond 503
-    throw createAllProvidersFailedError('Tous les providers IA ont échoué (quiz)');
+async function generateQuizWithAI(analysis, childProfile, questionCount = 5, ctx) {
+    throwIfAborted(ctx);
+    logger.debug('Génération de quiz', { questionCount });
+    return runWithFallback('génération de quiz', ctx, provider => provider.generateQuiz(analysis, childProfile, questionCount, ctx));
 }
 
 module.exports = {

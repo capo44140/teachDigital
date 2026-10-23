@@ -3,11 +3,15 @@
     <!-- Clé active -->
     <div class="flex items-center justify-between gap-3">
       <div class="flex items-center space-x-3 min-w-0">
-        <div :class="[
-          'w-2.5 h-2.5 rounded-full flex-shrink-0',
-          config.keyConfigured ? 'bg-green-400 shadow-lg shadow-green-400/50' : 'bg-slate-500'
-        ]"></div>
-        <p class="text-xs text-white/50 font-mono truncate">
+        <!-- Pastille décorative : l'état est donné par le texte voisin -->
+        <div
+          aria-hidden="true"
+          :class="[
+            'w-2.5 h-2.5 rounded-full flex-shrink-0',
+            config.keyConfigured ? 'bg-green-400 shadow-lg shadow-green-400/50' : 'bg-slate-500'
+          ]"
+        ></div>
+        <p class="text-xs text-white/70 font-mono truncate">
           {{ config.keyConfigured ? config.maskedKey : 'Aucune clé' }}
         </p>
       </div>
@@ -22,7 +26,7 @@
     </div>
 
     <div>
-      <label :for="`${config.name}-key`" class="block text-xs text-white/40 uppercase tracking-wider mb-2">
+      <label :for="`${config.name}-key`" class="block text-xs text-white/70 uppercase tracking-wider mb-2">
         {{ config.keyConfigured ? 'Remplacer la clé API' : 'Clé API' }}
       </label>
       <input
@@ -31,15 +35,16 @@
         type="password"
         autocomplete="off"
         :placeholder="config.keyPlaceholder"
+        :aria-describedby="`${config.name}-key-hint`"
         class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-all font-mono text-sm"
       >
-      <p class="text-xs text-white/30 mt-1">
+      <p :id="`${config.name}-key-hint`" class="text-xs text-white/70 mt-1">
         Créez une clé sur {{ config.keyUrl }}. Elle est vérifiée puis stockée chiffrée sur le serveur.
       </p>
     </div>
 
     <div>
-      <label :for="`${config.name}-model`" class="block text-xs text-white/40 uppercase tracking-wider mb-2">Modèle</label>
+      <label :for="`${config.name}-model`" class="block text-xs text-white/70 uppercase tracking-wider mb-2">Modèle</label>
       <input
         :id="`${config.name}-model`"
         v-model="modelInput"
@@ -47,19 +52,20 @@
         autocomplete="off"
         :list="`${config.name}-models`"
         :placeholder="config.defaultModel"
+        :aria-describedby="`${config.name}-model-hint`"
         class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-all font-mono text-sm"
       >
       <datalist :id="`${config.name}-models`">
         <option v-for="model in modelSuggestions" :key="model" :value="model"></option>
       </datalist>
-      <p class="text-xs text-white/30 mt-1">
+      <p :id="`${config.name}-model-hint`" class="text-xs text-white/70 mt-1" aria-live="polite">
         <span v-if="loadingModels">Chargement des modèles disponibles… </span>
         <span v-else-if="modelSuggestions.length">{{ modelSuggestions.length }} modèles proposés par {{ config.label }}. </span>
         Vide = défaut : {{ config.defaultModel }}
       </p>
     </div>
 
-    <div v-if="error" class="bg-red-500/20 border border-red-500/30 rounded-xl p-4">
+    <div v-if="error" class="bg-red-500/20 border border-red-500/30 rounded-xl p-4" role="alert">
       <p class="text-red-200 text-sm">{{ error }}</p>
     </div>
 
@@ -70,11 +76,11 @@
         :class="[
           'flex-1 px-6 py-3 rounded-xl font-medium transition-all flex items-center justify-center space-x-2',
           (!hasChanges || saving)
-            ? 'bg-white/5 text-white/30 cursor-not-allowed'
+            ? 'bg-white/5 text-white/70 cursor-not-allowed'
             : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:shadow-lg hover:shadow-purple-500/50'
         ]"
       >
-        <svg v-if="saving" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+        <svg v-if="saving" aria-hidden="true" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>

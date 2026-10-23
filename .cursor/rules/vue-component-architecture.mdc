@@ -1,5 +1,5 @@
 ---
-globs: src/components/*.vue,src/stores/*.js
+globs: frontend/src/views/*.vue,frontend/src/components/**/*.vue,frontend/src/stores/*.js
 description: Architecture et patterns pour les composants Vue.js et la gestion d'état
 ---
 
@@ -7,457 +7,181 @@ description: Architecture et patterns pour les composants Vue.js et la gestion d
 
 ## Structure des Composants
 
-### Template Standard Vue 3
+### Écrans vs composants
+- **`src/views/`** : écrans routés, tous chargés à la demande dans `router/index.js`
+  (FamilyGate, ProfileSelector, PinLock, Dashboard, UserDashboard, ProfileManagement, EditProfilePage,
+  PinSettings, LessonScanner, QuizGenerator, TextQuizGenerator, SecurityDashboard, ParentQuizManagement,
+  LessonDetails, CoursePageManager, CoursePageViewer, ParentActivityManagement, ProgressTracking,
+  ParentProgressTracking, ParentSettings, FamilyGateSettings, ChildSettings, YouTubeVideoManager,
+  YouTubeKidsViewerSimple, ChildHelp, BadgeManager, BadgeAdminManager, AISettings, NotFound).
+  Un nouvel écran va dans `views/` + une route avec le bon `meta` (`public`, `requiresAdmin`, `requiresChildOrTeen`).
+- **`src/components/`** : composants partagés (AppBackground, BaseModal, ConfirmDialog, InstallAppCard,
+  OfflineBanner, PinPad, ImageUpload, OnboardingTour, ProfileSkeleton, PullToRefresh, ToastContainer,
+  UpdateNotification, VersionInfo, AIProviderConfig) et sous-dossiers par domaine : `quiz/`,
+  `lesson-scanner/`, `course-pages/`, `badges/`, `dashboard/`, `progress/`.
+- **`src/composables/`** : `useParentNavigation` (navigation dans l'espace parent), `useQuizGeneration`,
+  `useConfirm`.
+
+### Template standard
 ```vue
 <template>
-  <!-- Structure HTML avec classes TailwindCSS -->
-  <div class="component-container">
-    <!-- Contenu du composant -->
+  <div class="glass-card-dashboard p-6">
+    <h2 id="section-title" class="text-xl font-semibold text-white">{{ title }}</h2>
+    <button type="button" class="..." :disabled="loading" @click="handleAction">
+      <!-- Icône : SVG inline (aria-hidden), pas de bibliothèque d'icônes -->
+      <svg aria-hidden="true" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">…</svg>
+      Enregistrer
+    </button>
   </div>
 </template>
 
-<script>
-import { ref, computed, onMounted, watch } from 'vue'
-import { useStore } from '@/stores/storeName'
-import { Icon } from '@iconify/vue'
+<script setup>
+import { ref } from 'vue'
 
-export default {
-  name: 'ComponentName',
-  components: {
-    Icon
-  },
-  props: {
-    // Props avec validation
-    title: {
-      type: String,
-      required: true
-    },
-    data: {
-      type: Object,
-      default: () => ({})
-    }
-  },
-  emits: ['update', 'delete'],
-  setup(props, { emit }) {
-    // Composition API setup
-    const store = useStore()
-    
-    // Variables réactives
-    const loading = ref(false)
-    const error = ref(null)
-    
-    // Computed properties
-    const computedValue = computed(() => {
-      return props.data.value * 2
-    })
-    
-    // Méthodes
-    const handleAction = () => {
-      emit('update', newValue)
-    }
-    
-    // Lifecycle hooks
-    onMounted(() => {
-      // Initialisation
-    })
-    
-    // Watchers
-    watch(() => props.data, (newData) => {
-      // Réaction aux changements
-    }, { deep: true })
-    
-    return {
-      loading,
-      error,
-      computedValue,
-      handleAction
-    }
-  }
+const props = defineProps({
+  title: { type: String, required: true }
+})
+const emit = defineEmits(['update'])
+const loading = ref(false)
+
+function handleAction () {
+  emit('update', props.title)
 }
 </script>
-
-<style scoped>
-/* Styles spécifiques au composant */
-.component-container {
-  @apply p-4 bg-white rounded-lg shadow-md;
-}
-</style>
 ```
+Les écrans existants utilisent majoritairement l'Options API (`data` / `methods`) avec un `setup()`
+pour les composables : rester cohérent avec le fichier modifié.
 
-## Composants Spécialisés
+## Composants Transverses (montés une seule fois dans App.vue)
+- **AppBackground** : fond animé partagé (teinte selon `meta.bgTone`)
+- **OfflineBanner** : bandeau hors ligne
+- **PullToRefresh** : « tirer pour actualiser » (désactivable par `meta.disablePullToRefresh`)
+- **ToastContainer** : toasts (`toastStore`, `this.$toast`, `useToast()`)
+- **ConfirmDialog** : confirmations (`this.$confirm({ … })`, `useConfirm()`) — jamais `window.confirm`
+- **OnboardingTour** : présentation au premier passage d'un enfant / ado (`onboardingStore`)
+- **UpdateNotification** : proposition de mise à jour (`updateService`)
 
-### Composants de Dashboard
-- **PerformanceDashboard** : [src/components/PerformanceDashboard.vue](mdc:frontend/src/components/PerformanceDashboard.vue)
-- **CacheStats** : Composant de statistiques de cache
-- **ImageOptimizer** : Optimisation d'images
-
-### Composants de Gestion
-- **YouTubeVideoManager** : [src/components/YouTubeVideoManager.vue](mdc:frontend/src/components/YouTubeVideoManager.vue)
-- **YouTubeKidsViewer** : [src/components/YouTubeKidsViewer.vue](mdc:frontend/src/components/YouTubeKidsViewer.vue)
-- **LessonScanner** : Scanner de leçons
-
-### Composants de Configuration
-- **PinSettings** : [src/components/PinSettings.vue](mdc:frontend/src/components/PinSettings.vue)
-- **ChildSettings** : Configuration des profils enfants
-- **BadgeManager** : Gestion des badges
-
-### Composants de Notification
-- **UpdateNotification** : [src/components/UpdateNotification.vue](mdc:frontend/src/components/UpdateNotification.vue)
-- **NotificationCenter** : Centre de notifications
-- **ProgressTracking** : Suivi des progrès
+## Fenêtres modales : BaseModal
+Toute modale passe par [BaseModal.vue](mdc:frontend/src/components/BaseModal.vue) (role `dialog` /
+`alertdialog`, `aria-modal`, focus initial et piégé, Échap, retour du focus) :
+```vue
+<BaseModal :open="showForm" labelledby="form-title" :persistent="saving" @close="showForm = false">
+  <h2 id="form-title">Nouveau badge</h2>
+  <!-- … -->
+</BaseModal>
+```
+`overlayClass` / `panelClass` doivent être des classes globales (Tailwind) : le contenu est téléporté
+hors des styles scopés de l'écran.
 
 ## Gestion d'État avec Pinia
 
-### Structure des Stores
-```javascript
-// src/stores/profileStore.js
-import { defineStore } from 'pinia'
-import { profileService } from '@/services/profileService.js'
+### Stores existants (option stores)
+- **profileStore** : profils, profil sélectionné (persisté), statistiques ; appelle `ProfileService`
+- **badgeStore** : badges et badges du profil
+- **settingsStore** : préférences enfant appliquées par classes sur `<html>` + `styles/preferences.css`
+- **onboardingStore** : état de la présentation guidée
+- **toastStore** : file des toasts
 
-export const useProfileStore = defineStore('profile', () => {
-  // État
-  const profiles = ref([])
-  const currentProfile = ref(null)
-  const loading = ref(false)
-  const error = ref(null)
-  
-  // Getters
-  const activeProfiles = computed(() => 
-    profiles.value.filter(profile => profile.isActive)
-  )
-  
-  const profileCount = computed(() => profiles.value.length)
-  
-  // Actions
-  const fetchProfiles = async () => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      profiles.value = await profileService.getAllProfiles()
-    } catch (err) {
-      error.value = err.message
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-  
-  const createProfile = async (profileData) => {
-    try {
-      const newProfile = await profileService.createProfile(profileData)
-      profiles.value.push(newProfile)
-      return newProfile
-    } catch (err) {
-      error.value = err.message
-      throw err
-    }
-  }
-  
-  const updateProfile = async (id, updates) => {
-    try {
-      const updatedProfile = await profileService.updateProfile(id, updates)
-      const index = profiles.value.findIndex(p => p.id === id)
-      if (index !== -1) {
-        profiles.value[index] = updatedProfile
+Il n'existe pas de store d'authentification ni de store « API » : l'authentification passe par
+`authService`, `sessionService`, `familyGateService`, `parentAccessService`.
+
+### Structure d'un store
+```javascript
+// frontend/src/stores/badgeStore.js (extrait simplifié)
+import { defineStore } from 'pinia'
+import badgeService from '../services/badgeService.js'
+
+export const useBadgeStore = defineStore('badge', {
+  state: () => ({ allBadges: [], profileBadges: [], loading: false, error: null }),
+  getters: {
+    lockedBadges: (state) => state.profileBadges.filter(badge => !badge.is_unlocked)
+  },
+  actions: {
+    async loadAllBadges () {
+      this.loading = true
+      this.error = null
+      try {
+        this.allBadges = await badgeService.getAllBadges()
+      } catch (error) {
+        this.error = error.message
+        throw error
+      } finally {
+        this.loading = false
       }
-      return updatedProfile
-    } catch (err) {
-      error.value = err.message
-      throw err
     }
-  }
-  
-  const deleteProfile = async (id) => {
-    try {
-      await profileService.deleteProfile(id)
-      profiles.value = profiles.value.filter(p => p.id !== id)
-    } catch (err) {
-      error.value = err.message
-      throw err
-    }
-  }
-  
-  const setCurrentProfile = (profile) => {
-    currentProfile.value = profile
-  }
-  
-  return {
-    // État
-    profiles,
-    currentProfile,
-    loading,
-    error,
-    
-    // Getters
-    activeProfiles,
-    profileCount,
-    
-    // Actions
-    fetchProfiles,
-    createProfile,
-    updateProfile,
-    deleteProfile,
-    setCurrentProfile
   }
 })
 ```
-
-### Stores Spécialisés
-- **AuthStore** : [src/stores/authStore.js](mdc:frontend/src/stores/authStore.js)
-- **LessonStore** : [src/stores/lessonStore.js](mdc:frontend/src/stores/lessonStore.js)
-- **ApiStore** : [src/stores/apiStore.js](mdc:frontend/src/stores/apiStore.js)
+Dans un composant `<script setup>`, utiliser `storeToRefs(store)` pour garder la réactivité
+(ne pas déstructurer directement l'état du store).
 
 ## Patterns de Composants
 
-### Composant avec Formulaires
-```vue
-<script>
-export default {
-  setup() {
-    const form = ref({
-      name: '',
-      email: '',
-      age: null
-    })
-    
-    const errors = ref({})
-    const isSubmitting = ref(false)
-    
-    const validateForm = () => {
-      errors.value = {}
-      
-      if (!form.value.name) {
-        errors.value.name = 'Le nom est requis'
-      }
-      
-      if (!form.value.email) {
-        errors.value.email = 'L\'email est requis'
-      } else if (!isValidEmail(form.value.email)) {
-        errors.value.email = 'Format d\'email invalide'
-      }
-      
-      return Object.keys(errors.value).length === 0
-    }
-    
-    const handleSubmit = async () => {
-      if (!validateForm()) return
-      
-      isSubmitting.value = true
-      try {
-        await submitForm(form.value)
-        // Succès
-      } catch (error) {
-        // Gestion d'erreur
-      } finally {
-        isSubmitting.value = false
-      }
-    }
-    
-    return {
-      form,
-      errors,
-      isSubmitting,
-      handleSubmit
-    }
-  }
-}
-</script>
-```
+### Formulaires
+- Validation UI simple (champs requis, format) ; la validation métier est faite par le serveur
+  (message d'erreur 400 renvoyé dans `error.message`)
+- PIN : composant `PinPad` (4 à 8 chiffres) et `utils/pinPolicy.js` pour l'aide à la saisie
+- Images : `ImageUpload` + `imageValidationService` / `imageOptimizationService`
 
-### Composant avec Liste et Filtres
-```vue
-<script>
-export default {
-  setup() {
-    const items = ref([])
-    const filteredItems = computed(() => {
-      let filtered = items.value
-      
-      if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase()
-        filtered = filtered.filter(item => 
-          item.title.toLowerCase().includes(query) ||
-          item.description.toLowerCase().includes(query)
-        )
-      }
-      
-      if (selectedCategory.value) {
-        filtered = filtered.filter(item => item.category === selectedCategory.value)
-      }
-      
-      return filtered.sort((a, b) => {
-        switch (sortBy.value) {
-          case 'title': return a.title.localeCompare(b.title)
-          case 'date': return new Date(b.createdAt) - new Date(a.createdAt)
-          default: return 0
-        }
-      })
-    })
-    
-    const searchQuery = ref('')
-    const selectedCategory = ref('')
-    const sortBy = ref('title')
-    
-    return {
-      items,
-      filteredItems,
-      searchQuery,
-      selectedCategory,
-      sortBy
-    }
-  }
-}
-</script>
-```
+### Navigation parent / enfant
+- Espace parent : `useParentNavigation()` (`goToParent`, `parentLocation`) ; le guard exige `hasParentAccess`
+- Espace enfant : `?profile=` / `?childId=` désigne le profil enfant/ado ; il ne donne aucun droit
 
-### Composant avec Modal
-```vue
-<template>
-  <div v-if="isOpen" class="modal-overlay" @click="closeModal">
-    <div class="modal-content" @click.stop>
-      <div class="modal-header">
-        <h3>{{ title }}</h3>
-        <button @click="closeModal" class="close-button">
-          <Icon name="mdi:close" />
-        </button>
-      </div>
-      <div class="modal-body">
-        <slot />
-      </div>
-      <div class="modal-footer">
-        <slot name="footer">
-          <button @click="closeModal" class="btn-secondary">
-            Annuler
-          </button>
-          <button @click="confirm" class="btn-primary">
-            Confirmer
-          </button>
-        </slot>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script>
-export default {
-  props: {
-    isOpen: Boolean,
-    title: String
-  },
-  emits: ['close', 'confirm'],
-  setup(props, { emit }) {
-    const closeModal = () => emit('close')
-    const confirm = () => emit('confirm')
-    
-    return {
-      closeModal,
-      confirm
-    }
-  }
-}
-</script>
-```
+### Contenu HTML
+- Pas de `v-html` ; avatars via `v-safe-html` (DOMPurify)
+- Pages de cours : uniquement via `CoursePageFrame.vue` (iframe sandbox, URL signée)
 
 ## Bonnes Pratiques
 
 ### Nommage et Organisation
-- **Composants** : PascalCase (ex: `UserProfile.vue`)
+- **Composants** : PascalCase (ex: `UserDashboard.vue`)
 - **Props** : camelCase avec validation
-- **Events** : kebab-case (ex: `@user-updated`)
-- **Slots** : kebab-case (ex: `<template #modal-footer>`)
+- **Events** : kebab-case dans les templates (ex: `@user-updated`)
 
-### Performance
-- Utiliser `v-memo` pour les listes volumineuses
-- Implémenter `v-once` pour le contenu statique
-- Éviter les watchers profonds sur de gros objets
-- Utiliser `shallowRef` pour les objets volumineux
+### Styles
+- Classes Tailwind 4 dans les templates ; effets « liquid glass » via les classes globales
+  (`.glass-card-dashboard`, `.glass-card-stat`, `.glass-stat-card`) et variables `--lg-*` de `styles/liquid-glass.css`
+- Pas de composants `components/ui/*` (supprimés) ni de bibliothèque d'icônes
 
 ### Accessibilité
-- Utiliser les attributs ARIA appropriés
-- Implémenter la navigation au clavier
-- Fournir des labels descriptifs
-- Assurer un contraste suffisant
+- Rôles, libellés et titres explicites : les tests E2E sélectionnent par rôle / libellé (`getByRole`, `getByLabel`)
+- Navigation au clavier (lien d'évitement dans App.vue, focus géré par BaseModal)
+- Contraste suffisant, y compris avec les préférences enfant (`preferences.css`)
 
 ### Tests
-- Tester les interactions utilisateur
-- Vérifier le rendu conditionnel
-- Tester la gestion des erreurs
-- Valider les props et events
+- Composants : `@vue/test-utils` dans `frontend/tests/components/`
+- Vérifier le rendu conditionnel, les événements émis et l'accessibilité (rôles, labels)
 
 ## Communication entre Composants
 
 ### Props Down, Events Up
 ```vue
-<!-- Parent -->
-<ChildComponent 
-  :data="parentData" 
-  @update="handleUpdate"
-  @delete="handleDelete"
+<!-- Parent (views/ParentQuizManagement.vue) -->
+<QuizLessonsList
+  :lessons="selectedChild.lessons || []"
+  :filter-status="filterStatus"
+  @update:filter-status="filterStatus = $event"
+  @view-lesson="viewLesson"
+  @delete-lesson="deleteLesson"
 />
 
-<!-- Child -->
+<!-- Enfant (components/quiz/QuizLessonsList.vue, Options API) -->
 <script>
 export default {
-  props: ['data'],
-  emits: ['update', 'delete'],
-  setup(props, { emit }) {
-    const handleAction = () => {
-      emit('update', newValue)
-    }
-    
-    return { handleAction }
-  }
-}
-</script>
-```
-
-### Provide/Inject pour les données profondes
-```vue
-<!-- Ancestor -->
-<script>
-import { provide } from 'vue'
-
-export default {
-  setup() {
-    const theme = ref('dark')
-    provide('theme', theme)
-    
-    return { theme }
-  }
-}
-</script>
-
-<!-- Descendant -->
-<script>
-import { inject } from 'vue'
-
-export default {
-  setup() {
-    const theme = inject('theme')
-    
-    return { theme }
-  }
+  props: { lessons: { type: Array, required: true }, filterStatus: { type: String, default: 'all' } },
+  emits: ['update:filterStatus', 'view-lesson', 'start-quiz', 'delete-lesson']
 }
 </script>
 ```
 
 ### Store Global pour l'état partagé
 ```vue
-<script>
-import { useProfileStore } from '@/stores/profileStore.js'
+<script setup>
+import { storeToRefs } from 'pinia'
+import { useProfileStore } from '../stores/profileStore.js'
 
-export default {
-  setup() {
-    const profileStore = useProfileStore()
-    
-    // Accès direct à l'état et aux actions
-    return {
-      profiles: profileStore.profiles,
-      loading: profileStore.loading,
-      fetchProfiles: profileStore.fetchProfiles
-    }
-  }
-}
+const profileStore = useProfileStore()
+const { profiles, isLoading } = storeToRefs(profileStore)
 </script>
 ```
+Imports relatifs dans `src/` : l'alias `@` n'est défini que dans `vitest.config.js`, pas dans `vite.config.js`.

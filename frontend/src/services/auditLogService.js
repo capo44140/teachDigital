@@ -1,9 +1,55 @@
 /**
  * Service de logs d'audit - Délégation au backend
- * Toute la logique de logging est gérée par le backend
+ *
+ * POST /api/audit/logs exige un jeton : l'auteur (userId), l'adresse IP et le User-Agent
+ * sont déduits par le serveur. Le client n'envoie donc que l'action, la catégorie, le niveau
+ * et des détails courts. Sans jeton (avant le code familial), rien n'est envoyé : le serveur
+ * journalise lui-même les événements du code familial et de connexion.
  */
 
-import { apiService } from './apiService.js'
+import { apiService, buildQuery } from './apiService.js'
+
+// Actions acceptées par POST /api/audit/logs (les autres sont refusées en 400 :
+// LOGIN_* et QUIZ_COMPLETED sont journalisés par le serveur lui-même)
+export const CLIENT_AUDIT_ACTIONS = new Set([
+  'CLIENT_ERROR',
+  'SYSTEM_ERROR',
+  'SECURITY_VIOLATION',
+  'PROFILE_CREATED',
+  'PROFILE_UPDATED',
+  'LESSON_CREATED',
+  'LESSON_DELETED',
+  'NOTIFICATION_CREATED',
+  'IMAGE_UPLOADED',
+  'QUIZ_GENERATION_START',
+  'QUIZ_GENERATION_SUCCESS',
+  'QUIZ_GENERATION_FAILED',
+  'API_REQUEST_SUCCESS',
+  'API_REQUEST_FAILED'
+])
+
+// Taille maximale des détails (JSON) : 4000 caractères, 2000 pour CLIENT_ERROR (limites serveur,
+// avec une marge pour l'enveloppe { truncated, excerpt })
+const MAX_DETAILS_LENGTH = 3800
+const MAX_CLIENT_ERROR_DETAILS_LENGTH = 1800
+
+function compactDetails (details, maxLength = MAX_DETAILS_LENGTH) {
+  try {
+    const json = JSON.stringify(details ?? {})
+    if (json.length <= maxLength) return details ?? {}
+    return { truncated: true, excerpt: json.slice(0, maxLength) }
+  } catch {
+    return { unserializable: true }
+  }
+}
+
+// Le profil concerné (enfant, leçon…) n'est pas l'auteur : il voyage dans les détails
+function withTargetProfile (profileId, details = {}) {
+  if (profileId === undefined || profileId === null || profileId === '' || profileId === 'unknown') {
+    return details
+  }
+  return { targetProfileId: profileId, ...details }
+}
 
 class AuditLogService {
   constructor () {
@@ -24,112 +70,69 @@ class AuditLogService {
   }
 
   /**
-   * Enregistre un événement d'audit (via backend)
+   * Enregistre un événement d'audit (via backend), uniquement avec un jeton.
+   * @returns {Promise<boolean>} true si l'événement a été envoyé
    */
-  async log (action, userId, category, level = this.levels.INFO, details = {}, ipAddress = null, userAgent = null) {
+  async log (action, category, level = this.levels.INFO, details = {}) {
+    if (!CLIENT_AUDIT_ACTIONS.has(action)) {
+      console.warn('Action d\'audit non acceptée par le serveur, ignorée :', action)
+      return false
+    }
+    if (!apiService.hasToken()) return false
     try {
+      const maxLength = action === 'CLIENT_ERROR' ? MAX_CLIENT_ERROR_DETAILS_LENGTH : MAX_DETAILS_LENGTH
       await apiService.request('/api/audit/logs', {
         method: 'POST',
         body: JSON.stringify({
           action,
-          userId,
           category,
           level,
-          details,
-          ipAddress,
-          userAgent
+          details: compactDetails(details, maxLength)
         })
       })
+      return true
     } catch (error) {
-      console.error('Erreur lors de l\'enregistrement du log d\'audit:', error)
+      console.warn('Log d\'audit non enregistré:', error?.message || error)
+      return false
     }
-  }
-
-  /**
-   * Enregistre une tentative de connexion (via backend)
-   */
-  async logAuthentication (userId, success, method = 'pin', details = {}) {
-    const level = success ? this.levels.INFO : this.levels.WARNING
-    const action = success ? 'LOGIN_SUCCESS' : 'LOGIN_FAILED'
-
-    await this.log(
-      action,
-      userId,
-      this.categories.AUTHENTICATION,
-      level,
-      {
-        method,
-        success,
-        ...details
-      }
-    )
   }
 
   /**
    * Enregistre un changement de profil (via backend)
    */
-  async logProfileChange (userId, action, changes = {}) {
-    await this.log(
+  async logProfileChange (profileId, action, changes = {}) {
+    return this.log(
       action,
-      userId,
       this.categories.DATA_ACCESS,
       this.levels.INFO,
-      {
-        changes,
-        timestamp: new Date().toISOString()
-      }
+      withTargetProfile(profileId, { changes })
     )
   }
 
   /**
-   * Enregistre l'utilisation d'une API IA (via backend)
+   * Enregistre un accès aux données (via backend)
    */
-  async logApiUsage (userId, apiType, success, details = {}) {
-    const level = success ? this.levels.INFO : this.levels.ERROR
-    const action = success ? 'API_REQUEST_SUCCESS' : 'API_REQUEST_FAILED'
-
-    await this.log(
+  async logDataAccess (profileId, dataType, action, details = {}) {
+    return this.log(
       action,
-      userId,
+      this.categories.DATA_ACCESS,
+      this.levels.INFO,
+      withTargetProfile(profileId, { dataType, ...details })
+    )
+  }
+
+  /**
+   * Étape d'une génération de quiz par l'IA
+   * @param {'START'|'SUCCESS'|'FAILED'} phase
+   * @param {string|number} profileId - enfant ciblé
+   * @param {Object} details - source (scanner / texte), nombre de questions…
+   */
+  async logQuizGeneration (phase, profileId, details = {}) {
+    return this.log(
+      `QUIZ_GENERATION_${phase}`,
       this.categories.API_USAGE,
-      level,
-      {
-        apiType,
-        success,
-        ...details
-      }
-    )
-  }
-
-  /**
-   * Enregistre une violation de sécurité (via backend)
-   */
-  async logSecurityViolation (userId, violation, details = {}) {
-    await this.log(
-      'SECURITY_VIOLATION',
-      userId,
-      this.categories.SECURITY,
-      this.levels.CRITICAL,
-      {
-        violation,
-        ...details
-      }
-    )
-  }
-
-  /**
-   * Enregistre un accès aux données sensibles (via backend)
-   */
-  async logDataAccess (userId, dataType, action, details = {}) {
-    await this.log(
-      action,
-      userId,
-      this.categories.DATA_ACCESS,
-      this.levels.INFO,
-      {
-        dataType,
-        ...details
-      }
+      phase === 'FAILED' ? this.levels.ERROR : this.levels.INFO,
+      withTargetProfile(profileId, details)
     )
   }
 
@@ -137,9 +140,8 @@ class AuditLogService {
    * Enregistre une erreur système (via backend)
    */
   async logSystemError (error, component, details = {}) {
-    await this.log(
+    return this.log(
       'SYSTEM_ERROR',
-      'system',
       this.categories.SYSTEM,
       this.levels.ERROR,
       {
@@ -151,19 +153,18 @@ class AuditLogService {
   }
 
   /**
+   * Erreur JavaScript non interceptée côté client (action CLIENT_ERROR, détails courts)
+   */
+  async logClientError (details = {}) {
+    return this.log('CLIENT_ERROR', this.categories.SYSTEM, this.levels.ERROR, details)
+  }
+
+  /**
    * Récupère les logs d'audit (via backend)
    */
   async getLogs (filters = {}) {
     try {
-      const params = new URLSearchParams()
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          params.append(key, value)
-        }
-      })
-
-      const endpoint = params.toString() ? `/api/audit/logs?${params}` : '/api/audit/logs'
-      const response = await apiService.request(endpoint)
+      const response = await apiService.request(`/api/audit/logs${buildQuery(filters)}`)
       return response.data?.logs || []
     } catch (error) {
       console.error('Erreur lors de la récupération des logs:', error)
@@ -176,7 +177,7 @@ class AuditLogService {
    */
   async getSecurityStats (days = 7) {
     try {
-      const response = await apiService.request(`/api/audit/stats?days=${days}`)
+      const response = await apiService.request(`/api/audit/stats${buildQuery({ days })}`)
       return response.data || {}
     } catch (error) {
       console.error('Erreur lors de la récupération des stats:', error)

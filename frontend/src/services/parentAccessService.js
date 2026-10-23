@@ -6,6 +6,7 @@
 
 import sessionService from './sessionService.js'
 import { apiService } from './apiService.js'
+import { authService } from './authService.js'
 
 /**
  * @param {string|number} profileId
@@ -21,5 +22,5 @@ export function hasParentAccess (profileId) {
  * (la session famille est conservée).
  */
 export function leaveParentSpace () {
-  return apiService.logout()
+  return authService.logout()
 }

@@ -12,6 +12,13 @@ jest.mock('../../lib/database.js', () => ({
 const { pool } = require('../../lib/database.js');
 const { handleYoutubeVideos, handleYoutubeVideo } = require('../../controllers/youtubeController.js');
 const { createMockRequest, createMockResponse } = require('../helpers/testHelpers.js');
+const { validate } = require('../../lib/validation.js');
+const { youtubeVideoCreateSchema, youtubeVideoUpdateSchema } = require('../../lib/schemas.js');
+const { runChain } = require('./support/chain.js');
+
+// Chaînes identiques à api/index.js (validation Zod puis contrôleur)
+const createRoute = [validate(youtubeVideoCreateSchema), handleYoutubeVideos];
+const updateRoute = [validate(youtubeVideoUpdateSchema), handleYoutubeVideo];
 
 const video = {
   id: 3,
@@ -91,7 +98,7 @@ describe('YouTube - /youtube-videos/:id', () => {
     req.user = admin;
     const res = createMockResponse();
 
-    await handleYoutubeVideo(req, res);
+    await runChain(updateRoute, req, res);
 
     expect(res.statusCode).toBe(200);
     expect(res.body.data.video.is_active).toBe(false);
@@ -106,7 +113,7 @@ describe('YouTube - /youtube-videos/:id', () => {
     req.user = admin;
     const res = createMockResponse();
 
-    await handleYoutubeVideo(req, res);
+    await runChain(updateRoute, req, res);
 
     expect(res.statusCode).toBe(400);
     expect(pool.query).not.toHaveBeenCalled();
@@ -157,7 +164,7 @@ describe('YouTube - collection', () => {
     req.user = admin;
     const res = createMockResponse();
 
-    await handleYoutubeVideos(req, res);
+    await runChain(createRoute, req, res);
 
     expect(res.statusCode).toBe(201);
     expect(res.body.data.video.id).toBe(3);
@@ -176,13 +183,28 @@ describe('YouTube - collection', () => {
   });
 
   it('POST valide les champs requis et les longueurs', async () => {
-    const req = createMockRequest('POST', '/api/youtube-videos', { title: 'Sans URL' });
-    req.user = admin;
-    const res = createMockResponse();
+    for (const body of [{ title: 'Sans URL' }, { url: 'u', video_id: 'v'.repeat(65), title: 'T' }, { url: 'u', videoId: 'v', title: 'T', isActive: 'peut-être' }]) {
+      const req = createMockRequest('POST', '/api/youtube-videos', body);
+      req.user = admin;
+      const res = createMockResponse();
 
-    await handleYoutubeVideos(req, res);
+      await runChain(createRoute, req, res);
 
-    expect(res.statusCode).toBe(400);
+      expect(res.statusCode).toBe(400);
+      expect(res.body.code).toBe('VALIDATION_ERROR');
+    }
     expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  it('POST applique les valeurs par défaut (catégorie, tranche d\'âge, active)', async () => {
+    pool.query.mockResolvedValue({ rows: [video] });
+    const req = createMockRequest('POST', '/api/youtube-videos', { url: video.url, videoId: 'abc123', title: 'T' });
+    req.user = admin;
+
+    await runChain(createRoute, req, createMockResponse());
+
+    const [sqlText, params] = pool.query.mock.calls[0];
+    expect(sqlText).toContain('video_id');
+    expect(params).toEqual(expect.arrayContaining(['abc123', 'general', '6-12', true, '']));
   });
 });
