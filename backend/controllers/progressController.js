@@ -1,10 +1,17 @@
+const { types: pgTypes } = require('pg')
 const { default: sql } = require('../lib/database.js')
 const { canActForProfile } = require('../lib/auth.js')
 const { handleError, createErrorResponse } = require('../lib/response.js')
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js')
+const { computeStreaksFromDayKeys } = require('../lib/streaks.js')
 
 const DEFAULT_HISTORY_LIMIT = 50
 const MAX_HISTORY_LIMIT = 500
+
+// Les dates agrégées en JSON reviennent en texte : on les convertit avec le même parser
+// que pg pour une colonne timestamp (réponse identique à celle d'une requête classique)
+const parseTimestamp = pgTypes.getTypeParser(1114, 'text')
+const toTimestamp = value => (value === null || value === undefined ? null : parseTimestamp(value))
 
 function startOfWeekMonday(date = new Date()) {
   const d = new Date(date)
@@ -13,60 +20,6 @@ function startOfWeekMonday(date = new Date()) {
   const day = (d.getDay() + 6) % 7
   d.setDate(d.getDate() - day)
   return d
-}
-
-function toDateOnlyKey(date) {
-  // YYYY-MM-DD en local (ok pour streak)
-  const d = new Date(date)
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
-
-function computeStreaksFromDayKeys(dayKeys) {
-  // dayKeys: array unique, trié desc (YYYY-MM-DD)
-  if (!Array.isArray(dayKeys) || dayKeys.length === 0) {
-    return { current: 0, best: 0, lastActivityDate: null }
-  }
-
-  const todayKey = toDateOnlyKey(new Date())
-  const yesterday = new Date()
-  yesterday.setDate(yesterday.getDate() - 1)
-  const yesterdayKey = toDateOnlyKey(yesterday)
-
-  const set = new Set(dayKeys)
-
-  // current streak: commence aujourd'hui si activité, sinon hier si activité, sinon 0
-  let current = 0
-  let cursor = null
-  if (set.has(todayKey)) cursor = new Date()
-  else if (set.has(yesterdayKey)) cursor = yesterday
-  else cursor = null
-
-  while (cursor) {
-    const key = toDateOnlyKey(cursor)
-    if (!set.has(key)) break
-    current++
-    cursor.setDate(cursor.getDate() - 1)
-  }
-
-  // best streak: parcourir toutes les dates (desc) et compter runs consécutifs
-  let best = 1
-  let run = 1
-  for (let i = 1; i < dayKeys.length; i++) {
-    const prev = new Date(dayKeys[i - 1])
-    const cur = new Date(dayKeys[i])
-    prev.setDate(prev.getDate() - 1)
-    if (toDateOnlyKey(prev) === toDateOnlyKey(cur)) {
-      run++
-      best = Math.max(best, run)
-    } else {
-      run = 1
-    }
-  }
-
-  return { current, best, lastActivityDate: dayKeys[0] }
 }
 
 function computeLevelFromXp(xpTotal) {
@@ -173,6 +126,87 @@ function buildAchievements({ totals, streaks, subjectsVariety, perfectCount }) {
   }))
 }
 
+/**
+ * Toutes les statistiques du résumé en UNE requête (CTE + FILTER + agrégats JSON),
+ * au lieu de 7 requêtes parallèles qui occupaient jusqu'à 7 connexions du pool par appel.
+ * Les timestamps et décimaux passent en texte dans le JSON pour garder exactement les
+ * types renvoyés jusqu'ici (Date, chaîne « 75.00 » pour percentage).
+ */
+function buildProgressSummaryQuery(profileId, weekStartIso, historyLimit) {
+  return sql`
+    WITH results AS (
+      SELECT
+        qr.id,
+        qr.lesson_id,
+        qr.course_page_id,
+        qr.score,
+        qr.total_questions,
+        qr.percentage,
+        qr.answers,
+        qr.is_completed,
+        qr.completed_at,
+        COALESCE(l.title, cp.title) AS lesson_title,
+        NULLIF(TRIM(COALESCE(l.subject, cp.subject)), '') AS subject_name,
+        COALESCE(
+          qr.completed_at >= ${weekStartIso}::timestamptz
+            AND qr.completed_at < (${weekStartIso}::timestamptz + interval '7 days'),
+          false
+        ) AS in_week
+      FROM quiz_results qr
+      LEFT JOIN lessons l ON l.id = qr.lesson_id
+      LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
+      WHERE qr.profile_id = ${profileId}
+    ),
+    totals AS (
+      SELECT
+        COUNT(*)::int AS total_quizzes,
+        COALESCE(AVG(percentage), 0)::float AS average_score,
+        COALESCE(SUM(percentage), 0)::int AS xp_sum,
+        COUNT(*) FILTER (WHERE percentage = 100 AND is_completed IS NOT FALSE)::int AS perfect_count,
+        COUNT(*) FILTER (WHERE in_week)::int AS quizzes_this_week,
+        COUNT(*) FILTER (WHERE in_week AND percentage = 100 AND is_completed IS NOT FALSE)::int AS perfect_this_week,
+        COUNT(DISTINCT subject_name) FILTER (WHERE in_week)::int AS subjects_this_week
+      FROM results
+    )
+    SELECT
+      t.*,
+      (SELECT COALESCE(json_agg(d.day_key ORDER BY d.day_key DESC), '[]'::json)
+         FROM (SELECT DISTINCT to_char(DATE(completed_at), 'YYYY-MM-DD') AS day_key
+               FROM results WHERE completed_at IS NOT NULL
+               ORDER BY day_key DESC LIMIT 365) d) AS day_keys,
+      (SELECT COALESCE(json_agg(s ORDER BY s.quizzes DESC, s.average_score DESC), '[]'::json)
+         FROM (SELECT COALESCE(subject_name, 'Autres') AS subject,
+                      COUNT(*)::int AS quizzes,
+                      COALESCE(AVG(percentage), 0)::float AS average_score,
+                      MAX(completed_at)::text AS last_attempt
+               FROM results
+               GROUP BY 1
+               ORDER BY quizzes DESC, average_score DESC
+               LIMIT 20) s) AS skills,
+      (SELECT COALESCE(json_agg(m ORDER BY m.month_key DESC), '[]'::json)
+         FROM (SELECT to_char(date_trunc('month', completed_at), 'YYYY-MM') AS month_key,
+                      COUNT(*)::int AS quiz_count,
+                      COALESCE(AVG(percentage), 0)::float AS average_score
+               FROM results
+               WHERE completed_at IS NOT NULL
+               GROUP BY 1
+               ORDER BY month_key DESC
+               LIMIT 6) m) AS monthly,
+      (SELECT COALESCE(json_agg(h ORDER BY h.position), '[]'::json)
+         FROM (SELECT id, lesson_id, course_page_id, lesson_title,
+                      COALESCE(subject_name, 'Autres') AS subject,
+                      score, total_questions,
+                      percentage::text AS percentage,
+                      answers, is_completed,
+                      completed_at::text AS completed_at,
+                      ROW_NUMBER() OVER (ORDER BY completed_at DESC, id DESC) AS position
+               FROM results
+               ORDER BY completed_at DESC, id DESC
+               LIMIT ${historyLimit}) h) AS history
+    FROM totals t
+  `
+}
+
 async function handleProfileProgressSummary(req, res) {
   try {
     if (req.method !== 'GET') {
@@ -187,7 +221,9 @@ async function handleProfileProgressSummary(req, res) {
       return
     }
 
-    if (!canActForProfile(req.user, profileIdNum)) {
+    // canActForProfile est asynchrone (statut admin de la cible lu en base, avec cache) :
+    // sans await, la Promise serait toujours « vraie » et l'accès jamais refusé
+    if (!(await canActForProfile(req.user, profileIdNum))) {
       res.status(403).json(createErrorResponse('Accès refusé', 'FORBIDDEN'))
       return
     }
@@ -201,131 +237,29 @@ async function handleProfileProgressSummary(req, res) {
     const weekStart = startOfWeekMonday(new Date())
     const weekStartIso = weekStart.toISOString()
 
-    const [
-      totalsRes,
-      perfectRes,
-      dayKeysRes,
-      weekStatsRes,
-      skillsRes,
-      monthlyRes,
-      recentHistoryRes
-    ] = await Promise.all([
-      withQueryTimeout(
-        sql`SELECT COUNT(*)::int as total_quizzes, COALESCE(AVG(percentage), 0)::float as average_score, COALESCE(SUM(percentage), 0)::int as xp_sum FROM quiz_results WHERE profile_id = ${profileIdNum}`,
-        TIMEOUTS.STANDARD,
-        'progress summary (totals)'
-      ),
-      withQueryTimeout(
-        sql`SELECT COUNT(*)::int as perfect_count FROM quiz_results WHERE profile_id = ${profileIdNum} AND percentage = 100 AND is_completed IS NOT FALSE`,
-        TIMEOUTS.STANDARD,
-        'progress summary (perfect)'
-      ),
-      withQueryTimeout(
-        sql`
-          SELECT DISTINCT DATE(completed_at) as day
-          FROM quiz_results
-          WHERE profile_id = ${profileIdNum}
-          ORDER BY day DESC
-          LIMIT 365
-        `,
-        TIMEOUTS.STANDARD,
-        'progress summary (days)'
-      ),
-      withQueryTimeout(
-        sql`
-          SELECT 
-            COUNT(*)::int as quizzes_this_week,
-            COUNT(*) FILTER (WHERE percentage = 100 AND is_completed IS NOT FALSE)::int as perfect_this_week,
-            COUNT(DISTINCT NULLIF(TRIM(COALESCE(l.subject, cp.subject)), ''))::int as subjects_this_week
-          FROM quiz_results qr
-          LEFT JOIN lessons l ON l.id = qr.lesson_id
-          LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
-          WHERE qr.profile_id = ${profileIdNum}
-            AND qr.completed_at >= ${weekStartIso}::timestamptz
-            AND qr.completed_at < (${weekStartIso}::timestamptz + interval '7 days')
-        `,
-        TIMEOUTS.STANDARD,
-        'progress summary (week)'
-      ),
-      withQueryTimeout(
-        sql`
-          SELECT 
-            COALESCE(NULLIF(TRIM(COALESCE(l.subject, cp.subject)), ''), 'Autres') as subject,
-            COUNT(*)::int as quizzes,
-            COALESCE(AVG(qr.percentage), 0)::float as average_score,
-            MAX(qr.completed_at) as last_attempt
-          FROM quiz_results qr
-          LEFT JOIN lessons l ON l.id = qr.lesson_id
-          LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
-          WHERE qr.profile_id = ${profileIdNum}
-          GROUP BY 1
-          ORDER BY quizzes DESC, average_score DESC
-          LIMIT 20
-        `,
-        TIMEOUTS.STANDARD,
-        'progress summary (skills)'
-      ),
-      withQueryTimeout(
-        sql`
-          SELECT 
-            to_char(date_trunc('month', completed_at), 'YYYY-MM') as month_key,
-            COUNT(*)::int as quiz_count,
-            COALESCE(AVG(percentage), 0)::float as average_score
-          FROM quiz_results
-          WHERE profile_id = ${profileIdNum}
-          GROUP BY 1
-          ORDER BY month_key DESC
-          LIMIT 6
-        `,
-        TIMEOUTS.STANDARD,
-        'progress summary (monthly)'
-      ),
-      withQueryTimeout(
-        sql`
-          SELECT
-            qr.id,
-            qr.lesson_id,
-            qr.course_page_id,
-            COALESCE(l.title, cp.title) as lesson_title,
-            COALESCE(NULLIF(TRIM(COALESCE(l.subject, cp.subject)), ''), 'Autres') as subject,
-            qr.score,
-            qr.total_questions,
-            qr.percentage,
-            qr.answers,
-            qr.is_completed,
-            qr.completed_at
-          FROM quiz_results qr
-          LEFT JOIN lessons l ON l.id = qr.lesson_id
-          LEFT JOIN course_pages cp ON cp.id = qr.course_page_id
-          WHERE qr.profile_id = ${profileIdNum}
-          ORDER BY qr.completed_at DESC
-          LIMIT ${historyLimit}
-        `,
-        TIMEOUTS.STANDARD,
-        'progress summary (recent history)'
-      )
-    ])
+    const rows = await withQueryTimeout(
+      buildProgressSummaryQuery(profileIdNum, weekStartIso, historyLimit),
+      TIMEOUTS.LONG,
+      'résumé de progression'
+    )
+    const row = rows?.[0] || {}
 
-    const totalsRow = totalsRes?.[0] || {}
-    const perfectCount = perfectRes?.[0]?.perfect_count ?? 0
-    const dayKeys = (dayKeysRes || []).map(r => toDateOnlyKey(r.day))
-    const streaks = computeStreaksFromDayKeys(dayKeys)
+    const perfectCount = Number(row.perfect_count) || 0
+    const streaks = computeStreaksFromDayKeys(row.day_keys || [])
 
-    const weekRow = weekStatsRes?.[0] || {}
-    const subjectsThisWeek = Number(weekRow.subjects_this_week) || 0
-
-    const xpBase = Number(totalsRow.xp_sum) || 0
-    const xpTotal = xpBase + (Number(perfectCount) || 0) * 50
+    const xpBase = Number(row.xp_sum) || 0
+    const xpTotal = xpBase + perfectCount * 50
     const levelInfo = computeLevelFromXp(xpTotal)
 
-    const subjectsVarietyAllTime = (skillsRes || []).filter(s => s.subject && s.subject !== 'Autres').length
+    const skills = Array.isArray(row.skills) ? row.skills : []
+    const subjectsVarietyAllTime = skills.filter(s => s.subject && s.subject !== 'Autres').length
 
     const summary = {
       profileId: profileIdNum,
       totals: {
-        totalQuizzes: Number(totalsRow.total_quizzes) || 0,
-        averageScore: Number(totalsRow.average_score) || 0,
-        perfectCount: Number(perfectCount) || 0
+        totalQuizzes: Number(row.total_quizzes) || 0,
+        averageScore: Number(row.average_score) || 0,
+        perfectCount
       },
       streaks,
       xp: {
@@ -334,24 +268,24 @@ async function handleProfileProgressSummary(req, res) {
       },
       week: {
         start: weekStartIso,
-        quizzesThisWeek: Number(weekRow.quizzes_this_week) || 0,
-        perfectThisWeek: Number(weekRow.perfect_this_week) || 0,
-        subjectsThisWeek
+        quizzesThisWeek: Number(row.quizzes_this_week) || 0,
+        perfectThisWeek: Number(row.perfect_this_week) || 0,
+        subjectsThisWeek: Number(row.subjects_this_week) || 0
       },
       weeklyGoals: null,
-      skills: (skillsRes || []).map(s => ({
+      skills: skills.map(s => ({
         subject: s.subject,
         quizzes: Number(s.quizzes) || 0,
         averageScore: Number(s.average_score) || 0,
-        lastAttempt: s.last_attempt
+        lastAttempt: toTimestamp(s.last_attempt)
       })),
-      monthlyProgress: (monthlyRes || []).map(m => ({
+      monthlyProgress: (Array.isArray(row.monthly) ? row.monthly : []).map(m => ({
         monthKey: m.month_key,
         quizCount: Number(m.quiz_count) || 0,
         averageScore: Number(m.average_score) || 0
       })),
       achievements: null,
-      recentHistory: (recentHistoryRes || []).map(q => ({
+      recentHistory: (Array.isArray(row.history) ? row.history : []).map(q => ({
         id: q.id,
         lessonId: q.lesson_id,
         coursePageId: q.course_page_id,
@@ -363,7 +297,7 @@ async function handleProfileProgressSummary(req, res) {
         percentage: q.percentage,
         answers: q.answers,
         isCompleted: q.is_completed !== false,
-        completedAt: q.completed_at
+        completedAt: toTimestamp(q.completed_at)
       }))
     }
 
@@ -387,6 +321,6 @@ async function handleProfileProgressSummary(req, res) {
 }
 
 module.exports = {
-  handleProfileProgressSummary
+  handleProfileProgressSummary,
+  buildProgressSummaryQuery
 }
-

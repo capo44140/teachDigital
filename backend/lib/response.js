@@ -1,4 +1,5 @@
 // Utilitaires pour les réponses API standardisées
+const logger = require('./logger.js');
 
 function buildErrorPayload(message, code = 'ERROR', data = null, extra = {}) {
   return {
@@ -76,13 +77,18 @@ function notFoundResponse(message = 'Ressource non trouvée') {
 // Les détails techniques (message PostgreSQL, detail, hint, stack) restent dans les logs serveur :
 // les renvoyer au client permet d'extraire des données par messages d'erreur.
 function handleError(error, defaultMessage = 'Erreur interne du serveur') {
-  console.error('Erreur API:', error);
-
   const message = typeof error?.message === 'string' ? error.message : '';
 
   if (message === 'Token manquant' || message === 'Token invalide') {
     return unauthorizedResponse(message);
   }
+
+  // Le détail technique va dans les logs (masqués), jamais dans la réponse
+  logger.error(`Erreur API : ${defaultMessage}`, {
+    error,
+    ...(error?.detail ? { detail: error.detail } : {}),
+    ...(error?.hint ? { hint: error.hint } : {})
+  });
 
   // Erreurs de timeout (à tester avant les erreurs base : elles portent aussi un code)
   const isTimeout =
@@ -96,12 +102,6 @@ function handleError(error, defaultMessage = 'Erreur interne du serveur') {
 
   // Erreurs PostgreSQL (codes SQLSTATE à 5 caractères) ou réseau (ECONNREFUSED...)
   if (error?.code && (typeof error.code === 'string' || typeof error.code === 'number')) {
-    console.error('Erreur PostgreSQL:', {
-      code: error.code,
-      message: error.message,
-      detail: error.detail,
-      hint: error.hint
-    });
     // Contraintes : message générique mais statut utile au client
     if (error.code === '23505') {
       return errorResponse('Cette ressource existe déjà', 409, null, 'CONFLICT');

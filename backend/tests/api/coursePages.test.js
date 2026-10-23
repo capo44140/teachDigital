@@ -5,19 +5,21 @@
 
 jest.mock('../../lib/database.js', () => ({
   pool: { query: jest.fn() },
-  default: jest.fn()
+  // Vérification d'accès aux profils (lib/auth.js) : seul le profil 1 est un parent
+  default: jest.fn((strings, ...values) => Promise.resolve([{ is_admin: values[0] === 1, is_active: true, token_version: 0 }]))
 }));
 // Importé par testHelpers mais inutile ici
 jest.mock('../../lib/nativeHash.js', () => ({ NativeHashService: {} }));
 
 const { pool } = require('../../lib/database.js');
 const { handleCoursePages, handleCoursePage } = require('../../controllers/coursePageController.js');
-const { generateToken } = require('../../lib/auth.js');
+const { generateToken, generateFamilyToken } = require('../../lib/auth.js');
 const { coursePageCreateSchema } = require('../../lib/schemas.js');
 const { createMockRequest, createMockResponse } = require('../helpers/testHelpers.js');
 
 const adminAuth = () => ({ authorization: `Bearer ${generateToken({ profileId: 1, isAdmin: true })}` });
 const childAuth = () => ({ authorization: `Bearer ${generateToken({ profileId: 7, isAdmin: false })}` });
+const familyAuth = () => ({ authorization: `Bearer ${generateFamilyToken().token}` });
 
 const PAGE = {
   id: 12,
@@ -35,9 +37,9 @@ describe('API Endpoints - Pages de cours', () => {
   });
 
   describe('GET /api/course-pages', () => {
-    it('liste les pages publiées d\'un enfant sans token', async () => {
+    it('liste les pages publiées d\'un enfant pour cet enfant', async () => {
       pool.query.mockResolvedValueOnce({ rows: [PAGE] });
-      const req = createMockRequest('GET', '/api/course-pages?targetProfileId=7&published=false');
+      const req = createMockRequest('GET', '/api/course-pages?targetProfileId=7&published=false', {}, childAuth());
       const res = createMockResponse();
 
       await handleCoursePages(req, res);
@@ -49,6 +51,35 @@ describe('API Endpoints - Pages de cours', () => {
       expect(sqlText).toContain('is_published = true');
       expect(sqlText).not.toContain('html_content');
       expect(params).toEqual([7]);
+    });
+
+    it('refuse les pages d\'un autre enfant à un profil enfant', async () => {
+      const req = createMockRequest('GET', '/api/course-pages?targetProfileId=8', {}, childAuth());
+      const res = createMockResponse();
+
+      await handleCoursePages(req, res);
+
+      expect(res.statusCode).toBe(403);
+      expect(pool.query).not.toHaveBeenCalled();
+    });
+
+    it('refuse au jeton famille les pages ciblant un parent', async () => {
+      const req = createMockRequest('GET', '/api/course-pages?targetProfileId=1', {}, familyAuth());
+      const res = createMockResponse();
+
+      await handleCoursePages(req, res);
+
+      expect(res.statusCode).toBe(403);
+    });
+
+    it('laisse le jeton famille lire les pages d\'un enfant', async () => {
+      pool.query.mockResolvedValueOnce({ rows: [PAGE] });
+      const req = createMockRequest('GET', '/api/course-pages?targetProfileId=7', {}, familyAuth());
+      const res = createMockResponse();
+
+      await handleCoursePages(req, res);
+
+      expect(res.statusCode).toBe(200);
     });
 
     it('refuse la liste complète sans token parent', async () => {
@@ -87,13 +118,13 @@ describe('API Endpoints - Pages de cours', () => {
   describe('POST /api/course-pages', () => {
     const body = { title: 'Les molécules', subject: '', htmlContent: '<html></html>', targetProfileId: 7 };
 
-    it('exige un token', async () => {
+    it('refuse sans utilisateur authentifié (le 401 est renvoyé par le routeur)', async () => {
       const req = createMockRequest('POST', '/api/course-pages', body);
       const res = createMockResponse();
 
       await handleCoursePages(req, res);
 
-      expect(res.statusCode).toBe(401);
+      expect(res.statusCode).toBe(403);
     });
 
     it('refuse un profil enfant', async () => {
@@ -142,6 +173,26 @@ describe('API Endpoints - Pages de cours', () => {
       await handleCoursePage(req, res);
 
       expect(res.statusCode).toBe(404);
+    });
+
+    it('cache à un enfant la page publiée d\'un autre enfant', async () => {
+      pool.query.mockResolvedValueOnce({ rows: [{ ...PAGE, target_profile_id: 8, html_content: '<p>x</p>' }] });
+      const req = createMockRequest('GET', '/api/course-pages/12', {}, childAuth());
+      const res = createMockResponse();
+
+      await handleCoursePage(req, res);
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('montre une page publiée à son enfant', async () => {
+      pool.query.mockResolvedValueOnce({ rows: [{ ...PAGE, html_content: '<p>x</p>' }] });
+      const req = createMockRequest('GET', '/api/course-pages/12', {}, childAuth());
+      const res = createMockResponse();
+
+      await handleCoursePage(req, res);
+
+      expect(res.statusCode).toBe(200);
     });
 
     it('montre une page masquée à un parent (aperçu)', async () => {

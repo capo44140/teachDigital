@@ -168,7 +168,8 @@ describeWithDb('API Endpoints - Notifications', () => {
 
       await handleNotifications(req, res);
 
-      expect(res.statusCode).toBe(401);
+      // Le 401 (jeton manquant) est renvoyé par le routeur (router.test.js) ; le contrôleur refuse l'action
+      expect(res.statusCode).toBe(403);
     });
 
     it('devrait refuser la création sans champs requis', async () => {
@@ -269,7 +270,8 @@ describeWithDb('API Endpoints - Notifications', () => {
 
       await handleNotification(req, res);
 
-      expect(res.statusCode).toBe(401);
+      // Sans utilisateur, la notification est introuvable (le 401 est renvoyé par le routeur)
+      expect(res.statusCode).toBe(404);
     });
   });
 
@@ -305,7 +307,8 @@ describeWithDb('API Endpoints - Notifications', () => {
 
       await handleNotification(req, res);
 
-      expect(res.statusCode).toBe(401);
+      // Sans utilisateur, la notification est introuvable (le 401 est renvoyé par le routeur)
+      expect(res.statusCode).toBe(404);
     });
   });
 });

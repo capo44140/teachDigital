@@ -50,15 +50,17 @@ async function createTestProfile(overrides = {}) {
 }
 
 /**
- * Crée un code PIN pour un profil
+ * Crée (ou remplace) le code PIN d'un profil : un seul PIN par profil
+ * (contrainte UNIQUE (profile_id), migration 0101_pin_codes_unique_profile.sql)
  */
 async function createTestPin(profileId, pin = '1234') {
   try {
     const hashedPin = await NativeHashService.hashPin(pin);
-    
+
     const result = await sql`
       INSERT INTO pin_codes (profile_id, pin_code)
       VALUES (${profileId}, ${hashedPin})
+      ON CONFLICT (profile_id) DO UPDATE SET pin_code = EXCLUDED.pin_code, updated_at = CURRENT_TIMESTAMP
       RETURNING *
     `;
 
@@ -253,7 +255,8 @@ async function createTestBadge(overrides = {}) {
   const badgeData = {
     name: 'Test Badge',
     description: 'Badge de test',
-    icon: '🏆',
+    // Texte simple : les bases de test locales peuvent être en WIN1252 (pas d'emoji)
+    icon: 'trophy',
     category: 'test',
     condition_type: 'quiz_completed',
     condition_value: 1,

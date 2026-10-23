@@ -32,6 +32,8 @@ async function initFamilyGate() {
         VALUES (1, $1, CURRENT_TIMESTAMP)
         ON CONFLICT (id) DO UPDATE SET
           pin_hash = EXCLUDED.pin_hash,
+          -- Nouveau code : les sessions « famille » ouvertes avec l'ancien sont révoquées
+          token_version = family_gate.token_version + 1,
           updated_at = CURRENT_TIMESTAMP
       `,
       [hashedPin]
@@ -43,7 +45,8 @@ async function initFamilyGate() {
     await db.pool.end();
   } catch (err) {
     if (err.code === '42P01') {
-      console.error('❌ Table family_gate absente. Exécutez d\'abord: psql -f scripts/create-family-gate-table.sql');
+      // La table est créée par les migrations (migrations/0001_baseline.sql)
+      console.error('❌ Table family_gate absente. Appliquez d\'abord les migrations : pnpm run migrate (ou démarrez le serveur).');
     } else {
       console.error('❌ Erreur:', err.message);
     }

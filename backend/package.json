@@ -7,9 +7,12 @@
     "dev": "node server.js",
     "start": "node server.js",
     "build": "echo 'No build step required'",
-    "setup:env": "node scripts/setup-env.js",
+    "migrate": "node scripts/migrate.js",
+    "migrate:status": "node scripts/migrate.js --status",
     "init-badges": "node scripts/init-badges.js",
     "init-family-gate": "node scripts/init-family-gate.js",
+    "init-default-pins": "node scripts/init-default-pins.js",
+    "reset-pin": "node scripts/reset-pin.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -35,7 +38,15 @@
     ],
     "modulePathIgnorePatterns": [
       "/node_modules/"
-    ]
+    ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 84,
+        "branches": 70,
+        "functions": 85,
+        "lines": 85
+      }
+    }
   },
   "dependencies": {
     "@fastify/busboy": "^2.1.1",

@@ -1,306 +1,187 @@
-const { default: sql } = require('../lib/database.js');
-const { authenticateToken, canActForProfile } = require('../lib/auth.js');
-const { handleError, createErrorResponse } = require('../lib/response.js');
+const { pool } = require('../lib/database.js');
+const { canAccessProfile } = require('../lib/scope.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
+const { parseId, sendError, sendFailure } = require('../lib/http.js');
 
-// Handler des notifications
+// Les notifications d'un profil parent (demandes de profil, alertes de sécurité,
+// résultats des enfants) ne sont jamais accessibles avec un jeton famille ou enfant :
+// toutes les routes passent par canAccessProfile.
+
+function query(text, params, operation, timeout = TIMEOUTS.STANDARD) {
+    return withQueryTimeout(pool.query(text, params).then(result => result.rows), timeout, operation);
+}
+
+function parseIsRead(value) {
+    if (value === true || value === 'true') return true;
+    if (value === false || value === 'false') return false;
+    return undefined;
+}
+
+// GET /notifications (notificationListQuerySchema) — POST /notifications (parent)
 async function handleNotifications(req, res) {
     try {
         if (req.method === 'GET') {
-            // Parser les query parameters depuis l'URL
-            const url = new URL(req.url, `http://${req.headers.host}`);
-            const profileId = url.searchParams.get('profileId');
-            const isRead = url.searchParams.get('isRead');
-            const type = url.searchParams.get('type');
-
-            let queryText = `
-        SELECT 
-          n.id, n.type, n.title, n.message, n.data, 
-          n.is_read, n.created_at,
-          p.name as profile_name
-        FROM notifications n
-        JOIN profiles p ON n.profile_id = p.id
-        WHERE 1=1
-      `;
-            const params = [];
+            const { profileId, isRead, type } = req.query || {};
 
             // Sans profileId explicite : les notifications du profil connecté
-            const targetProfileId = parseInt(profileId || req.user?.profileId, 10);
-            if (!Number.isInteger(targetProfileId) || targetProfileId <= 0) {
-                res.status(400).json({ success: false, message: 'ID de profil requis' });
-                return;
+            const targetProfileId = parseId(profileId ?? req.user?.profileId);
+            if (!targetProfileId) {
+                return sendFailure(res, 400, 'ID de profil requis', 'BAD_REQUEST');
             }
-            if (!canActForProfile(req.user, targetProfileId)) {
-                res.status(403).json({ success: false, message: 'Accès refusé', code: 'FORBIDDEN' });
-                return;
+            if (!(await canAccessProfile(req.user, targetProfileId))) {
+                return sendFailure(res, 403, 'Accès refusé', 'FORBIDDEN');
             }
-            params.push(targetProfileId);
-            queryText += ` AND n.profile_id = $${params.length}`;
 
-            // searchParams.get renvoie null (et non undefined) quand le filtre est absent
-            if (isRead !== null) {
-                params.push(isRead === 'true');
+            const params = [targetProfileId];
+            let queryText = `
+                SELECT n.id, n.type, n.title, n.message, n.data, n.is_read, n.created_at,
+                       p.name as profile_name
+                FROM notifications n
+                JOIN profiles p ON n.profile_id = p.id
+                WHERE n.profile_id = $1`;
+
+            const readFilter = parseIsRead(isRead);
+            if (readFilter !== undefined) {
+                params.push(readFilter);
                 queryText += ` AND n.is_read = $${params.length}`;
             }
-
-            if (type) {
+            if (typeof type === 'string' && type) {
                 params.push(type);
                 queryText += ` AND n.type = $${params.length}`;
             }
+            queryText += ' ORDER BY n.created_at DESC LIMIT 500';
 
-            queryText += ` ORDER BY n.created_at DESC`;
-            const notifications = await withQueryTimeout(sql(queryText, params), TIMEOUTS.DEFAULT, 'récupération des notifications');
-
-            res.status(200).json({
+            const notifications = await query(queryText, params, 'récupération des notifications', TIMEOUTS.DEFAULT);
+            return res.status(200).json({
                 success: true,
                 message: 'Notifications récupérées avec succès',
                 data: { notifications }
             });
+        }
 
-        } else if (req.method === 'POST') {
-            // Authentification requise pour POST
-            const user = authenticateToken(req);
-
-            if (!user.isAdmin) {
-                res.status(403).json({
-                    success: false,
-                    message: 'Accès refusé - Admin requis'
-                });
-                return;
+        if (req.method === 'POST') {
+            // requireAdmin + notificationCreateSchema sur la route ; double garde ici
+            if (req.user?.isAdmin !== true) {
+                return sendFailure(res, 403, 'Accès refusé - Admin requis', 'FORBIDDEN');
+            }
+            const { profileId, type, title, message, data } = req.body || {};
+            const targetId = parseId(profileId);
+            if (!targetId || !type || !title || !message) {
+                return sendFailure(res, 400, 'profileId, type, title et message requis', 'VALIDATION_ERROR');
             }
 
-            const { profileId, type, title, message, data } = req.body;
-
-            if (!profileId || !type || !title || !message) {
-                res.status(400).json({
-                    success: false,
-                    message: 'profileId, type, title et message requis'
-                });
-                return;
-            }
-
-            const profile = await withQueryTimeout(
-                sql`
-          SELECT id FROM profiles WHERE id = ${profileId}
-        `,
-                TIMEOUTS.STANDARD,
-                'vérification du profil'
-            );
-
+            const profile = await query('SELECT id FROM profiles WHERE id = $1', [targetId], 'vérification du profil');
             if (!profile[0]) {
-                res.status(404).json({
-                    success: false,
-                    message: 'Profil non trouvé'
-                });
-                return;
+                return sendFailure(res, 404, 'Profil non trouvé', 'NOT_FOUND');
             }
 
-            const result = await withQueryTimeout(
-                sql`
-          INSERT INTO notifications (profile_id, type, title, message, data)
-          VALUES (${profileId}, ${type}, ${title}, ${message}, ${data ? JSON.stringify(data) : null})
-          RETURNING *
-        `,
-                TIMEOUTS.STANDARD,
+            const result = await query(
+                `INSERT INTO notifications (profile_id, type, title, message, data)
+                 VALUES ($1, $2, $3, $4, $5::jsonb)
+                 RETURNING *`,
+                [targetId, type, title, message, data === undefined || data === null ? null : JSON.stringify(data)],
                 'création de la notification'
             );
-
-            res.status(201).json({
+            return res.status(201).json({
                 success: true,
                 message: 'Notification créée avec succès',
                 data: { notification: result[0] }
             });
-
-        } else {
-            res.status(405).json({
-                success: false,
-                message: 'Méthode non autorisée'
-            });
         }
 
+        return sendFailure(res, 405, 'Méthode non autorisée', 'METHOD_NOT_ALLOWED');
     } catch (error) {
-        const errorResponse = handleError(error, 'Erreur lors de la gestion des notifications');
-        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+        return sendError(res, error, 'Erreur lors de la gestion des notifications');
     }
 }
 
-// Handler d'une notification spécifique
+// GET / PUT (notificationUpdateSchema) / DELETE /notifications/:id
 async function handleNotification(req, res) {
     try {
-        const id = req.params.id;
-
+        const id = parseId(req.params?.id);
         if (!id) {
-            res.status(400).json({
-                success: false,
-                message: 'ID de notification requis'
-            });
-            return;
+            return sendFailure(res, 400, 'ID de notification invalide', 'BAD_REQUEST');
+        }
+        if (!['GET', 'PUT', 'DELETE'].includes(req.method)) {
+            return sendFailure(res, 405, 'Méthode non autorisée', 'METHOD_NOT_ALLOWED');
+        }
+
+        const rows = await query(
+            `SELECT n.id, n.profile_id, n.type, n.title, n.message, n.data, n.is_read, n.created_at,
+                    p.name as profile_name
+             FROM notifications n
+             JOIN profiles p ON n.profile_id = p.id
+             WHERE n.id = $1`,
+            [id],
+            'récupération de la notification'
+        );
+
+        // 404 aussi quand la notification appartient à un profil inaccessible
+        // (ne pas révéler son existence)
+        if (!rows[0] || !(await canAccessProfile(req.user, rows[0].profile_id))) {
+            return sendFailure(res, 404, 'Notification non trouvée', 'NOT_FOUND');
         }
 
         if (req.method === 'GET') {
-            console.log(`🔍 Récupération de la notification ID: ${id} (type: ${typeof id})`);
-
-            const notifications = await withQueryTimeout(
-                sql`
-          SELECT 
-            n.id, n.profile_id, n.type, n.title, n.message, n.data, 
-            n.is_read, n.created_at,
-            p.name as profile_name
-          FROM notifications n
-          JOIN profiles p ON n.profile_id = p.id
-          WHERE n.id = ${parseInt(id, 10)}
-        `,
-                TIMEOUTS.STANDARD,
-                'récupération de la notification'
-            );
-
-            // 404 aussi quand la notification appartient à un autre profil (ne pas révéler son existence)
-            if (!notifications[0] || !canActForProfile(req.user, notifications[0].profile_id)) {
-                res.status(404).json({
-                    success: false,
-                    message: 'Notification non trouvée'
-                });
-                return;
-            }
-
-            res.status(200).json({
+            return res.status(200).json({
                 success: true,
                 message: 'Notification récupérée avec succès',
-                data: { notification: notifications[0] }
+                data: { notification: rows[0] }
             });
+        }
 
-        } else if (req.method === 'PUT') {
-            // Authentification requise pour PUT
-            const user = authenticateToken(req);
-
-            const { isRead } = req.body;
-
-            const existingNotification = await withQueryTimeout(
-                sql`
-          SELECT * FROM notifications WHERE id = ${parseInt(id)}
-        `,
-                TIMEOUTS.STANDARD,
-                'vérification de la notification'
-            );
-
-            if (!existingNotification[0]) {
-                res.status(404).json({
-                    success: false,
-                    message: 'Notification non trouvée'
-                });
-                return;
+        if (req.method === 'PUT') {
+            const isRead = parseIsRead(req.body?.isRead);
+            if (isRead === undefined) {
+                return sendFailure(res, 400, 'isRead doit être un booléen', 'VALIDATION_ERROR');
             }
-
-            if (!canActForProfile(user, existingNotification[0].profile_id)) {
-                res.status(403).json({
-                    success: false,
-                    message: 'Accès refusé'
-                });
-                return;
-            }
-
-            const result = await withQueryTimeout(
-                sql`
-          UPDATE notifications 
-          SET 
-            is_read = COALESCE(${isRead}, is_read),
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = ${parseInt(id)}
-          RETURNING *
-        `,
-                TIMEOUTS.STANDARD,
+            const result = await query(
+                `UPDATE notifications SET is_read = $1, updated_at = CURRENT_TIMESTAMP
+                 WHERE id = $2
+                 RETURNING *`,
+                [isRead, id],
                 'mise à jour de la notification'
             );
-
-            res.status(200).json({
+            return res.status(200).json({
                 success: true,
                 message: 'Notification modifiée avec succès',
                 data: { notification: result[0] }
             });
-
-        } else if (req.method === 'DELETE') {
-            // Authentification requise pour DELETE
-            const user = authenticateToken(req);
-
-            const existingNotification = await withQueryTimeout(
-                sql`
-          SELECT * FROM notifications WHERE id = ${parseInt(id)}
-        `,
-                TIMEOUTS.STANDARD,
-                'vérification de la notification'
-            );
-
-            if (!existingNotification[0]) {
-                res.status(404).json({
-                    success: false,
-                    message: 'Notification non trouvée'
-                });
-                return;
-            }
-
-            if (!canActForProfile(user, existingNotification[0].profile_id)) {
-                res.status(403).json({
-                    success: false,
-                    message: 'Accès refusé'
-                });
-                return;
-            }
-
-            const result = await withQueryTimeout(
-                sql`
-          DELETE FROM notifications 
-          WHERE id = ${parseInt(id)}
-          RETURNING *
-        `,
-                TIMEOUTS.STANDARD,
-                'suppression de la notification'
-            );
-
-            res.status(200).json({
-                success: true,
-                message: 'Notification supprimée avec succès',
-                data: { notification: result[0] }
-            });
-
-        } else {
-            res.status(405).json({
-                success: false,
-                message: 'Méthode non autorisée'
-            });
         }
 
+        const result = await query('DELETE FROM notifications WHERE id = $1 RETURNING *', [id], 'suppression de la notification');
+        return res.status(200).json({
+            success: true,
+            message: 'Notification supprimée avec succès',
+            data: { notification: result[0] }
+        });
     } catch (error) {
-        const errorResponse = handleError(error, 'Erreur lors de la gestion de la notification');
-        res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+        return sendError(res, error, 'Erreur lors de la gestion de la notification');
     }
 }
 
-// POST /api/notifications/mark-all-read
+// POST /api/notifications/mark-all-read (markAllNotificationsReadSchema)
 // Marque comme lues toutes les notifications d'un profil (le sien par défaut).
 async function handleMarkAllNotificationsRead(req, res) {
     try {
         if (req.method !== 'POST') {
-            return res.status(405).json(createErrorResponse('Méthode non autorisée', 'METHOD_NOT_ALLOWED'));
+            return sendFailure(res, 405, 'Méthode non autorisée', 'METHOD_NOT_ALLOWED');
         }
 
-        const rawProfileId = req.body?.profileId ?? req.user?.profileId;
-        const profileId = parseInt(rawProfileId, 10);
-
-        if (!Number.isInteger(profileId) || profileId <= 0) {
-            return res.status(400).json(createErrorResponse('ID de profil requis', 'BAD_REQUEST'));
+        const profileId = parseId(req.body?.profileId ?? req.user?.profileId);
+        if (!profileId) {
+            return sendFailure(res, 400, 'ID de profil requis', 'BAD_REQUEST');
         }
-        if (!canActForProfile(req.user, profileId)) {
-            return res.status(403).json(createErrorResponse('Accès refusé', 'FORBIDDEN'));
+        if (!(await canAccessProfile(req.user, profileId))) {
+            return sendFailure(res, 403, 'Accès refusé', 'FORBIDDEN');
         }
 
-        const rows = await withQueryTimeout(
-            sql`
-              UPDATE notifications
-              SET is_read = true, updated_at = CURRENT_TIMESTAMP
-              WHERE profile_id = ${profileId} AND is_read = false
-              RETURNING id
-            `,
-            TIMEOUTS.STANDARD,
+        const rows = await query(
+            `UPDATE notifications
+             SET is_read = true, updated_at = CURRENT_TIMESTAMP
+             WHERE profile_id = $1 AND is_read = false
+             RETURNING id`,
+            [profileId],
             'marquage de toutes les notifications comme lues'
         );
 
@@ -310,8 +191,7 @@ async function handleMarkAllNotificationsRead(req, res) {
             data: { profileId, updated: rows.length }
         });
     } catch (error) {
-        const errorResponse = handleError(error, 'Erreur lors du marquage des notifications');
-        return res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
+        return sendError(res, error, 'Erreur lors du marquage des notifications');
     }
 }
 

@@ -1,7 +1,8 @@
 const { pool } = require('../lib/database.js');
-const { authenticateToken, canActForProfile } = require('../lib/auth.js');
-const { handleError } = require('../lib/response.js');
+const { scopeForUser, canAccessProfile } = require('../lib/scope.js');
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js');
+const { parseId, sendError, sendFailure } = require('../lib/http.js');
+const coursePageView = require('../lib/coursePageView.js');
 const logger = require('../lib/logger.js');
 
 // Colonnes renvoyées dans les listes : sans html_content (trop lourd)
@@ -26,37 +27,14 @@ function query(text, params, operation) {
     );
 }
 
-function sendError(res, error, defaultMessage) {
-    const errorResponse = handleError(error, defaultMessage);
-    res.status(errorResponse.statusCode).json(JSON.parse(errorResponse.body));
-}
-
-function parseId(value) {
-    const id = parseInt(value, 10);
-    return Number.isNaN(id) || id <= 0 ? null : id;
-}
-
 function emptyToNull(value) {
     return value === '' ? null : value;
 }
 
-// Vérifie le token et les droits parent. Renvoie null si la réponse 403 a déjà été envoyée.
-function requireAdmin(req, res) {
-    const user = authenticateToken(req);
-    if (!user?.isAdmin) {
-        res.status(403).json({ success: false, message: 'Accès réservé aux parents' });
-        return null;
-    }
-    return user;
-}
-
-// Un parent voit aussi les pages masquées ; un enfant (sans token parent) non.
-function isAdminRequest(req) {
-    try {
-        return authenticateToken(req)?.isAdmin === true;
-    } catch (_error) {
-        return false;
-    }
+function parsePublished(value) {
+    if (value === true || value === 'true' || value === '1') return true;
+    if (value === false || value === 'false' || value === '0') return false;
+    return undefined;
 }
 
 async function ensureChildProfile(profileId, res) {
@@ -66,39 +44,53 @@ async function ensureChildProfile(profileId, res) {
         'vérification de l\'enfant cible'
     );
     if (!rows[0]) {
-        res.status(400).json({ success: false, message: 'Enfant cible introuvable' });
+        sendFailure(res, 400, 'Enfant cible introuvable', 'BAD_REQUEST');
         return false;
     }
     return true;
 }
 
-// GET /course-pages?targetProfileId=&published= — POST /course-pages
+// Une page est visible par un parent (brouillons compris) ; sinon publiée et destinée
+// à un profil accessible (jeton famille : un enfant ; jeton profil : le sien).
+async function canSeeCoursePage(user, coursePage) {
+    if (scopeForUser(user).isAdmin) return true;
+    return coursePage.is_published === true && canAccessProfile(user, coursePage.target_profile_id);
+}
+
+// GET /course-pages?targetProfileId=&published= (coursePageListQuerySchema)
+// POST /course-pages (parent, coursePageCreateSchema)
 async function handleCoursePages(req, res) {
     try {
         if (req.method === 'GET') {
             const { targetProfileId, published } = req.query || {};
-            const isAdmin = isAdminRequest(req);
+            const scope = scopeForUser(req.user);
             const params = [];
             const conditions = [];
 
             if (targetProfileId !== undefined) {
                 const targetId = parseId(targetProfileId);
                 if (!targetId) {
-                    res.status(400).json({ success: false, message: 'ID de profil cible invalide' });
-                    return;
+                    return sendFailure(res, 400, 'ID de profil cible invalide', 'BAD_REQUEST');
+                }
+                if (!(await canAccessProfile(req.user, targetId))) {
+                    return sendFailure(res, 403, 'Accès refusé', 'FORBIDDEN');
                 }
                 params.push(targetId);
                 conditions.push(`target_profile_id = $${params.length}`);
-            } else if (!isAdmin) {
-                res.status(403).json({ success: false, message: 'Accès réservé aux parents' });
-                return;
+            } else if (!scope.isAdmin) {
+                return sendFailure(res, 403, 'Accès réservé aux parents', 'FORBIDDEN');
             }
 
-            if (!isAdmin) {
+            if (!scope.isAdmin) {
+                // Un enfant ne voit jamais les pages masquées (le profil cible, obligatoire,
+                // a été vérifié ci-dessus)
                 conditions.push('is_published = true');
-            } else if (published !== undefined) {
-                params.push(published === 'true' || published === '1');
-                conditions.push(`is_published = $${params.length}`);
+            } else {
+                const isPublished = parsePublished(published);
+                if (isPublished !== undefined) {
+                    params.push(isPublished);
+                    conditions.push(`is_published = $${params.length}`);
+                }
             }
 
             let queryText = `SELECT ${SUMMARY_COLUMNS} FROM course_pages`;
@@ -108,21 +100,22 @@ async function handleCoursePages(req, res) {
             queryText += ' ORDER BY created_at DESC';
 
             const coursePages = await query(queryText, params, 'récupération des pages de cours');
-
-            res.status(200).json({
+            return res.status(200).json({
                 success: true,
                 message: 'Pages de cours récupérées avec succès',
                 data: { coursePages }
             });
+        }
 
-        } else if (req.method === 'POST') {
-            const user = requireAdmin(req, res);
-            if (!user) return;
+        if (req.method === 'POST') {
+            // requireAdmin est appliqué par le routeur ; double garde ici
+            if (req.user?.isAdmin !== true) {
+                return sendFailure(res, 403, 'Accès réservé aux parents', 'FORBIDDEN');
+            }
 
             const { title, subject, description, htmlContent, targetProfileId, isPublished = true } = req.body || {};
             if (!title || !htmlContent || !targetProfileId) {
-                res.status(400).json({ success: false, message: 'Titre, contenu HTML et enfant cible requis' });
-                return;
+                return sendFailure(res, 400, 'Titre, contenu HTML et enfant cible requis', 'VALIDATION_ERROR');
             }
             if (!(await ensureChildProfile(targetProfileId, res))) return;
 
@@ -130,23 +123,21 @@ async function handleCoursePages(req, res) {
                 `INSERT INTO course_pages (profile_id, target_profile_id, title, subject, description, html_content, is_published)
                  VALUES ($1, $2, $3, $4, $5, $6, $7)
                  RETURNING ${SUMMARY_COLUMNS}`,
-                [user.profileId, targetProfileId, title, emptyToNull(subject) ?? null, emptyToNull(description) ?? null, htmlContent, isPublished],
+                [req.user.profileId, targetProfileId, title, emptyToNull(subject) ?? null, emptyToNull(description) ?? null, htmlContent, isPublished],
                 'création de la page de cours'
             );
 
             logger.info(`📄 Page de cours publiée: "${title}" pour le profil ${targetProfileId}`);
-
-            res.status(201).json({
+            return res.status(201).json({
                 success: true,
                 message: 'Page de cours publiée avec succès',
                 data: { coursePage: rows[0] }
             });
-
-        } else {
-            res.status(405).json({ success: false, message: 'Méthode non autorisée' });
         }
+
+        return sendFailure(res, 405, 'Méthode non autorisée', 'METHOD_NOT_ALLOWED');
     } catch (error) {
-        sendError(res, error, 'Erreur lors de la gestion des pages de cours');
+        return sendError(res, error, 'Erreur lors de la gestion des pages de cours');
     }
 }
 
@@ -155,8 +146,7 @@ async function handleCoursePage(req, res) {
     try {
         const id = parseId(req.params?.id);
         if (!id) {
-            res.status(400).json({ success: false, message: 'ID de page invalide' });
-            return;
+            return sendFailure(res, 400, 'ID de page invalide', 'BAD_REQUEST');
         }
 
         if (req.method === 'GET') {
@@ -167,20 +157,23 @@ async function handleCoursePage(req, res) {
             );
             const coursePage = rows[0];
 
-            if (!coursePage || (!coursePage.is_published && !isAdminRequest(req))) {
-                res.status(404).json({ success: false, message: 'Page de cours non trouvée' });
-                return;
+            // 404 aussi pour une page invisible : ne pas révéler son existence
+            if (!coursePage || !(await canSeeCoursePage(req.user, coursePage))) {
+                return sendFailure(res, 404, 'Page de cours non trouvée', 'NOT_FOUND');
             }
-
-            res.status(200).json({
+            return res.status(200).json({
                 success: true,
                 message: 'Page de cours récupérée avec succès',
                 data: { coursePage }
             });
+        }
 
-        } else if (req.method === 'PUT') {
-            if (!requireAdmin(req, res)) return;
+        // PUT / DELETE : parents uniquement (requireAdmin sur la route)
+        if (req.user?.isAdmin !== true) {
+            return sendFailure(res, 403, 'Accès réservé aux parents', 'FORBIDDEN');
+        }
 
+        if (req.method === 'PUT') {
             const body = req.body || {};
             const params = [];
             const sets = [];
@@ -191,8 +184,7 @@ async function handleCoursePage(req, res) {
             }
 
             if (sets.length === 0) {
-                res.status(400).json({ success: false, message: 'Aucune modification fournie' });
-                return;
+                return sendFailure(res, 400, 'Aucune modification fournie', 'BAD_REQUEST');
             }
             if (body.targetProfileId !== undefined && !(await ensureChildProfile(body.targetProfileId, res))) return;
 
@@ -204,55 +196,119 @@ async function handleCoursePage(req, res) {
                 params,
                 'mise à jour de la page de cours'
             );
-
             if (!rows[0]) {
-                res.status(404).json({ success: false, message: 'Page de cours non trouvée' });
-                return;
+                return sendFailure(res, 404, 'Page de cours non trouvée', 'NOT_FOUND');
             }
-
-            res.status(200).json({
+            return res.status(200).json({
                 success: true,
                 message: 'Page de cours modifiée avec succès',
                 data: { coursePage: rows[0] }
             });
+        }
 
-        } else if (req.method === 'DELETE') {
-            if (!requireAdmin(req, res)) return;
-
-            const rows = await query(
-                'DELETE FROM course_pages WHERE id = $1 RETURNING id',
-                [id],
-                'suppression de la page de cours'
-            );
-
+        if (req.method === 'DELETE') {
+            const rows = await query('DELETE FROM course_pages WHERE id = $1 RETURNING id', [id], 'suppression de la page de cours');
             if (!rows[0]) {
-                res.status(404).json({ success: false, message: 'Page de cours non trouvée' });
-                return;
+                return sendFailure(res, 404, 'Page de cours non trouvée', 'NOT_FOUND');
             }
-
-            res.status(200).json({
+            return res.status(200).json({
                 success: true,
                 message: 'Page de cours supprimée avec succès',
                 data: { id }
             });
-
-        } else {
-            res.status(405).json({ success: false, message: 'Méthode non autorisée' });
         }
+
+        return sendFailure(res, 405, 'Méthode non autorisée', 'METHOD_NOT_ALLOWED');
     } catch (error) {
-        sendError(res, error, 'Erreur lors de la gestion de la page de cours');
+        return sendError(res, error, 'Erreur lors de la gestion de la page de cours');
+    }
+}
+
+// ─── Affichage isolé (cf. lib/coursePageView.js) ────────────────────────────────
+
+function sendViewUrl(res, target) {
+    const token = coursePageView.signViewToken(target);
+    return res.status(200).json({
+        success: true,
+        data: {
+            url: coursePageView.viewUrl(token),
+            expiresIn: coursePageView.VIEW_TOKEN_EXPIRES_IN_SECONDS
+        }
+    });
+}
+
+// POST /course-pages/:id/view : URL d'affichage d'une page visible par l'utilisateur
+async function handleCoursePageView(req, res) {
+    try {
+        const id = parseId(req.params?.id);
+        if (!id) {
+            return sendFailure(res, 400, 'ID de page invalide', 'BAD_REQUEST');
+        }
+        const rows = await query(
+            'SELECT id, is_published, target_profile_id FROM course_pages WHERE id = $1',
+            [id],
+            'vérification de la page de cours'
+        );
+        if (!rows[0] || !(await canSeeCoursePage(req.user, rows[0]))) {
+            return sendFailure(res, 404, 'Page de cours non trouvée', 'NOT_FOUND');
+        }
+        // Un parent peut afficher un brouillon ; pour un enfant, la publication est revérifiée au rendu
+        return sendViewUrl(res, { pageId: id, requirePublished: !scopeForUser(req.user).isAdmin });
+    } catch (error) {
+        return sendError(res, error, 'Erreur lors de l\'ouverture de la page de cours');
+    }
+}
+
+// POST /course-pages/preview (parent) : URL d'aperçu d'un brouillon non publié
+function handleCoursePagePreview(req, res) {
+    try {
+        const previewId = coursePageView.createPreview(req.body.htmlContent);
+        return sendViewUrl(res, { previewId });
+    } catch (error) {
+        return sendError(res, error, 'Erreur lors de la préparation de l\'aperçu');
+    }
+}
+
+// GET /course-pages/render?t=<jeton> (sans en-tête Authorization : chargé par l'iframe)
+async function handleCoursePageRender(req, res) {
+    try {
+        const target = coursePageView.verifyViewToken(req.query?.t);
+        if (!target) {
+            return coursePageView.sendRenderError(res, 401, 'Lien expiré : rouvrez la page de cours.');
+        }
+        if (target.previewId) {
+            const html = coursePageView.getPreview(target.previewId);
+            if (!html) {
+                return coursePageView.sendRenderError(res, 404, 'Aperçu expiré : relancez l\'aperçu.');
+            }
+            return coursePageView.sendCoursePageHtml(res, html);
+        }
+        const rows = await query(
+            'SELECT html_content, is_published FROM course_pages WHERE id = $1',
+            [target.pageId],
+            'affichage de la page de cours'
+        );
+        if (!rows[0] || (target.requirePublished && rows[0].is_published !== true)) {
+            return coursePageView.sendRenderError(res, 404, 'Page de cours introuvable.');
+        }
+        return coursePageView.sendCoursePageHtml(res, rows[0].html_content);
+    } catch (error) {
+        logger.error('Erreur lors de l\'affichage de la page de cours', error);
+        return coursePageView.sendRenderError(res, 500, 'Page de cours indisponible.');
     }
 }
 
 // Résultats d'une session de révision sur une page de cours.
 // Une session = une ligne de quiz_results, créée à la première sauvegarde (POST)
 // puis mise à jour au fil des réponses (PUT), comme le ferait un quiz classique.
+// Le quiz vit dans le HTML généré : le score ne peut pas être recalculé par le serveur,
+// seules ses bornes sont vérifiées (coursePageResultSchema + ici).
 function parseResultBody(body) {
     const profileId = parseId(body?.profileId);
     const score = Number(body?.score);
     const totalQuestions = Number(body?.totalQuestions);
     if (!profileId || !Number.isInteger(score) || !Number.isInteger(totalQuestions)
-        || totalQuestions < 1 || score < 0 || score > totalQuestions) {
+        || totalQuestions < 1 || totalQuestions > 1000 || score < 0 || score > totalQuestions) {
         return null;
     }
     const answers = body?.answers && typeof body.answers === 'object' ? body.answers : {};
@@ -275,7 +331,7 @@ async function unlockBadges(profileId, coursePage, data) {
         });
     } catch (badgeError) {
         // Ne pas bloquer la sauvegarde si la vérification des badges échoue
-        console.error('⚠️  Erreur lors de la vérification des badges (non bloquant):', badgeError.message);
+        logger.warn(`⚠️  Erreur lors de la vérification des badges (non bloquant): ${badgeError?.message || badgeError}`);
         return [];
     }
 }
@@ -285,25 +341,21 @@ async function handleCoursePageResults(req, res) {
     try {
         const coursePageId = parseId(req.params?.id);
         if (!coursePageId) {
-            res.status(400).json({ success: false, message: 'ID de page invalide' });
-            return;
+            return sendFailure(res, 400, 'ID de page invalide', 'BAD_REQUEST');
         }
         if (req.method !== 'POST' && req.method !== 'PUT') {
-            res.status(405).json({ success: false, message: 'Méthode non autorisée' });
-            return;
+            return sendFailure(res, 405, 'Méthode non autorisée', 'METHOD_NOT_ALLOWED');
         }
 
         const data = parseResultBody(req.body);
         if (!data) {
-            res.status(400).json({ success: false, message: 'Données de résultat invalides' });
-            return;
+            return sendFailure(res, 400, 'Données de résultat invalides', 'VALIDATION_ERROR');
         }
-        if (!canActForProfile(req.user, data.profileId)) {
-            res.status(403).json({ success: false, message: 'Accès refusé', code: 'FORBIDDEN' });
-            return;
+        if (!(await canAccessProfile(req.user, data.profileId))) {
+            return sendFailure(res, 403, 'Accès refusé', 'FORBIDDEN');
         }
 
-        // La page doit exister, être visible et destinée à cet enfant
+        // La page doit exister, être publiée et destinée à cet enfant
         const pages = await query(
             'SELECT id, subject FROM course_pages WHERE id = $1 AND is_published = true AND target_profile_id = $2',
             [coursePageId, data.profileId],
@@ -311,8 +363,7 @@ async function handleCoursePageResults(req, res) {
         );
         const coursePage = pages[0];
         if (!coursePage) {
-            res.status(404).json({ success: false, message: 'Page de cours non trouvée' });
-            return;
+            return sendFailure(res, 404, 'Page de cours non trouvée', 'NOT_FOUND');
         }
 
         let rows;
@@ -327,8 +378,7 @@ async function handleCoursePageResults(req, res) {
         } else {
             const resultId = parseId(req.params?.resultId);
             if (!resultId) {
-                res.status(400).json({ success: false, message: 'ID de résultat invalide' });
-                return;
+                return sendFailure(res, 400, 'ID de résultat invalide', 'BAD_REQUEST');
             }
             rows = await query(
                 `UPDATE quiz_results
@@ -339,15 +389,14 @@ async function handleCoursePageResults(req, res) {
                 'mise à jour du résultat de page de cours'
             );
             if (!rows[0]) {
-                res.status(404).json({ success: false, message: 'Résultat non trouvé' });
-                return;
+                return sendFailure(res, 404, 'Résultat non trouvé', 'NOT_FOUND');
             }
         }
 
         // Badges évalués uniquement sur une session terminée (pas sur un 5/5 intermédiaire)
         const unlockedBadges = data.completed ? await unlockBadges(data.profileId, coursePage, data) : [];
 
-        res.status(req.method === 'POST' ? 201 : 200).json({
+        return res.status(req.method === 'POST' ? 201 : 200).json({
             success: true,
             message: 'Résultat sauvegardé avec succès',
             data: {
@@ -356,12 +405,15 @@ async function handleCoursePageResults(req, res) {
             }
         });
     } catch (error) {
-        sendError(res, error, 'Erreur lors de la sauvegarde du résultat');
+        return sendError(res, error, 'Erreur lors de la sauvegarde du résultat');
     }
 }
 
 module.exports = {
     handleCoursePages,
     handleCoursePage,
+    handleCoursePageView,
+    handleCoursePagePreview,
+    handleCoursePageRender,
     handleCoursePageResults
 };

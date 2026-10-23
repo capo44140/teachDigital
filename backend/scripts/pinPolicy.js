@@ -1,20 +1,12 @@
-// Règles pour les PIN initialisés par script : 4 à 8 chiffres, pas de code trivial
-const TRIVIAL_PINS = new Set(['1234', '12345', '123456', '1234567', '12345678', '4321', '0123', '2580', '1212', '1004', '2000', '6969']);
+// Règles pour les PIN initialisés par script : même politique que l'API (lib/pinPolicy.js),
+// y compris le minimum de 6 chiffres pour un profil parent (isAdmin)
+const { checkNewPin, isTrivialPin } = require('../lib/pinPolicy.js');
 
-function isTrivialPin(pin) {
-  if (TRIVIAL_PINS.has(pin)) return true;
-  // Tous les chiffres identiques (0000, 1111...)
-  if (/^(\d)\1+$/.test(pin)) return true;
-  return false;
-}
-
-function assertStrongPin(pin) {
+function assertStrongPin(pin, { isAdmin = false } = {}) {
   const value = typeof pin === 'string' ? pin.trim() : '';
-  if (!/^\d{4,8}$/.test(value)) {
-    throw new Error('PIN requis : 4 à 8 chiffres');
-  }
-  if (isTrivialPin(value)) {
-    throw new Error('PIN trop facile à deviner, choisissez-en un autre');
+  const check = checkNewPin(value, { isAdmin });
+  if (!check.ok) {
+    throw new Error(check.code === 'INVALID_PIN' ? 'PIN requis : 4 à 8 chiffres' : check.message);
   }
   return value;
 }
