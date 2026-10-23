@@ -4,7 +4,8 @@
  * Priorité : valeur enregistrée depuis l'interface > variable d'environnement > défaut.
  */
 
-const { encrypt, decrypt, loadSettings, saveSetting } = require('../aiSettingsStore.js');
+const { encrypt, decryptWithInfo, loadSettings, saveSetting } = require('../aiSettingsStore.js');
+const logger = require('../../../../lib/logger.js');
 const validation = require('../../utils/validation.js');
 const constants = require('../../utils/constants.js');
 
@@ -128,7 +129,20 @@ function resolveName(name) {
 }
 
 /**
- * Charge les paramètres enregistrés depuis la base (appelé au démarrage du serveur)
+ * Re-chiffre avec AI_SETTINGS_KEY une clé encore chiffrée avec la clé dérivée de JWT_SECRET
+ * (best effort : en cas d'échec, la clé reste lisible et sera re-chiffrée au prochain chargement)
+ */
+async function reencryptApiKey(name, apiKey) {
+    try {
+        await saveSetting(apiKeySetting(name), encrypt(apiKey));
+        logger.info(`Clé ${name} re-chiffrée avec AI_SETTINGS_KEY`);
+    } catch (error) {
+        logger.warn(`Re-chiffrement de la clé ${name} impossible`, { error: error.message });
+    }
+}
+
+/**
+ * Charge les paramètres enregistrés depuis la base (au démarrage du serveur, cf. aiSettingsLoader.js)
  */
 async function load() {
     const settings = await loadSettings(NAMES.flatMap(name => [apiKeySetting(name), modelSetting(name)]));
@@ -137,10 +151,12 @@ async function load() {
         const storedKey = settings.get(apiKeySetting(name));
         if (storedKey) {
             try {
-                apiKey = decrypt(storedKey);
+                const { value, needsReencrypt } = decryptWithInfo(storedKey);
+                apiKey = value;
+                if (needsReencrypt) await reencryptApiKey(name, apiKey);
             } catch (error) {
-                // JWT_SECRET changé depuis l'enregistrement : la clé doit être ressaisie
-                console.warn(`⚠️ Clé ${name} enregistrée illisible (JWT_SECRET modifié ?) :`, error.message);
+                // JWT_SECRET / AI_SETTINGS_KEY changé depuis l'enregistrement : la clé doit être ressaisie
+                logger.warn(`Clé ${name} enregistrée illisible (JWT_SECRET ou AI_SETTINGS_KEY modifié ?)`, { error: error.message });
             }
         }
         uiValues[name] = { apiKey, model: settings.get(modelSetting(name)) || null };
@@ -178,7 +194,7 @@ async function setApiKey(name, apiKey) {
     getDefinition(name);
     await saveSetting(apiKeySetting(name), apiKey ? encrypt(apiKey) : null);
     uiValues[name] = { ...uiValues[name], apiKey: apiKey || null };
-    console.log(`🔑 Clé ${name} ${apiKey ? 'enregistrée depuis l\'interface' : 'supprimée (retour au .env)'}`);
+    logger.info(`Clé ${name} ${apiKey ? 'enregistrée depuis l\'interface' : 'supprimée (retour au .env)'}`);
 }
 
 function getDefaultModel(name) {
@@ -215,7 +231,7 @@ async function setModel(name, model) {
     getDefinition(name);
     await saveSetting(modelSetting(name), model || null);
     uiValues[name] = { ...uiValues[name], model: model || null };
-    console.log(`🔄 Modèle ${name} : ${model || '(défaut)'}`);
+    logger.info(`Modèle ${name} : ${model || '(défaut)'}`);
 }
 
 function authHeaders(definition, apiKey) {

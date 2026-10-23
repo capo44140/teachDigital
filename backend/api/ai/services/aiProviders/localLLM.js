@@ -1,87 +1,16 @@
 /**
  * Provider LLM Local pour l'analyse de texte et la génération de quiz
- * Compatible avec Ollama et autres LLMs locaux
+ * Compatible avec LM Studio, Ollama et autres LLMs locaux à API compatible OpenAI
  */
 
-const AIProviderBase = require('./base.js');
-const { fetchWithTimeout } = require('../../utils/fetch.js');
+const OpenAICompatibleProvider = require('./openaiCompatible.js');
 const { isLocalLLMAvailable } = require('../../utils/validation.js');
-const { DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, LOCAL_LLM_TIMEOUT_MS } = require('../../utils/constants.js');
+const { LOCAL_LLM_TIMEOUT_MS } = require('../../utils/constants.js');
 const localLLMConfig = require('./localLLMConfig.js');
+const logger = require('../../../../lib/logger.js');
 
-class LocalLLMProvider extends AIProviderBase {
-    constructor() {
-        super('LocalLLM');
-        this.baseUrl = localLLMConfig.getBaseUrl();
-        this.model = localLLMConfig.getActiveModel();
-        // Déjà borné sous le timeout serveur dans constants.js
-        this.timeoutMs = LOCAL_LLM_TIMEOUT_MS;
-    }
-
-    isAvailable() {
-        return isLocalLLMAvailable();
-    }
-
-    /**
-     * Analyse un texte extrait d'une image avec le LLM local
-     * @param {string} extractedText - Texte extrait de l'image par OCR
-     * @returns {Promise<Object>} Analyse structurée du contenu
-     */
-    async analyzeText(extractedText) {
-        console.log('🏠 LocalLLM analyzeText: Début (texte: ' + extractedText.substring(0, 50) + '...)');
-
-        const response = await fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: this.model,
-                messages: [
-                    {
-                        role: 'user',
-                        content: `Analysez ce texte extrait d'une image de leçon et extrayez les concepts clés, les informations importantes et les sujets abordés. Répondez en français au format JSON. IMPORTANT: Répondez UNIQUEMENT avec du JSON valide, sans backticks, sans markdown, sans texte supplémentaire. Format: {"titre_principal": "...", "concepts_cles": [...], "informations_importantes": [...], "niveau": "...", "matiere": "..."}
-
-Texte extrait de l'image:
-${extractedText}`
-                    }
-                ],
-                max_tokens: DEFAULT_MAX_TOKENS,
-                temperature: DEFAULT_TEMPERATURE
-            })
-        }, Number.isFinite(this.timeoutMs) ? this.timeoutMs : undefined);
-
-        if (!response.ok) {
-            throw new Error(`Erreur LLM local: ${response.status} - ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const responseText = data.choices[0].message.content;
-
-        return this.parseJSONResponse(responseText);
-    }
-
-    /**
-     * Génère un quiz avec le LLM local
-     * @param {Object} analysis - Analyse du contenu
-     * @param {Object} childProfile - Profil de l'enfant
-     * @param {number} questionCount - Nombre de questions souhaitées (défaut: 5)
-     * @returns {Promise<Object>} Quiz généré
-     */
-    async generateQuiz(analysis, childProfile, questionCount = 5) {
-        console.log(`🏠 LocalLLM generateQuiz: Début (${questionCount} questions)`);
-
-        const response = await fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: this.model,
-                messages: [
-                    {
-                        role: 'system',
-                        content: `Tu es un enseignant expert qui crée des interrogations adaptées à l'âge des enfants.
+function buildStrictQuizSystemPrompt(childProfile = {}, questionCount = 5) {
+    return `Tu es un enseignant expert qui crée des interrogations adaptées à l'âge des enfants.
 Objectif: produire un JSON STRICT pour TeachDigital.
 
 Contraintes OBLIGATOIRES:
@@ -104,11 +33,11 @@ Contraintes OBLIGATOIRES:
 - "correctAnswer" doit être un ENTIER 0..3 (PAS une lettre A-D, PAS le texte d'une option, PAS 1..4).
 - Pas de virgules finales, pas de NaN, pas de commentaires.
 
-Contexte enfant: âge=${childProfile.age || 8}, niveau="${childProfile.level || 'primaire'}".`
-                    },
-                    {
-                        role: 'user',
-                        content: `À partir de l'analyse suivante, génère un quiz.
+Contexte enfant: âge=${childProfile.age || 8}, niveau="${childProfile.level || 'primaire'}".`;
+}
+
+function buildStrictQuizUserPrompt(analysis) {
+    return `À partir de l'analyse suivante, génère un quiz.
 
 Analyse JSON:
 ${JSON.stringify(analysis)}
@@ -117,71 +46,62 @@ Rappel du format TeachDigital (STRICT):
 {"title":"...","description":"...","questions":[{"question":"...","options":["...","...","...","..."],"correctAnswer":0,"explanation":"..."}]}
 
 Exemple MINIMAL (ne pas recopier tel quel, c'est juste un exemple de structure):
-{"title":"Exemple","description":"...","questions":[{"question":"...","options":["A","B","C","D"],"correctAnswer":2,"explanation":"..."}]}`
-                    }
-                ],
-                max_tokens: Math.max(1500, questionCount * 300),
-                temperature: 0.2
-            })
-        }, Number.isFinite(this.timeoutMs) ? this.timeoutMs : undefined);
+{"title":"Exemple","description":"...","questions":[{"question":"...","options":["A","B","C","D"],"correctAnswer":2,"explanation":"..."}]}`;
+}
 
-        if (!response.ok) {
-            throw new Error(`Erreur LLM local: ${response.status}`);
-        }
+class LocalLLMProvider extends OpenAICompatibleProvider {
+    constructor() {
+        super('LocalLLM', {
+            baseUrl: localLLMConfig.getBaseUrl(),
+            model: localLLMConfig.getActiveModel(),
+            // Déjà borné sous le timeout serveur dans constants.js
+            timeoutMs: LOCAL_LLM_TIMEOUT_MS,
+            // L'URL est saisie depuis l'interface : pas de redirection suivie (SSRF)
+            fetchOptions: { redirect: 'error' }
+        });
+    }
 
-        const data = await response.json();
-        const responseText = data.choices[0].message.content;
+    isAvailable() {
+        return !!isLocalLLMAvailable();
+    }
 
-        return this.parseJSONResponse(responseText);
+    // Pas de clé API pour un LLM local
+    buildHeaders() {
+        return { 'Content-Type': 'application/json' };
+    }
+
+    /**
+     * Génère un quiz avec le LLM local (prompt plus strict, température basse :
+     * les petits modèles locaux respectent mal le format sinon)
+     */
+    async generateQuiz(analysis, childProfile, questionCount = 5, ctx) {
+        logger.debug('LocalLLM generateQuiz', { model: this.model, questionCount });
+        const content = await this.chatText([
+            { role: 'system', content: buildStrictQuizSystemPrompt(childProfile, questionCount) },
+            { role: 'user', content: buildStrictQuizUserPrompt(analysis) }
+        ], { maxTokens: Math.max(1500, questionCount * 300), temperature: 0.2, ctx, operation: 'génération quiz' });
+        return this.parseJSONResponse(content);
     }
 
     /**
      * Extrait le texte d'une image en utilisant la vision du LLM local
-     * Compatible avec Ollama et autres LLMs locaux supportant la vision (llava, bakllava, etc.)
+     * (modèles vision : llava, qwen-vl, etc.)
      * @param {string} base64Image - Image en base64
      * @param {string} prompt - Prompt pour l'extraction
+     * @param {Object} [ctx] - Contexte de la requête
      * @returns {Promise<string>} Texte extrait de l'image
      */
-    async extractTextWithVision(base64Image, prompt) {
-        console.log('🏠 LocalLLM extractTextWithVision: Début');
-
-        const response = await fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: this.model,
-                messages: [
-                    {
-                        role: 'user',
-                        content: [
-                            {
-                                type: 'text',
-                                text: prompt
-                            },
-                            {
-                                type: 'image_url',
-                                image_url: {
-                                    url: `data:image/jpeg;base64,${base64Image}`
-                                }
-                            }
-                        ]
-                    }
-                ],
-                max_tokens: 4000,
-                temperature: 0.1
-            })
-        }, Number.isFinite(this.timeoutMs) ? this.timeoutMs : undefined);
-
-        if (!response.ok) {
-            throw new Error(`Erreur LLM local Vision: ${response.status} - ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices[0].message.content;
-
-        return content;
+    async extractTextWithVision(base64Image, prompt, ctx) {
+        logger.debug('LocalLLM extractTextWithVision', { model: this.model });
+        return this.chatText([
+            {
+                role: 'user',
+                content: [
+                    { type: 'text', text: prompt },
+                    { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+                ]
+            }
+        ], { maxTokens: 4000, temperature: 0.1, ctx, operation: 'vision OCR', allowEmpty: true });
     }
 }
 

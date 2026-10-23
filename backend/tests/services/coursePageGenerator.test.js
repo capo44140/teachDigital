@@ -148,6 +148,47 @@ describe('generateCoursePageFromImages', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
+  it('envoie la clé Gemini dans l\'en-tête x-goog-api-key, jamais dans l\'URL', async () => {
+    getAvailableProviders.mockReturnValue([fakeProvider('Gemini', 'gemini-2.5-flash')]);
+    global.fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ candidates: [{ content: { parts: [{ text: PAGE }] } }] })
+    });
+
+    const result = await generateCoursePageFromImages({ images, childProfile });
+
+    expect(result.provider).toBe('Gemini');
+    const [url, options] = global.fetch.mock.calls[0];
+    expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
+    expect(url).not.toContain('key=');
+    expect(options.headers['x-goog-api-key']).toBe('key-Gemini');
+    expect(JSON.parse(options.body).contents[0].parts[1].inline_data).toEqual({ mime_type: 'image/png', data: 'AAAA' });
+  });
+
+  it('s\'arrête sans essayer le provider suivant quand la requête est annulée', async () => {
+    getAvailableProviders.mockReturnValue([fakeProvider('LocalLLM', 'qwen-vl'), fakeProvider('OpenAI', 'gpt-4o')]);
+    const controller = new AbortController();
+    global.fetch.mockImplementation((url, options) => new Promise((resolve, reject) => {
+      options.signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })));
+      setTimeout(() => controller.abort(Object.assign(new Error('client parti'), { code: 'CLIENT_CLOSED', isAbort: true })), 10);
+    }));
+
+    await expect(generateCoursePageFromImages({ images, childProfile }, { signal: controller.signal, deadline: Date.now() + 600000 }))
+      .rejects.toMatchObject({ code: 'CLIENT_CLOSED' });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    // URL saisie depuis l'interface : pas de redirection suivie
+    expect(global.fetch.mock.calls[0][1].redirect).toBe('error');
+  });
+
+  it('répond « délai dépassé » (AI_TIMEOUT) quand il ne reste plus assez de temps', async () => {
+    getAvailableProviders.mockReturnValue([fakeProvider('OpenAI', 'gpt-4o')]);
+
+    await expect(generateCoursePageFromImages({ images, childProfile }, { deadline: Date.now() + 1000 }))
+      .rejects.toMatchObject({ code: 'AI_TIMEOUT' });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it("échoue avec AI_UNAVAILABLE si le provider choisi n'est pas configuré", async () => {
     coursePageConfig.getProvider.mockReturnValue('Gemini');
     getProviderByName.mockReturnValue(fakeProvider('Gemini', 'gemini-flash', false));

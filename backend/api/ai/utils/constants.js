@@ -17,6 +17,8 @@ const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 // Le serveur coupe toute requête après 180s (server.timeout) : un appel IA plus long
 // ne peut de toute façon pas aboutir. On borne donc les timeouts juste en dessous.
+// Chaque appel est en plus borné par le délai global de la requête (AI_REQUEST_TIMEOUT_MS,
+// cf. utils/requestContext.js) : la boucle de repli entre providers ne le dépasse jamais.
 const SERVER_REQUEST_TIMEOUT_MS = 180000;
 const MAX_AI_TIMEOUT_MS = SERVER_REQUEST_TIMEOUT_MS - 10000;
 const boundedTimeout = (value, fallback) => Math.min(parseInt(value || String(fallback), 10) || fallback, MAX_AI_TIMEOUT_MS);
@@ -47,6 +49,8 @@ const DEFAULT_QUESTION_COUNT = 5;
 const OCR_LANGUAGES = 'fra+eng';
 
 module.exports = {
+    SERVER_REQUEST_TIMEOUT_MS,
+
     // URLs
     LOCAL_LLM_BASE_URL,
     OPENAI_BASE_URL,

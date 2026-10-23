@@ -3,6 +3,8 @@
  * Définit l'interface commune que tous les providers doivent implémenter
  */
 
+const logger = require('../../../../lib/logger.js');
+
 class AIProviderBase {
     constructor(name) {
         if (new.target === AIProviderBase) {
@@ -30,9 +32,10 @@ class AIProviderBase {
     /**
      * Analyse un texte extrait d'une image
      * @param {string} extractedText - Texte extrait par OCR
+     * @param {Object} [ctx] - Contexte de la requête (signal d'annulation, délai)
      * @returns {Promise<Object>} Analyse structurée du contenu
      */
-    async analyzeText(extractedText) {
+    async analyzeText(extractedText, ctx) {
         throw new Error('Method analyzeText() must be implemented');
     }
 
@@ -41,9 +44,10 @@ class AIProviderBase {
      * @param {Object} analysis - Analyse du contenu
      * @param {Object} childProfile - Profil de l'enfant
      * @param {number} questionCount - Nombre de questions souhaitées (défaut: 5)
+     * @param {Object} [ctx] - Contexte de la requête (signal d'annulation, délai)
      * @returns {Promise<Object>} Quiz généré
      */
-    async generateQuiz(analysis, childProfile, questionCount = 5) {
+    async generateQuiz(analysis, childProfile, questionCount = 5, ctx) {
         throw new Error('Method generateQuiz() must be implemented');
     }
 
@@ -54,7 +58,7 @@ class AIProviderBase {
      * @returns {Object} Objet JSON parsé
      */
     parseJSONResponse(content) {
-        let jsonText = content.trim();
+        let jsonText = String(content || '').trim();
 
         // Nettoyer les backticks markdown
         if (jsonText.startsWith('```json')) {
@@ -72,7 +76,8 @@ class AIProviderBase {
         try {
             return JSON.parse(jsonText);
         } catch (parseError) {
-            console.error(`❌ Erreur de parsing JSON pour ${this.name}:`, parseError);
+            // Le contenu n'est pas journalisé : il reprend le texte de la leçon
+            logger.warn(`Réponse JSON illisible (${this.name})`, { error: parseError.message, length: jsonText.length });
             throw new Error(`Impossible de parser la réponse ${this.name}`);
         }
     }

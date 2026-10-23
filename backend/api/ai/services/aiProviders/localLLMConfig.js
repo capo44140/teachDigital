@@ -6,6 +6,7 @@
 
 const { loadSettings, saveSetting } = require('../aiSettingsStore.js');
 const { DEFAULT_LOCAL_LLM_MODEL, LOCAL_LLM_BASE_URL } = require('../../utils/constants.js');
+const logger = require('../../../../lib/logger.js');
 
 const MODEL_SETTING = 'local_llm_model';
 const URL_SETTING = 'local_llm_url';
@@ -24,7 +25,7 @@ function getEnvBaseUrl() {
 
 module.exports = {
     /**
-     * Charge l'URL et le modèle enregistrés depuis la base (appelé au démarrage du serveur)
+     * Charge l'URL et le modèle enregistrés depuis la base (cf. aiSettingsLoader.js)
      */
     async load() {
         const settings = await loadSettings([MODEL_SETTING, URL_SETTING]);
@@ -47,7 +48,7 @@ module.exports = {
     async setActiveModel(modelId) {
         await saveSetting(MODEL_SETTING, modelId || null);
         activeModel = modelId || null;
-        console.log(`🔄 LocalLLM modèle actif changé: ${modelId || '(défaut .env)'}`);
+        logger.info(`LocalLLM : modèle actif ${modelId || '(défaut .env)'}`);
     },
 
     /**
@@ -77,7 +78,7 @@ module.exports = {
     async setBaseUrl(baseUrl) {
         await saveSetting(URL_SETTING, baseUrl || null);
         uiBaseUrl = baseUrl || null;
-        console.log(`🔄 LocalLLM URL : ${baseUrl || '(défaut .env)'}`);
+        logger.info(`LocalLLM : URL ${baseUrl ? 'enregistrée depuis l\'interface' : 'du .env'}`);
     },
 
     /**
