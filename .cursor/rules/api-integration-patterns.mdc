@@ -1,250 +1,157 @@
 ---
-globs: src/services/*.js,src/repositories/*.js,backend/api/*.js
+globs: frontend/src/services/**/*.js,backend/api/**/*.js,backend/controllers/*.js
 description: Patterns et conventions pour l'intégration API et les services
 ---
 
 # Intégration API et Services - TeachDigital
 
-## Architecture des Services
+## Architecture des Services (frontend)
 
-### Pattern Repository
-Utiliser le pattern Repository pour l'accès aux données :
-
-```javascript
-// Exemple basé sur src/repositories/baseRepository.js
-export class BaseRepository {
-  constructor(tableName) {
-    this.tableName = tableName
-  }
-  
-  async findById(id) {
-    const result = await sql`SELECT * FROM ${sql(this.tableName)} WHERE id = ${id}`
-    return result[0] || null
-  }
-  
-  async create(data) {
-    const result = await sql`INSERT INTO ${sql(this.tableName)} ${sql(data)} RETURNING *`
-    return result[0]
-  }
-}
-```
+### Client HTTP : apiService
+[frontend/src/services/apiService.js](mdc:frontend/src/services/apiService.js) est le **seul** client HTTP,
+sans endpoint métier :
+- URL de base : chemins relatifs en dev (proxy Vite `/api` → `VITE_DEV_API_TARGET`, défaut `http://127.0.0.1:3001`),
+  `VITE_API_URL_PROD` en production ;
+- jeton : profil valide d'abord, sinon famille (option `auth: 'auto' | 'profile' | 'none'`) ;
+- délais : 30 s par défaut, 60 s connexion / routes publiques, 180 s génération de quiz depuis documents,
+  10 min génération de page de cours ;
+- erreurs : `ApiError` (`status`, `code`, `data`, `retryAfterSeconds`, `requestId`) avec messages français
+  (401 → `SESSION_EXPIRED` + nettoyage du jeton concerné et redirection via `setAuthErrorHandler`,
+  403, 413, 415 `UNSUPPORTED_FILE_TYPE`, 429 avec délai, 503, 504, `NETWORK_ERROR`, `TIMEOUT`) ;
+- `buildQuery(params)` pour les chaînes de requête.
 
 ### Services Métier
-- **ProfileService** : [src/services/profileService.js](mdc:frontend/src/services/profileService.js)
-- **LessonService** : [src/services/lessonService.js](mdc:frontend/src/services/lessonService.js)
-- **NotificationService** : [src/services/notificationService.js](mdc:frontend/src/services/notificationService.js)
-- **YouTubeService** : [src/services/youtubeVideoService.js](mdc:frontend/src/services/youtubeVideoService.js)
-
-## Configuration API
-
-### Service API Principal
-```javascript
-// Basé sur src/services/apiService.js
-export class ApiService {
-  constructor() {
-    this.baseURL = process.env.VITE_API_URL || '/api'
-    this.timeout = 10000
-  }
-  
-  async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`
-    const config = {
-      timeout: this.timeout,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      },
-      ...options
-    }
-    
-    return fetch(url, config)
-  }
-}
-```
+- **Auth** : [authService.js](mdc:frontend/src/services/authService.js), [familyGateService.js](mdc:frontend/src/services/familyGateService.js)
+- **Profils** : [profile/profileService.js](mdc:frontend/src/services/profile/profileService.js) (`ProfileService`, méthodes statiques)
+- **Leçons / quiz** : [lessonService.js](mdc:frontend/src/services/lessonService.js) (`LessonService`, méthodes statiques)
+- **Pages de cours** : [coursePageService.js](mdc:frontend/src/services/coursePageService.js) (fonctions exportées)
+- **Autres** : `activityService`, `badgeService`, `youtubeVideoService`, `aiService`, `auditLogService`, `progressService`
 
 ### Gestion des Erreurs Centralisée
-Utiliser le service d'erreur : [src/services/errorService.js](mdc:frontend/src/services/errorService.js)
-
 ```javascript
-import { ErrorService } from '@/services/errorService.js'
-
+// Dans un composant (Options API)
 try {
-  const data = await apiService.get('/profiles')
+  await ProfileService.updateProfile(id, data)
+  this.$toast.success('Profil mis à jour')
 } catch (error) {
-  const standardError = ErrorService.createError(
-    'Erreur lors du chargement des profils',
-    ErrorService.errorTypes.NETWORK,
-    ErrorService.severityLevels.MEDIUM,
-    { endpoint: '/profiles' },
-    error
-  )
-  throw standardError
+  // message du serveur / d'ApiError + référence de requête discrète
+  this.$toast.errorFrom(error, 'Impossible de mettre à jour le profil')
 }
 ```
+Utilitaires : `describeError`, `requestRef`, `errorToastOptions` ([frontend/src/utils/apiErrors.js](mdc:frontend/src/utils/apiErrors.js)).
+Les erreurs non interceptées sont rattrapées dans `main.js` (toast + `clientErrorReporter`).
 
-## Backend API (Vercel Functions)
+## Backend API (Express)
 
-### Structure des Endpoints
+### Structure
 ```
-backend/api/
-├── auth/              # Authentification
-│   ├── login.js       # POST /api/auth/login
-│   ├── logout.js       # POST /api/auth/logout
-│   └── verify.js      # GET /api/auth/verify
-├── profiles/          # Gestion des profils
-│   ├── index.js       # GET,POST /api/profiles
-│   ├── [id].js        # GET,PUT,DELETE /api/profiles/:id
-│   └── [id]/pin.js    # GET,PUT /api/profiles/:id/pin
-└── lessons/           # Gestion des leçons
-    ├── index.js       # GET,POST /api/lessons
-    └── [id].js        # GET,PUT,DELETE /api/lessons/:id
+backend/
+├── app.js               # requestId, helmet, CORS, multipart (/ai), limites JSON, /health, errorHandler
+├── api/index.js         # TOUTES les routes : rate limit, accès, validation → contrôleur
+├── api/badges.js        # sous-routeur /badges
+├── api/ai/**            # sous-routeur /ai (parents) : quiz, OCR, pages de cours, fournisseurs
+├── controllers/*.js     # auth, profile, lesson, coursePage, notification, activity, youtube, audit, progress
+└── lib/                 # auth, scope, validation, schemas, http, response, queries, database...
 ```
+Le routeur est monté sur `/api` et sur `/` (nginx relaie `/api/x` vers `/x`).
+
+### Routes principales (api/index.js)
+| Préfixe | Accès |
+| --- | --- |
+| `POST /auth/family-gate`, `POST /auth/logout`, `GET /auth/verify`, `GET /course-pages/render?t=` | publiques |
+| `POST /auth/login` | jeton famille ou profil (`requireMember`) |
+| `/profiles`, `/lessons`, `/course-pages`, `/notifications`, `/activities`, `/youtube-videos` | membre ; écritures parent (`requireAdmin`) |
+| `/badges` | lecture membre, écriture parent (`requireAdminForWrites`) |
+| `/ai/*` | parent (`requireAdmin`) |
+| `POST /audit/logs` | membre (rate limité) ; lecture / stats / export : parent |
 
 ### Configuration Backend
-- **Database** : [backend/lib/database.js](mdc:backend/lib/database.js)
-- **Auth** : [backend/lib/auth.js](mdc:backend/lib/auth.js)
+- **Database** : [backend/lib/database.js](mdc:backend/lib/database.js), timeouts [backend/lib/queries.js](mdc:backend/lib/queries.js)
+- **Auth** : [backend/lib/auth.js](mdc:backend/lib/auth.js), isolation [backend/lib/scope.js](mdc:backend/lib/scope.js)
+- **Validation** : [backend/lib/validation.js](mdc:backend/lib/validation.js) + [backend/lib/schemas.js](mdc:backend/lib/schemas.js)
+- **Réponses** : [backend/lib/http.js](mdc:backend/lib/http.js) (`parseId`, `sendFailure`, `sendError`), [backend/lib/response.js](mdc:backend/lib/response.js)
 - **CORS** : [backend/lib/cors.js](mdc:backend/lib/cors.js)
-- **Response** : [backend/lib/response.js](mdc:backend/lib/response.js)
 
 ### Exemple d'Endpoint
 ```javascript
-// backend/api/profiles/index.js
-import { sql } from '@/lib/database.js'
-import { createResponse } from '@/lib/response.js'
-import { verifyAuth } from '@/lib/auth.js'
+// backend/api/index.js
+router.get('/activities/:id', handleActivity)
+router.put('/activities/:id', requireAdmin, validate(schemas.activityUpdateSchema), handleActivity)
 
-export default async function handler(req, res) {
+// backend/controllers/activityController.js (forme simplifiée)
+const { pool } = require('../lib/database.js')
+const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js')
+const { parseId, sendError, sendFailure } = require('../lib/http.js')
+
+async function handleActivity (req, res) {
   try {
-    // Vérification de l'authentification
-    const user = await verifyAuth(req)
-    if (!user) {
-      return createResponse(res, 401, 'Non autorisé')
-    }
-    
+    const id = parseId(req.params?.id)
+    if (!id) return sendFailure(res, 400, 'ID invalide', 'BAD_REQUEST')
+
     if (req.method === 'GET') {
-      const profiles = await sql`SELECT * FROM profiles WHERE user_id = ${user.id}`
-      return createResponse(res, 200, profiles)
+      const { rows } = await withQueryTimeout(
+        pool.query('SELECT id, title, status FROM activities WHERE id = $1', [id]),
+        TIMEOUTS.STANDARD,
+        'récupération de l\'activité'
+      )
+      if (!rows[0]) return sendFailure(res, 404, 'Activité non trouvée', 'NOT_FOUND')
+      return res.status(200).json({ success: true, message: 'Activité récupérée', data: { activity: rows[0] } })
     }
-    
-    if (req.method === 'POST') {
-      const { name, age, avatar } = req.body
-      const profile = await sql`
-        INSERT INTO profiles (name, age, avatar, user_id) 
-        VALUES (${name}, ${age}, ${avatar}, ${user.id}) 
-        RETURNING *
-      `
-      return createResponse(res, 201, profile[0])
-    }
-    
-    return createResponse(res, 405, 'Méthode non autorisée')
+    // PUT : req.body déjà validé et normalisé par Zod ; colonnes en liste blanche
+    return sendFailure(res, 405, 'Méthode non autorisée', 'METHOD_NOT_ALLOWED')
   } catch (error) {
-    console.error('Erreur API profiles:', error)
-    return createResponse(res, 500, 'Erreur serveur')
+    return sendError(res, error, 'Erreur lors de la gestion de l\'activité')
   }
 }
 ```
+Les contrôleurs reçoivent `req.user` (jeton décodé) et filtrent avec `lib/scope.js` ce qu'un jeton
+famille / enfant peut voir.
 
 ## Services Spécialisés
 
-### Service de Cache
-```javascript
-// src/services/cachedApiService.js
-export class CachedApiService {
-  constructor() {
-    this.cache = new Map()
-    this.cacheTimeout = 5 * 60 * 1000 // 5 minutes
-  }
-  
-  async get(endpoint, useCache = true) {
-    if (useCache && this.cache.has(endpoint)) {
-      const cached = this.cache.get(endpoint)
-      if (Date.now() - cached.timestamp < this.cacheTimeout) {
-        return cached.data
-      }
-    }
-    
-    const data = await this.apiService.get(endpoint)
-    this.cache.set(endpoint, {
-      data,
-      timestamp: Date.now()
-    })
-    
-    return data
-  }
-}
-```
-
-### Service de Reconnaissance Faciale
-- **Face Recognition** : [src/services/faceRecognitionService.js](mdc:frontend/src/services/faceRecognitionService.js)
-- Chargement différé des modèles
-- Cache des résultats de reconnaissance
+### Routes IA (backend/api/ai/**)
+- Réservées aux parents ; envoi en `FormData` (multipart, jeton vérifié avant lecture du corps) ou JSON
+  (10 Mo max sur les routes listées dans `LARGE_BODY_ROUTES`).
+- Images uniquement (PDF / autre → 415 `UNSUPPORTED_FILE_TYPE`) ; délai global `AI_REQUEST_TIMEOUT_MS` (170 s),
+  génération annulée si le client se déconnecte.
+- Fournisseurs essayés dans l'ordre : LocalLLM → OpenAI → Gemini → DeepSeek → Groq → Mistral → Kimi → OpenRouter.
+- Erreurs : 503 `AI_UNAVAILABLE`, 504 `AI_TIMEOUT` (traduites par `toAiError` dans `aiService.js`).
 
 ### Service YouTube
-- **YouTube Manager** : [src/services/youtubeVideoService.js](mdc:frontend/src/services/youtubeVideoService.js)
-- Gestion des vidéos et métadonnées
-- Optimisation des thumbnails
+- [youtubeVideoService.js](mdc:frontend/src/services/youtubeVideoService.js) : CRUD des vidéos + utilitaires
+  `extractVideoId`, `getThumbnailUrl`, `getEmbedUrl` ; un enfant ne reçoit que les vidéos actives.
 
 ## Gestion des États avec Pinia
-
-### Stores API
-```javascript
-// src/stores/apiStore.js
-import { defineStore } from 'pinia'
-import { apiService } from '@/services/apiService.js'
-
-export const useApiStore = defineStore('api', () => {
-  const loading = ref(false)
-  const error = ref(null)
-  
-  const fetchProfiles = async () => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      const profiles = await apiService.get('/profiles')
-      return profiles
-    } catch (err) {
-      error.value = err.message
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-  
-  return { loading, error, fetchProfiles }
-})
-```
+Pas de store « API » générique : les composants appellent les services ; les stores
+(`profileStore`, `badgeStore`, `settingsStore`, `onboardingStore`, `toastStore`) gardent l'état partagé
+et appellent eux-mêmes les services quand il le faut (ex. `profileStore` → `ProfileService`).
 
 ## Bonnes Pratiques
 
 ### Gestion des Erreurs
-- Toujours utiliser try/catch pour les appels API
-- Logger les erreurs avec contexte
-- Retourner des erreurs utilisateur-friendly
+- try/catch autour des appels ; laisser remonter l'`ApiError` jusqu'au composant
+- Afficher via `$toast.errorFrom` / `describeError` (message + `requestId`)
+- Backend : `sendError` / `sendFailure`, jamais de détail technique dans la réponse
 
 ### Performance
-- Utiliser le cache pour éviter les requêtes répétées
-- Implémenter le lazy loading pour les données volumineuses
-- Optimiser les requêtes avec des paramètres appropriés
+- Pas de cache applicatif des réponses API côté client (ni le service worker)
+- Filtrer côté serveur (paramètres validés par Zod, `buildQuery` côté client)
 
 ### Sécurité
-- Valider toutes les entrées côté serveur
-- Utiliser l'authentification JWT
-- Implémenter la limitation de taux (rate limiting)
+- Valider toutes les entrées côté serveur (`validate(schema)`)
+- Choisir le bon middleware d'accès pour chaque nouvelle route
+- Rate limiting via `createRateLimiter` (`backend/lib/rateLimit.js`) pour les routes sensibles
 
 ### Tests
-- Tester les services avec des mocks
-- Vérifier la gestion des erreurs
-- Tester les cas limites et les timeouts
+- Frontend : `apiService.request` simulé (`vi.mock`) dans `frontend/tests/services/`
+- Backend : Jest dans `backend/tests/api/` (routes, isolation, sécurité)
 
 ## Scripts Utilitaires
-
-### Tests API
-- `pnpm run test-api` : Test des endpoints API
-- `pnpm run test-cors` : Vérification CORS
-- `pnpm run test-local` : Tests locaux
-
-### Migration et Setup
-- `pnpm run init-db` : Initialisation base de données
-- `pnpm run migrate-db` : Migration des données
-- `pnpm run setup-env` : Configuration environnement
+```bash
+# backend/
+pnpm dev                 # API sur http://localhost:3001
+pnpm test                # tests Jest (suites DB ignorées sans TEST_DATABASE_URL)
+pnpm run migrate         # migrations
+# frontend/
+pnpm dev                 # Vite sur http://localhost:3000, /api relayé vers le backend local
+```

@@ -4,69 +4,86 @@ description: Fonctionnalités spécifiques de l'application TeachDigital
 
 # Fonctionnalités Spécifiques - TeachDigital
 
+Écrans dans `frontend/src/views/`, services dans `frontend/src/services/`, logique dans
+`backend/controllers/` et `backend/lib/`. Toute règle métier est appliquée par le backend.
 
-### Intégration
-- Traitement local des données
-- Pas de stockage des données biométriques
+## Accès : code familial, profils et PIN
 
-## Gestion des Profils
+- **Code d'entrée familial** : `FamilyGate.vue` → `POST /api/auth/family-gate` → jeton famille (24 h).
+  Service [familyGateService.js](mdc:frontend/src/services/familyGateService.js) ; réglage parent
+  `FamilyGateSettings.vue` (`PUT /api/auth/family-gate`) ; initialisation serveur
+  `node scripts/init-family-gate.js <code>`.
+- **Choix du profil** : `ProfileSelector.vue` (« Qui est-ce ? »). Un enfant / ado entre sans PIN
+  avec le jeton famille ; un parent passe par `PinLock.vue` (`POST /api/auth/login` → jeton profil).
+- **Types de profils** : `child`, `teen`, `admin` (parent). Gestion parent : `ProfileManagement.vue`,
+  `EditProfilePage.vue` ; service [profile/profileService.js](mdc:frontend/src/services/profile/profileService.js)
+  (exporté par `profile/index.js`) ; store [profileStore.js](mdc:frontend/src/stores/profileStore.js) ;
+  backend [profileController.js](mdc:backend/controllers/profileController.js). Demande de création
+  par un enfant : `POST /api/profiles/requests`.
+- **PIN** : saisie `PinPad.vue` ; changement `PinSettings.vue` via `authService.updatePin`
+  (politique miroir `utils/pinPolicy.js`, revalidée par `backend/lib/pinPolicy.js`) ;
+  PIN oublié : `node scripts/reset-pin.js <profileId> <PIN>` (révoque les sessions du profil).
 
-### Services de profil
-- **Service principal** : [src/services/profileService.js](mdc:frontend/src/services/profileService.js)
-- **Services spécialisés** : [src/services/profile/](mdc:frontend/src/services/profile/)
-- **Repository** : [src/repositories/profileRepository.js](mdc:frontend/src/repositories/profileRepository.js)
+## Leçons et quiz
 
-### Types de profils
-- **Profils enfants** : Gestion des profils pour les enfants
-- **Profils adolescents** : Gestion des profils pour les adolescents
-- **Migration** : [scripts/migrate-teen-profiles.js](mdc:frontend/scripts/migrate-teen-profiles.js)
+- **Création (parent)** : `LessonScanner.vue` (photos de leçon → OCR / IA → quiz, composants
+  `components/lesson-scanner/`) et `TextQuizGenerator.vue` (texte → quiz), via
+  [aiService.js](mdc:frontend/src/services/aiService.js) et `useQuizGeneration`.
+- **Gestion (parent)** : `ParentQuizManagement.vue` (composants `components/quiz/`), `LessonDetails.vue`.
+- **Quiz de l'enfant** : `QuizGenerator.vue` (`?childId=&lessonId=`). Seules les réponses partent :
+  `POST /api/lessons/:id/quiz-results` `{ profileId, answers }` ; le serveur calcule le score et
+  renvoie la correction. `GET /api/lessons/:id` retire réponses et explications pour un non-parent.
+- **Services** : [lessonService.js](mdc:frontend/src/services/lessonService.js) ;
+  backend [lessonController.js](mdc:backend/controllers/lessonController.js).
+- Formats acceptés par l'IA : images uniquement (PDF refusés en 415 `UNSUPPORTED_FILE_TYPE`).
 
-## Système de Leçons
+## Pages de cours HTML
 
-### Gestion des leçons
-- **Service** : [src/services/lessonService.js](mdc:frontend/src/services/lessonService.js)
-- **Repository** : [src/repositories/lessonRepository.js](mdc:frontend/src/repositories/lessonRepository.js)
-- **Store** : [src/stores/lessonStore.js](mdc:frontend/src/stores/lessonStore.js)
+- **Parent** : `CoursePageManager.vue` (dépôt d'un fichier HTML ou génération par l'IA,
+  `components/course-pages/CoursePageGenerator.vue`, aperçu `POST /api/course-pages/preview`).
+- **Enfant** : `CoursePageViewer.vue` → `CoursePageFrame.vue` : iframe `sandbox` sans
+  `allow-same-origin`, URL signée obtenue par `POST /api/course-pages/:id/view`, score remonté par
+  `postMessage` (`teachdigital:quiz-progress`).
+- **Services** : [coursePageService.js](mdc:frontend/src/services/coursePageService.js) ;
+  backend `controllers/coursePageController.js`, `lib/coursePageView.js`.
 
-### Scanner de leçons
-- **Guide** : [LESSON-SCANNER.md](mdc:LESSON-SCANNER.md)
-- **Migration** : [scripts/migrate-lessons.js](mdc:frontend/scripts/migrate-lessons.js)
+## YouTube Kids
 
-## Intégration YouTube Kids
+- **Parent** : `YouTubeVideoManager.vue` ; **enfant** : `YouTubeKidsViewerSimple.vue` (vidéos actives uniquement).
+- **Services** : [youtubeVideoService.js](mdc:frontend/src/services/youtubeVideoService.js) ;
+  backend `controllers/youtubeController.js` (table `youtube_videos`).
 
-### Services YouTube
-- **Service principal** : [src/services/youtubeVideoService.js](mdc:frontend/src/services/youtubeVideoService.js)
-- **Guide** : [YOUTUBE-KIDS-GUIDE.md](mdc:YOUTUBE-KIDS-GUIDE.md)
-- **Troubleshooting** : [YOUTUBE-TROUBLESHOOTING.md](mdc:YOUTUBE-TROUBLESHOOTING.md)
+## Activités, progression et badges
 
-### Scripts de test
-- **Test simple** : [scripts/test-youtube-extraction-simple.js](mdc:frontend/scripts/test-youtube-extraction-simple.js)
-- **Test complet** : [scripts/test-youtube-extraction.js](mdc:frontend/scripts/test-youtube-extraction.js)
-- **Test Kids viewer** : [scripts/test-youtube-kids-viewer.js](mdc:frontend/scripts/test-youtube-kids-viewer.js)
+- **Activités** assignées par le parent : `ParentActivityManagement.vue`,
+  [activityService.js](mdc:frontend/src/services/activityService.js), `controllers/activityController.js`.
+- **Progression** : `ProgressTracking.vue` (enfant), `ParentProgressTracking.vue` (composants
+  `components/progress/`), `progressService.js`, `controllers/progressController.js`, `lib/streaks.js`.
+- **Badges** : `BadgeManager.vue` (enfant), `BadgeAdminManager.vue` (parent), `badgeService.js`,
+  `badgeStore.js` ; backend `api/badges.js`, `lib/badgeService.js`, `lib/badgeConditions.js`.
+  Critères supportés : `quiz_completed`, `perfect_score`, `score_streak`, `subjects_variety`,
+  `subject_specific`, `daily_streak` (`learning_time` refusé). Déblocage évalué par le serveur
+  après un résultat de quiz.
 
-### Base de données YouTube
-- **Setup** : [YOUTUBE-DB-SETUP.md](mdc:YOUTUBE-DB-SETUP.md)
-- **Migration** : [scripts/migrate-youtube-videos.js](mdc:frontend/scripts/migrate-youtube-videos.js)
+## Notifications
 
-## Système de Notifications
-
-### Gestion des notifications
-- **Service** : [src/services/notificationService.js](mdc:frontend/src/services/notificationService.js)
-- **Repository** : [src/repositories/notificationRepository.js](mdc:frontend/src/repositories/notificationRepository.js)
-- **Store** : [src/stores/notificationStore.js](mdc:frontend/src/stores/notificationStore.js)
-
-### Tests
-- **Test des notifications** : [scripts/test-notifications.js](mdc:frontend/scripts/test-notifications.js)
+- Notifications **en base** (table `notifications`), créées par le serveur (`lib/notify.js` :
+  quiz terminé, PIN parent verrouillé, demande de création de profil) et exposées par `/api/notifications`.
+- **Aucune notification push** (pas de VAPID ni de handler push dans le service worker).
+- Messages transitoires de l'interface : toasts (`toastStore`, `this.$toast`).
 
 ## Intelligence Artificielle
 
-### Services AI
-- **Service principal** : [src/services/aiService.js](mdc:frontend/src/services/aiService.js)
-- **Services métier** : [src/services/business/](mdc:frontend/src/services/business/)
+- **Réglages (parent)** : `AISettings.vue` + `components/AIProviderConfig.vue`.
+- **Service** : [aiService.js](mdc:frontend/src/services/aiService.js) ; backend `api/ai/**`
+  (réservé aux parents, images uniquement, délai global `AI_REQUEST_TIMEOUT_MS`).
+- **Fournisseurs** (ordre) : LocalLLM → OpenAI → Gemini → DeepSeek → Groq → Mistral → Kimi → OpenRouter.
+  Clés dans l'environnement du backend ou enregistrées chiffrées depuis l'interface (`AI_SETTINGS_KEY`), jamais en `VITE_*`.
 
-## Gestion des Activités
+## Sécurité, paramètres et aide
 
-### Services d'activité
-- **Service principal** : [src/services/activityService.js](mdc:frontend/src/services/activityService.js)
-- **Guide d'intégration** : [DASHBOARD-ACTIVITY-INTEGRATION.md](mdc:DASHBOARD-ACTIVITY-INTEGRATION.md)
-- **Guide de gestion** : [ACTIVITY-MANAGEMENT-GUIDE.md](mdc:ACTIVITY-MANAGEMENT-GUIDE.md)
+- **Journal d'audit / sécurité (parent)** : `SecurityDashboard.vue`,
+  [auditLogService.js](mdc:frontend/src/services/auditLogService.js), `controllers/auditController.js`.
+- **Paramètres parent** : `ParentSettings.vue` (dont `InstallAppCard` pour installer la PWA).
+- **Paramètres enfant** : `ChildSettings.vue` (`settingsStore` : classes sur `<html>` + `styles/preferences.css`).
+- **Aide et découverte** : `ChildHelp.vue`, `OnboardingTour.vue` (`onboardingStore`).

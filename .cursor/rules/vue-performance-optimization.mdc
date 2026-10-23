@@ -1,5 +1,5 @@
 ---
-globs: *.vue,src/components/*.vue,src/services/*.js
+globs: *.vue,frontend/src/components/**/*.vue,frontend/src/services/*.js,frontend/vite.config.js
 description: Optimisations de performance spécifiques à Vue.js pour TeachDigital
 ---
 
@@ -7,139 +7,99 @@ description: Optimisations de performance spécifiques à Vue.js pour TeachDigit
 
 ## Configuration Vite Optimisée
 
-### Configuration de build optimisée
-La configuration Vite dans [vite.config.js](mdc:frontend/vite.config.js) inclut des optimisations avancées :
+### Configuration de build
+La configuration dans [frontend/vite.config.js](mdc:frontend/vite.config.js) (plugins : `vue()` + plugin
+interne qui écrit `dist/version.json` ; pas de vite-plugin-pwa) :
 
 ```javascript
-// Optimisations Terser activées
-terserOptions: {
-  compress: {
-    drop_console: true,        // Supprimer console.log en production
-    drop_debugger: true,       // Supprimer debugger en production
-    dead_code: true,           // Supprimer code mort
-    unused: true,              // Supprimer variables inutilisées
-    keep_classnames: true      // Important pour Vue.js
+build: {
+  manifest: true,          // dist/.vite/manifest.json, lu par scripts/generate-sw.js (précache)
+  minify: 'terser',
+  target: ['es2020', 'chrome80', 'firefox78', 'safari14', 'edge80'],
+  terserOptions: {
+    compress: {
+      drop_debugger: true,
+      // Seuls console.log/info/debug sont retirés : console.warn/error restent en production
+      pure_funcs: ['console.log', 'console.info', 'console.debug'],
+      passes: 2,
+      keep_classnames: true   // Important pour Vue.js
+    },
+    format: { comments: false }
   }
 }
 ```
 
-### Code Splitting Intelligent
-- **Vue Vendor Chunk** : Vue.js et son écosystème séparés
-- **Database Chunk** : @neondatabase isolé
-- **App Chunk** : Tous les composants et services regroupés
+### Code Splitting
+- **Écrans** : les 29 vues de `src/views/` sont chargées à la demande (`() => import('../views/X.vue')`
+  dans `router/index.js`) → chunks `assets/views/<Vue>-[hash].js`
+- **Dépendances** : `vue-vendor` (vue, @vue/*, vue-router, pinia) et `vendor` (le reste, ex. DOMPurify)
+- Composants / services chargés dynamiquement → `assets/components/…`, `assets/services/…`
+- `installService` est importé dynamiquement par `main.js` (hors du bundle initial)
 
 ## Optimisations Vue.js Spécifiques
 
-### Lazy Loading des Composants
-```javascript
-// Dans src/main.js - Chargement différé des services
-const scheduleIdleTask = window.requestIdleCallback || ((cb) => setTimeout(cb, 1))
-
-// Initialisation asynchrone après le premier rendu
-scheduleIdleTask(() => {
-  initializeServicesAsync()
-})
-```
-
-### Composants Optimisés
-- **PerformanceDashboard** : [src/components/PerformanceDashboard.vue](mdc:frontend/src/components/PerformanceDashboard.vue)
-- **YouTubeVideoManager** : Chargement différé des vidéos
-- **ImageOptimizer** : Optimisation automatique des images
+### Démarrage
+- `main.js` monte l'application immédiatement ; le Service Worker est enregistré après `load`,
+  la vérification de version a lieu 5 s plus tard puis toutes les 30 min
+- Chunk introuvable après un déploiement : rechargement unique (`reloadOnceAfterChunkError`,
+  événement `vite:preloadError` et `router.onError`)
 
 ### Gestion d'État Efficace
-- Utiliser `shallowRef` pour les objets volumineux
-- Éviter les mutations profondes avec `reactive`
-- Préférer `computed` pour les calculs coûteux
+- Utiliser `shallowRef` pour les objets volumineux (quiz, HTML de pages de cours)
+- Éviter les watchers profonds sur de gros objets
+- Préférer `computed` pour les calculs dérivés
+- Éviter les appels répétés : `profileStore` met les profils en cache 60 s et dédoublonne les chargements simultanés
 
-### Services de Performance
-- **Cache Service** : [src/services/cachedApiService.js](mdc:frontend/src/services/cachedApiService.js)
-- **Offline Data Service** : [src/services/offlineDataService.js](mdc:frontend/src/services/offlineDataService.js)
-- **Mobile Optimization** : [src/services/mobileOptimizationService.js](mdc:frontend/src/services/mobileOptimizationService.js)
+### Squelettes et ressentis
+- `ProfileSkeleton` pendant le chargement des profils
+- `PullToRefresh` remonte la page courante au lieu de recharger toute l'application
 
 ## Optimisations de Bundle
-
-### Tree Shaking Agressif
-- Configuration ESBuild avec `treeShaking: true`
-- Exclusion des dépendances non utilisées
-- Minification intelligente des noms
-
-### Chunks Optimisés
-```javascript
-// Stratégie de chunks dans vite.config.js
-manualChunks: (id) => {
-  if (id.includes('node_modules')) {
-    if (id.includes('vue') || id.includes('@vue')) {
-      return 'vue-vendor'  // Vue.js isolé
-    }
-    if (id.includes('@neondatabase')) {
-      return 'database'     // Base de données isolée
-    }
-    return 'vendor'         // Autres dépendances
-  }
-  return 'app'             // Code applicatif
-}
-```
+- Pas de bibliothèque d'icônes ni de kit UI : SVG inline et classes Tailwind
+- Dépendances runtime limitées à `vue`, `vue-router`, `pinia`, `dompurify` : vérifier l'impact
+  (`pnpm run build:analyze`) avant d'en ajouter une
+- `optimizeDeps` + esbuild `treeShaking: true` en développement
 
 ## Métriques de Performance
 
-### Scripts de Monitoring
-- `pnpm run build:analyze` : Analyse du bundle
-- `pnpm run lighthouse` : Audit Lighthouse
-- `pnpm run performance:check` : Vérification complète
-
-### Objectifs de Performance
-- **First Contentful Paint** : < 0.5s
-- **Time to Interactive** : < 1.5s
-- **Bundle Size** : < 250KB
-- **Lighthouse Score** : > 90
+### Scripts de Monitoring (frontend/)
+- `pnpm run build:analyze` : build + [scripts/analyze-bundle.js](mdc:frontend/scripts/analyze-bundle.js)
+  (signale les chunks > 500 Ko et les images > 100 Ko)
+- `pnpm run build:analyze:visual` / `pnpm run bundle:size` : vite-bundle-analyzer
+- `pnpm run lighthouse` : audit Lighthouse de `http://localhost:3000`
+- `pnpm run performance:check` : build + analyse + Lighthouse
+- `pnpm run check:performance` : [scripts/check-performance.js](mdc:frontend/scripts/check-performance.js) vérifie encore
+  d'anciens motifs (`scheduleIdleTask` / `initializeServicesAsync` dans `main.js`, `webpackChunkName`) :
+  ne pas réintroduire ces motifs pour le satisfaire
 
 ## Bonnes Pratiques
 
 ### Composants Vue
 - Utiliser `v-memo` pour les listes volumineuses
-- Implémenter `v-once` pour le contenu statique
+- `v-once` pour le contenu statique
+- `:key` stables sur les listes
 - Éviter les watchers profonds sur de gros objets
 
 ### Services
-- Charger les services critiques en priorité
-- Différer les services non critiques
-- Utiliser le cache pour éviter les requêtes répétées
+- Pas de cache applicatif des réponses API (données sensibles) : limiter plutôt les appels redondants
+- Filtrer côté serveur (paramètres de requête via `buildQuery`)
 
 ### Images et Assets
-- Optimisation automatique avec Sharp
-- Lazy loading des images
-- Formats modernes (WebP, AVIF)
-
-## Monitoring en Temps Réel
-
-### Dashboard de Performance
-Le composant [PerformanceDashboard.vue](mdc:frontend/src/components/PerformanceDashboard.vue) fournit :
-- Temps de chargement des composants
-- Statistiques de cache
-- Métriques de bundle
-- Tests de performance interactifs
-
-### Logs de Performance
-```javascript
-// Dans src/main.js
-console.log('🚀 Initialisation asynchrone des services...')
-console.log('✅ Profils préchargés')
-console.log('✅ Services PWA initialisés avec succès')
-```
+- Images envoyées : compression / redimensionnement / WebP côté client par
+  [imageOptimizationService.js](mdc:frontend/src/services/imageOptimizationService.js) avant upload
+- Icônes PWA générées avec Sharp (`pnpm run generate-icons`)
+- `loading="lazy"` pour les images hors écran (déjà utilisé pour les photos de profil des tableaux de bord)
+- Assets Vite hachés : cache long (`immutable`) côté nginx et cache-first dans le Service Worker
 
 ## Optimisations Spécifiques TeachDigital
 
-### Reconnaissance Faciale
-- Chargement différé de Face-API.js (-53% de JavaScript)
-- Initialisation uniquement quand nécessaire
-- Cache des modèles de reconnaissance
-
 ### YouTube Integration
-- Chargement différé des vidéos
-- Optimisation des thumbnails
-- Cache des métadonnées vidéo
+- Miniatures `img.youtube.com` (`getThumbnailUrl`, autorisées par la CSP) ; l'enfant ouvre la vidéo
+  dans un nouvel onglet (hôtes YouTube en liste blanche), le parent la prévisualise en iframe (`getEmbedUrl`)
+
+### Pages de cours
+- HTML chargé dans une iframe isolée par URL signée : ne pas l'injecter dans le DOM de l'application
 
 ### PWA Features
-- Service Worker optimisé
-- Cache intelligent avec revalidation
-- Mise à jour transparente des ressources
+- Service Worker unique : précache du build (`PRECACHE_ASSETS`), navigation réseau d'abord
+- Mise à jour détectée par `version.json`, proposée par `UpdateNotification`

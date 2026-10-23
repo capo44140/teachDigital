@@ -1,93 +1,62 @@
-# Scanner de Leçons avec IA
+# Scanner de leçons avec IA
 
 ## Fonctionnalité
 
-Le scanner de leçons permet aux parents de :
-1. Scanner ou télécharger une image de leçon
-2. Sélectionner l'enfant pour qui générer l'interrogation
-3. Générer automatiquement une interrogation adaptée à l'âge et au niveau de l'enfant
-4. Proposer l'interrogation à l'enfant sélectionné
+Le scanner (`/lesson-scanner`, `src/views/LessonScanner.vue`, réservé aux parents) transforme des
+photos de leçon en quiz :
 
-## Comment utiliser
+1. choix de l'enfant (ses niveau et âge orientent la génération) ;
+2. envoi de 1 à 10 photos de la leçon ;
+3. extraction du texte de chaque image, puis génération d'un quiz à partir de ces extractions ;
+4. enregistrement de la leçon (`POST /api/lessons`), puis ouverture du quiz en aperçu parent.
 
-### 1. Accès au scanner
-- Connectez-vous en tant que parent
-- Dans le dashboard parent, cliquez sur "Scanner des leçons"
+L'enfant retrouve ensuite le quiz sur son tableau de bord. Ses réponses sont notées par le serveur
+(voir plus bas).
 
-### 2. Sélection de l'enfant
-- Choisissez l'enfant pour qui vous voulez générer l'interrogation
-- Les profils enfants disponibles s'affichent automatiquement
+Pour générer un quiz à partir d'un texte collé : `/text-quiz-generator`
+(`src/views/TextQuizGenerator.vue`). Le parcours commun « générer → enregistrer → ouvrir l'aperçu »
+est dans `src/composables/useQuizGeneration.js`.
 
-### 3. Scan de la leçon
-- Glissez-déposez une image de leçon dans la zone de téléchargement
-- Ou cliquez sur "Parcourir les fichiers" pour sélectionner une image
-- Formats supportés : JPG, PNG, PDF
+## Formats acceptés
 
-### 4. Génération de l'interrogation
-- Cliquez sur "Générer l'interrogation"
-- L'IA analyse le contenu de la leçon
-- Une interrogation adaptée est générée automatiquement
+- **Images uniquement** : JPG, PNG ou WebP, 10 au maximum par leçon.
+- Les PDF et les autres types de fichiers sont refusés par le serveur (415
+  `UNSUPPORTED_FILE_TYPE`). L'écran les écarte avant l'envoi.
+- Taille : 15 Mo par fichier et 25 Mo par envoi (`API_UPLOAD_MAX_*`). Les images sont compressées
+  côté navigateur avant l'envoi.
 
-### 5. Passage du quiz
-- L'enfant peut maintenant passer l'interrogation
-- Questions à choix multiples avec explications
-- Score et feedback à la fin
+## Routes IA utilisées (`backend/api/ai/index.js`, parent uniquement)
+
+| Route | Rôle |
+| --- | --- |
+| `POST /api/ai/extract-text-from-documents` | Texte d'une image, par un LLM vision ou Tesseract selon `OCR_MODE` |
+| `POST /api/ai/generate-quiz-from-analyses` | Quiz à partir des textes extraits |
+| `POST /api/ai/generate-quiz-from-text` | Quiz à partir d'un texte (générateur texte) |
+| `POST /api/ai/generate-quiz-from-image`, `generate-quiz-from-documents` | Variantes en un seul appel |
+
+Chaque génération a un délai global (`AI_REQUEST_TIMEOUT_MS`, 170 s). Elle est annulée si le
+navigateur abandonne la requête.
 
 ## Configuration IA
 
-### Mode démo (par défaut)
-- Fonctionne sans configuration
-- Utilise des quiz prédéfinis pour les tests
-- Parfait pour tester l'interface
+- Les clés des fournisseurs se saisissent dans **Configuration IA** (`/ai-settings`), où elles sont
+  enregistrées chiffrées (`AI_SETTINGS_KEY`), ou dans le `.env` du backend. Elles ne doivent
+  **jamais** figurer dans une variable `VITE_*`, qui serait publiée dans le JavaScript du
+  navigateur.
+- Ordre d'essai des fournisseurs disponibles : LLM local (LM Studio / Ollama) → OpenAI → Gemini →
+  DeepSeek → Groq → Mistral → Kimi → OpenRouter. Variables de réglage : `AI_PROVIDER`,
+  `AI_PROVIDERS_ORDER` et `AI_DISABLE_PROVIDERS`.
+- Il n'y a **pas de mode démo** : sans fournisseur disponible, la génération échoue avec un
+  message explicite.
+- OCR : `OCR_MODE=llm` (vision, meilleure qualité) ou `tesseract` (hors ligne). Avec Tesseract, les
+  données de langue sont téléchargées au premier usage puis gardées dans le volume
+  `.cache/tesseract`.
 
-### Mode IA avancé
-- **OpenAI** : Ajoutez votre clé API OpenAI dans `backend/.env` (jamais dans une variable `VITE_*`, qui serait publiée dans le JavaScript du navigateur) :
-```
-OPENAI_API_KEY=<votre-cle-openai>
-```
-- **Gemini (Gratuit)** : Ajoutez votre clé API Gemini dans `backend/.env` :
-```
-GEMINI_API_KEY=<votre-cle-gemini>
-```
-- Obtient une clé OpenAI sur : https://platform.openai.com/api-keys
-- Obtient une clé Gemini sur : https://makersuite.google.com/app/apikey
-- Analyse réelle des images avec IA
-- Génération personnalisée des quiz
-- **Fallback automatique** : Si OpenAI échoue, utilise Gemini
+## Passage du quiz (`/quiz-generator?childId=&lessonId=`)
 
-## Composants créés
-
-### LessonScanner.vue
-- Interface de scan des leçons
-- Sélection du profil enfant
-- Téléchargement et aperçu des images
-- Intégration avec le service IA
-
-### QuizGenerator.vue
-- Affichage et gestion des quiz
-- Interface de passage du quiz
-- Calcul des scores et feedback
-- Navigation entre les questions
-
-### AIService.js
-- Service d'analyse d'images avec IA
-- Génération de quiz personnalisés
-- Mode démo et mode IA avancé
-- Gestion des erreurs et fallbacks
-
-## Routes ajoutées
-
-- `/lesson-scanner` - Interface de scan
-- `/quiz-generator` - Interface de quiz
-
-## Intégration
-
-Le scanner est intégré dans le dashboard parent avec un bouton dédié dans la section d'administration.
-
-## Fonctionnalités techniques
-
-- **Analyse d'images** : Reconnaissance du contenu des leçons
-- **Génération adaptative** : Quiz adaptés à l'âge et au niveau
-- **Interface intuitive** : Design moderne et responsive
-- **Gestion d'erreurs** : Fallback vers le mode démo
-- **Performance** : Optimisé pour les appareils mobiles
+- L'enfant ne reçoit jamais les bonnes réponses ni les explications avant de valider :
+  `GET /api/lessons/:id` les retire pour un non-parent.
+- À la fin, seules les réponses sont envoyées (`POST /api/lessons/:id/quiz-results`,
+  `{ profileId, answers }`). Le serveur calcule le score et renvoie la correction
+  (`correction`) ainsi que les badges débloqués.
+- En session parent, le quiz s'ouvre en aperçu : rien n'est enregistré.

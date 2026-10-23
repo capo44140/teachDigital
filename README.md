@@ -1,59 +1,77 @@
 # TeachDigital
 
-Application éducative familiale (PWA) : un frontend **Vue 3 + Vite 7** et une API **Node.js / Express**
-adossée à **PostgreSQL**, déployés en conteneurs **Docker sur un NAS Synology**.
+Application éducative familiale (PWA). Le frontend est en **Vue 3 + Vite 7**, l'API en
+**Node.js / Express** sur **PostgreSQL**. Les deux tournent en conteneurs **Docker sur un NAS
+Synology**.
+
+> 🔄 Mise en production de cette version sur un NAS déjà installé : suivre la checklist
+> [« Mise à jour du déploiement »](doc/DEPLOY-SYNOLOGY.md#-mise-à-jour-du-déploiement-première-livraison-de-cette-version)
+> (réseau Docker, ports, nginx, migrations, `.env`).
 
 ## 🚀 Stack technique
 
 | Couche | Technologies |
 | --- | --- |
-| Frontend | Vue 3, Vite 7, Pinia, Vue Router, Tailwind CSS 4 (PostCSS), PWA (service worker généré au build) |
-| Backend | Node.js, Express 4, `pg`, JWT, Zod, Helmet, Tesseract.js / fournisseurs IA (OpenAI, Gemini, Groq, Mistral, DeepSeek, Kimi, LLM local) |
-| Base de données | PostgreSQL |
-| Tests | Vitest (unitaires front), Jest (backend), Playwright (E2E) |
-| Déploiement | Docker / Docker Compose sur Synology via `deploy.ps1` (ou `deploy-frontend.ps1`) |
-| Outillage | **Node 22** (`.nvmrc`, minimum `^20.19 \|\| >=22.12` pour Vite 7), **pnpm 9.15** (`packageManager`) |
+| Frontend | Vue 3, Vite 7, Pinia, Vue Router, Tailwind CSS 4 (PostCSS), DOMPurify, PWA (service worker unique, généré au build) |
+| Backend | Node.js, Express 4, `pg`, JWT, Zod, Helmet, busboy ; OCR Tesseract.js et fournisseurs IA (LLM local, OpenAI, Gemini, DeepSeek, Groq, Mistral, Kimi, OpenRouter) |
+| Base de données | PostgreSQL, schéma versionné par des migrations SQL (`backend/migrations/`) |
+| Tests | Vitest + Vue Test Utils (frontend), Jest (backend, unitaires et intégration PostgreSQL), Playwright (E2E, API simulée) |
+| Déploiement | Docker Compose sur Synology via `deploy.ps1` (nginx du frontend → backend sur un réseau Docker dédié) |
+| Outillage | **Node 22** (`.nvmrc` ; minimum `^20.19 \|\| >=22.12` pour Vite 7), **pnpm 9.15** (`packageManager`) |
 
 ## 📦 Installation (développement)
 
-Prérequis : Node 22 (`nvm use`) et pnpm 9.15 (`corepack enable` ou `npm i -g pnpm@9.15.9`).
+Prérequis : Node 22 (`nvm use`), pnpm 9.15 (`corepack enable` ou `npm i -g pnpm@9.15.9`) et un
+PostgreSQL local, avec une base et un utilisateur dédiés.
 
 ```bash
-# Frontend
-cd frontend
-pnpm install
-cp .env.example .env            # aucune clé secrète côté frontend (cf. Sécurité)
-
 # Backend
-cd ../backend
+cd backend
 pnpm install
-cp env.example .env             # renseigner DB_* et JWT_SECRET
-pnpm dev                        # API sur http://localhost:3001
+cp env.example .env             # DB_* (ou DATABASE_URL) et JWT_SECRET (>= 32 caractères) obligatoires
+pnpm dev                        # attend PostgreSQL, applique les migrations, puis écoute sur http://localhost:3001
+node scripts/init-family-gate.js <code>    # code d'entrée familial (aucun code par défaut)
+node scripts/init-default-pins.js <PIN>    # PIN des profils qui n'en ont pas
+
+# Frontend
+cd ../frontend
+pnpm install
+cp .env.example .env            # variables VITE_* uniquement, sans aucun secret
+pnpm dev                        # http://localhost:3000
 ```
 
-Puis, dans `frontend/` : `pnpm dev` → [http://localhost:3000](http://localhost:3000).
-En développement, Vite relaie `/api` vers le backend (`VITE_DEV_API_TARGET`, défaut `http://127.0.0.1:3001`).
+En développement, Vite relaie `/api` vers le backend (`VITE_DEV_API_TARGET`, défaut
+`http://127.0.0.1:3001`). Le schéma de la base est créé et mis à jour **uniquement** par les
+migrations du backend : voir [backend/README.md](backend/README.md#migrations).
 
 ## 🧪 Qualité et tests
 
-Commandes à lancer dans `frontend/` (sauf mention contraire) :
-
 ```bash
-pnpm run lint:check      # ESLint (sans correction) — utilisé par la CI
-pnpm run lint            # ESLint avec --fix
-pnpm exec vitest run     # tests unitaires frontend (pnpm test = mode watch)
-pnpm run test:coverage   # couverture (src/ uniquement, pas de seuil imposé pour l'instant)
-pnpm run test:e2e        # tests Playwright (cf. doc/PLAYWRIGHT-GUIDE.md)
-cd backend && pnpm test  # tests Jest unitaires (les suites DB sont ignorées sans TEST_DATABASE_URL)
-                         # tests d'intégration : voir backend/tests/README.md (base dédiée + schema.sql)
+# frontend/
+pnpm run lint:check             # ESLint (pnpm run lint : avec --fix)
+pnpm exec vitest run            # tests unitaires et de composants (pnpm test : mode watch)
+pnpm run test:coverage          # couverture, avec les seuils minimaux de vitest.config.js
+pnpm exec playwright test       # E2E : serveur Vite lancé par Playwright, API simulée
+                                # sans navigateur Playwright : E2E_BROWSER_CHANNEL=msedge
+
+# backend/
+pnpm test                       # Jest ; les suites PostgreSQL sont ignorées sans TEST_DATABASE_URL
+TEST_DATABASE_URL=postgresql://.../teachdigital_test pnpm run test:db:init   # base de test = migrations
+TEST_DATABASE_URL=postgresql://.../teachdigital_test pnpm test -- --runInBand
 ```
+
+Détails : [backend/tests/README.md](backend/tests/README.md) et
+[frontend/tests/e2e/README.md](frontend/tests/e2e/README.md).
 
 CI GitHub Actions :
 
-- `.github/workflows/ci.yml` — à chaque push / PR : lint, tests unitaires, build frontend, tests backend
-  (unitaires + intégration sur un PostgreSQL de service, schéma `backend/tests/schema.sql`).
-- `.github/workflows/e2e-tests.yml` — tests Playwright.
-- `.github/workflows/deploy-synology.yml` — déploiement **manuel** (`workflow_dispatch`), précédé de la CI.
+- `.github/workflows/ci.yml`, à chaque push et PR :
+  - frontend : lint, Vitest avec seuils de couverture, build ;
+  - backend : PostgreSQL de service, schéma créé par les migrations, `pnpm run migrate`,
+    tests unitaires et d'intégration.
+- `.github/workflows/e2e-tests.yml` : Playwright (Chromium, projets bureau et mobile).
+- `.github/workflows/deploy-synology.yml` : déploiement **manuel** (`workflow_dispatch`), précédé
+  de la CI.
 
 ## 🏗️ Build de production
 
@@ -61,13 +79,14 @@ CI GitHub Actions :
 cd frontend && pnpm run build
 ```
 
-Génère `frontend/dist/` (Vite, minification Terser, chunks hashés) puis `dist/sw.js` (`frontend/scripts/generate-sw.js`).
-L'URL publique de l'API utilisée par le build est `VITE_API_URL_PROD` (défaut dans `frontend/src/services/apiService.js`).
+Génère `frontend/dist/` (Vite, Terser, un chunk par écran), `dist/version.json`, puis `dist/sw.js`
+(`scripts/generate-sw.js`, qui précache les fichiers du build). Le build appelle l'API sur la même
+origine que la page (`/api/...`, relayé par le nginx du frontend) ; `VITE_API_URL_PROD` ne sert qu'à
+forcer une autre origine (qui devrait alors aussi être autorisée par la CSP de `frontend/nginx.conf`).
 
 ## 🐳 Déploiement (Docker sur Synology)
 
-Le déploiement réel se fait depuis un poste Windows (PowerShell + Git Bash) vers le NAS via SSH
-(alias `synology` dans `~/.ssh/config`) :
+Depuis un poste Windows (PowerShell et Git Bash), vers le NAS par SSH (alias `synology`) :
 
 ```powershell
 .\deploy.ps1                     # backend + frontend
@@ -76,116 +95,150 @@ Le déploiement réel se fait depuis un poste Windows (PowerShell + Git Bash) ve
 .\deploy.ps1 -SkipBuild          # réutilise le frontend/dist/ existant
 ```
 
-- **Backend** : le contenu de `backend/` est copié dans le dossier défini par `backend/.synology-deploy.json`
-  (`deployPath`, cf. `backend/.synology-deploy.json.example`), puis `backend/docker-compose.yml` est
-  reconstruit et relancé. Le conteneur écoute sur le port **3001** (healthcheck `/health` ; readiness
-  `/health/ready`, qui vérifie PostgreSQL et renvoie 503 si la base est injoignable).
-  Les secrets viennent du fichier **`.env` présent sur le NAS** à côté du compose (jamais transféré ni
-  commité) — modèle : `backend/env.docker.example`.
-- **Frontend** : `frontend/dist/`, `frontend/nginx.conf`, `frontend/Dockerfile.prebuilt` et
-  `frontend/docker-compose.yml` sont copiés dans
-  `/volume1/docker/teachdigital/frontend` (ou `frontendDeployPath` de `.synology-deploy.json`).
-  L'hôte publie le port **3000** vers nginx (port 80 du conteneur), qui sert la SPA et relaie `/api/`
-  vers le backend (`host.docker.internal:3001`). Le reverse proxy DSM (HTTPS) pointe vers le port 3000.
-- `deploy-frontend.ps1` est l'ancien script équivalent pour le frontend seul.
+- **Frontend** (`teachdigital-frontend`) : nginx sur le port **3000** de l'hôte. Il sert la SPA,
+  applique les en-têtes de sécurité et relaie `/api/` vers `http://backend:3001` par le réseau
+  Docker externe `teachdigital`. `deploy.ps1` crée ce réseau, avec un sous-réseau fixe
+  (`-DockerSubnet`, défaut `172.30.240.0/24`). Le reverse proxy HTTPS de DSM vise `localhost:3000`.
+- **Backend** (`teachdigital-backend`) : publié **uniquement sur `127.0.0.1:3001`**. Les secrets
+  viennent du `.env` présent sur le NAS à côté du compose (modèle `backend/env.docker.example`) ;
+  ce fichier n'est jamais transféré ni commité. Les migrations s'appliquent au démarrage.
+  Santé : `/health` (liveness) et `/health/ready` (base joignable).
 
-Autres fichiers Docker :
-
-- `docker-compose.app.yml` + `env.synology.example` : stack tout-en-un (PostgreSQL + backend + frontend
-  [+ nginx avec `--profile production`]), non utilisée par `deploy.ps1`.
-- `docker-compose.yml` (racine) + `init-supabase.sql` : stack Supabase **optionnelle et non utilisée**
-  (cf. [doc/README-SUPABASE.md](doc/README-SUPABASE.md)).
-
-Documentation complémentaire : [doc/DEPLOY-SYNOLOGY.md](doc/DEPLOY-SYNOLOGY.md),
-[doc/SYNOLOGY-ENV-VARIABLES.md](doc/SYNOLOGY-ENV-VARIABLES.md),
-[doc/HTTPS-SYNOLOGY-SETUP.md](doc/HTTPS-SYNOLOGY-SETUP.md)
-(certains guides de `doc/` décrivent d'anciennes approches — Vercel, Neon — et sont conservés pour l'historique).
+Guides : [doc/DEPLOY-SYNOLOGY.md](doc/DEPLOY-SYNOLOGY.md),
+[doc/HTTPS-SYNOLOGY-SETUP.md](doc/HTTPS-SYNOLOGY-SETUP.md) et
+[doc/SYNOLOGY-ENV-VARIABLES.md](doc/SYNOLOGY-ENV-VARIABLES.md).
+`docker-compose.app.yml` + `env.synology.example` décrivent une stack tout-en-un (PostgreSQL,
+backend et frontend, plus nginx avec `--profile production`) que `deploy.ps1` n'utilise pas.
 
 ## 🔒 Sécurité / secrets
 
-Aucun secret ne doit être commité : seuls les fichiers `*.example` sont versionnés (`frontend/.env`,
-`.env.*`, `backend/.env` sont ignorés par git et exclus des images Docker).
+Aucun secret ne doit être commité : seuls les fichiers `*.example` sont versionnés. `.env` et
+`.env.*` sont ignorés par git et exclus des images Docker.
 
-Variables **obligatoires** côté backend (`backend/.env` en local, `.env` du NAS en production) :
-
-| Variable | Exigence |
+| Variable (backend) | Exigence |
 | --- | --- |
-| `JWT_SECRET` | ≥ 32 caractères aléatoires, unique par environnement : `openssl rand -hex 32`. `docker compose` refuse de démarrer s'il est absent. |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` (ou `DATABASE_URL`) | Identifiants PostgreSQL dédiés à l'application, mot de passe fort. |
-| `FRONTEND_URL` / `ALLOWED_ORIGIN` | Origines autorisées par CORS. |
+| `JWT_SECRET` | Au moins 32 caractères aléatoires (`openssl rand -hex 32`). Le serveur refuse de démarrer avec un secret absent, trop court ou d'exemple |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` (ou `DATABASE_URL`) | Utilisateur PostgreSQL dédié, **propriétaire des tables**, mot de passe fort |
+| `AI_SETTINGS_KEY` | Recommandée (au moins 32 caractères, différente de `JWT_SECRET`) : chiffre les clés IA saisies dans l'interface |
+| `FRONTEND_URL` / `ALLOWED_ORIGIN` | Origines autorisées par CORS |
 
-Clés IA (`OPENAI_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`,
-`KIMI_API_KEY`) : **uniquement dans l'environnement du backend**. Ne jamais créer de variable `VITE_*`
-contenant une clé : tout ce qui est préfixé `VITE_` est intégré en clair dans le JavaScript livré.
+Les clés IA vont dans le `.env` du backend ou dans Configuration IA. Ne **jamais** créer de
+variable `VITE_*` contenant une clé : tout ce qui est préfixé `VITE_` est publié en clair dans le
+JavaScript.
 
-Mise en service :
+Modèle d'accès (détails : [doc/PIN-SECURITY.md](doc/PIN-SECURITY.md)) :
 
-1. Initialiser le code d'entrée familial (aucun code par défaut) :
-   `cd backend && node scripts/init-family-gate.js <code à 4-8 chiffres>`
-2. Définir les codes PIN des profils : `node scripts/init-default-pins.js <PIN>` (dans `backend/`).
-3. **Changer tout code par défaut ou trivial** (ex. `1234`) : un code connu de tous donne accès à
-   l'espace parent. Les PIN se modifient ensuite depuis les paramètres parent.
+- **Code familial d'abord**, qui délivre un jeton « famille » : accès enfant, jamais aux données
+  d'un parent. Ensuite seulement, **PIN d'un profil** (`POST /api/auth/login` exige le jeton
+  famille), qui délivre un jeton « profil ». L'espace parent exige le jeton admin du profil et une
+  session de 30 min.
+- **Révocation** par `token_version` : un changement de code familial ou de PIN, la désactivation
+  d'un profil ou le changement de son type invalident les jetons déjà émis.
+- **Verrouillage** des PIN par (profil, IP) : 15 min, puis 1 h, puis 24 h. Plafond global de 100
+  échecs par heure, qui verrouille 15 min. Les verrous sont en mémoire : un redémarrage du backend
+  les lève.
+- **Politique des PIN**, à chaque changement : codes triviaux refusés (`WEAK_PIN`), au moins 6
+  chiffres pour un parent (`PIN_TOO_SHORT`). Les PIN existants restent valides.
+- **Quiz notés par le serveur** : un enfant ne reçoit jamais les bonnes réponses avant d'avoir
+  envoyé les siennes.
+- **Journal d'audit** : les événements d'authentification sont écrits par le serveur ; l'envoi
+  client exige un jeton.
+- **CSP** (`frontend/nginx.conf`) : une seule politique stricte pour l'application, sans script
+  inline (`script-src 'self'`). Les pages de cours (HTML généré avec scripts) sont servies à part
+  par `GET /api/course-pages/render?t=<jeton signé de 5 min>`, avec leur propre CSP `sandbox`
+  (`backend/lib/coursePageView.js`). Elles s'affichent dans une iframe
+  `sandbox="allow-scripts allow-forms allow-modals"`, et nginx n'ajoute aucune CSP sur cette route.
 
-Si un secret a été commité par le passé, il doit être considéré comme compromis : le **changer**
-(la réécriture de l'historique git ne suffit pas).
-
-Le conteneur frontend applique aussi les en-têtes de sécurité dans `frontend/nginx.conf` (CSP,
-`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`). La CSP est
-stricte pour l'application (`script-src 'self'`) ; les routes `/course-page*`, qui affichent du HTML
-généré par l'IA avec ses scripts inline, reçoivent une CSP dédiée (`'unsafe-inline'`, Google Fonts).
-Une navigation SPA vers ces routes force un chargement complet du document pour bénéficier de cette
-CSP (cf. `frontend/src/router/index.js`).
+Mise en service : `node scripts/init-family-gate.js <code>` et
+`node scripts/init-default-pins.js <PIN>` (dans `backend/`, ou par `docker exec` sur le NAS). Pour
+un PIN oublié : `node scripts/reset-pin.js <id profil> <PIN>`. Un secret commité par le passé doit
+être considéré comme compromis et **changé** : réécrire l'historique git ne suffit pas.
 
 ## 📁 Structure du projet
 
 ```text
 teachDigital/
-├── frontend/               # Application Vue 3 / Vite (PWA)
-│   ├── src/                #   components, services, stores, router, config, utils...
-│   ├── public/             #   assets statiques, manifest, template du service worker
-│   ├── scripts/            #   build (generate-sw.js), versioning, migrations et utilitaires DB
-│   ├── tests/              #   Vitest (tests/services) et Playwright (tests/e2e)
-│   ├── index.html, vite.config.js, vitest.config.js, playwright.config.js, eslint.config.js
-│   ├── Dockerfile, .dockerignore                           #   build complet dans Docker (docker-compose.app.yml)
-│   ├── Dockerfile.prebuilt, nginx.conf, docker-compose.yml #   image frontend déployée sur le NAS
-│   └── package.json, pnpm-lock.yaml, env.example           #   scripts et dépendances frontend (pnpm)
-├── backend/                # API Express (server.js, api/, controllers/, lib/, scripts/, tests/, Dockerfile, docker-compose.yml)
-├── doc/                    # Documentation détaillée
+├── frontend/               # Application Vue 3 / Vite (PWA) — voir frontend/README.md
+│   ├── src/                #   views/ (écrans routés), components/, composables/, services/, stores/,
+│   │                       #   router/, styles/, utils/, constants/, config/
+│   ├── public/             #   assets statiques, manifest, modèle du service worker (sw.js)
+│   ├── scripts/            #   build (generate-sw.js, generate-icons.js), versioning, analyse du bundle
+│   ├── tests/              #   Vitest (services, components, stores, utils) et Playwright (e2e)
+│   ├── Dockerfile.prebuilt, nginx.conf (modèle), docker-compose.yml   # image déployée sur le NAS
+│   └── Dockerfile          #   build complet dans Docker (docker-compose.app.yml)
+├── backend/                # API Express — voir backend/README.md
+│   ├── server.js, app.js   #   cycle de vie / application Express
+│   ├── api/, controllers/, lib/
+│   ├── migrations/         #   schéma PostgreSQL (NNNN_description.sql)
+│   ├── scripts/            #   migrate, init-family-gate, init-default-pins, reset-pin, init-badges
+│   ├── tests/              #   Jest
+│   └── Dockerfile, docker-compose.yml, env.example, env.docker.example
+├── doc/                    # Documentation détaillée (voir ci-dessous)
+├── .cursor/rules/          # Règles pour les assistants IA
 ├── .github/workflows/      # CI, E2E, déploiement manuel Synology
 ├── deploy.ps1              # Déploiement Synology (backend + frontend)
-├── deploy-frontend.ps1     # Déploiement Synology (frontend seul, historique)
-├── docker-compose.app.yml, nginx.conf, env.synology.example   # stack tout-en-un (PostgreSQL + backend + frontend)
-├── docker-compose.yml, init-supabase.sql                     # stack Supabase optionnelle (non utilisée)
+├── docker-compose.app.yml, nginx.conf, env.synology.example   # stack tout-en-un (non utilisée par deploy.ps1)
 └── .nvmrc, .gitignore, .gitattributes, README.md
 ```
 
 ## 📝 Scripts utiles
 
-À lancer dans `frontend/` :
+Dans `frontend/` :
 
-- `pnpm run dev` / `pnpm run build` / `pnpm run preview`
+- `pnpm run dev` / `build` / `preview`
 - `pnpm run generate-icons`, `pnpm run validate-manifest`
-- `pnpm run version:patch|minor|major` — gestion de version (cf. [doc/VERSION-MANAGEMENT.md](doc/VERSION-MANAGEMENT.md))
-- Scripts de migration / maintenance DB : `pnpm run init-db`, `migrate-db`, `migrate-pins`, `migrate-teens`,
-  `migrate-lessons`, `migrate-badges`, `migrate:audit-logs` (variables DB dans `frontend/.env`, cf. `frontend/env.example`)
-- `pnpm run audit` / `pnpm run security:check` — audit des dépendances + lint
-- `pnpm run build:analyze`, `pnpm run bundle:analyze`, `pnpm run lighthouse` — analyse de performance
+- `pnpm run version:patch|minor|major` : gestion de version
+  ([doc/VERSION-MANAGEMENT.md](doc/VERSION-MANAGEMENT.md))
+- `pnpm run test:e2e[:ui|:headed|:debug|:report]`, `pnpm run test:all` (Vitest + Playwright)
+- `pnpm run audit` / `pnpm run security:check` : audit des dépendances, plus lint
+- `pnpm run build:analyze`, `pnpm run bundle:analyze`, `pnpm run lighthouse` : analyse de
+  performance
+
+Dans `backend/` :
+
+- `pnpm dev` / `pnpm start`
+- `pnpm run migrate` / `pnpm run migrate:status` : migrations de la base du `.env`
+- `pnpm run init-family-gate`, `init-default-pins`, `reset-pin`, `init-badges` (voir
+  [backend/README.md](backend/README.md))
+- `pnpm test`, `pnpm run test:coverage`, `pnpm run test:db:init`
 
 ## ⚡ Performance
 
-Les travaux d'optimisation (code splitting, lazy loading, cache) sont documentés dans :
-[doc/OPTIMIZATIONS-README.md](doc/OPTIMIZATIONS-README.md),
-[doc/OPTIMIZATIONS-SUMMARY.md](doc/OPTIMIZATIONS-SUMMARY.md),
-[doc/BUNDLE-SIZE-OPTIMIZATION.md](doc/BUNDLE-SIZE-OPTIMIZATION.md),
-[doc/PERFORMANCE-OPTIMIZATIONS-2024.md](doc/PERFORMANCE-OPTIMIZATIONS-2024.md),
-[doc/QUICK-PERFORMANCE-CHECK.md](doc/QUICK-PERFORMANCE-CHECK.md).
-Pour mesurer l'état actuel : `pnpm run build:analyze` et `pnpm run lighthouse` (sur `pnpm preview`).
+- Chaque écran (`src/views/`) est chargé à la demande, avec un chunk par vue. Les dépendances sont
+  regroupées en `vue-vendor` et `vendor`. Terser retire `console.log/info/debug`.
+- Le service worker précache tout le build et sert les fichiers hachés depuis le cache. L'API
+  n'est jamais mise en cache.
+- Le fond animé est rendu une seule fois (`AppBackground`), et il devient statique sur mobile ou
+  quand les animations sont réduites.
+- Mesures : `pnpm run build:analyze` (taille des chunks) et `pnpm run lighthouse` (audite
+  `http://localhost:3000`).
+
+## 📚 Documentation (`doc/`)
+
+| Sujet | Document |
+| --- | --- |
+| Déploiement, mise à jour, exploitation | [DEPLOY-SYNOLOGY.md](doc/DEPLOY-SYNOLOGY.md) |
+| HTTPS / reverse proxy DSM | [HTTPS-SYNOLOGY-SETUP.md](doc/HTTPS-SYNOLOGY-SETUP.md) |
+| Variables d'environnement | [SYNOLOGY-ENV-VARIABLES.md](doc/SYNOLOGY-ENV-VARIABLES.md) |
+| Droits Docker sur le NAS | [SYNOLOGY_DOCKER_PERMISSIONS.md](doc/SYNOLOGY_DOCKER_PERMISSIONS.md) |
+| Authentification, PIN, jetons | [PIN-SECURITY.md](doc/PIN-SECURITY.md) |
+| PWA, service worker, mises à jour | [PWA-INSTALL.md](doc/PWA-INSTALL.md) |
+| Versions | [VERSION-MANAGEMENT.md](doc/VERSION-MANAGEMENT.md) |
+| Design « Liquid Glass » et accessibilité | [LIQUID-GLASS-DESIGN-GUIDE.md](doc/LIQUID-GLASS-DESIGN-GUIDE.md) |
+| Scanner de leçons / IA | [LESSON-SCANNER.md](doc/LESSON-SCANNER.md) |
+| Badges | [BADGE-SYSTEM-GUIDE.md](doc/BADGE-SYSTEM-GUIDE.md) |
+| Activités | [ACTIVITY-MANAGEMENT-GUIDE.md](doc/ACTIVITY-MANAGEMENT-GUIDE.md) |
+| Vidéos YouTube | [YOUTUBE-KIDS-GUIDE.md](doc/YOUTUBE-KIDS-GUIDE.md) |
+| Portage React Native (API de référence) | [REACT-NATIVE-PORTING-GUIDE.md](doc/REACT-NATIVE-PORTING-GUIDE.md) |
 
 ## 🤝 Contribution
 
-1. Créer une branche (`git checkout -b feature/ma-fonctionnalite`)
-2. Vérifier localement (dans `frontend/`) : `pnpm run lint:check && pnpm exec vitest run && pnpm run build`
-3. Ouvrir une Pull Request (la CI doit passer)
+1. Créer une branche (`git checkout -b feature/ma-fonctionnalite`).
+2. Vérifier en local :
+   - dans `frontend/` : `pnpm run lint:check && pnpm exec vitest run --coverage && pnpm run build` ;
+   - dans `backend/` : `pnpm test`.
+   Toute évolution du schéma passe par une nouvelle migration dans `backend/migrations/`.
+3. Ouvrir une Pull Request (la CI doit passer).
 
 ## 📄 Licence
 

@@ -1,77 +1,90 @@
 ---
-globs: tests/**/*.js,src/**/*.test.js,*.config.js
+globs: frontend/tests/**/*.js,backend/tests/**/*.js,frontend/*.config.js
 description: Standards de test pour TeachDigital
 ---
 
 # Standards de Test - TeachDigital
 
-## Configuration des Tests
+Détails et exemples : [comprehensive-testing-guidelines.mdc](mdc:.cursor/rules/comprehensive-testing-guidelines.mdc).
+
+## Frontend (`frontend/`)
 
 ### Framework de test
-- **Vitest** : Framework principal (configuration dans [vitest.config.js](mdc:frontend/vitest.config.js))
-- **Setup** : [tests/setup.js](mdc:frontend/tests/setup.js)
-- **Coverage** : V8 coverage provider
+- **Vitest** : configuration dans [frontend/vitest.config.js](mdc:frontend/vitest.config.js) (jsdom, globals)
+- **Setup** : [frontend/tests/setup.js](mdc:frontend/tests/setup.js)
+- **Coverage** : provider V8 sur `src/**/*.{js,vue}`, seuils bloquants : statements 70, branches 72, functions 39, lines 70
+  (seuils = couverture mesurée : ils ne doivent pas baisser, à relever quand des tests sont ajoutés)
 
 ### Scripts de test disponibles
 ```bash
-pnpm run test          # Tests en mode watch
-pnpm run test:run      # Tests une seule fois
+pnpm run test          # Vitest en mode watch
+pnpm run test:run      # Vitest une seule fois
 pnpm run test:ui       # Interface utilisateur Vitest
-pnpm run test:coverage # Tests avec couverture de code
-pnpm run test:watch    # Tests en mode watch
+pnpm run test:coverage # Avec couverture (la CI lance : pnpm exec vitest run --coverage)
+pnpm run test:e2e      # Playwright (tests/e2e)
+pnpm run test:all      # Vitest puis Playwright
 ```
 
 ### Structure des tests
-- **Tests unitaires** : `tests/services/` ou `src/**/*.test.js`
-- **Tests d'intégration** : `tests/integration/`
-- **Tests E2E** : À implémenter avec Playwright ou Cypress
+- **Services** : `tests/services/` (apiService, authService, lessonService, coursePageService, routerGuard...)
+- **Composants** : `tests/components/` (`@vue/test-utils`)
+- **Stores** : `tests/stores/`
+- **Utilitaires** : `tests/utils/`
+- **E2E** : `tests/e2e/*.spec.js` (Playwright, API simulée par `page.route`)
 
 ### Exemple de test de service
 ```javascript
-// Basé sur tests/services/profileService.test.js
-import { describe, it, expect, beforeEach } from 'vitest'
-import { ProfileService } from '@/services/profileService.js'
+// Basé sur tests/services/lessonService.test.js
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+
+const mockApiService = vi.hoisted(() => ({ request: vi.fn() }))
+vi.mock('../../src/services/apiService.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return { ...actual, apiService: mockApiService }
+})
+
+const { ProfileService } = await import('../../src/services/profile/profileService.js')
 
 describe('ProfileService', () => {
-  let profileService
-  
-  beforeEach(() => {
-    profileService = new ProfileService()
-  })
-  
-  it('should create a profile', async () => {
-    // Test implementation
+  beforeEach(() => vi.clearAllMocks())
+
+  it('appelle GET /api/profiles', async () => {
+    mockApiService.request.mockResolvedValue({ success: true, data: { profiles: [] } })
+    await ProfileService.getAllProfiles()
+    expect(mockApiService.request.mock.calls[0][0]).toBe('/api/profiles')
   })
 })
 ```
 
-### Tests de base de données
-- **Configuration DB** : [scripts/test-database-config.js](mdc:frontend/scripts/test-database-config.js)
-- **Tests de migration** : Tester avec [scripts/migrate-database.js](mdc:frontend/scripts/migrate-database.js)
-- **Tests de sécurité** : [scripts/test-pin-security.js](mdc:frontend/scripts/test-pin-security.js)
-
-### Tests de services spécifiques
-- **Notifications** : [scripts/test-notifications.js](mdc:frontend/scripts/test-notifications.js)
-- **YouTube** : [scripts/test-youtube-service.js](mdc:frontend/scripts/test-youtube-service.js)
-- **Version** : [scripts/test-version-display.js](mdc:frontend/scripts/test-version-display.js)
-
 ### Tests de composants Vue
-- Utiliser Vue Test Utils pour les composants
-- Tester les interactions utilisateur
-- Vérifier le rendu conditionnel
+- Utiliser `@vue/test-utils` (`mount`) avec jsdom
+- Tester les interactions utilisateur et le rendu conditionnel
+- Sélectionner par rôle, libellé ou texte (comme les tests E2E)
 
-### Bonnes pratiques
-- **Nommage** : `describe` pour les groupes, `it` pour les cas de test
-- **Assertions** : Utiliser les matchers Vitest
-- **Mocking** : Mocker les dépendances externes
-- **Coverage** : Viser au moins 80% de couverture
+## Backend (`backend/`)
 
-### Tests de performance
+- **Jest** (`backend/tests/`) : `api/`, `lib/`, `app/`, `controllers/`, `services/` ; helpers dans
+  `tests/helpers/testHelpers.js` (`describeWithDb`, `createTestProfile`, `generateTestToken`, `createMockRequest`...)
+- Les suites base de données ne tournent qu'avec `TEST_DATABASE_URL` (base dédiée dont le nom contient « test ») :
+  ```bash
+  TEST_DATABASE_URL=postgresql://.../teachdigital_test pnpm run test:db:init   # vide le schéma puis applique les migrations
+  TEST_DATABASE_URL=postgresql://.../teachdigital_test pnpm test -- --runInBand
+  ```
+- Sans `TEST_DATABASE_URL`, `pnpm test` lance uniquement les tests unitaires
+- Seuils de couverture Jest dans `backend/package.json` (statements 84, branches 70, functions 85, lines 85)
+
+## Bonnes pratiques
+- **Nommage** : `describe` pour les groupes, `it` pour les cas de test, libellés en français
+- **Assertions** : matchers Vitest / Jest
+- **Mocking** : simuler `apiService` (frontend) ; ne jamais appeler un vrai backend depuis Vitest ou Playwright
+- **Sécurité** : toute nouvelle route backend reçoit un test d'accès (jeton famille / enfant / parent) et d'isolation
+
+## Tests de performance
 - **Bundle analysis** : `pnpm run build:analyze`
 - **Lighthouse** : `pnpm run lighthouse`
 - **Bundle size** : `pnpm run bundle:size`
 
-### Tests de sécurité
+## Tests de sécurité
 - **Audit des dépendances** : `pnpm run audit`
 - **Linting** : `pnpm run lint:check`
 - **Check complet** : `pnpm run security:check`

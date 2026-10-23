@@ -1,5 +1,5 @@
 ---
-globs: scripts/*.js,package.json,src/version.json
+globs: frontend/scripts/*.js,frontend/package.json,backend/package.json,deploy.ps1,frontend/docker-compose.yml,backend/docker-compose.yml,frontend/public/version.json
 description: Gestion des versions et déploiement
 ---
 
@@ -8,47 +8,60 @@ description: Gestion des versions et déploiement
 ## Gestion des Versions
 
 ### Versioning
-- **Version principale** : Définie dans [package.json](mdc:frontend/package.json)
-- **Version de l'app** : [src/version.json](mdc:frontend/src/version.json)
-- **Scripts de version** : [scripts/version-bump.js](mdc:frontend/scripts/version-bump.js)
+- **Version principale** : `version` de [frontend/package.json](mdc:frontend/package.json)
+- **Script de version** : [frontend/scripts/version-bump.js](mdc:frontend/scripts/version-bump.js) — met à jour `package.json`,
+  `public/manifest.json` et `public/version.json` (ce dernier ne sert qu'en développement)
+- **Version de build** : `vite.config.js` calcule `<version>-<horodatage>`, l'injecte dans le bundle
+  (`__APP_VERSION__`) et l'écrit dans `dist/version.json` ; `scripts/generate-sw.js` en dérive `BUILD_VERSION` du service worker
 
-### Scripts de version disponibles
+### Scripts de version disponibles (frontend/)
 ```bash
-pnpm run version:patch    # Version patch (0.0.1 -> 0.0.2)
-pnpm run version:minor    # Version minor (0.0.1 -> 0.1.0)
-pnpm run version:major    # Version major (0.0.1 -> 1.0.0)
+pnpm run version:patch    # Version patch (1.0.2 -> 1.0.3)
+pnpm run version:minor    # Version minor (1.0.2 -> 1.1.0)
+pnpm run version:major    # Version major (1.0.2 -> 2.0.0)
 pnpm run version:current  # Afficher la version actuelle
 ```
 
-### Affichage de la version
-- **Test d'affichage** : [scripts/test-version-display.js](mdc:frontend/scripts/test-version-display.js)
-- **Composant de version** : Intégré dans l'interface utilisateur
+### Affichage et détection
+- **Composant de version** : [frontend/src/components/VersionInfo.vue](mdc:frontend/src/components/VersionInfo.vue)
+- **Détection de mise à jour** : `updateService` compare `__APP_VERSION__` avec `/version.json` du serveur
 
 ## Déploiement
 
-### Build et déploiement
-- **Build standard** : `pnpm run build`
-- **Build Vercel** : `pnpm run build:vercel`
-- **Script de déploiement** : [scripts/build-vercel.js](mdc:frontend/scripts/build-vercel.js)
+### Build
+- **Build standard** : `pnpm run build` (dans `frontend/`) = `vite build --mode production` + `node scripts/generate-sw.js`
+- Le backend n'a pas d'étape de build (image `node:22-alpine`)
 
-### Backend (Vercel Functions)
-- **Configuration** : [backend/vercel.json](mdc:backend/vercel.json)
-- **Déploiement** : [scripts/deploy.js](mdc:frontend/scripts/deploy.js)
-- **Scripts disponibles** :
-  - `pnpm run deploy` : Déploiement production
-  - `pnpm run deploy:preview` : Déploiement preview
+### Déploiement Synology : deploy.ps1 (racine)
+```powershell
+.\deploy.ps1                          # backend + frontend
+.\deploy.ps1 -Target backend          # backend uniquement (-Target backend|frontend|both)
+.\deploy.ps1 -Target frontend -SkipBuild   # réutilise frontend/dist/
+.\deploy.ps1 -NoBuildCache            # docker compose build --no-cache
+.\deploy.ps1 -DockerSubnet 172.30.240.0/24 # sous-réseau du réseau Docker « teachdigital » (à sa création)
+```
+- Transfert par SSH (alias `synology` par défaut), chemins NAS via `-BackendPath` / `-FrontendPath`
+  ou `.synology-deploy.json` ; crée le réseau Docker externe `teachdigital` s'il n'existe pas
+- **Backend** : `backend/` → conteneur `teachdigital-backend` (`backend/docker-compose.yml`), port publié
+  **uniquement** sur `127.0.0.1:3001` ; au démarrage : attente de PostgreSQL, migrations, puis écoute ;
+  vérification `/health` puis `/health/ready`
+- **Frontend** : `frontend/dist/` + `nginx.conf` + `Dockerfile.prebuilt` + `docker-compose.yml` → conteneur
+  `teachdigital-frontend` (nginx) sur le port hôte 3000, qui relaie `/api/` vers `http://backend:3001`
+- Workflow GitHub manuel équivalent : `.github/workflows/deploy-synology.yml`
+- `docker-compose.app.yml` (racine) : stack tout-en-un optionnelle (PostgreSQL + backend + frontend), pas le chemin du NAS
 
 ### Variables d'environnement
-- **Setup automatique** : [scripts/setup-env.js](mdc:frontend/scripts/setup-env.js)
-- **Configuration** : [scripts/configure-env.js](mdc:frontend/scripts/configure-env.js)
-- **Template** : [env.example](mdc:frontend/env.example)
+- **NAS** : `.env` à côté de `backend/docker-compose.yml`, modèle [backend/env.docker.example](mdc:backend/env.docker.example)
+  (`JWT_SECRET` obligatoire, `DB_*`, `AI_SETTINGS_KEY`, clés IA, `TRUST_PROXY`...)
+- **Local backend** : [backend/env.example](mdc:backend/env.example) → `backend/.env`
+- **Frontend** : [frontend/env.example](mdc:frontend/env.example) → `frontend/.env` (variables `VITE_*` publiques uniquement)
 
 ## Git Hooks
 
 ### Configuration des hooks
-- **Setup** : [scripts/setup-git-hooks.js](mdc:frontend/scripts/setup-git-hooks.js)
-- **Pre-commit** : [scripts/pre-commit-hook.js](mdc:frontend/scripts/pre-commit-hook.js)
-- **Installation** : `pnpm run setup:hooks`
+- **Setup** : [frontend/scripts/setup-git-hooks.js](mdc:frontend/scripts/setup-git-hooks.js)
+- **Pre-commit** : [frontend/scripts/pre-commit-hook.js](mdc:frontend/scripts/pre-commit-hook.js)
+- **Installation** : `pnpm run setup:hooks` (dans `frontend/`)
 
 ### Messages de commit
 - **Règle existante** : [.cursor/rules/forcefrancaisgitmessage.mdc](mdc:.cursor/rules/forcefrancaisgitmessage.mdc)
@@ -56,12 +69,14 @@ pnpm run version:current  # Afficher la version actuelle
 
 ## Maintenance
 
-### Mise à jour des dépendances
+### Mise à jour des dépendances (frontend/)
 - **Check** : `pnpm run update:deps:check`
 - **Minor updates** : `pnpm run update:deps:minor`
 - **Major updates** : `pnpm run update:deps:major`
 
 ### Scripts de maintenance
-- **Audit de sécurité** : `pnpm run audit`
-- **Linting** : `pnpm run lint`
-- **Tests** : `pnpm run test:run`
+- **Audit de sécurité** : `pnpm run audit` (frontend)
+- **Linting** : `pnpm run lint` (frontend)
+- **Tests** : `pnpm run test:run` (frontend), `pnpm test` (backend)
+- **Base de données** : `pnpm run migrate` / `pnpm run migrate:status` et scripts `backend/scripts/*`
+  (sur le NAS : `docker exec -it teachdigital-backend node scripts/<script> ...`)

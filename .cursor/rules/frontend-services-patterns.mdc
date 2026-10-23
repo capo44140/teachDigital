@@ -1,5 +1,5 @@
 ---
-globs: src/services/*.js
+globs: frontend/src/services/**/*.js
 description: Patterns pour les services frontend - Appels API uniquement
 alwaysApply: true
 ---
@@ -10,6 +10,13 @@ alwaysApply: true
 
 **Les services frontend ne font QUE des appels API au backend. Aucune logique métier.**
 
+- `apiService.js` est **uniquement le client HTTP** (URL de base, choix du jeton, délais, `ApiError`,
+  `buildQuery`, gestion des 401). N'y ajoutez jamais d'endpoint métier.
+- Chaque domaine a son service : `authService`, `lessonService`, `coursePageService`,
+  `profile/profileService` (exporté par `profile/index.js`), `activityService`, `badgeService`,
+  `youtubeVideoService`, `aiService`, `auditLogService`, `progressService`, `familyGateService`...
+  Ajoutez une méthode au service du domaine concerné plutôt que d'appeler `apiService` depuis un composant.
+
 ## 📋 Structure Standard d'un Service Frontend
 
 ```javascript
@@ -18,243 +25,183 @@ alwaysApply: true
  * Toute la logique métier est gérée par le backend
  */
 
-import { apiService } from './apiService.js'
+import { apiService, buildQuery } from './apiService.js'
 
 export class MonService {
   /**
    * Description de la méthode
-   * @param {type} param - Description
-   * @returns {Promise<type>} Description
+   * @param {Object} filters - Description
+   * @returns {Promise<Array>} Description
    */
-  async maMethode(param) {
-    try {
-      const response = await apiService.request('/api/endpoint', {
-        method: 'POST',
-        body: JSON.stringify({ param })
-      })
-      return response.data || null
-    } catch (error) {
-      console.error('Erreur dans maMethode:', error)
-      throw error
-    }
+  async list (filters = {}) {
+    const response = await apiService.request(`/api/mon-domaine${buildQuery(filters)}`)
+    return response.data?.items || []
+  }
+
+  async create (payload) {
+    const response = await apiService.request('/api/mon-domaine', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+    return response.data
   }
 }
 
 export default new MonService()
 ```
 
+Les services existants n'ont pas tous la même forme (instance par défaut, classe à méthodes
+statiques comme `LessonService` / `ProfileService`, fonctions exportées comme `coursePageService`) :
+suivre la forme du service que l'on modifie.
+
 ## ✅ Ce qui est AUTORISÉ dans les Services Frontend
 
 ### 1. Appels API
 ```javascript
-// ✅ BON - Appel API simple
-async getAllItems() {
+// ✅ BON - Appel API simple (le jeton est ajouté par apiService)
+async getAllItems () {
   const response = await apiService.request('/api/items')
   return response.data || []
 }
 ```
 
+- `auth: 'profile'` exige le jeton profil, `auth: 'none'` n'envoie aucun jeton
+  (ex. `authService` : `/api/auth/verify`, `/api/auth/logout`).
+- `FormData` est envoyé tel quel (pas de `Content-Type` forcé) : c'est le format des routes IA.
+
 ### 2. Formatage pour l'affichage
 ```javascript
-// ✅ BON - Formatage UI uniquement
-formatDate(dateString) {
+// ✅ BON - Formatage UI uniquement (voir aussi utils/progressFormatters.js)
+formatDate (dateString) {
   return new Date(dateString).toLocaleDateString('fr-FR')
-}
-
-formatCurrency(amount) {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR'
-  }).format(amount)
 }
 ```
 
 ### 3. Gestion d'erreurs simple
 ```javascript
-// ✅ BON - Catch et throw simple
-async getItem(id) {
+// ✅ BON - Catch et throw simple : l'ApiError (status, code, requestId, retryAfterSeconds) remonte
+async getItem (id) {
   try {
     const response = await apiService.request(`/api/items/${id}`)
     return response.data
   } catch (error) {
-    console.error('Erreur:', error)
+    console.error('Erreur dans getItem:', error)
     throw error
   }
 }
 ```
+L'affichage se fait dans le composant : `this.$toast.errorFrom(error, 'Message de secours')`
+ou `describeError` / `errorToastOptions` de `utils/apiErrors.js` (message + référence de requête).
 
 ### 4. Transformation de données pour l'UI
 ```javascript
 // ✅ BON - Transformation simple pour l'affichage
-async getItemsForSelect() {
+async getItemsForSelect () {
   const items = await this.getAllItems()
-  return items.map(item => ({
-    label: item.name,
-    value: item.id
-  }))
+  return items.map(item => ({ label: item.name, value: item.id }))
 }
 ```
 
 ## ❌ Ce qui est INTERDIT dans les Services Frontend
 
-### 1. Accès à la base de données
+### 1. Accès à la base de données / SQL
 ```javascript
 // ❌ INTERDIT - Accès direct DB
 import sql from '@/config/database.js'
 const items = await sql`SELECT * FROM items`
 ```
 
-### 2. Logique métier complexe
+### 2. Logique métier
 ```javascript
-// ❌ INTERDIT - Calculs métier
-calculateBadgeProgress(badge) {
-  // Logique complexe de calcul...
-}
+// ❌ INTERDIT - Calcul du score : le serveur le calcule à partir de { profileId, answers }
+calculateQuizScore (answers, questions) { /* ... */ }
 
-// ❌ INTERDIT - Validation serveur
-validateProfile(profile) {
-  // Validation complexe...
-}
+// ❌ INTERDIT - Décider du déblocage d'un badge
+checkBadgeUnlock (badge, history) { /* ... */ }
 ```
 
-### 3. Requêtes SQL
+### 3. Secrets et cache de données API
 ```javascript
-// ❌ INTERDIT - SQL dans le frontend
-async getProfileBadges(profileId) {
-  const result = await sql`
-    SELECT * FROM badges WHERE profile_id = ${profileId}
-  `
-}
-```
+// ❌ INTERDIT - Clé d'API dans le front (VITE_* est public)
+const key = import.meta.env.VITE_OPENAI_API_KEY
 
-### 4. Cache complexe avec logique
-```javascript
-// ❌ INTERDIT - Cache avec logique métier
-class CacheService {
-  cleanup() {
-    // Logique de nettoyage complexe...
-  }
-  
-  evictLeastUsed() {
-    // Algorithme LRU...
-  }
-}
+// ❌ INTERDIT - Cache persistant de réponses API (jetons, PIN, progression ne doivent pas survivre
+// dans le navigateur ; le service worker ne met jamais l'API en cache)
+localStorage.setItem('lessons_cache', JSON.stringify(lessons))
 ```
 
 ## 📝 Exemples Concrets
 
-### ✅ Service Badge (Correct)
+### ✅ Service Badge
 ```javascript
-// src/services/badgeService.js
+// frontend/src/services/badgeService.js
 import { apiService } from './apiService.js'
 
 export class BadgeService {
-  async getAllBadges() {
+  async getAllBadges () {
     const response = await apiService.request('/api/badges')
     return response.data || []
   }
 
-  async getProfileBadges(profileId) {
+  async getProfileBadges (profileId) {
     const response = await apiService.request(`/api/badges/profile/${profileId}`)
     return response.data || []
   }
 }
+
+export default new BadgeService()
 ```
 
-### ✅ Service Cache (Correct - Appels API)
+### ✅ Service IA (FormData, routes réservées aux parents)
 ```javascript
-// src/services/cacheService.js
-import { apiService } from './apiService.js'
-
-class CacheService {
-  async get(key, defaultValue = null) {
-    try {
-      const response = await apiService.request(`/api/cache/${encodeURIComponent(key)}`)
-      return response.data?.value ?? defaultValue
-    } catch (error) {
-      return defaultValue
-    }
-  }
-
-  async set(key, value, options = {}) {
-    await apiService.request('/api/cache', {
-      method: 'POST',
-      body: JSON.stringify({ key, value, options })
-    })
-  }
+// frontend/src/services/aiService.js (extrait simplifié)
+async extractTextFromDocuments (files, useLLMOCR = true) {
+  const formData = new FormData()
+  files.forEach((file, index) => {
+    formData.append(`file_${index}`, file)
+    formData.append(`file_${index}_name`, file.name)
+    formData.append(`file_${index}_type`, file.type)
+  })
+  formData.append('fileCount', files.length.toString())
+  formData.append('useLLMOCR', useLLMOCR.toString())
+  const response = await apiService.request('/api/ai/extract-text-from-documents', {
+    method: 'POST',
+    body: formData
+  })
+  return response.data?.extractions || null
 }
 ```
-
-### ✅ Service AI (Correct - Appels API)
-```javascript
-// src/services/aiService.js
-import { apiService } from './apiService.js'
-
-class AIService {
-  async generateQuizFromImage(imageFile, childProfile) {
-    const formData = new FormData()
-    formData.append('image', imageFile)
-    formData.append('childProfile', JSON.stringify(childProfile))
-
-    const response = await apiService.request('/api/ai/generate-quiz-from-image', {
-      method: 'POST',
-      body: formData
-    })
-    return response.data?.quiz || null
-  }
-}
-```
+Les routes IA n'acceptent que des images (PDF → 415 `UNSUPPORTED_FILE_TYPE`) ; les limites
+(nombre de documents, de questions, taille du texte) sont dans `constants/aiLimits.js`.
 
 ## 🔄 Flux de Données
 
-### Pattern Standard
 ```
-Composant Vue
+Composant Vue (views/ ou components/)
     ↓
-Service Frontend (appel API)
+Service de domaine (src/services/...)
     ↓
-apiService.request()
+apiService.request()  — jeton profil, sinon jeton famille
     ↓
 Backend API (logique métier)
     ↓
-Base de données PostgreSQL
+PostgreSQL
 ```
 
-### Exemple Complet
-```javascript
-// 1. Composant Vue
-// src/components/BadgeList.vue
-import badgeService from '@/services/badgeService.js'
+## 🎯 Checklist pour Nouveau Service / Nouvelle Méthode
 
-const badges = await badgeService.getAllBadges()
-
-// 2. Service Frontend
-// src/services/badgeService.js
-async getAllBadges() {
-  return await apiService.request('/api/badges')
-}
-
-// 3. Backend API
-// backend/api/badges.js
-const badges = await sql`SELECT * FROM badges`
-return res.json({ success: true, data: badges })
-```
-
-## 🎯 Checklist pour Nouveau Service
-
-Avant de créer un nouveau service frontend, vérifier :
-
-- [ ] Le service ne contient QUE des appels API
-- [ ] Aucun import de `database.js` ou `sql`
-- [ ] Aucune logique métier complexe
-- [ ] Aucune requête SQL
-- [ ] Utilise `apiService` pour tous les appels
-- [ ] Gestion d'erreurs simple (catch/throw)
-- [ ] Formatage UI uniquement si nécessaire
+- [ ] Le service ne contient QUE des appels API (+ formatage d'affichage)
+- [ ] Aucun import de `database.js`, aucun SQL
+- [ ] Aucune logique métier (score, droits, badges, politique PIN autre que l'aide à la saisie)
+- [ ] Utilise `apiService.request()` (et `buildQuery` pour les paramètres)
+- [ ] Ne pose pas lui-même l'en-tête `Authorization`
+- [ ] Gestion d'erreurs simple (catch/throw) ; aucun secret
+- [ ] Test Vitest dans `frontend/tests/services/` avec `apiService` simulé
 
 ## 📚 Références
 
-- **Service API Principal** : [src/services/apiService.js](mdc:frontend/src/services/apiService.js)
-- **Exemple Service Badge** : [src/services/badgeService.js](mdc:frontend/src/services/badgeService.js)
-- **Exemple Service Cache** : [src/services/cacheService.js](mdc:frontend/src/services/cacheService.js)
+- **Client HTTP** : [frontend/src/services/apiService.js](mdc:frontend/src/services/apiService.js)
+- **Exemple Service Badge** : [frontend/src/services/badgeService.js](mdc:frontend/src/services/badgeService.js)
+- **Exemple fonctions exportées** : [frontend/src/services/coursePageService.js](mdc:frontend/src/services/coursePageService.js)
+- **Erreurs pour l'UI** : [frontend/src/utils/apiErrors.js](mdc:frontend/src/utils/apiErrors.js)
 - **Architecture** : [.cursor/rules/architecture-overview.mdc](mdc:.cursor/rules/architecture-overview.mdc)

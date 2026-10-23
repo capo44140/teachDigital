@@ -1,65 +1,71 @@
 ---
-globs: src/repositories/*.js,src/services/*.js,backend/**/*.js
+globs: backend/**/*.js,backend/migrations/*.sql
 description: Patterns et conventions pour la base de données PostgreSQL
 ---
 
 # Patterns de Base de Données - PostgreSQL
 
+La base n'est accessible **que par le backend** (`backend/`). Le frontend passe toujours par l'API :
+il n'existe ni configuration de base ni pattern Repository côté frontend.
+
 ## Configuration de la Base de Données
 
 ### Configuration principale
-- **Configuration** : [src/config/database.js](mdc:frontend/src/config/database.js)
-- **Backend API** : [backend/api/index.js](mdc:frontend/src/backend/api/index.js)
-- **Variables d'environnement** : Utiliser les variables PostgreSQL définies dans [vite.config.js](mdc:frontend/vite.config.js)
+- **Pool et helper `sql`** : [backend/lib/database.js](mdc:backend/lib/database.js) (`pool`, `sql`, `getConnectionConfig`, `waitForDatabase`)
+- **Timeouts applicatifs** : [backend/lib/queries.js](mdc:backend/lib/queries.js) (`withQueryTimeout`, `TIMEOUTS`)
+- **Transactions** : [backend/lib/transaction.js](mdc:backend/lib/transaction.js) (`withTransaction`)
+- **Variables d'environnement** : `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` (prioritaires) ou `DATABASE_URL` ; réglages `DB_SSL`, `DB_MAX_CONNECTIONS`, `DB_STATEMENT_TIMEOUT_MS`... (cf. [backend/env.example](mdc:backend/env.example))
 
-### Pattern Repository
-Utiliser le pattern Repository pour l'accès aux données :
+### Accès aux données
+Pas de couche Repository : les contrôleurs (`backend/controllers/`, `backend/api/`) et `backend/lib/`
+écrivent leurs requêtes paramétrées.
 
 ```javascript
-// Exemple basé sur src/repositories/baseRepository.js
-import { database } from '@/config/database.js'
+const { pool } = require('../lib/database.js')
+const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js')
 
-export class BaseRepository {
-  constructor(tableName) {
-    this.tableName = tableName
-  }
-  
-  async findById(id) {
-    // Implémentation standard
-  }
-  
-  async create(data) {
-    // Implémentation standard
-  }
-}
+const { rows } = await withQueryTimeout(
+  pool.query('SELECT id, name, type FROM profiles WHERE id = $1 AND is_active = true', [profileId]),
+  TIMEOUTS.STANDARD,
+  'récupération du profil'
+)
 ```
 
-### Conventions de nommage des tables
-- **Tables** : snake_case (ex: `user_profiles`, `lesson_progress`)
-- **Colonnes** : snake_case (ex: `created_at`, `user_id`)
-- **Index** : `idx_` + nom de la table + colonnes (ex: `idx_profiles_user_id`)
+### Conventions de nommage
+- **Tables** : snake_case au pluriel (ex: `profiles`, `quiz_results`, `profile_badges`)
+- **Colonnes** : snake_case (ex: `created_at`, `profile_id`, `target_profile_id`)
+- **Index** : `idx_` + nom de la table + colonnes (ex: `idx_quiz_results_profile_completed`)
 
 ### Gestion des connexions
-- Utiliser le pool de connexions PostgreSQL
-- Fermer les connexions après utilisation
-- Gérer les erreurs de connexion gracieusement
+- Utiliser le pool partagé (`pool.query`, `sql`) ; ne pas créer d'autre `Pool` / `Client` dans le code applicatif
+  (seul le runner de migrations ouvre sa propre connexion)
+- Transactions : `withTransaction(async (client) => ...)` — connexion dédiée, `COMMIT` / `ROLLBACK` et libération automatiques
+- Encadrer les requêtes par `withQueryTimeout` (504 `GATEWAY_TIMEOUT` plutôt qu'une attente infinie ;
+  le `statement_timeout` PostgreSQL sert de filet)
+- Au démarrage, `server.js` attend PostgreSQL (`DB_STARTUP_TIMEOUT_MS`, 5 min) ; `/health/ready` vérifie la base
 
 ### Migrations
-- Scripts de migration dans `scripts/`
-- Exemple : [scripts/migrate-database.js](mdc:frontend/scripts/migrate-database.js)
-- Toujours tester les migrations avant déploiement
+- Fichiers `backend/migrations/NNNN_description.sql`, appliqués au démarrage par `server.js`
+  via [backend/lib/migrate.js](mdc:backend/lib/migrate.js) (échec = arrêt du serveur)
+- CLI dans `backend/` : `pnpm run migrate`, `pnpm run migrate:status`
+- Un nouveau fichier par changement (0001-0099 infra, 0100-0199 fonctionnalités) ; ne jamais modifier un fichier appliqué
+- Idempotent (`IF NOT EXISTS`, gardes `DO $$`), sans `BEGIN`/`COMMIT`, sans `CREATE INDEX CONCURRENTLY`, sans préfixe `public.`
+- Aucun DDL ailleurs (ni `server.js`, ni contrôleurs, ni scripts du frontend)
+- Détails : [advanced-database-patterns.mdc](mdc:.cursor/rules/advanced-database-patterns.mdc)
 
 ### Sécurité des données
-- Utiliser des requêtes paramétrées
-- Valider les données avant insertion
-- Chiffrer les données sensibles (voir [src/services/encryptionService.js](mdc:frontend/src/services/encryptionService.js))
+- Requêtes paramétrées uniquement (`$1` avec `pool.query`, `${valeur}` avec `sql`) ; jamais de concaténation de valeurs reçues
+- Noms de colonnes dynamiques : liste blanche (ex. `WRITABLE_COLUMNS` de `youtubeController.js` / `activityController.js`)
+- Valider les entrées sur la route avec Zod (`validate(schema)`, schémas dans `backend/lib/schemas.js`)
+- Isolation par profil : `backend/lib/scope.js` (`visibleProfileCondition`, `requireProfileAccess`)
+- PIN hachés en bcrypt (`backend/lib/nativeHash.js`), jamais en clair ni dans les logs ; les paramètres SQL ne sont jamais journalisés
 
-### Exemples de repositories
-- **Profiles** : [src/repositories/profileRepository.js](mdc:frontend/src/repositories/profileRepository.js)
-- **Lessons** : [src/repositories/lessonRepository.js](mdc:frontend/src/repositories/lessonRepository.js)
-- **Notifications** : [src/repositories/notificationRepository.js](mdc:frontend/src/repositories/notificationRepository.js)
+### Tables principales
+`profiles`, `pin_codes`, `family_gate`, `lessons`, `course_pages`, `quiz_results`, `badges`,
+`profile_badges`, `notifications`, `activities`, `youtube_videos`, `audit_logs`, `ai_settings`
+(cf. `migrations/0001_baseline.sql`) + `schema_migrations` (gérée par le runner).
 
 ### Gestion des erreurs
-- Logger les erreurs de base de données
-- Retourner des erreurs utilisateur-friendly
-- Implémenter des retry logic pour les connexions temporaires
+- `sendError(res, error, 'message par défaut')` (`backend/lib/http.js`) : timeout → 504, doublon (23505) → 409,
+  contrainte / format invalide → 400, autres → 500 ; message générique, détail dans les logs avec le `requestId`
+- Ne jamais renvoyer le message PostgreSQL au client

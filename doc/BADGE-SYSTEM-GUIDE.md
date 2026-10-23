@@ -1,312 +1,92 @@
-# Guide du Système de Badges - TeachDigital
+# 🏆 Système de badges
 
-## 🏆 Vue d'ensemble
+Les badges récompensent les enfants pour leurs quiz. Le serveur les évalue et les débloque lui-même ;
+le frontend ne fait que les afficher.
 
-Le système de badges de TeachDigital permet de gamifier l'expérience d'apprentissage en récompensant les utilisateurs pour leurs progrès et leurs réussites.
+## Données
 
-## 📁 Architecture
+- `badges` : définition (`name`, `description`, `icon` (emoji), `category`, `condition_type`,
+  `condition_value`, `points`, `color`, `is_active`).
+- `profile_badges` : progression par profil (`progress`, `is_unlocked`, `unlocked_at`), une ligne
+  unique par `(profile_id, badge_id)`.
 
-### Tables de base de données
+Les deux tables sont créées par la migration `backend/migrations/0001_baseline.sql`. Il n'y a pas
+de script de migration propre aux badges.
 
-#### Table `badges`
-Stocke les définitions des badges disponibles.
+## Critères (`condition_type`)
 
-```sql
-CREATE TABLE badges (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  description TEXT NOT NULL,
-  icon VARCHAR(50) NOT NULL,
-  category VARCHAR(50) NOT NULL,
-  condition_type VARCHAR(50) NOT NULL,
-  condition_value INTEGER NOT NULL,
-  points INTEGER DEFAULT 0,
-  color VARCHAR(50) DEFAULT 'yellow',
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
-```
+Liste des critères évaluables, dans `backend/lib/badgeConditions.js` :
 
-#### Table `profile_badges`
-Suit les badges débloqués et la progression pour chaque profil.
+| Critère | Progression comparée à `condition_value` |
+| --- | --- |
+| `quiz_completed` | Nombre de quiz terminés (leçons et pages de cours) |
+| `perfect_score` | Nombre de quiz à 100 % |
+| `score_streak` | Série actuelle de quiz consécutifs à 80 % ou plus |
+| `subjects_variety` | Nombre de matières différentes |
+| `subject_specific` | Quiz terminés dans une matière, déduite du nom ou de la description du badge (« Mathématicien », « Littéraire » → français, « Historien »…) |
+| `daily_streak` | Plus longue série de jours consécutifs avec au moins un quiz terminé |
 
-```sql
-CREATE TABLE profile_badges (
-  id SERIAL PRIMARY KEY,
-  profile_id INTEGER REFERENCES profiles(id) ON DELETE CASCADE,
-  badge_id INTEGER REFERENCES badges(id) ON DELETE CASCADE,
-  progress INTEGER DEFAULT 0,
-  is_unlocked BOOLEAN DEFAULT FALSE,
-  unlocked_at TIMESTAMP,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(profile_id, badge_id)
-)
-```
+`learning_time` (temps d'apprentissage) n'est **pas pris en charge** : l'application n'enregistre
+pas le temps passé. Pour cette raison :
 
-## 🚀 Installation
+- la création ou la modification d'un badge avec ce critère est refusée (400, validation de
+  `lib/schemas.js`) ;
+- la migration `0102_deactivate_learning_time_badges.sql` a désactivé les badges existants de ce
+  type. Les déblocages déjà obtenus sont conservés.
 
-### 1. Exécuter la migration
+## Déblocage
+
+Après chaque résultat enregistré, le serveur appelle `lib/badgeService.js`
+(`checkAndUnlockBadges`) :
+
+- quiz d'une leçon : `POST /api/lessons/:id/quiz-results`. La réponse contient `unlockedBadges`,
+  que l'écran de quiz affiche en toast ;
+- session de révision d'une page de cours terminée : `POST`/`PUT /api/course-pages/:id/results`.
+
+Le calcul tient en un nombre fixe de requêtes : statistiques du profil, puis un seul UPSERT des
+progressions. Une erreur de badge ne bloque jamais l'enregistrement du résultat.
+
+## API (`backend/api/badges.js`)
+
+Les lectures sont ouvertes à tout membre ; les écritures sont réservées aux parents
+(`requireAdminForWrites`). Les routes `/profile/:profileId/*` vérifient l'accès au profil : un
+jeton famille ne lit pas les données d'un parent.
+
+| Méthode | Route | Rôle |
+| --- | --- | --- |
+| GET | `/api/badges` | Badges |
+| GET | `/api/badges/:id` | Un badge |
+| POST / PUT / DELETE | `/api/badges`, `/api/badges/:id` | Créer, modifier, supprimer (parent) |
+| GET | `/api/badges/profile/:profileId` | Badges d'un profil avec progression |
+| GET | `/api/badges/profile/:profileId/unlocked` | Badges débloqués |
+| GET | `/api/badges/profile/:profileId/stats` | Statistiques (total, débloqués, points…) |
+| GET | `/api/badges/profile/:profileId/recent?limit=` | Derniers badges débloqués |
+| POST | `/api/badges/check-unlock` | Réévaluer les badges d'un profil (parent) |
+
+## Interface
+
+- **Enfant** : `/badge-manager?profile=<id>` (`src/views/BadgeManager.vue`), accessible depuis le
+  tableau de bord enfant. Il montre les badges débloqués, en cours et verrouillés.
+- **Parent** : `/badge-admin-manager` (`src/views/BadgeAdminManager.vue`), avec deux onglets :
+  gestion des badges et statistiques par enfant. Le formulaire ne propose que les critères
+  ci-dessus. Désactiver un badge le masque aux enfants sans perdre les déblocages.
+- Code : `src/services/badgeService.js` (appels API), `src/stores/badgeStore.js` et
+  `src/components/badges/BadgeCard.vue`.
+
+## Badges par défaut
 
 ```bash
-# Migrer les tables de badges
-node scripts/migrate-badges.js
+# dans backend/ (ou docker exec -it teachdigital-backend node scripts/init-badges.js)
+node scripts/init-badges.js
 ```
 
-Cette commande va :
-- Créer les tables `badges` et `profile_badges`
-- Créer les index nécessaires
-- Insérer 10 badges par défaut
+Le script crée 16 badges de démonstration et ignore ceux dont le nom existe déjà. En production
+(`NODE_ENV=production`) ou en CI, il s'arrête si la table contient déjà des badges.
 
-### 2. Vérifier l'installation
+## Dépannage
 
-Les badges par défaut incluent :
-- 🎯 **Premier pas** : Complète ton premier quiz
-- 📚 **Apprenti** : Complète 5 quiz
-- 🏆 **Expert** : Complète 10 quiz
-- ⭐ **Perfectionniste** : Obtiens un score parfait de 100%
-- 🔥 **Série de victoires** : Obtiens plus de 80% sur 3 quiz d'affilée
-- ⏰ **Studieux** : Passe plus de 60 minutes à apprendre
-- 📅 **Régulier** : Complète un quiz pendant 7 jours consécutifs
-- 🌈 **Polyvalent** : Complète des quiz dans 3 matières différentes
-- 🔢 **Mathématicien** : Complète 5 quiz de mathématiques
-- 📖 **Littéraire** : Complète 5 quiz de français
-
-## 📖 Utilisation
-
-### Pour les utilisateurs
-
-#### Affichage des badges dans le Dashboard
-
-Les utilisateurs peuvent voir leurs badges depuis le `UserDashboard` :
-```vue
-<div @click="viewBadges">
-  <p>{{ badgeMessage }}</p>
-  <div>{{ badgeStats.unlocked }}/{{ badgeStats.total }}</div>
-</div>
-```
-
-#### Gestionnaire de badges
-
-Le composant `BadgeManager` permet de :
-- Voir tous les badges disponibles
-- Consulter les badges débloqués
-- Suivre la progression des badges en cours
-- Voir les badges verrouillés
-
-### Pour les développeurs
-
-#### Utilisation du BadgeService
-
-```javascript
-import badgeService from '../services/badgeService.js'
-
-// Récupérer tous les badges
-const badges = await badgeService.getAllBadges()
-
-// Récupérer les badges d'un profil
-const profileBadges = await badgeService.getProfileBadges(profileId)
-
-// Vérifier et débloquer automatiquement les badges
-const newBadges = await badgeService.checkAndUnlockBadges(
-  profileId, 
-  'quiz_completed',
-  { subject: 'mathématiques', score: 90 }
-)
-```
-
-#### Utilisation du BadgeStore
-
-```javascript
-import { useBadgeStore } from '../stores/badgeStore.js'
-
-const badgeStore = useBadgeStore()
-
-// Charger les badges d'un profil
-await badgeStore.loadProfileBadges(profileId)
-
-// Accéder aux statistiques
-console.log(badgeStore.badgeStats) // { total, unlocked, locked, points, percentage }
-
-// Vérifier automatiquement les badges après une action
-const unlockedBadges = await badgeStore.checkAndUnlockBadges(
-  profileId,
-  'quiz_completed',
-  { score: 100 }
-)
-```
-
-#### Intégration avec les quiz
-
-Pour débloquer automatiquement les badges après un quiz :
-
-```javascript
-// Dans QuizGenerator.vue ou similaire
-async function onQuizCompleted(result) {
-  try {
-    // Sauvegarder le résultat du quiz
-    await saveQuizResult(result)
-    
-    // Vérifier les badges
-    const newBadges = await badgeStore.checkAndUnlockBadges(
-      profileId,
-      'quiz_completed',
-      {
-        score: result.score,
-        percentage: result.percentage,
-        subject: result.subject
-      }
-    )
-    
-    // Afficher les nouveaux badges débloqués
-    if (newBadges.length > 0) {
-      showBadgeNotifications(newBadges)
-    }
-  } catch (error) {
-    console.error('Erreur lors de la vérification des badges:', error)
-  }
-}
-```
-
-## 🎨 Types de badges
-
-### Par catégorie
-
-- **débutant** : Badges pour les premiers pas
-- **progression** : Badges de progression générale
-- **excellence** : Badges de performance
-- **temps** : Badges liés au temps d'apprentissage
-- **diversité** : Badges de diversité des matières
-- **matière** : Badges spécifiques à une matière
-
-### Par type de condition
-
-- **quiz_completed** : Nombre de quiz complétés
-- **perfect_score** : Score parfait de 100%
-- **score_streak** : Série de bons scores
-- **learning_time** : Temps d'apprentissage total
-- **daily_streak** : Jours consécutifs d'apprentissage
-- **subjects_variety** : Variété de matières
-- **subject_specific** : Nombre de quiz dans une matière
-
-## 🔧 Personnalisation
-
-### Créer un badge personnalisé
-
-```javascript
-const newBadge = await badgeService.createCustomBadge({
-  name: 'Super Star',
-  description: 'Obtiens 100% à 5 quiz',
-  icon: '🌟',
-  category: 'excellence',
-  condition_type: 'perfect_score',
-  condition_value: 5,
-  points: 150,
-  color: 'rainbow'
-})
-```
-
-### Couleurs disponibles
-
-- `blue` : Bleu
-- `green` : Vert
-- `purple` : Violet
-- `yellow` : Jaune
-- `orange` : Orange
-- `pink` : Rose
-- `rainbow` : Arc-en-ciel
-
-## 📊 Statistiques et suivi
-
-### Statistiques globales
-
-```javascript
-const stats = await badgeService.getBadgeStats(profileId)
-// {
-//   total: 10,      // Nombre total de badges
-//   unlocked: 3,    // Badges débloqués
-//   locked: 7,      // Badges verrouillés
-//   points: 85,     // Points gagnés
-//   percentage: 30  // Pourcentage de progression
-// }
-```
-
-### Badges récents
-
-```javascript
-const recentBadges = await badgeService.getRecentlyUnlockedBadges(profileId, 5)
-```
-
-## 🎯 Bonnes pratiques
-
-1. **Vérifier les badges après chaque action importante** :
-   - Complétion d'un quiz
-   - Ajout d'une activité
-   - Session d'apprentissage
-
-2. **Afficher les notifications de badges** :
-   - Utiliser des animations pour célébrer les nouveaux badges
-   - Afficher une notification push pour les badges importants
-
-3. **Encourager la progression** :
-   - Montrer les badges presque débloqués
-   - Afficher la progression en pourcentage
-
-4. **Maintenir l'engagement** :
-   - Ajouter régulièrement de nouveaux badges
-   - Créer des badges saisonniers ou événementiels
-
-## 🐛 Dépannage
-
-### Les badges ne se débloquent pas
-
-1. Vérifier que les tables existent :
-```sql
-SELECT * FROM badges;
-SELECT * FROM profile_badges;
-```
-
-2. Vérifier les logs :
-```javascript
-console.log(await badgeService.checkAndUnlockBadges(profileId, 'quiz_completed'))
-```
-
-3. Vérifier les statistiques du profil :
-```javascript
-console.log(await badgeService.getQuizCompletedCount(profileId))
-```
-
-### Erreurs de migration
-
-Si la migration échoue :
-```bash
-# Supprimer les tables existantes (ATTENTION : perte de données)
-# Puis relancer la migration
-node scripts/migrate-badges.js
-```
-
-## 📚 Ressources
-
-- [BadgeService.js](src/services/badgeService.js) - Service principal
-- [BadgeRepository.js](src/repositories/badgeRepository.js) - Accès aux données
-- [BadgeStore.js](src/stores/badgeStore.js) - Store Pinia
-- [BadgeManager.vue](src/components/BadgeManager.vue) - Interface utilisateur
-- [BadgeCard.vue](src/components/BadgeCard.vue) - Carte de badge
-
-## 🤝 Contribution
-
-Pour ajouter de nouveaux types de badges :
-
-1. Ajouter le type de condition dans `BadgeService.shouldUnlockBadge()`
-2. Ajouter la logique de calcul dans `BadgeService.calculateBadgeProgress()`
-3. Mettre à jour `BadgeService.isRelevantBadge()` pour le mapping
-4. Tester avec différents scénarios
-
-## 📝 Notes
-
-- Les badges sont automatiquement vérifiés lors de la complétion d'un quiz
-- La progression est sauvegardée même si le badge n'est pas débloqué
-- Les badges peuvent être désactivés sans être supprimés (is_active = false)
-- Les points de badges peuvent être utilisés pour un système de récompenses futur
-
+| Symptôme | Piste |
+| --- | --- |
+| Un badge ne se débloque jamais | Vérifier qu'il est actif et que son critère est pris en charge. Pour `subject_specific`, la matière doit apparaître dans le nom ou la description, et correspondre à la matière des leçons |
+| « Badge à critère non évaluable » dans les logs | Badge `subject_specific` sans matière reconnaissable, ou critère inconnu en base |
+| Création refusée | Critère `learning_time` ou inconnu, valeur ≤ 0, champ obligatoire vide |

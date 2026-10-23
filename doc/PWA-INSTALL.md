@@ -1,78 +1,77 @@
-# 📱 Installation PWA - TeachDigital
+# 📱 PWA - TeachDigital
 
-## 🎯 Comment installer l'application sur votre iPhone
+## 🎯 Installer l'application
 
-### Méthode 1 : Via Safari (Recommandée)
-1. **Ouvrez Safari** sur votre iPhone
-2. **Naviguez** vers votre application TeachDigital
-3. **Touchez l'icône de partage** (carré avec flèche vers le haut)
-4. **Sélectionnez "Sur l'écran d'accueil"**
-5. **Personnalisez** le nom si souhaité
-6. **Touchez "Ajouter"**
+Dans l'espace parent, **Paramètres > « Installer l'application »** (`InstallAppCard`) propose un
+bouton d'installation quand le navigateur le permet. Sinon, la carte affiche les étapes propres au
+navigateur. L'ancienne adresse `/settings/pwa` redirige vers `/parent-settings`.
 
-### Méthode 2 : Via Chrome (Android)
-1. **Ouvrez Chrome** sur votre appareil
-2. **Naviguez** vers votre application TeachDigital
-3. **Touchez le menu** (3 points)
-4. **Sélectionnez "Ajouter à l'écran d'accueil"**
-5. **Confirmez** l'installation
+- **iPhone / iPad (Safari)** : bouton Partager > « Sur l'écran d'accueil » > « Ajouter ».
+- **Android (Chrome)** : menu ⋮ > « Installer l'application » ou « Ajouter à l'écran d'accueil ».
+- **Ordinateur (Chrome / Edge)** : icône d'installation dans la barre d'adresse, ou menu ⋮ >
+  « Installer TeachDigital ». Firefox pour ordinateur ne permet pas l'installation.
 
-## ✨ Fonctionnalités PWA
+L'installation exige HTTPS, sauf sur `localhost`.
 
-### 🎨 Icône moderne
-- **Design éducatif** avec livre ouvert et tablette
-- **Couleurs attrayantes** : bleu dégradé avec accents dorés
-- **Multiples tailles** : 16x16 à 512x512 pixels
-- **Optimisée** pour tous les appareils
+## ✨ Comportement
 
-### 🚀 Performance
-- **Service Worker** pour la mise en cache
-- **Chargement rapide** même hors ligne
-- **Interface native** sur mobile
-- **Notifications push** (à venir)
+- **Hors ligne** : un bandeau (`OfflineBanner`) l'annonce. Les pages déjà construites restent
+  consultables, car tous les fichiers du build sont mis en cache. En revanche, rien ne peut être
+  chargé ni enregistré : les réponses de l'API ne sont **jamais** mises en cache (jetons, PIN,
+  progression).
+- **Mises à jour** : l'application compare le build qu'elle exécute (`__APP_VERSION__`) avec
+  `/version.json`. La vérification a lieu 5 s après le chargement, puis toutes les 30 min et à
+  chaque retour sur l'onglet. Si un nouveau build est disponible, `UpdateNotification` propose de
+  recharger (rappel 30 min plus tard en cas de refus). Si un fichier JS d'un ancien build manque
+  après un déploiement, la page se recharge une fois automatiquement.
+- **Pas de notifications push**.
 
-### 🔒 Sécurité
-- **Code PIN** pour les profils administrateurs
-- **Gestion des profils** sécurisée
-- **Données locales** protégées
+## 🛠️ Fonctionnement technique
 
-## 🛠️ Développement
+| Élément | Fichier |
+| --- | --- |
+| Manifest | `frontend/public/manifest.json` |
+| Service worker (modèle) | `frontend/public/sw.js` |
+| Génération du service worker | `frontend/scripts/generate-sw.js`, lancé par `pnpm run build` |
+| Enregistrement et suivi des mises à jour | `src/main.js`, `src/services/updateService.js` |
+| Installation | `src/services/installService.js`, `src/components/InstallAppCard.vue` |
+| Icônes | `public/icon.svg` → `public/icons/icon-*.png`, `public/favicon-*.png` |
 
-### Génération des icônes
+`pnpm run build` enchaîne :
+
+1. `vite build`, qui produit `dist/`, `dist/version.json` (même valeur que `__APP_VERSION__`) et
+   `dist/.vite/manifest.json` (option `build.manifest`) ;
+2. `scripts/generate-sw.js`, qui écrit `dist/sw.js` à partir de `public/sw.js` en y injectant
+   `BUILD_VERSION` et `PRECACHE_ASSETS`, c'est-à-dire tous les fichiers listés dans le manifeste
+   Vite.
+
+Stratégies du service worker (le seul de l'application, sans `vite-plugin-pwa`) :
+
+| Requête | Stratégie |
+| --- | --- |
+| `/api/*` | Réseau uniquement. Hors ligne, il renvoie une réponse JSON 503 `OFFLINE` |
+| Navigation (pages) | Réseau d'abord, avec `index.html` en cache en secours |
+| `/assets/*` (fichiers hachés) | Cache d'abord. Les anciens fichiers sont gardés un temps pour les onglets restés ouverts |
+| Icônes, manifest, `/` | Réseau d'abord, cache en secours |
+| `/sw.js`, `/version.json` | Jamais en cache (nginx envoie aussi `no-cache`) |
+
+Le nouveau service worker s'active immédiatement (`skipWaiting` + `clients.claim`) et supprime les
+caches des builds précédents.
+
+## 🔧 Commandes (dans `frontend/`)
+
 ```bash
-pnpm run generate-icons
+pnpm run generate-icons      # icônes PNG à partir de public/icon.svg (sharp)
+pnpm run validate-manifest   # vérifie que les ressources du manifest existent
+pnpm run build               # dist/ + dist/sw.js
+pnpm run preview             # tester le build (le service worker n'est actif que sur le build)
 ```
 
-### Build avec icônes
-```bash
-pnpm run build
-```
+## 🚨 Dépannage
 
-### Test local
-```bash
-pnpm run dev
-```
-
-## 📋 Spécifications techniques
-
-- **Manifest PWA** : `/public/manifest.json`
-- **Service Worker** : `/public/sw.js`
-- **Icônes** : `/public/icons/`
-- **Favicons** : `/public/favicon-*.png`
-
-## 🎨 Design de l'icône
-
-L'icône représente :
-- 📚 **Livre ouvert** : Apprentissage et éducation
-- 📱 **Tablette** : Technologie numérique
-- 👥 **Profils colorés** : Gestion des utilisateurs
-- 🔒 **Cadenas** : Sécurité et protection
-- **TD** : Initiales de TeachDigital
-
-## 🔧 Configuration
-
-Toutes les icônes sont générées automatiquement à partir du fichier SVG source (`/public/icon.svg`) et optimisées pour :
-- iOS (iPhone/iPad)
-- Android
-- Desktop (Chrome, Firefox, Safari)
-- PWA (Progressive Web App)
+| Symptôme | Piste |
+| --- | --- |
+| L'application n'est pas installable | Le site doit être en HTTPS, les icônes doivent exister (`pnpm run validate-manifest`), et le navigateur doit permettre l'installation (pas Firefox sur ordinateur) |
+| Ancienne version affichée | Attendre la proposition de mise à jour, ou recharger. DevTools > Application > Service Workers > « Update » |
+| Une page s'affiche hors ligne mais reste vide | Normal : ses données viennent de l'API, qui n'est jamais mise en cache |
+| Vérifier les caches | DevTools > Application > Cache Storage : `teachdigital-static-<build>` et `teachdigital-assets-v1` |

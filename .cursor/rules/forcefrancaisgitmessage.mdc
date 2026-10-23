@@ -27,7 +27,7 @@ Toujours générer les messages de commit Git en français, de manière concise 
 - `revert:` - Annulation d'un commit précédent
 
 ## Exemples de Messages
-- `feat: ajouter authentification par reconnaissance faciale`
+- `feat: ajouter verrouillage progressif du PIN`
 - `fix: corriger bug d'affichage des profils`
 - `docs: mettre à jour la documentation API`
 - `style: formater le code selon les standards`
@@ -56,16 +56,16 @@ Si un message de corps est nécessaire :
 
 ## Exemples de Messages Complets
 ```
-feat: ajouter système de notifications push
+feat: calculer le score des quiz côté serveur
 
-Implémente les notifications push pour informer les utilisateurs
-des nouvelles activités disponibles. Utilise l'API Notifications
-du navigateur avec fallback sur les notifications in-app.
+Le client n'envoie plus que les réponses de l'enfant. Le serveur
+calcule le score et renvoie la correction, qui n'est jamais
+transmise avant la soumission.
 ```
 
 ```
-fix: corriger fuite mémoire dans FaceRecognitionService
+fix: corriger l'ordre d'affichage des profils
 
-La détection des visages ne libérait pas correctement les ressources
-après utilisation, causant une accumulation progressive de la mémoire.
+Les profils désactivés apparaissaient avant les profils actifs
+sur l'écran de choix du profil.
 ```

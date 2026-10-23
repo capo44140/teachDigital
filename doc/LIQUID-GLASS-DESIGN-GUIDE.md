@@ -1,234 +1,87 @@
-# Guide Design Liquid Glass - ParentSettings
+# Guide de design « Liquid Glass »
 
-## 🎨 Vue d'ensemble
+## 🎨 Principe
 
-Le composant `ParentSettings.vue` a été redesigné avec un effet **Liquid Glass** inspiré par iOS, combinant des éléments de glassmorphism moderne avec des animations fluides et élégantes.
+Toutes les pages de l'application partagent le même style : un fond sombre animé, des cartes en
+verre translucide (`backdrop-filter: blur`), des textes blancs et des dégradés d'accent par
+domaine. Il n'existe **pas** de bibliothèque de composants « Glass » : `components/ui/*` a été
+supprimé. Le style repose sur Tailwind CSS 4 et sur quelques classes partagées.
 
-## ✨ Caractéristiques principales
+| Élément | Fichier |
+| --- | --- |
+| Imports globaux (Tailwind, styles partagés), safe areas iOS, focus visible, `prefers-reduced-motion` | `src/style.css` |
+| Variables `--lg-*` et cartes partagées | `src/styles/liquid-glass.css` |
+| Préférences d'affichage des enfants (taille du texte, lecture facile, contraste, animations) | `src/styles/preferences.css` + `src/stores/settingsStore.js` |
+| Fond animé commun | `src/components/AppBackground.vue` |
+| Fenêtres modales | `src/components/BaseModal.vue`, `src/components/ConfirmDialog.vue` |
 
-### 1. **Backdrop Blur Effect**
+## 🌌 Fond partagé (`AppBackground`)
+
+`App.vue` le rend **une seule fois**, derrière toutes les pages (`z-index: -1`). Une page ne doit
+donc pas dessiner son propre fond. Il se compose d'un dégradé slate-900 → purple-900 et de trois
+disques flous animés.
+
+- Teinte : `meta.bgTone` de la route (`blue`, `green`, `red`, `orange`, `yellow`, `rainbow` ;
+  violet par défaut). La couleur choisie par l'enfant dans « Mes paramètres » est prioritaire.
+- Sur petit écran, avec « réduire les animations » ou « réduire la transparence », les disques
+  deviennent des dégradés statiques, sans filtre ni animation.
+
+## 🧊 Classes et variables partagées (`liquid-glass.css`)
+
 ```css
-backdrop-filter: blur(20px);
-```
-- Crée l'effet de verre translucide
-- Intensité: 20px pour un flou subtil mais perceptible
-- Compatible avec les navigateurs modernes
-
-### 2. **Gradients Animés en Arrière-plan**
-- 3 blobs animés avec `mix-blend-multiply`
-- Couleurs: Purple, Blue, Pink
-- Animations infinies de 7 secondes
-- Effets délais décalés pour fluidité
-
-### 3. **Transparence Subtile**
-```css
-background: rgba(255, 255, 255, 0.08);
-border: 1px solid rgba(255, 255, 255, 0.15);
-```
-- Utilisation de `rgba` pour transparence
-- Bordures blanches semi-transparentes
-- Crée la sensation de profondeur
-
-### 4. **Palette de Couleurs**
-- **Fond**: Dégradé slate-900 → purple-900 → slate-900
-- **Accents**: Gradients pour chaque catégorie
-  - Blue → Cyan (Profils & Sécurité)
-  - Green → Emerald (Apprentissage)
-  - Purple → Violet (Quiz)
-  - Orange → Red (Activités)
-
-## 🎯 Composants Principaux
-
-### Glass Card Base
-```vue
-<div class="glass-card">
-  <!-- Contenu -->
-</div>
-```
-- Padding: 1.5rem
-- Border radius: 2rem
-- Shadow: 0 8px 32px rgba(0, 0, 0, 0.1)
-- Hover effect: augmentation background & shadow
-
-### Button Card Component
-```vue
-<button-card 
-  @click="handleClick"
-  title="Titre"
-  description="Description"
-  icon="🎯"
-  :color-gradient="'from-blue-400 to-cyan-400'"
-/>
-```
-- Icône emoji (2rem)
-- Gradient coloré unique par section
-- Animation hover avec translateX(4px)
-- Transition smooth de 0.3s
-
-### Toggle Item Component
-```vue
-<toggle-item
-  v-model="settings.option"
-  title="Titre"
-  description="Description"
-  icon="✉️"
-/>
-```
-- Toggle glass avec gradient purple-blue
-- Emoji icône à gauche
-- Animations fluides 0.3s
-
-### Info Card Component
-```vue
-<info-card 
-  title="Version"
-  :description="`Version: ${version}`"
-  :badge="version"
-/>
-```
-- Badge blanc/translucide
-- Texte blanc avec opacité variable
-
-## 🎬 Animations
-
-### Blob Animation (7s loop)
-```css
-@keyframes blob {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
-}
-```
-- Animation fluide et organique
-- 3 blobs avec délais décalés
-
-### Hover Effects
-- **Cartes**: Background lighter + shadow augmentée
-- **Boutons**: translateX(4px) + shadow glow
-- **Toggle**: Animation du slider smooth
-
-### Transitions
-- Propriété: `transition: all 0.3s ease`
-- Applies to: background, border, shadow, transform
-
-## 📱 Responsive Design
-
-### Mobile (< 640px)
-- Border radius réduit: 1.5rem
-- Padding buttons: 0.875rem 1.5rem
-- Font size: 0.95rem
-- Layout: flex-col au lieu de flex-row
-
-### Tablet/Desktop
-- Border radius complet: 2rem
-- Padding buttons: 1rem 2rem
-- Font size: 1rem
-- Layout: flex-row
-
-## 💻 Performance
-
-### GPU Acceleration
-- `will-change: transform` sur animations
-- `backdrop-filter` accéléré GPU
-- `mix-blend-multiply` optimisé
-
-### Optimisations
-- Fixed background blobs (pointer-events-none)
-- Z-index stratégique (fixed: 0, header: 10, main: 10)
-- Animations efficaces (pas de layout shifts)
-
-## 🎨 Palette de Couleurs Utilisée
-
-```javascript
-// Sections
-- Blue/Cyan: #60A5FA to #06B6D4 (Profils)
-- Green/Emerald: #4ADE80 to #10B981 (Apprentissage)
-- Purple/Violet: #A78BFA to #8B5CF6 (Quiz)
-- Indigo/Blue: #818CF8 to #3B82F6 (Leçons)
-- Orange/Red: #FBBF24 to #F87171 (Activités)
-- Yellow/Orange: #FBBF24 to #FB923C (Notifications)
-- Gray: #9CA3AF to #64748B (Infos)
-
-// Transparences
-- Heavy blur: rgba(255,255,255, 0.08)
-- Medium blur: rgba(255,255,255, 0.1)
-- Light blur: rgba(255,255,255, 0.12)
-- Borders: rgba(255,255,255, 0.15)
+--lg-glass-light: rgba(255, 255, 255, 0.08);   /* fond des cartes */
+--lg-glass-heavy: rgba(255, 255, 255, 0.12);   /* survol */
+--lg-glass-border: rgba(255, 255, 255, 0.15);
+--lg-primary-purple: #8B5CF6;  /* + --lg-pink, --lg-blue, --lg-cyan, --lg-emerald, --lg-orange… */
+--lg-transition-normal: all 0.3s ease;
 ```
 
-## 🚀 Utilisation et Extension
+| Classe | Usage |
+| --- | --- |
+| `.glass-card-dashboard` | Carte de section (tableaux de bord, paramètres) : colonne flex, padding 1.5rem, rayon 1.5rem, flou 20px |
+| `.glass-card-stat` | Statistique en ligne (icône + valeur), qui se soulève au survol |
+| `.glass-stat-card` | Bloc de statistique dont la mise en page revient au composant |
 
-### Ajouter une nouvelle section Glass Card
-```vue
-<div class="glass-card">
-  <div class="p-6 border-b border-white/10">
-    <h2 class="text-2xl font-bold text-white flex items-center">
-      <div class="w-10 h-10 bg-gradient-to-br from-[COLOR-1] to-[COLOR-2] rounded-xl mr-3 flex items-center justify-center">
-        <svg><!-- icone --></svg>
-      </div>
-      Titre
-    </h2>
-  </div>
-  <div class="p-6 space-y-3">
-    <!-- Contenu -->
-  </div>
-</div>
+Le reste s'écrit en utilitaires Tailwind, sur ce modèle :
+
+```html
+<section class="glass-card-dashboard" aria-labelledby="titre-section">
+  <h2 id="titre-section" class="text-xl font-bold text-white">Titre</h2>
+  <p class="text-white/70">Texte secondaire</p>
+  <button class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white
+                 focus:outline-none focus:ring-2 focus:ring-purple-400">
+    Action
+  </button>
+</section>
 ```
 
-### Ajouter un nouveau Button Card
-```vue
-<button-card 
-  @click="goToPage"
-  title="Mon Titre"
-  description="Ma description"
-  icon="🎯"
-  :color-gradient="'from-cyan-400 to-blue-400'"
-/>
-```
+Repères : textes `text-white` et `text-white/70` ; champs `bg-white/10 border border-white/20` ;
+dégradés d'accent par domaine (profils : bleu → cyan, apprentissage : vert → émeraude, quiz :
+violet → rose, activités : orange → rouge). Les icônes sont des SVG inline (`aria-hidden="true"`)
+ou des emoji. Il n'y a pas de bibliothèque d'icônes.
 
-## 🔧 Configuration TailwindCSS
+## ♿ Accessibilité (obligatoire)
 
-Le design utilise les classes Tailwind standard avec support pour:
-- `backdrop-blur-2xl`
-- `bg-white/10` (transparence)
-- `border-white/20`
-- `mix-blend-multiply`
-- `rounded-2xl`
-- Animations custom via `@keyframes`
+- **Préférences enfant** (`settingsStore`, classes posées sur `<html>`) : `td-font-small` et
+  `td-font-large` pour la taille du texte (toute l'interface est en `rem`), `td-easy-read` pour la
+  lecture facile, `td-high-contrast` pour le contraste élevé (fonds pleins, sans flou),
+  `td-reduce-motion` pour supprimer les animations. Ces préférences ne s'appliquent que dans
+  l'espace enfant. Conséquences pour le code :
+  - utiliser des tailles en `rem` (classes Tailwind), pas en `px` ;
+  - en contraste élevé, les classes contenant `bg-white/`, `text-white/`, `glass-card`,
+    `glass-stat`… sont surchargées. Un nouveau motif translucide doit reprendre ces préfixes, ou
+    être ajouté à `preferences.css`.
+- `prefers-reduced-motion` est respecté globalement (`style.css`).
+- Un anneau de focus visible est défini par défaut (`:focus-visible`) ; ne pas le supprimer sans
+  le remplacer.
+- **Modales** : toujours passer par `BaseModal`, qui gère `role="dialog"`, `aria-modal`, le titre
+  associé, le focus piégé, la touche Échap et le retour du focus. Pour une confirmation, utiliser
+  `useConfirm()` / `this.$confirm(...)` (affiché par `ConfirmDialog`), jamais `window.confirm`.
+  Les classes passées à `overlayClass` / `panelClass` doivent être globales (Tailwind), car
+  la modale est téléportée hors du composant.
+- Contraste : le texte secondaire ne descend pas sous `text-white/70` sur fond de verre.
 
-## ✅ Navigateurs Supportés
+## ⚡ Performance
 
-- ✅ Chrome 76+
-- ✅ Firefox 103+
-- ✅ Safari 9+
-- ✅ Edge 79+
-- ✅ iOS Safari 9+
-- ✅ Chrome Android
-
-Tous supportent `backdrop-filter` et `mix-blend-mode`.
-
-## 📊 Avantages du Design
-
-1. **Moderne**: Suits iOS design patterns
-2. **Élégant**: Transparence et flou subtils
-3. **Performant**: GPU accelerated
-4. **Responsive**: Adapté à tous les appareils
-5. **Accessible**: Contraste suffit pour WCAG AA
-6. **Maintenable**: Composants réutilisables
-7. **Scalable**: Facile à étendre
-
-## 🎯 Cas d'Usage
-
-Parfait pour:
-- ⚙️ Écrans de paramètres
-- 📱 Panneaux de contrôle
-- 🎨 Interfaces modernes
-- 📊 Dashboards
-- 🔧 Panneaux d'administration
-
-## 📝 Notes de Développement
-
-- Les emojis utilisés sont de simples caractères Unicode
-- Les animations sont bouclées (infinite)
-- Les transitions peuvent être désactivées via `prefers-reduced-motion`
-- Le design fonctionne sans JavaScript (CSS-only animations)
+`backdrop-filter` coûte cher sur mobile. Il faut éviter d'empiler des couches floues et de
+recréer des fonds animés dans les pages : le fond est déjà fourni par `AppBackground`.
