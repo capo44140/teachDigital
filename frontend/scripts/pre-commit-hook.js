@@ -39,8 +39,9 @@ function shouldAutoIncrementVersion() {
 function autoIncrementVersion() {
   try {
     console.log('🔄 Incrémentation automatique de la version...')
-    execSync('node scripts/version-bump.js patch', { stdio: 'inherit' })
-    
+    // --no-commit : le commit en cours inclut les fichiers de version (pas de commit imbriqué)
+    execSync('node scripts/version-bump.js patch --no-commit', { stdio: 'inherit' })
+
     // Ajouter les fichiers modifiés au staging area
     execSync('git add package.json public/manifest.json public/version.json', { stdio: 'inherit' })
     

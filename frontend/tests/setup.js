@@ -1,24 +1,6 @@
 import { vi } from 'vitest'
 import { createPinia } from 'pinia'
 
-// Mock des modules externes
-vi.mock('postgres', () => {
-  return {
-    default: vi.fn(() => {
-      const mockSql = vi.fn();
-      // Simuler la syntaxe de template literals
-      return new Proxy(mockSql, {
-        get: () => mockSql
-      });
-    })
-  };
-})
-
-vi.mock('bcryptjs', () => ({
-  hash: vi.fn(),
-  compare: vi.fn()
-}))
-
 // Mock des APIs du navigateur
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

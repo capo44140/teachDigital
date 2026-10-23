@@ -1,12 +1,20 @@
 <template>
-  <div class="version-info" :class="position">
-    <div class="version-badge" :title="versionDetails" @click="toggleDetails">
-      <i class="fas fa-info-circle"></i>
+  <div class="version-info" :class="position" @keydown.esc="showDetails = false">
+    <button
+      type="button"
+      class="version-badge"
+      :title="versionDetails"
+      :aria-label="`Informations de version (v${appVersion})`"
+      :aria-expanded="showDetails ? 'true' : 'false'"
+      aria-controls="version-info-details"
+      @click="toggleDetails"
+    >
+      <i class="fas fa-info-circle" aria-hidden="true"></i>
       <span class="version-text">v{{ appVersion }}</span>
-    </div>
-    
+    </button>
+
     <!-- Détails de la version (au survol ou clic) -->
-    <div v-if="showDetails" class="version-details" :class="detailsPosition">
+    <div v-if="showDetails" id="version-info-details" class="version-details" :class="detailsPosition">
       <div class="version-details-content">
         <h4>Informations de version</h4>
         <div class="version-detail-item">
@@ -31,6 +39,7 @@
 </template>
 
 <script>
+import { formatDate as formatDateFr } from '../utils/progressFormatters.js'
 export default {
   name: 'VersionInfo',
   props: {
@@ -60,7 +69,7 @@ export default {
     detailsPosition() {
       const positions = {
         'bottom-right': 'details-top-left',
-        'bottom-left': 'details-top-right', 
+        'bottom-left': 'details-top-right',
         'top-right': 'details-bottom-left',
         'top-left': 'details-bottom-right'
       }
@@ -79,7 +88,7 @@ export default {
         this.showDetails = false
       })
     }
-    
+
     // Fermer les détails en cliquant ailleurs
     document.addEventListener('click', this.handleClickOutside)
   },
@@ -110,31 +119,19 @@ export default {
           console.warn('Impossible de charger package.json:', packageError)
         }
       }
-      
+
       // Déterminer l'environnement
       this.environment = import.meta.env.MODE || 'production'
     },
-    
+
     toggleDetails() {
       this.showDetails = !this.showDetails
     },
-    
-    formatDate(dateString) {
-      if (!dateString) return 'N/A'
-      try {
-        const date = new Date(dateString)
-        return date.toLocaleDateString('fr-FR', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })
-      } catch (error) {
-        return dateString
-      }
+
+    formatDate(value) {
+      return formatDateFr(value, { month: 'short', fallback: 'N/A' })
     },
-    
+
     handleClickOutside(event) {
       if (!this.$el.contains(event.target)) {
         this.showDetails = false
@@ -293,17 +290,17 @@ export default {
   .version-info.bottom-left {
     bottom: 10px;
   }
-  
+
   .version-info.top-right,
   .version-info.top-left {
     top: 10px;
   }
-  
+
   .version-badge {
     padding: 6px 10px;
     font-size: 11px;
   }
-  
+
   .version-details-content {
     min-width: 180px;
     padding: 12px;

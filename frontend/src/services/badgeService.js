@@ -135,22 +135,6 @@ export class BadgeService {
   }
 
   /**
-   * Vérifier et débloquer automatiquement les badges après une action
-   */
-  async checkAndUnlockBadges (profileId, actionType, actionData = {}) {
-    try {
-      const response = await apiService.request('/api/badges/check-unlock', {
-        method: 'POST',
-        body: JSON.stringify({ profileId, actionType, actionData })
-      })
-      return response.data?.unlockedBadges || []
-    } catch (error) {
-      console.error('Erreur dans checkAndUnlockBadges:', error)
-      throw error
-    }
-  }
-
-  /**
    * Récupérer les badges récemment débloqués
    */
   async getRecentlyUnlockedBadges (profileId, limit = 5) {

@@ -1,7 +1,11 @@
 /**
  * Pages de cours HTML (fiches de révision avec quiz intégrés)
- * Lecture des fichiers déposés par le parent et extraction de leurs métadonnées
+ * Endpoints /api/course-pages (liste, lecture, publication, sessions de révision),
+ * lecture des fichiers déposés par le parent, extraction de leurs métadonnées
+ * et URL d'affichage isolé
  */
+
+import { apiService, buildQuery } from './apiService.js'
 
 // Aligné sur MAX_COURSE_PAGE_HTML_LENGTH côté backend
 export const MAX_COURSE_PAGE_SIZE = 5 * 1024 * 1024
@@ -65,31 +69,111 @@ export function extractCoursePageMetadata (html, fileName = '') {
   }
 }
 
-export const PROGRESS_MESSAGE_TYPE = 'teachdigital:quiz-progress'
-
-// Script injecté dans la page isolée : remonte le score du quiz à l'application.
-// Deux sources : les compteurs #sOk / #sTot / #sStreak des pages générées,
-// ou un appel explicite à window.TeachDigital.report(ok, total, streak).
-const PROGRESS_BRIDGE = `<script>(function(){
-if(window.parent===window)return;
-var last=null;
-function num(id){var el=document.getElementById(id);if(!el)return null;var v=parseInt(el.textContent,10);return isNaN(v)?null:v}
-function send(ok,total,streak){if(!(total>0)||!(ok>=0)||ok>total)return;var key=ok+'/'+total;if(key===last)return;last=key;
-window.parent.postMessage({type:'${PROGRESS_MESSAGE_TYPE}',ok:ok,total:total,streak:streak>0?streak:0},'*')}
-window.TeachDigital={report:function(ok,total,streak){send(+ok,+total,+streak)}};
-function fromDom(){var ok=num('sOk'),total=num('sTot');if(ok!==null&&total!==null)send(ok,total,num('sStreak')||0)}
-function watch(){var el=document.getElementById('sTot');if(!el)return false;
-new MutationObserver(fromDom).observe(el,{childList:true,characterData:true,subtree:true});return true}
-if(!watch())document.addEventListener('DOMContentLoaded',watch);
-})();</script>`
+// ─── Endpoints /api/course-pages ────────────────────────────────────────────
 
 /**
- * Ajoute le pont de progression à une page de cours (avant </body> si présent)
+ * Pages de cours (sans leur contenu HTML)
+ * @param {{ targetProfileId?: number, published?: boolean }} filters
+ * @returns {Promise<Array>}
  */
-export function withProgressBridge (html) {
-  const match = /<\/body\s*>/i.exec(html)
-  if (!match) return html + PROGRESS_BRIDGE
-  return html.slice(0, match.index) + PROGRESS_BRIDGE + html.slice(match.index)
+export async function getCoursePages (filters = {}) {
+  const response = await apiService.request(`/api/course-pages${buildQuery(filters)}`)
+  return response.success ? response.data.coursePages : []
+}
+
+/**
+ * Page de cours avec son contenu HTML
+ * @returns {Promise<Object|null>}
+ */
+export async function getCoursePage (id) {
+  const response = await apiService.request(`/api/course-pages/${id}`)
+  return response.success ? response.data.coursePage : null
+}
+
+/**
+ * Publier une page de cours pour un enfant
+ * @returns {Promise<Object|null>}
+ */
+export async function createCoursePage (coursePageData) {
+  const response = await apiService.request('/api/course-pages', {
+    method: 'POST',
+    body: JSON.stringify(coursePageData)
+  })
+  return response.success ? response.data.coursePage : null
+}
+
+/**
+ * Modifier une page de cours (titre, contenu, visibilité...)
+ * @returns {Promise<Object|null>}
+ */
+export async function updateCoursePage (id, coursePageData) {
+  const response = await apiService.request(`/api/course-pages/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(coursePageData)
+  })
+  return response.success ? response.data.coursePage : null
+}
+
+/**
+ * Supprimer une page de cours
+ * @returns {Promise<boolean>}
+ */
+export async function deleteCoursePage (id) {
+  const response = await apiService.request(`/api/course-pages/${id}`, { method: 'DELETE' })
+  return response.success
+}
+
+/**
+ * Enregistrer une session de révision sur une page de cours (première sauvegarde).
+ * keepalive : la requête part même si la page se ferme.
+ */
+export async function saveCoursePageResult (coursePageId, resultData, { keepalive = false } = {}) {
+  const response = await apiService.request(`/api/course-pages/${coursePageId}/results`, {
+    method: 'POST',
+    body: JSON.stringify(resultData),
+    keepalive
+  })
+  return response.success ? response.data : null
+}
+
+/**
+ * Mettre à jour une session de révision en cours.
+ * keepalive : la requête part même si la page se ferme.
+ */
+export async function updateCoursePageResult (coursePageId, resultId, resultData, { keepalive = false } = {}) {
+  const response = await apiService.request(`/api/course-pages/${coursePageId}/results/${resultId}`, {
+    method: 'PUT',
+    body: JSON.stringify(resultData),
+    keepalive
+  })
+  return response.success ? response.data : null
+}
+
+// Type des messages envoyés par le pont de progression, que le serveur ajoute
+// à chaque page servie (backend/lib/coursePageView.js)
+export const PROGRESS_MESSAGE_TYPE = 'teachdigital:quiz-progress'
+
+/**
+ * URL d'affichage isolé d'une page enregistrée (valable 10 min, le temps que l'iframe la charge).
+ * La page est servie par le backend avec sa propre CSP « sandbox » : l'application garde
+ * une CSP stricte, sans 'unsafe-inline'.
+ * @returns {Promise<string>}
+ */
+export async function getCoursePageViewUrl (id) {
+  const response = await apiService.request(`/api/course-pages/${id}/view`, { method: 'POST' })
+  return response.data.url
+}
+
+/**
+ * URL d'aperçu d'un brouillon non publié (parent uniquement)
+ * @returns {Promise<string>}
+ */
+export async function getCoursePagePreviewUrl (htmlContent) {
+  const response = await apiService.request('/api/course-pages/preview', {
+    method: 'POST',
+    body: JSON.stringify({ htmlContent })
+  })
+  return response.data.url
 }
 
 /**

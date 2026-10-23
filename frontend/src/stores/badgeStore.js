@@ -266,40 +266,6 @@ export const useBadgeStore = defineStore('badge', {
     },
 
     /**
-     * Vérifier et débloquer automatiquement les badges
-     * @param {number} profileId - ID du profil
-     * @param {string} actionType - Type d'action
-     * @param {Object} actionData - Données de l'action
-     */
-    async checkAndUnlockBadges (profileId, actionType, actionData = {}) {
-      try {
-        const newlyUnlockedBadges = await badgeService.checkAndUnlockBadges(
-          profileId,
-          actionType,
-          actionData
-        )
-
-        if (newlyUnlockedBadges.length > 0) {
-          // Actualiser les données du profil
-          await this.loadProfileBadges(profileId)
-
-          // Retourner les badges débloqués pour notification
-          return newlyUnlockedBadges
-        }
-
-        // Même si aucun badge n'est débloqué, actualiser la progression
-        if (this.currentProfileId === profileId) {
-          await this.loadProfileBadges(profileId)
-        }
-
-        return []
-      } catch (error) {
-        console.error('Erreur lors de la vérification des badges:', error)
-        throw error
-      }
-    },
-
-    /**
      * Charger les badges par catégorie
      * @param {string} category - Catégorie
      */

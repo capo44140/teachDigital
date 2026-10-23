@@ -1,14 +1,17 @@
 // Service Worker pour TeachDigital PWA
 // Seul Service Worker de l'application (enregistré dans src/main.js).
-// BUILD_VERSION est remplacé au build par scripts/generate-sw.js (même valeur que dist/version.json).
+// BUILD_VERSION et PRECACHE_ASSETS sont remplacés au build par scripts/generate-sw.js
+// (même version que dist/version.json ; liste des fichiers de dist/.vite/manifest.json).
 const BUILD_VERSION = 'teachdigital-dev';
+const PRECACHE_ASSETS = [];
 
 // Caches versionnés : chaque déploiement repart d'un précache propre
 const STATIC_CACHE = `teachdigital-static-${BUILD_VERSION}`;
 // Assets Vite hachés (/assets/*) : immuables, conservés d'un build à l'autre
 // (un onglet resté sur l'ancienne version peut encore charger ses chunks)
 const ASSET_CACHE = 'teachdigital-assets-v1';
-const MAX_ASSET_ENTRIES = 300;
+// Anciens assets conservés au-delà du build courant (ceux du build courant ne sont jamais supprimés)
+const MAX_OLD_ASSET_ENTRIES = 150;
 const CURRENT_CACHES = [STATIC_CACHE, ASSET_CACHE];
 
 const urlsToCache = [
@@ -57,13 +60,34 @@ async function deleteOldCaches() {
   );
 }
 
-// Limiter la taille du cache des assets (les plus anciens sont supprimés en premier)
+// Limiter la taille du cache des assets : ceux du build courant sont conservés,
+// les plus anciens des autres sont supprimés en premier
 async function trimAssetCache() {
   const cache = await caches.open(ASSET_CACHE);
   const requests = await cache.keys();
-  const excess = requests.length - MAX_ASSET_ENTRIES;
+  const current = new Set(PRECACHE_ASSETS);
+  const oldRequests = requests.filter((request) => !current.has(new URL(request.url).pathname));
+  const excess = oldRequests.length - MAX_OLD_ASSET_ENTRIES;
   if (excess > 0) {
-    await Promise.all(requests.slice(0, excess).map((request) => cache.delete(request)));
+    await Promise.all(oldRequests.slice(0, excess).map((request) => cache.delete(request)));
+  }
+}
+
+// Précacher tous les fichiers du build (chunks de toutes les pages compris) :
+// une page jamais visitée reste accessible hors ligne. Les fichiers hachés déjà en cache
+// (immuables) ne sont pas retéléchargés ; un échec isolé ne bloque pas l'installation.
+async function precacheBuildAssets() {
+  if (PRECACHE_ASSETS.length === 0) return;
+  const cache = await caches.open(ASSET_CACHE);
+  const results = await Promise.allSettled(PRECACHE_ASSETS.map(async (url) => {
+    if (await cache.match(url)) return;
+    const response = await fetch(new Request(url, { cache: 'reload' }));
+    if (!response.ok) throw new Error(`${url} : HTTP ${response.status}`);
+    await cache.put(url, response);
+  }));
+  const failed = results.filter((result) => result.status === 'rejected');
+  if (failed.length > 0) {
+    console.warn(`⚠️ Service Worker: ${failed.length} fichier(s) non précaché(s)`, failed.map((f) => f.reason?.message));
   }
 }
 
@@ -93,14 +117,17 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => {
-        console.log('📦 Service Worker: Mise en cache des ressources statiques');
-        return cache.addAll(urlsToCache.map((url) => new Request(url, { cache: 'reload' })));
-      })
-      .catch((error) => {
-        console.error('❌ Service Worker: Erreur lors de la mise en cache', error);
-      })
+    Promise.all([
+      caches.open(STATIC_CACHE)
+        .then((cache) => {
+          console.log('📦 Service Worker: Mise en cache des ressources statiques');
+          return cache.addAll(urlsToCache.map((url) => new Request(url, { cache: 'reload' })));
+        })
+        .catch((error) => {
+          console.error('❌ Service Worker: Erreur lors de la mise en cache', error);
+        }),
+      precacheBuildAssets()
+    ])
   );
 });
 
@@ -216,191 +243,3 @@ async function handleStaticResource(request) {
     return new Response('Ressource non disponible', { status: 404 });
   }
 }
-
-// Gestion des notifications push avancées
-self.addEventListener('push', (event) => {
-  console.log('📢 Service Worker: Notification push reçue');
-  
-  let notificationData = {
-    title: 'TeachDigital',
-    body: 'Nouvelle notification',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
-    data: {
-      timestamp: Date.now(),
-      url: '/'
-    }
-  };
-
-  // Parser les données de la notification si disponibles
-  if (event.data) {
-    try {
-      const pushData = event.data.json();
-      notificationData = {
-        ...notificationData,
-        ...pushData,
-        data: {
-          ...notificationData.data,
-          ...pushData.data
-        }
-      };
-    } catch (error) {
-      // Si ce n'est pas du JSON, traiter comme du texte
-      notificationData.body = event.data.text();
-    }
-  }
-
-  // Configuration des actions selon le type de notification
-  const actions = getNotificationActions(notificationData.data?.type);
-  
-  const options = {
-    body: notificationData.body,
-    icon: notificationData.icon || '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
-    vibrate: [200, 100, 200],
-    data: notificationData.data,
-    actions: actions,
-    requireInteraction: notificationData.data?.requireInteraction || false,
-    silent: notificationData.data?.silent || false,
-    tag: notificationData.data?.tag || 'teachdigital-notification'
-  };
-  
-  event.waitUntil(
-    self.registration.showNotification(notificationData.title, options)
-  );
-});
-
-// Gestion des clics sur les notifications
-self.addEventListener('notificationclick', (event) => {
-  console.log('👆 Service Worker: Clic sur notification', event.action);
-  
-  const notification = event.notification;
-  const data = notification.data || {};
-  
-  // Fermer la notification
-  notification.close();
-  
-  // Gérer les actions
-  event.waitUntil(handleNotificationAction(event.action, data));
-});
-
-// Gestion des actions de notification
-async function handleNotificationAction(action, data) {
-  const { type, profileId, lessonId, url } = data;
-  
-  let targetUrl = '/';
-  
-  // Déterminer l'URL cible selon l'action et le type
-  switch (action) {
-    case 'open':
-      targetUrl = url || getDefaultUrlForType(type, profileId, lessonId);
-      break;
-    case 'quiz':
-      targetUrl = `/quiz/${lessonId}?profile=${profileId}`;
-      break;
-    case 'profile':
-      targetUrl = `/profile/${profileId}`;
-      break;
-    case 'achievements':
-      targetUrl = `/profile/${profileId}?tab=achievements`;
-      break;
-    case 'progress':
-      targetUrl = `/profile/${profileId}?tab=progress`;
-      break;
-    case 'dismiss':
-      // Marquer comme lue (optionnel)
-      return;
-    default:
-      targetUrl = getDefaultUrlForType(type, profileId, lessonId);
-  }
-  
-  // Ouvrir ou focuser l'application
-  const clients = await self.clients.matchAll({
-    type: 'window',
-    includeUncontrolled: true
-  });
-  
-  // Chercher une fenêtre existante
-  for (const client of clients) {
-    if (client.url.includes(self.location.origin) && 'focus' in client) {
-      await client.focus();
-      await client.navigate(targetUrl);
-      return;
-    }
-  }
-  
-  // Ouvrir une nouvelle fenêtre
-  await self.clients.openWindow(targetUrl);
-}
-
-// Obtenir l'URL par défaut selon le type de notification
-function getDefaultUrlForType(type, profileId, lessonId) {
-  switch (type) {
-    case 'quiz_reminder':
-      return lessonId ? `/quiz/${lessonId}?profile=${profileId}` : `/?profile=${profileId}`;
-    case 'achievement':
-      return `/profile/${profileId}?tab=achievements`;
-    case 'progress_update':
-      return `/profile/${profileId}?tab=progress`;
-    case 'lesson_available':
-      return lessonId ? `/lesson/${lessonId}?profile=${profileId}` : `/?profile=${profileId}`;
-    case 'parent_notification':
-      return `/parent-dashboard?profile=${profileId}`;
-    default:
-      return profileId ? `/?profile=${profileId}` : '/';
-  }
-}
-
-// Obtenir les actions selon le type de notification
-function getNotificationActions(type) {
-  const baseActions = [
-    {
-      action: 'open',
-      title: 'Ouvrir',
-      icon: '/icons/icon-72x72.png'
-    },
-    {
-      action: 'dismiss',
-      title: 'Ignorer',
-      icon: '/icons/icon-72x72.png'
-    }
-  ];
-  
-  switch (type) {
-    case 'quiz_reminder':
-      return [
-        {
-          action: 'quiz',
-          title: 'Faire le Quiz',
-          icon: '/icons/icon-72x72.png'
-        },
-        ...baseActions
-      ];
-    case 'achievement':
-      return [
-        {
-          action: 'achievements',
-          title: 'Voir les Badges',
-          icon: '/icons/icon-72x72.png'
-        },
-        ...baseActions
-      ];
-    case 'progress_update':
-      return [
-        {
-          action: 'progress',
-          title: 'Voir la Progression',
-          icon: '/icons/icon-72x72.png'
-        },
-        ...baseActions
-      ];
-    default:
-      return baseActions;
-  }
-}
-
-// Gestion de la fermeture des notifications
-self.addEventListener('notificationclose', (event) => {
-  // Pas d'appel API ici : le Service Worker ne dispose pas du jeton d'authentification
-  console.log('❌ Service Worker: Notification fermée', event.notification.tag);
-});

@@ -6,8 +6,9 @@
     @touchmove.passive="onTouchMove"
     @touchend.passive="onTouchEnd"
   >
-    <!-- Indicateur de pull -->
+    <!-- Indicateur de pull (geste tactile, purement visuel) -->
     <div
+      aria-hidden="true"
       class="ptr-indicator"
       :class="{
         'ptr-visible': pullDistance > 0,
@@ -19,8 +20,8 @@
       <div class="ptr-content">
         <!-- Spinner / Flèche -->
         <div class="ptr-icon" :class="{ 'ptr-spinning': isRefreshing }">
-          <svg
-            v-if="!isRefreshing"
+          <svg v-if="!isRefreshing"
+            aria-hidden="true"
             xmlns="http://www.w3.org/2000/svg"
             width="24"
             height="24"
@@ -35,8 +36,8 @@
             <polyline points="7 13 12 18 17 13" />
             <line x1="12" y1="2" x2="12" y2="18" />
           </svg>
-          <svg
-            v-else
+          <svg v-else
+            aria-hidden="true"
             xmlns="http://www.w3.org/2000/svg"
             width="24"
             height="24"
@@ -55,9 +56,15 @@
       </div>
     </div>
 
+    <!-- Annonce de l'actualisation pour les lecteurs d'écran (région présente en permanence) -->
+    <p class="sr-only" role="status">{{ isRefreshing ? 'Actualisation de la page…' : '' }}</p>
+
     <!-- Contenu de la page -->
+    <!-- Transformation uniquement pendant le geste : au repos, aucun transform ni will-change,
+         sinon .ptr-body deviendrait le bloc conteneur des modales en position: fixed -->
     <div
       class="ptr-body"
+      :class="{ 'ptr-body--active': isGestureActive }"
       :style="bodyStyle"
     >
       <slot />
@@ -94,6 +101,9 @@ export default {
         opacity: Math.min(this.pullDistance / this.threshold, 1)
       }
     },
+    isGestureActive () {
+      return this.isRefreshing || this.pullDistance > 0
+    },
     bodyStyle () {
       if (this.isRefreshing) {
         return { transform: `translateY(${this.threshold}px)`, transition: 'transform 0.3s ease' }
@@ -102,7 +112,8 @@ export default {
         const distance = Math.min(this.pullDistance, this.maxPull)
         return { transform: `translateY(${distance}px)`, transition: 'none' }
       }
-      return { transform: 'translateY(0)', transition: 'transform 0.3s ease' }
+      // Au repos : transform: none (le retour à 0 reste animé)
+      return { transform: 'none', transition: 'transform 0.3s ease' }
     },
     arrowStyle () {
       const rotation = this.pullDistance >= this.threshold ? 180 : (this.pullDistance / this.threshold) * 180
@@ -116,6 +127,15 @@ export default {
       if (this.pullDistance >= this.threshold) return 'Relâchez pour actualiser'
       if (this.pullDistance > 10) return 'Tirez pour actualiser'
       return ''
+    }
+  },
+  watch: {
+    // Désactivé en cours de geste (changement de page) : revenir au repos
+    disabled (isDisabled) {
+      if (isDisabled && !this.isRefreshing) {
+        this.isPulling = false
+        this.resetPull()
+      }
     }
   },
   methods: {
@@ -278,7 +298,8 @@ export default {
   to { transform: rotate(360deg); }
 }
 
-.ptr-body {
+/* will-change seulement pendant le geste (voir le commentaire du template) */
+.ptr-body--active {
   will-change: transform;
 }
 </style>

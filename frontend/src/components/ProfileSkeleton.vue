@@ -1,5 +1,6 @@
 <template>
-  <div class="profile-skeleton">
+  <!-- Squelette purement visuel : l'état de chargement est annoncé par l'écran parent -->
+  <div class="profile-skeleton" aria-hidden="true">
     <!-- Skeleton pour ProfileSelector -->
     <div v-if="type === 'selector'" class="profile-card-skeleton">
       <div class="skeleton-image"></div>

@@ -1,93 +1,88 @@
 <template>
-  <Teleport to="body">
-    <Transition name="onb-fade">
-      <div
-        v-if="store.visible && currentSlide"
-        class="onb-overlay"
-        role="dialog"
-        aria-modal="true"
-        :aria-labelledby="`onb-title-${currentSlide.id}`"
-        @keydown.esc="store.skip()"
-      >
-        <div class="onb-card">
-          <button
-            type="button"
-            class="onb-skip"
-            aria-label="Passer la présentation"
-            @click="store.skip()"
-          >
-            Passer
-          </button>
+  <!-- Fenêtre modale accessible (BaseModal) : focus initial sur « Suivant », Échap = passer -->
+  <BaseModal
+    :open="store.visible && !!currentSlide"
+    :labelledby="currentSlide ? `onb-title-${currentSlide.id}` : ''"
+    transition="onb-fade"
+    overlay-class="onb-overlay"
+    panel-class="onb-card"
+    initial-focus=".onb-btn--primary"
+    :close-on-backdrop="false"
+    @close="store.skip()"
+  >
+    <button
+      type="button"
+      class="onb-skip"
+      aria-label="Passer la présentation"
+      @click="store.skip()"
+    >
+      Passer
+    </button>
 
-          <Transition name="onb-slide" mode="out-in">
-            <div :key="currentSlide.id" class="onb-slide">
-              <div class="onb-emoji" aria-hidden="true">{{ currentSlide.emoji }}</div>
-              <h2 :id="`onb-title-${currentSlide.id}`" class="onb-title">
-                {{ currentSlide.title }}
-              </h2>
-              <p class="onb-body">{{ currentSlide.body }}</p>
-            </div>
-          </Transition>
-
-          <div class="onb-progress" :aria-label="`Étape ${store.currentStep + 1} sur ${store.totalSteps}`">
-            <span
-              v-for="(_, i) in store.steps"
-              :key="i"
-              class="onb-dot"
-              :class="{ 'onb-dot--active': i === store.currentStep, 'onb-dot--done': i < store.currentStep }"
-              aria-hidden="true"
-            />
-          </div>
-
-          <div class="onb-actions">
-            <button
-              v-if="store.currentStep > 0"
-              type="button"
-              class="onb-btn onb-btn--ghost"
-              @click="store.previous()"
-            >
-              Précédent
-            </button>
-            <button
-              ref="nextBtn"
-              type="button"
-              class="onb-btn onb-btn--primary"
-              @click="store.next()"
-            >
-              {{ store.isLastStep ? 'C\'est parti !' : 'Suivant' }}
-            </button>
-          </div>
+    <!-- Chaque nouvelle étape est annoncée par les lecteurs d'écran -->
+    <div aria-live="polite">
+      <Transition name="onb-slide" mode="out-in">
+        <div v-if="currentSlide" :key="currentSlide.id" class="onb-slide">
+          <div class="onb-emoji" aria-hidden="true">{{ currentSlide.emoji }}</div>
+          <h2 :id="`onb-title-${currentSlide.id}`" class="onb-title">
+            {{ currentSlide.title }}
+          </h2>
+          <p class="onb-body">{{ currentSlide.body }}</p>
         </div>
-      </div>
-    </Transition>
-  </Teleport>
+      </Transition>
+    </div>
+
+    <div class="onb-progress">
+      <span class="sr-only">Étape {{ store.currentStep + 1 }} sur {{ store.totalSteps }}</span>
+      <span
+        v-for="(_, i) in store.steps"
+        :key="i"
+        class="onb-dot"
+        :class="{ 'onb-dot--active': i === store.currentStep, 'onb-dot--done': i < store.currentStep }"
+        aria-hidden="true"
+      />
+    </div>
+
+    <div class="onb-actions">
+      <button
+        v-if="store.currentStep > 0"
+        type="button"
+        class="onb-btn onb-btn--ghost"
+        @click="store.previous()"
+      >
+        Précédent
+      </button>
+      <button
+        type="button"
+        class="onb-btn onb-btn--primary"
+        @click="store.next()"
+      >
+        {{ store.isLastStep ? 'C\'est parti !' : 'Suivant' }}
+      </button>
+    </div>
+  </BaseModal>
 </template>
 
 <script>
 import { storeToRefs } from 'pinia'
 import { useOnboardingStore } from '../stores/onboardingStore.js'
+import BaseModal from './BaseModal.vue'
 
 export default {
   name: 'OnboardingTour',
+  components: {
+    BaseModal
+  },
   setup() {
     const store = useOnboardingStore()
     const { currentSlide } = storeToRefs(store)
     return { store, currentSlide }
-  },
-  watch: {
-    'store.visible'(visible) {
-      if (visible) {
-        // Focus le bouton "Suivant" pour la nav clavier
-        this.$nextTick(() => {
-          this.$refs.nextBtn?.focus()
-        })
-      }
-    }
   }
 }
 </script>
 
-<style scoped>
+<!-- Non scopé : le fond et le panneau sont rendus par BaseModal (classes préfixées onb-) -->
+<style>
 .onb-overlay {
   position: fixed;
   inset: 0;
@@ -125,7 +120,7 @@ export default {
   padding: 0.5rem 0.75rem;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 0.875rem;
   cursor: pointer;
   border-radius: 0.5rem;
