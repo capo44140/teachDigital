@@ -1,5 +1,6 @@
 /**
- * Séries de jours d'activité consécutifs (résumé de progression, badge « daily_streak »).
+ * Séries de jours d'activité consécutifs (résumé de progression, badge « daily_streak »,
+ * conditions d'accès aux jeux) et bornes de jour / semaine.
  * Les jours sont des clés « YYYY-MM-DD » (DATE(completed_at) côté PostgreSQL) ; l'arithmétique
  * se fait sur des numéros de jour calendaires, sans dépendre du fuseau horaire du serveur.
  */
@@ -17,6 +18,30 @@ function toDateOnlyKey(date) {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
+ * Début du jour (minuit), en heure locale du serveur
+ * @param {Date} [date]
+ * @returns {Date}
+ */
+function startOfDay(date = new Date()) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/**
+ * Début de la semaine (lundi minuit), en heure locale du serveur
+ * @param {Date} [date]
+ * @returns {Date}
+ */
+function startOfWeekMonday(date = new Date()) {
+  const d = startOfDay(date);
+  // JS: 0=dimanche ... 6=samedi. On veut lundi=0
+  const day = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - day);
+  return d;
 }
 
 // Numéro de jour calendaire (jours depuis 1970-01-01), ou null si la clé est invalide
@@ -72,5 +97,7 @@ function computeStreaksFromDayKeys(dayKeys, now = new Date()) {
 
 module.exports = {
   toDateOnlyKey,
+  startOfDay,
+  startOfWeekMonday,
   computeStreaksFromDayKeys
 };

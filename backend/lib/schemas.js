@@ -8,6 +8,13 @@
  */
 const { z } = require('zod');
 const { getConditionSupport } = require('./badgeConditions.js');
+const {
+  GAME_CONDITIONS,
+  GAME_CONDITION_TYPES,
+  MIN_DAILY_LIMIT_MINUTES,
+  MAX_DAILY_LIMIT_MINUTES,
+  MAX_GAME_SCORE
+} = require('./games.js');
 
 // Messages d'erreur par défaut en français (affichés par le frontend)
 z.config(z.locales.fr());
@@ -425,6 +432,57 @@ const youtubeVideoCreateSchema = withAliases(YOUTUBE_ALIASES, z.object({
 
 const youtubeVideoUpdateSchema = withAliases(YOUTUBE_ALIASES, nonEmptyUpdate(z.object(youtubeFields).partial()));
 
+// ─── Jeux ────────────────────────────────────────────────────────────────────
+
+// GET /games
+const gameListQuerySchema = z.object({
+  profileId: numericIdSchema
+});
+
+const GAME_RULE_ALIASES = {
+  isEnabled: 'is_enabled',
+  conditionType: 'condition_type',
+  conditionValue: 'condition_value',
+  dailyLimitMinutes: 'daily_limit_minutes'
+};
+
+// PUT /games/:gameKey/rules/:profileId : remplace toute la règle (champs absents = défaut)
+const gameRuleUpdateSchema = withAliases(GAME_RULE_ALIASES, z.object({
+  is_enabled: booleanish.default(false),
+  condition_type: z.enum(GAME_CONDITION_TYPES, 'Condition d\'accès inconnue').default('none'),
+  condition_value: integer().pipe(z.number().min(0, 'Valeur de condition invalide')).default(0),
+  daily_limit_minutes: z.preprocess(
+    value => (value === '' ? null : value),
+    integer().pipe(z.number()
+      .min(MIN_DAILY_LIMIT_MINUTES, `La durée par jour doit être comprise entre ${MIN_DAILY_LIMIT_MINUTES} et ${MAX_DAILY_LIMIT_MINUTES} minutes`)
+      .max(MAX_DAILY_LIMIT_MINUTES, `La durée par jour doit être comprise entre ${MIN_DAILY_LIMIT_MINUTES} et ${MAX_DAILY_LIMIT_MINUTES} minutes`)
+    ).nullable()
+  ).default(null)
+}).superRefine((rule, ctx) => {
+  if (rule.condition_type === 'none') return;
+  const { min, max, unit } = GAME_CONDITIONS[rule.condition_type];
+  if (rule.condition_value < min || rule.condition_value > max) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['condition_value'],
+      message: `La valeur de la condition doit être comprise entre ${min} et ${max} (${unit})`
+    });
+  }
+}).transform(rule => (rule.condition_type === 'none' ? { ...rule, condition_value: 0 } : rule)));
+
+// POST /games/:gameKey/sessions
+const gameSessionStartSchema = z.object({
+  profileId: numericIdSchema
+});
+
+// PUT /games/sessions/:id : signal de vie (score en cours) ou fin de partie.
+// idle : reprise après une pause, le temps écoulé depuis le dernier signal n'est pas compté.
+const gameSessionUpdateSchema = z.object({
+  score: integer().pipe(z.number().min(0, 'Score invalide').max(MAX_GAME_SCORE, 'Score invalide')).default(0),
+  ended: booleanish.default(false),
+  idle: booleanish.default(false)
+});
+
 // ─── Journal d'audit ─────────────────────────────────────────────────────────
 
 const AUDIT_LEVELS = ['info', 'warning', 'error', 'critical'];
@@ -524,6 +582,10 @@ module.exports = {
   activityListQuerySchema,
   youtubeVideoCreateSchema,
   youtubeVideoUpdateSchema,
+  gameListQuerySchema,
+  gameRuleUpdateSchema,
+  gameSessionStartSchema,
+  gameSessionUpdateSchema,
   AUDIT_LEVELS,
   AUDIT_CATEGORIES,
   CLIENT_AUDIT_ACTIONS,

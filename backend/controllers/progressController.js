@@ -3,7 +3,7 @@ const { default: sql } = require('../lib/database.js')
 const { canActForProfile } = require('../lib/auth.js')
 const { handleError, createErrorResponse } = require('../lib/response.js')
 const { withQueryTimeout, TIMEOUTS } = require('../lib/queries.js')
-const { computeStreaksFromDayKeys } = require('../lib/streaks.js')
+const { computeStreaksFromDayKeys, startOfWeekMonday } = require('../lib/streaks.js')
 
 const DEFAULT_HISTORY_LIMIT = 50
 const MAX_HISTORY_LIMIT = 500
@@ -12,15 +12,6 @@ const MAX_HISTORY_LIMIT = 500
 // que pg pour une colonne timestamp (réponse identique à celle d'une requête classique)
 const parseTimestamp = pgTypes.getTypeParser(1114, 'text')
 const toTimestamp = value => (value === null || value === undefined ? null : parseTimestamp(value))
-
-function startOfWeekMonday(date = new Date()) {
-  const d = new Date(date)
-  d.setHours(0, 0, 0, 0)
-  // JS: 0=dimanche ... 6=samedi. On veut lundi=0
-  const day = (d.getDay() + 6) % 7
-  d.setDate(d.getDate() - day)
-  return d
-}
 
 function computeLevelFromXp(xpTotal) {
   const xp = Number.isFinite(xpTotal) ? xpTotal : 0

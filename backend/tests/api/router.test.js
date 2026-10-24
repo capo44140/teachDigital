@@ -87,6 +87,10 @@ describe('Sans jeton : 401', () => {
     ['GET', '/youtube-videos/1'],
     ['PUT', '/youtube-videos/1'],
     ['DELETE', '/youtube-videos/1'],
+    ['GET', '/games?profileId=7'],
+    ['PUT', '/games/pacman/rules/7'],
+    ['POST', '/games/pacman/sessions'],
+    ['PUT', '/games/sessions/1'],
     ['POST', '/notifications/mark-all-read'],
     ['POST', '/notifications'],
     ['PUT', '/notifications/1'],
@@ -134,6 +138,7 @@ describe('Jeton famille ou enfant sur une action parent : 403', () => {
     ['POST', '/youtube-videos'],
     ['PUT', '/youtube-videos/1'],
     ['DELETE', '/youtube-videos/1'],
+    ['PUT', '/games/pacman/rules/7'],
     ['POST', '/badges'],
     ['PUT', '/badges/1'],
     ['DELETE', '/badges/1'],
@@ -168,10 +173,16 @@ describe('Données d\'un parent : interdites au jeton famille et aux enfants', (
     ['GET', '/lessons?targetProfileId=1'],
     ['GET', '/course-pages?targetProfileId=1'],
     ['GET', '/activities?child_id=1'],
-    ['GET', '/lessons/1/quiz-results?profileId=1']
+    ['GET', '/lessons/1/quiz-results?profileId=1'],
+    ['GET', '/games?profileId=1']
   ])('%s %s', async (method, path) => {
     expect(await call(method, path, 'family')).toBe(403);
     expect(await call(method, path, 'child')).toBe(403);
+  });
+
+  it('démarrer une partie pour un parent', async () => {
+    expect(await call('POST', '/games/pacman/sessions', 'family', { profileId: 1 })).toBe(403);
+    expect(await call('POST', '/games/pacman/sessions', 'child', { profileId: 1 })).toBe(403);
   });
 
   it('marquer comme lues les notifications d\'un parent', async () => {
@@ -190,7 +201,8 @@ describe('Accès autorisés', () => {
     ['GET', '/activities'],
     ['GET', '/activities/1'],
     ['GET', '/youtube-videos'],
-    ['GET', '/youtube-videos/1']
+    ['GET', '/youtube-videos/1'],
+    ['GET', '/games?profileId=7']
   ])('famille : %s %s', async (method, path) => {
     const status = await call(method, path, 'family');
     expect(status).not.toBe(401);
@@ -212,7 +224,8 @@ describe('Accès autorisés', () => {
     ['PUT', '/activities/1', { status: 'completed' }],
     ['DELETE', '/activities/1', undefined],
     ['PUT', '/youtube-videos/1', { title: 'Nouvelle' }],
-    ['DELETE', '/youtube-videos/1', undefined]
+    ['DELETE', '/youtube-videos/1', undefined],
+    ['PUT', '/games/pacman/rules/7', { isEnabled: true }]
   ])('parent : %s %s', async (method, path, body) => {
     const status = await call(method, path, 'admin', body);
     expect(status).not.toBe(401);

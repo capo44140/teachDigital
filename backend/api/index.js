@@ -16,6 +16,7 @@ const {
 const { handleNotifications, handleNotification, handleMarkAllNotificationsRead } = require('../controllers/notificationController.js');
 const { handleActivities, handleActivity } = require('../controllers/activityController.js');
 const { handleYoutubeVideos, handleYoutubeVideo } = require('../controllers/youtubeController.js');
+const { handleGames, handleGameRule, handleGameSessionStart, handleGameSession } = require('../controllers/gameController.js');
 const { handleCreateAuditLog, handleAuditLogs, handleAuditStats, handleAuditExport } = require('../controllers/auditController.js');
 const { handleProfileProgressSummary } = require('../controllers/progressController.js');
 const badgesRouter = require('./badges.js');
@@ -162,6 +163,13 @@ router.post('/youtube-videos', requireAdmin, validate(schemas.youtubeVideoCreate
 router.get('/youtube-videos/:id', handleYoutubeVideo);
 router.put('/youtube-videos/:id', requireAdmin, validate(schemas.youtubeVideoUpdateSchema), handleYoutubeVideo);
 router.delete('/youtube-videos/:id', requireAdmin, handleYoutubeVideo);
+
+// Routes des jeux : accès de chaque enfant fixé par un parent (règles), temps de jeu compté
+// par le serveur (parties). Lecture et parties : profils accessibles ; règles : parents.
+router.get('/games', validate(schemas.gameListQuerySchema, 'query'), handleGames);
+router.put('/games/:gameKey/rules/:profileId', requireAdmin, validate(schemas.gameRuleUpdateSchema), handleGameRule);
+router.post('/games/:gameKey/sessions', validate(schemas.gameSessionStartSchema), handleGameSessionStart);
+router.put('/games/sessions/:id', validate(schemas.gameSessionUpdateSchema), handleGameSession);
 
 // Routes des badges : lecture pour tous les membres, écriture (et check-unlock) parents uniquement
 router.use('/badges', requireAdminForWrites, badgesRouter);
