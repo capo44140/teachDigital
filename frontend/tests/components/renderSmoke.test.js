@@ -34,6 +34,7 @@ function fakeApi (url) {
   if (path === '/api/lessons') return { lessons: [] }
   if (path === '/api/course-pages') return { coursePages: [] }
   if (path === '/api/youtube-videos') return { videos: [] }
+  if (path === '/api/games') return { profileId: 2, games: [], conditionTypes: [] }
   if (path === '/api/badges' || /^\/api\/badges\/profile\/\d+(\/recent)?$/.test(path)) return []
   if (path.startsWith('/api/badges/profile/') && path.endsWith('/unlocked')) return { unlockedBadges: [] }
   if (path === '/api/ai/course-page/provider') return { provider: null, options: [] }
@@ -112,6 +113,9 @@ const SCREENS = [
   ['LessonDetails', () => import('../../src/views/LessonDetails.vue'), '/lesson-details/5?childId=2'],
   ['ProgressTracking', () => import('../../src/views/ProgressTracking.vue'), '/progress-tracking?childId=2'],
   ['CoursePageManager', () => import('../../src/views/CoursePageManager.vue'), '/course-page-manager'],
+  ['GameArcade', () => import('../../src/views/GameArcade.vue'), '/games?profile=2'],
+  ['GamePlayer', () => import('../../src/views/GamePlayer.vue'), '/games/tetris?profile=2', { gameKey: 'tetris' }],
+  ['ParentGameManagement', () => import('../../src/views/ParentGameManagement.vue'), '/parent-game-management'],
   ['NotFound', () => import('../../src/views/NotFound.vue'), '/nulle-part']
 ]
 

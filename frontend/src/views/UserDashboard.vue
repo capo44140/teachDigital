@@ -133,6 +133,25 @@
         </div>
       </div>
 
+      <!-- Mes jeux (ouverts par un parent, parfois sous conditions) -->
+      <div class="mb-16">
+        <h2 class="text-3xl font-bold text-white mb-8 text-center">Mes jeux <span aria-hidden="true">🎮</span></h2>
+        <div class="text-center mb-8">
+          <p class="text-white/70 mb-6 text-lg">Pac-Man, Tetris… regarde quels jeux tu as débloqués !</p>
+          <button
+            type="button"
+            class="glass-button-action group"
+            :disabled="!currentProfile"
+            @click="openGames"
+          >
+            <svg aria-hidden="true" class="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/>
+            </svg>
+            <span>Voir mes jeux</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Mes cours disponibles (pages HTML publiées par un parent) -->
       <div class="mb-16">
         <h2 class="text-3xl font-bold text-white mb-8 text-center">Mes cours disponibles <span aria-hidden="true">📚</span></h2>
@@ -536,6 +555,11 @@ export default {
           profile: this.currentProfile.id
         }
       })
+    },
+
+    openGames() {
+      if (!this.currentProfile?.id) return
+      this.$router.push({ name: 'GameArcade', query: { profile: this.currentProfile.id } })
     },
 
     openYouTubeViewer() {

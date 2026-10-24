@@ -27,6 +27,11 @@ const TextQuizGenerator = () => import('../views/TextQuizGenerator.vue')
 const YouTubeVideoManager = () => import('../views/YouTubeVideoManager.vue')
 const YouTubeKidsViewer = () => import('../views/YouTubeKidsViewerSimple.vue')
 
+// Jeux
+const GameArcade = () => import('../views/GameArcade.vue')
+const GamePlayer = () => import('../views/GamePlayer.vue')
+const ParentGameManagement = () => import('../views/ParentGameManagement.vue')
+
 // Sécurité
 const SecurityDashboard = () => import('../views/SecurityDashboard.vue')
 
@@ -221,6 +226,27 @@ const routes = [
     name: 'YouTubeKidsViewer',
     component: YouTubeKidsViewer,
     meta: { requiresChildOrTeen: true, bgTone: 'red' }
+  },
+  {
+    // Jeux de l'enfant (?profile=) : accès fixé par un parent, évalué par le serveur
+    path: '/games',
+    name: 'GameArcade',
+    component: GameArcade,
+    meta: { requiresChildOrTeen: true, bgTone: 'yellow' }
+  },
+  {
+    // Partie en cours : les glissements du doigt dirigent le jeu, pas la page
+    path: '/games/:gameKey',
+    name: 'GamePlayer',
+    component: GamePlayer,
+    props: true,
+    meta: { requiresChildOrTeen: true, disablePullToRefresh: true }
+  },
+  {
+    path: '/parent-game-management',
+    name: 'ParentGameManagement',
+    component: ParentGameManagement,
+    meta: { requiresAdmin: true, disablePullToRefresh: true }
   },
   {
     path: '/child-help',
