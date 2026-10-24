@@ -42,18 +42,15 @@ describe('registre des thèmes', () => {
     expect(isAppThemeId(null)).toBe(false)
   })
 
-  it.each([
-    ['paw-patrol', 'un chiot'],
-    ['formula-1', 'une écurie']
-  ])('%s : %s pour chaque couleur préférée proposée à l\'enfant', (themeId) => {
-    const { options } = getAppTheme(themeId).tones
+  it('Pat\' Patrouille : un chiot pour chaque couleur préférée proposée à l\'enfant', () => {
+    const { options } = getAppTheme('paw-patrol').tones
     for (const tone of CHILD_THEMES) {
       expect(options[tone.id], tone.id).toMatchObject({ name: expect.any(String), emoji: expect.any(String), swatch: expect.any(String) })
     }
   })
 
   it('les autres thèmes ignorent la couleur préférée, ou gardent les couleurs d\'origine', () => {
-    for (const themeId of ['netflix', 'desperate-housewives', 'one-tree-hill']) {
+    for (const themeId of ['netflix', 'desperate-housewives', 'one-tree-hill', 'formula-1']) {
       expect(getAppTheme(themeId).tones, themeId).toBeNull()
     }
     expect(getAppTheme('liquid-glass').tones.options).toBeUndefined()

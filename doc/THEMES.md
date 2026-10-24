@@ -1,7 +1,7 @@
 # Thèmes de l'application
 
 TeachDigital propose six thèmes. **Liquid Glass**, le design d'origine, reste le thème par
-défaut ; les autres sont des clins d'œil à des séries et à la Formule 1, sans logo ni image
+défaut ; les autres sont des clins d'œil à des séries et à l'écurie Mercedes de Formule 1, sans logo ni image
 officiels (décors dessinés en SVG ou en CSS, polices libres OFL / Apache).
 
 | Thème | `data-app-theme` | Ambiance | Polices | Couleur préférée de l'enfant |
@@ -11,7 +11,7 @@ officiels (décors dessinés en SVG ou en CSS, polices libres OFL / Apache).
 | 🐶 Pat' Patrouille | `paw-patrol` | Ciel bleu du badge, pattes et os, titres blancs cernés de bleu marine, logo en écusson, cartes « autocollants », boutons en relief | Luckiest Guy (titres), Fredoka (texte) | Chiot préféré : Everest, Chase, Rocky, Zuma, Ruben ou toute l'équipe (couleur des grandes pattes) |
 | 🍎 Desperate Housewives | `desperate-housewives` | Nuit violine sur Wisteria Lane : glycines, lune, palissade blanche, pétales qui tombent, pomme rouge, liserés dorés, logo en pomme | Playfair Display (titres) | Ignorée |
 | 🏀 Les Frères Scott | `one-tree-hill` | Coucher de soleil sur le River Court : ciel étoilé, soleil derrière l'arbre seul sur la colline, panier en silhouette, orange du ballon, logo en ballon de basket | Permanent Marker (titres, façon graffiti) | Ignorée |
-| 🏎️ Formule 1 | `formula-1` | Fibre de carbone, rouge #E10600, damier, vibreur rouge et blanc, lignes de vitesse, titres en italique majuscule, cartes au liseré rouge façon chronométrage, logo en plaque inclinée | Titillium Web (titres et texte) | Écurie : Secteur violet, Red Bull, Aston Martin, McLaren, Renault ou toute la grille (couleur des lignes de vitesse) |
+| 🏎️ Mercedes F1 | `formula-1` (identifiant historique conservé) | Les Flèches d'Argent : noir carbone, argent métallisé, turquoise de l'écurie #00D2BE, points argentés qui s'effacent comme sur la livrée, lignes de vitesse, titres en majuscules espacées, cartes au liseré turquoise façon chronométrage, logo en plaque argent inclinée | Titillium Web (titres et texte) | Ignorée |
 
 ## 👪 Qui choisit quoi
 

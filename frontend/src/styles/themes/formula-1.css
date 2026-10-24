@@ -1,9 +1,9 @@
 /* ============================================
-   THÈME « FORMULE 1 » — :root[data-app-theme="formula-1"]
-   Fibre de carbone, rouge course (#E10600), damier, vibreur rouge et blanc, lignes de
-   vitesse ; titres en italique majuscule, cartes au liseré rouge façon écran de
-   chronométrage. La couleur préférée de l'enfant devient son écurie : elle colore les lignes
-   de vitesse (libellés dans src/themes/index.js).
+   THÈME « MERCEDES F1 » — :root[data-app-theme="formula-1"]
+   Les Flèches d'Argent : noir carbone, argent métallisé et turquoise de l'écurie ; motif de
+   points argentés qui s'efface comme sur la livrée, lignes de vitesse, titres en majuscules
+   espacées, cartes au liseré turquoise façon écran de chronométrage, logo en plaque argent.
+   (Identifiant « formula-1 » conservé : les choix déjà enregistrés restent valables.)
    Registre : src/themes/index.js — guide : doc/THEMES.md
    ============================================ */
 
@@ -26,164 +26,166 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-@font-face {
-  font-family: 'Titillium Web';
-  font-style: italic;
-  font-display: swap;
-  font-weight: 700;
-  src: url('@fontsource/titillium-web/files/titillium-web-latin-700-italic.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
 /* --- Variables et typographie (couche base : les préférences d'accessibilité priment) --- */
 @layer base {
   :root[data-app-theme="formula-1"] {
-    /* Échelles du thème : rouge course, rouge sombre, carbone */
-    --f1-red-50: #FFF0EF;
-    --f1-red-100: #FFDAD7;
-    --f1-red-200: #FFB3AD;
-    --f1-red-300: #FF8078;
-    --f1-red-400: #FF4238;
-    --f1-red-500: #E10600;
-    --f1-red-600: #B80500;
-    --f1-red-700: #940400;
-    --f1-red-800: #6F0300;
-    --f1-red-900: #4D0200;
-    --f1-red-950: #2B0100;
+    /* Échelles du thème : turquoise de l'écurie, argent (graphite), noir carbone */
+    --mb-teal-50: #E6FBF9;
+    --mb-teal-100: #C2F5F0;
+    --mb-teal-200: #8BEBE2;
+    --mb-teal-300: #4FDECF;
+    --mb-teal-400: #00D2BE;
+    --mb-teal-500: #00807A;
+    --mb-teal-600: #006B65;
+    --mb-teal-700: #005652;
+    --mb-teal-800: #004441;
+    --mb-teal-900: #003431;
+    --mb-teal-950: #001C1B;
 
-    --f1-darkred-50: #FCEFEF;
-    --f1-darkred-100: #F8DADA;
-    --f1-darkred-200: #F0B5B4;
-    --f1-darkred-300: #E2817F;
-    --f1-darkred-400: #C9403C;
-    --f1-darkred-500: #9B0500;
-    --f1-darkred-600: #820400;
-    --f1-darkred-700: #680300;
-    --f1-darkred-800: #520300;
-    --f1-darkred-900: #3D0200;
-    --f1-darkred-950: #230100;
+    --mb-silver-50: #F4F5F6;
+    --mb-silver-100: #E6E8E9;
+    --mb-silver-200: #CDD1D3;
+    --mb-silver-300: #ABB1B5;
+    --mb-silver-400: #868D92;
+    --mb-silver-500: #4A5157;
+    --mb-silver-600: #3D4348;
+    --mb-silver-700: #313639;
+    --mb-silver-800: #25292C;
+    --mb-silver-900: #1A1D1F;
+    --mb-silver-950: #0F1112;
 
-    --f1-carbon-50: #F7F7F8;
-    --f1-carbon-100: #EBEBEE;
-    --f1-carbon-200: #D6D6DB;
-    --f1-carbon-300: #B5B5BC;
-    --f1-carbon-400: #8C8C94;
-    --f1-carbon-500: #67676F;
-    --f1-carbon-600: #44444F;
-    --f1-carbon-700: #2D2D3A;
-    --f1-carbon-800: #1F1F2B;
-    --f1-carbon-900: #15151E;
-    --f1-carbon-950: #0B0B12;
+    --mb-carbon-50: #F4F5F6;
+    --mb-carbon-100: #E6E8E9;
+    --mb-carbon-200: #CDD1D3;
+    --mb-carbon-300: #ABB1B5;
+    --mb-carbon-400: #868D92;
+    --mb-carbon-500: #646B70;
+    --mb-carbon-600: #4A5055;
+    --mb-carbon-700: #33383C;
+    --mb-carbon-800: #222527;
+    --mb-carbon-900: #141617;
+    --mb-carbon-950: #0A0B0C;
 
-    /* Palette Tailwind : violet de marque → rouge course (les autres couleurs restent celles
-       des écuries et des drapeaux) */
-    --color-purple-50: var(--f1-red-50);
-    --color-purple-100: var(--f1-red-100);
-    --color-purple-200: var(--f1-red-200);
-    --color-purple-300: var(--f1-red-300);
-    --color-purple-400: var(--f1-red-400);
-    --color-purple-500: var(--f1-red-500);
-    --color-purple-600: var(--f1-red-600);
-    --color-purple-700: var(--f1-red-700);
-    --color-purple-800: var(--f1-red-800);
-    --color-purple-900: var(--f1-red-900);
-    --color-purple-950: var(--f1-red-950);
+    /* Palette Tailwind : violet de marque → turquoise de l'écurie */
+    --color-purple-50: var(--mb-teal-50);
+    --color-purple-100: var(--mb-teal-100);
+    --color-purple-200: var(--mb-teal-200);
+    --color-purple-300: var(--mb-teal-300);
+    --color-purple-400: var(--mb-teal-400);
+    --color-purple-500: var(--mb-teal-500);
+    --color-purple-600: var(--mb-teal-600);
+    --color-purple-700: var(--mb-teal-700);
+    --color-purple-800: var(--mb-teal-800);
+    --color-purple-900: var(--mb-teal-900);
+    --color-purple-950: var(--mb-teal-950);
 
-    --color-violet-50: var(--f1-red-50);
-    --color-violet-100: var(--f1-red-100);
-    --color-violet-200: var(--f1-red-200);
-    --color-violet-300: var(--f1-red-300);
-    --color-violet-400: var(--f1-red-400);
-    --color-violet-500: var(--f1-red-500);
-    --color-violet-600: var(--f1-red-600);
-    --color-violet-700: var(--f1-red-700);
-    --color-violet-800: var(--f1-red-800);
-    --color-violet-900: var(--f1-red-900);
-    --color-violet-950: var(--f1-red-950);
+    --color-violet-50: var(--mb-teal-50);
+    --color-violet-100: var(--mb-teal-100);
+    --color-violet-200: var(--mb-teal-200);
+    --color-violet-300: var(--mb-teal-300);
+    --color-violet-400: var(--mb-teal-400);
+    --color-violet-500: var(--mb-teal-500);
+    --color-violet-600: var(--mb-teal-600);
+    --color-violet-700: var(--mb-teal-700);
+    --color-violet-800: var(--mb-teal-800);
+    --color-violet-900: var(--mb-teal-900);
+    --color-violet-950: var(--mb-teal-950);
 
-    --color-fuchsia-50: var(--f1-red-50);
-    --color-fuchsia-100: var(--f1-red-100);
-    --color-fuchsia-200: var(--f1-red-200);
-    --color-fuchsia-300: var(--f1-red-300);
-    --color-fuchsia-400: var(--f1-red-400);
-    --color-fuchsia-500: var(--f1-red-500);
-    --color-fuchsia-600: var(--f1-red-600);
-    --color-fuchsia-700: var(--f1-red-700);
-    --color-fuchsia-800: var(--f1-red-800);
-    --color-fuchsia-900: var(--f1-red-900);
-    --color-fuchsia-950: var(--f1-red-950);
+    --color-fuchsia-50: var(--mb-teal-50);
+    --color-fuchsia-100: var(--mb-teal-100);
+    --color-fuchsia-200: var(--mb-teal-200);
+    --color-fuchsia-300: var(--mb-teal-300);
+    --color-fuchsia-400: var(--mb-teal-400);
+    --color-fuchsia-500: var(--mb-teal-500);
+    --color-fuchsia-600: var(--mb-teal-600);
+    --color-fuchsia-700: var(--mb-teal-700);
+    --color-fuchsia-800: var(--mb-teal-800);
+    --color-fuchsia-900: var(--mb-teal-900);
+    --color-fuchsia-950: var(--mb-teal-950);
 
-    --color-red-50: var(--f1-red-50);
-    --color-red-100: var(--f1-red-100);
-    --color-red-200: var(--f1-red-200);
-    --color-red-300: var(--f1-red-300);
-    --color-red-400: var(--f1-red-400);
-    --color-red-500: var(--f1-red-500);
-    --color-red-600: var(--f1-red-600);
-    --color-red-700: var(--f1-red-700);
-    --color-red-800: var(--f1-red-800);
-    --color-red-900: var(--f1-red-900);
-    --color-red-950: var(--f1-red-950);
+    --color-teal-50: var(--mb-teal-50);
+    --color-teal-100: var(--mb-teal-100);
+    --color-teal-200: var(--mb-teal-200);
+    --color-teal-300: var(--mb-teal-300);
+    --color-teal-400: var(--mb-teal-400);
+    --color-teal-500: var(--mb-teal-500);
+    --color-teal-600: var(--mb-teal-600);
+    --color-teal-700: var(--mb-teal-700);
+    --color-teal-800: var(--mb-teal-800);
+    --color-teal-900: var(--mb-teal-900);
+    --color-teal-950: var(--mb-teal-950);
 
-    /* Rose (fins de dégradés) → rouge sombre */
-    --color-pink-50: var(--f1-darkred-50);
-    --color-pink-100: var(--f1-darkred-100);
-    --color-pink-200: var(--f1-darkred-200);
-    --color-pink-300: var(--f1-darkred-300);
-    --color-pink-400: var(--f1-darkred-400);
-    --color-pink-500: var(--f1-darkred-500);
-    --color-pink-600: var(--f1-darkred-600);
-    --color-pink-700: var(--f1-darkred-700);
-    --color-pink-800: var(--f1-darkred-800);
-    --color-pink-900: var(--f1-darkred-900);
-    --color-pink-950: var(--f1-darkred-950);
+    /* Rose et indigo (fins de dégradés) → argent graphite */
+    --color-pink-50: var(--mb-silver-50);
+    --color-pink-100: var(--mb-silver-100);
+    --color-pink-200: var(--mb-silver-200);
+    --color-pink-300: var(--mb-silver-300);
+    --color-pink-400: var(--mb-silver-400);
+    --color-pink-500: var(--mb-silver-500);
+    --color-pink-600: var(--mb-silver-600);
+    --color-pink-700: var(--mb-silver-700);
+    --color-pink-800: var(--mb-silver-800);
+    --color-pink-900: var(--mb-silver-900);
+    --color-pink-950: var(--mb-silver-950);
 
-    --color-rose-50: var(--f1-darkred-50);
-    --color-rose-100: var(--f1-darkred-100);
-    --color-rose-200: var(--f1-darkred-200);
-    --color-rose-300: var(--f1-darkred-300);
-    --color-rose-400: var(--f1-darkred-400);
-    --color-rose-500: var(--f1-darkred-500);
-    --color-rose-600: var(--f1-darkred-600);
-    --color-rose-700: var(--f1-darkred-700);
-    --color-rose-800: var(--f1-darkred-800);
-    --color-rose-900: var(--f1-darkred-900);
-    --color-rose-950: var(--f1-darkred-950);
+    --color-rose-50: var(--mb-silver-50);
+    --color-rose-100: var(--mb-silver-100);
+    --color-rose-200: var(--mb-silver-200);
+    --color-rose-300: var(--mb-silver-300);
+    --color-rose-400: var(--mb-silver-400);
+    --color-rose-500: var(--mb-silver-500);
+    --color-rose-600: var(--mb-silver-600);
+    --color-rose-700: var(--mb-silver-700);
+    --color-rose-800: var(--mb-silver-800);
+    --color-rose-900: var(--mb-silver-900);
+    --color-rose-950: var(--mb-silver-950);
 
-    /* Gris → carbone */
-    --color-slate-50: var(--f1-carbon-50);
-    --color-slate-100: var(--f1-carbon-100);
-    --color-slate-200: var(--f1-carbon-200);
-    --color-slate-300: var(--f1-carbon-300);
-    --color-slate-400: var(--f1-carbon-400);
-    --color-slate-500: var(--f1-carbon-500);
-    --color-slate-600: var(--f1-carbon-600);
-    --color-slate-700: var(--f1-carbon-700);
-    --color-slate-800: var(--f1-carbon-800);
-    --color-slate-900: var(--f1-carbon-900);
-    --color-slate-950: var(--f1-carbon-950);
+    --color-indigo-50: var(--mb-silver-50);
+    --color-indigo-100: var(--mb-silver-100);
+    --color-indigo-200: var(--mb-silver-200);
+    --color-indigo-300: var(--mb-silver-300);
+    --color-indigo-400: var(--mb-silver-400);
+    --color-indigo-500: var(--mb-silver-500);
+    --color-indigo-600: var(--mb-silver-600);
+    --color-indigo-700: var(--mb-silver-700);
+    --color-indigo-800: var(--mb-silver-800);
+    --color-indigo-900: var(--mb-silver-900);
+    --color-indigo-950: var(--mb-silver-950);
 
-    --color-gray-50: var(--f1-carbon-50);
-    --color-gray-100: var(--f1-carbon-100);
-    --color-gray-200: var(--f1-carbon-200);
-    --color-gray-300: var(--f1-carbon-300);
-    --color-gray-400: var(--f1-carbon-400);
-    --color-gray-500: var(--f1-carbon-500);
-    --color-gray-600: var(--f1-carbon-600);
-    --color-gray-700: var(--f1-carbon-700);
-    --color-gray-800: var(--f1-carbon-800);
-    --color-gray-900: var(--f1-carbon-900);
-    --color-gray-950: var(--f1-carbon-950);
+    /* Gris → noir carbone et argent */
+    --color-slate-50: var(--mb-carbon-50);
+    --color-slate-100: var(--mb-carbon-100);
+    --color-slate-200: var(--mb-carbon-200);
+    --color-slate-300: var(--mb-carbon-300);
+    --color-slate-400: var(--mb-carbon-400);
+    --color-slate-500: var(--mb-carbon-500);
+    --color-slate-600: var(--mb-carbon-600);
+    --color-slate-700: var(--mb-carbon-700);
+    --color-slate-800: var(--mb-carbon-800);
+    --color-slate-900: var(--mb-carbon-900);
+    --color-slate-950: var(--mb-carbon-950);
+
+    --color-gray-50: var(--mb-carbon-50);
+    --color-gray-100: var(--mb-carbon-100);
+    --color-gray-200: var(--mb-carbon-200);
+    --color-gray-300: var(--mb-carbon-300);
+    --color-gray-400: var(--mb-carbon-400);
+    --color-gray-500: var(--mb-carbon-500);
+    --color-gray-600: var(--mb-carbon-600);
+    --color-gray-700: var(--mb-carbon-700);
+    --color-gray-800: var(--mb-carbon-800);
+    --color-gray-900: var(--mb-carbon-900);
+    --color-gray-950: var(--mb-carbon-950);
 
     /* Cartes : carbone presque opaque */
-    --lg-glass-light: rgba(31, 31, 43, 0.85);
-    --lg-glass-medium: rgba(36, 36, 50, 0.88);
-    --lg-glass-heavy: rgba(42, 42, 57, 0.92);
-    --lg-glass-border: rgba(255, 255, 255, 0.08);
-    --lg-glass-border-hover: rgba(225, 6, 0, 0.6);
-    --lg-glass-shadow: rgba(0, 0, 0, 0.5);
-    --lg-glass-elevation: 0 6px 18px rgba(0, 0, 0, 0.45);
-    --lg-glass-shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(225, 6, 0, 0.35);
+    --lg-glass-light: rgba(26, 29, 31, 0.86);
+    --lg-glass-medium: rgba(31, 34, 37, 0.89);
+    --lg-glass-heavy: rgba(37, 41, 44, 0.92);
+    --lg-glass-border: rgba(200, 204, 206, 0.1);
+    --lg-glass-border-hover: rgba(0, 210, 190, 0.55);
+    --lg-glass-shadow: rgba(0, 0, 0, 0.55);
+    --lg-glass-elevation: 0 6px 18px rgba(0, 0, 0, 0.5);
+    --lg-glass-shadow-hover: 0 12px 28px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 210, 190, 0.3);
 
     /* Coins vifs */
     --radius-xs: 0.0625rem;
@@ -201,75 +203,63 @@
     --td-font-display: 'Titillium Web', 'Segoe UI', system-ui, sans-serif;
 
     /* Fonds, surfaces et accents des composants */
-    --td-page-bg: #15151E;
+    --td-page-bg: #0A0B0C;
     --td-page-gradient: none;
-    --td-surface-base: #15151E;
-    --td-surface-solid: #1F1F2B;
-    --td-surface-raised: rgba(21, 21, 30, 0.97);
-    --td-surface-overlay: rgba(25, 25, 35, 0.97);
-    --td-surface-option: #1F1F2B;
-    --td-backdrop: rgba(5, 5, 10, 0.8);
-    --td-backdrop-glow: rgba(225, 6, 0, 0.3);
-    --td-backdrop-deep: rgba(5, 5, 10, 0.92);
-    --td-skeleton-bg: linear-gradient(135deg, #2D2D3A, #1F1F2B);
-    --td-accent: #E10600;
-    --td-accent-hover: #B80500;
-    --td-accent-gradient: linear-gradient(to right, #E10600, #9B0500);
-    --td-accent-gradient-hover: linear-gradient(to right, #B80500, #820400);
-    --td-accent-gradient-soft: linear-gradient(135deg, rgba(225, 6, 0, 0.75), rgba(155, 5, 0, 0.75));
-    --td-accent-gradient-faint: linear-gradient(135deg, rgba(225, 6, 0, 0.2), rgba(255, 255, 255, 0.08));
-    --td-accent-gradient-faint-hover: linear-gradient(135deg, rgba(225, 6, 0, 0.3), rgba(255, 255, 255, 0.12));
-    --td-accent-text-gradient: linear-gradient(135deg, #FFFFFF, #FF8078);
-    --td-accent-glow: rgba(225, 6, 0, 0.45);
-    --td-accent-glow-strong: rgba(225, 6, 0, 0.6);
-    --td-accent-muted: rgba(225, 6, 0, 0.55);
-    --td-focus-ring: #FFFFFF;
-    --td-focus-border: rgba(255, 255, 255, 0.85);
-    --td-focus-halo: rgba(225, 6, 0, 0.45);
+    --td-surface-base: #141617;
+    --td-surface-solid: #1A1D1F;
+    --td-surface-raised: rgba(20, 22, 23, 0.97);
+    --td-surface-overlay: rgba(24, 27, 29, 0.97);
+    --td-surface-option: #1A1D1F;
+    --td-backdrop: rgba(0, 0, 0, 0.8);
+    --td-backdrop-glow: rgba(0, 210, 190, 0.22);
+    --td-backdrop-deep: rgba(0, 0, 0, 0.92);
+    --td-skeleton-bg: linear-gradient(135deg, #33383C, #1A1D1F);
+    --td-accent: #00807A;
+    --td-accent-hover: #006B65;
+    --td-accent-gradient: linear-gradient(to right, #00807A, #4A5157);
+    --td-accent-gradient-hover: linear-gradient(to right, #006B65, #3D4348);
+    --td-accent-gradient-soft: linear-gradient(135deg, rgba(0, 128, 122, 0.8), rgba(74, 81, 87, 0.8));
+    --td-accent-gradient-faint: linear-gradient(135deg, rgba(0, 210, 190, 0.16), rgba(200, 204, 206, 0.1));
+    --td-accent-gradient-faint-hover: linear-gradient(135deg, rgba(0, 210, 190, 0.26), rgba(200, 204, 206, 0.16));
+    --td-accent-text-gradient: linear-gradient(135deg, #E6E8E9, #00D2BE);
+    --td-accent-glow: rgba(0, 210, 190, 0.4);
+    --td-accent-glow-strong: rgba(0, 210, 190, 0.55);
+    --td-accent-muted: rgba(0, 210, 190, 0.55);
+    --td-focus-ring: #00D2BE;
+    --td-focus-border: rgba(0, 210, 190, 0.9);
+    --td-focus-halo: rgba(0, 210, 190, 0.35);
   }
 
-  /* Titres : italique gras en majuscules, comme les écrans de course */
+  /* Titres : majuscules espacées, sobres comme la livrée */
   :root[data-app-theme="formula-1"] :is(h1, h2) {
     font-family: var(--td-font-display);
-    font-style: italic;
     font-weight: 700;
     font-synthesis: none;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
   }
 
   :root[data-app-theme="formula-1"] h1 {
-    line-height: 1.05;
+    line-height: 1.1;
   }
 }
 
 /* --- Habillage (hors couche : prime sur les utilitaires Tailwind et les styles des composants) --- */
 
-/* Fond : fibre de carbone et halo rouge ; la couleur préférée choisit l'écurie (data-tone) */
+/* Fond : fibre de carbone noire et reflet turquoise */
 :root[data-app-theme="formula-1"] .app-background {
-  --blob-1: #E10600;
-  --blob-2: #FFFFFF;
-  --blob-3: #8C8C94;
-  background-color: #15151E;
+  background-color: #0A0B0C;
   background-image:
-    radial-gradient(120% 60% at 50% -10%, rgba(225, 6, 0, 0.16), transparent 65%),
-    linear-gradient(27deg, #121219 5px, transparent 5px),
-    linear-gradient(207deg, #121219 5px, transparent 5px),
-    linear-gradient(27deg, #1C1C26 5px, transparent 5px),
-    linear-gradient(207deg, #1C1C26 5px, transparent 5px),
-    linear-gradient(90deg, #17171F 10px, transparent 10px),
-    linear-gradient(#191922 25%, #16161E 25%, #16161E 50%, transparent 50%, transparent 75%, #1E1E28 75%, #1E1E28);
+    radial-gradient(110% 55% at 50% -10%, rgba(0, 210, 190, 0.12), transparent 65%),
+    linear-gradient(27deg, #08090A 5px, transparent 5px),
+    linear-gradient(207deg, #08090A 5px, transparent 5px),
+    linear-gradient(27deg, #141617 5px, transparent 5px),
+    linear-gradient(207deg, #141617 5px, transparent 5px),
+    linear-gradient(90deg, #0E1011 10px, transparent 10px),
+    linear-gradient(#101213 25%, #0C0D0E 25%, #0C0D0E 50%, transparent 50%, transparent 75%, #16181A 75%, #16181A);
   background-size: auto, 20px 20px, 20px 20px, 20px 20px, 20px 20px, 20px 20px, 20px 20px;
   background-position: 0 0, 0 5px, 10px 0, 0 10px, 10px 5px, 0 0, 0 0;
 }
-
-:root[data-app-theme="formula-1"] .app-background[data-tone="purple"] { --blob-1: #A855F7; --blob-2: #E9D5FF; --blob-3: #7C3AED; }
-:root[data-app-theme="formula-1"] .app-background[data-tone="blue"] { --blob-1: #3671C6; --blob-2: #FFC906; --blob-3: #CC1E4A; }
-:root[data-app-theme="formula-1"] .app-background[data-tone="green"] { --blob-1: #229971; --blob-2: #CEDC00; --blob-3: #3BB8A3; }
-:root[data-app-theme="formula-1"] .app-background[data-tone="orange"] { --blob-1: #FF8000; --blob-2: #47C7FC; --blob-3: #FFB15C; }
-:root[data-app-theme="formula-1"] .app-background[data-tone="yellow"] { --blob-1: #FFD800; --blob-2: #0057B8; --blob-3: #FFFFFF; }
-:root[data-app-theme="formula-1"] .app-background[data-tone="red"] { --blob-1: #E8002D; --blob-2: #FFEB00; --blob-3: #FFFFFF; }
-:root[data-app-theme="formula-1"] .app-background[data-tone="rainbow"] { --blob-1: #E8002D; --blob-2: #3671C6; --blob-3: #FF8000; }
 
 :root[data-app-theme="formula-1"] .app-background::before,
 :root[data-app-theme="formula-1"] .app-background::after {
@@ -278,29 +268,29 @@
   pointer-events: none;
 }
 
-/* Drapeau à damier qui s'efface depuis le coin supérieur droit */
+/* Points argentés qui s'effacent depuis le coin, comme le motif de la livrée */
 :root[data-app-theme="formula-1"] .app-background::before {
   top: 0;
   right: 0;
-  width: 28rem;
-  height: 20rem;
-  background: repeating-conic-gradient(#FFFFFF 0 25%, transparent 0 50%) 0 0 / 2.25rem 2.25rem;
+  width: 36rem;
+  height: 26rem;
+  background: radial-gradient(circle, #C8CCCE 1.6px, transparent 2px) 0 0 / 14px 14px;
   -webkit-mask-image: radial-gradient(ellipse at 100% 0%, #000 0%, transparent 70%);
   mask-image: radial-gradient(ellipse at 100% 0%, #000 0%, transparent 70%);
-  opacity: 0.13;
+  opacity: 0.32;
 }
 
-/* Vibreur rouge et blanc en bas de l'écran */
+/* Filet turquoise et argent en bas de l'écran */
 :root[data-app-theme="formula-1"] .app-background::after {
   right: 0;
   bottom: 0;
   left: 0;
-  height: 0.75rem;
-  background: repeating-linear-gradient(90deg, #E10600 0 2.5rem, #F2F2F2 2.5rem 5rem);
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #00D2BE 25%, #C8CCCE 60%, transparent);
   opacity: 0.85;
 }
 
-/* Les trois disques deviennent des lignes de vitesse aux couleurs de l'écurie */
+/* Les trois disques deviennent des lignes de vitesse turquoise et argent */
 :root[data-app-theme="formula-1"] .app-background__blob {
   width: 65vw;
   height: 3px;
@@ -315,7 +305,7 @@
   top: 24%;
   right: auto;
   left: -12%;
-  background: linear-gradient(90deg, transparent, var(--blob-1) 45%, transparent);
+  background: linear-gradient(90deg, transparent, #00D2BE 45%, transparent);
 }
 
 :root[data-app-theme="formula-1"] .app-background__blob--2 {
@@ -323,7 +313,7 @@
   bottom: auto;
   left: 38%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--blob-2) 50%, transparent);
+  background: linear-gradient(90deg, transparent, #E6E8E9 50%, transparent);
   opacity: 0.35;
 }
 
@@ -331,7 +321,7 @@
   top: 80%;
   left: -6%;
   height: 5px;
-  background: linear-gradient(90deg, transparent, var(--blob-3) 55%, transparent);
+  background: linear-gradient(90deg, transparent, #868D92 55%, transparent);
   opacity: 0.45;
 }
 
@@ -359,18 +349,18 @@
   }
 }
 
-/* En-têtes : noir carbone, filet rouge */
+/* En-têtes : noir, filet turquoise */
 :root[data-app-theme="formula-1"] .td-page-header {
-  background: rgba(11, 11, 18, 0.92);
-  border-bottom: 3px solid #E10600;
+  background: rgba(5, 6, 7, 0.92);
+  border-bottom: 3px solid #00D2BE;
 }
 
-/* Logo : plaque rouge inclinée, « TD » en italique */
+/* Logo : plaque argent métallisé inclinée, ombre turquoise, « TD » noir */
 :root[data-app-theme="formula-1"] .td-brand-mark {
-  background: #E10600;
+  background: linear-gradient(135deg, #F4F5F6 0%, #ABB1B5 45%, #E6E8E9 60%, #868D92 100%);
   border-radius: 0.25rem;
   transform: skewX(-12deg);
-  box-shadow: 0.25rem 0.25rem 0 rgba(255, 255, 255, 0.14);
+  box-shadow: 0.25rem 0.25rem 0 #00D2BE;
 }
 
 /* Contenu (et infobulle) redressés */
@@ -378,19 +368,30 @@
   transform: skewX(12deg);
 }
 
+:root[data-app-theme="formula-1"] .td-brand-mark > :is(span, svg) {
+  color: #0A0B0C;
+}
+
 :root[data-app-theme="formula-1"] .td-brand-mark > span,
 :root[data-app-theme="formula-1"] .td-brand-name {
   font-family: var(--td-font-display);
-  font-style: italic;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-/* Cartes : liseré rouge à gauche, comme une ligne du classement ; les cartes cliquables
+/* Nom de l'application : dégradé argent */
+:root[data-app-theme="formula-1"] .td-brand-name {
+  background: linear-gradient(180deg, #FFFFFF, #ABB1B5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Cartes : liseré turquoise à gauche, comme une ligne du classement ; les cartes cliquables
    « démarrent » vers la droite */
 :root[data-app-theme="formula-1"] :is(.glass-card-dashboard, .glass-card-stat, .glass-stat-card, .glass-card-user, .glass-card-challenge) {
-  border-left: 4px solid #E10600;
+  border-left: 4px solid #00D2BE;
 }
 
 :root[data-app-theme="formula-1"] :is(button, a):is(.glass-card-dashboard, .glass-card-user, .glass-card-challenge) {
@@ -401,29 +402,27 @@
   transform: translateX(6px);
 }
 
-/* Boutons d'action en italique majuscule (pas les grandes cartes cliquables en dégradé) */
+/* Boutons d'action en majuscules espacées (pas les grandes cartes cliquables en dégradé) */
 :root[data-app-theme="formula-1"] button[class*="bg-gradient-to-"][class*="px-"] {
-  font-style: italic;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-/* « Qui est-ce ? » : cartes de pilote, bande rouge en bas */
+/* « Qui est-ce ? » : cartes de pilote, bande turquoise en bas */
 :root[data-app-theme="formula-1"] .profile-image-glass {
   border-radius: 0.25rem;
   border: 0;
-  border-bottom: 4px solid #E10600;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+  border-bottom: 4px solid #00D2BE;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
 }
 
 :root[data-app-theme="formula-1"] .profile-card-glass:is(:hover, :focus-visible) .profile-image-glass {
-  border-bottom-color: #FFFFFF;
+  border-bottom-color: #E6E8E9;
   transform: translateY(-4px);
 }
 
 :root[data-app-theme="formula-1"] .profile-name-glass {
-  font-style: italic;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }

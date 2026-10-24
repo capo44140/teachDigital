@@ -149,35 +149,25 @@ export const APP_THEMES = Object.freeze([
     }
   },
   {
+    // Identifiant historique conservé (thème « Formule 1 » devenu Mercedes) : les choix
+    // déjà enregistrés sur les appareils restent valables
     id: 'formula-1',
-    name: 'Formule 1',
+    name: 'Mercedes F1',
     emoji: '🏎️',
-    tagline: 'Extinction des feux, et c\'est parti !',
-    description: 'Fibre de carbone, rouge course, damier et lignes de vitesse.',
-    themeColor: '#15151E',
-    tones: {
-      title: 'Choisis ton écurie',
-      hint: 'Ses couleurs filent sur ta piste.',
-      options: {
-        purple: { name: 'Secteur violet', emoji: '⏱️', swatch: 'linear-gradient(135deg, #6E2BD9, #B266FF)' },
-        blue: { name: 'Red Bull', emoji: '🐂', swatch: 'linear-gradient(135deg, #1E2A5A, #3671C6 60%, #CC1E4A)' },
-        green: { name: 'Aston Martin', emoji: '💚', swatch: 'linear-gradient(135deg, #00594F, #229971 60%, #CEDC00)' },
-        orange: { name: 'McLaren', emoji: '🧡', swatch: 'linear-gradient(135deg, #FF8000, #FFB15C 70%, #47C7FC)' },
-        yellow: { name: 'Renault', emoji: '💛', swatch: 'linear-gradient(135deg, #FFD800, #FFE45C 60%, #0057B8)' },
-        rainbow: { name: 'Toute la grille', emoji: '🏁', swatch: 'linear-gradient(135deg, #E8002D, #FF8000, #229971, #3671C6)' }
-      }
-    },
+    tagline: 'Les Flèches d\'Argent',
+    description: 'Noir carbone, argent métallisé, turquoise de l\'écurie et lignes de vitesse.',
+    themeColor: '#0A0B0C',
+    tones: null,
     preview: {
-      background: 'repeating-conic-gradient(rgba(255, 255, 255, 0.08) 0 25%, transparent 0 50%) 100% 0 / 12px 12px, linear-gradient(160deg, #15151E 60%, #2B0100)',
-      surface: '#1F1F2B',
-      border: 'rgba(225, 6, 0, 0.75)',
-      accent: '#E10600',
+      background: 'radial-gradient(circle, rgba(200, 204, 206, 0.35) 1px, transparent 1.5px) 100% 0 / 7px 7px, linear-gradient(160deg, #0A0B0C 55%, #003431)',
+      surface: '#1A1D1F',
+      border: 'rgba(0, 210, 190, 0.8)',
+      accent: 'linear-gradient(90deg, #00D2BE, #ABB1B5)',
       text: '#FFFFFF',
       radius: '0.125rem',
       font: '\'Titillium Web\', \'Segoe UI\', system-ui, sans-serif',
       titleFont: '\'Titillium Web\', \'Segoe UI\', system-ui, sans-serif',
       titleWeight: 700,
-      titleStyle: 'italic',
       titleTransform: 'uppercase'
     }
   }

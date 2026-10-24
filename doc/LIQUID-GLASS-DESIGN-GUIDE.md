@@ -12,7 +12,7 @@ supprimé. Le style repose sur Tailwind CSS 4 et sur quelques classes partagées
 | Imports globaux (Tailwind, styles partagés), safe areas iOS, focus visible, `prefers-reduced-motion` | `src/style.css` |
 | Variables `--lg-*` et cartes partagées | `src/styles/liquid-glass.css` |
 | Préférences d'affichage des enfants (taille du texte, lecture facile, contraste, animations) | `src/styles/preferences.css` + `src/stores/settingsStore.js` |
-| Thèmes (Netflix, Pat' Patrouille, Desperate Housewives, Les Frères Scott, Formule 1) | `src/styles/themes/*.css` + `src/themes/index.js` + `src/stores/themeStore.js` — voir [THEMES.md](THEMES.md) |
+| Thèmes (Netflix, Pat' Patrouille, Desperate Housewives, Les Frères Scott, Mercedes F1) | `src/styles/themes/*.css` + `src/themes/index.js` + `src/stores/themeStore.js` — voir [THEMES.md](THEMES.md) |
 | Fond animé commun | `src/components/AppBackground.vue` |
 | Fenêtres modales | `src/components/BaseModal.vue`, `src/components/ConfirmDialog.vue` |
 
@@ -40,7 +40,7 @@ disques flous animés.
 
 - Teinte : `meta.bgTone` de la route (`blue`, `green`, `red`, `orange`, `yellow`, `rainbow` ;
   violet par défaut). La couleur choisie par l'enfant dans « Mes paramètres » est prioritaire.
-  Seuls les thèmes qui en tiennent compte la reçoivent (Liquid Glass, Pat' Patrouille, Formule 1).
+  Seuls les thèmes qui en tiennent compte la reçoivent (Liquid Glass, Pat' Patrouille).
 - Chaque thème redessine ce fond (pattes, glycines, halo rouge…) par ses classes
   `.app-background` et `.app-background__blob--1/2/3`.
 - Sur petit écran, avec « réduire les animations » ou « réduire la transparence », les disques
