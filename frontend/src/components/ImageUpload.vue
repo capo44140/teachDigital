@@ -238,7 +238,7 @@ export default {
 .upload-zone {
   position: relative;
   border: 2px dashed #4b5563;
-  border-radius: 0.5rem;
+  border-radius: calc(0.5rem * var(--td-radius-scale, 1));
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -277,7 +277,7 @@ export default {
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 0.5rem;
+  border-radius: calc(0.5rem * var(--td-radius-scale, 1));
   overflow: hidden;
 }
 
@@ -354,7 +354,7 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 0.5rem;
+  border-radius: calc(0.5rem * var(--td-radius-scale, 1));
 }
 
 .spinner {

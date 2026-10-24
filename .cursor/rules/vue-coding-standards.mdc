@@ -62,7 +62,7 @@ export default {
   que dans `vitest.config.js`, pas dans `vite.config.js`
 
 ### Gestion d'état avec Pinia
-- Stores Pinia pour l'état partagé uniquement : `badgeStore`, `onboardingStore`, `profileStore`, `settingsStore`, `toastStore`
+- Stores Pinia pour l'état partagé uniquement : `badgeStore`, `onboardingStore`, `profileStore`, `settingsStore`, `themeStore`, `toastStore`
 - Les stores existants sont des « option stores » (`defineStore('profile', { state, getters, actions })`) ;
   rester cohérent avec ce style
 - Exemple de store : [frontend/src/stores/profileStore.js](mdc:frontend/src/stores/profileStore.js)

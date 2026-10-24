@@ -26,9 +26,10 @@ Frontend (`frontend/`) :
 - `src/components/` - Composants partagés (BaseModal, ConfirmDialog, PinPad, ToastContainer...) et sous-dossiers `quiz/`, `lesson-scanner/`, `course-pages/`, `badges/`, `dashboard/`, `progress/`
 - `src/composables/` - `useParentNavigation`, `useQuizGeneration`, `useConfirm`
 - `src/services/` - `apiService.js` (client HTTP) + un service par domaine (auth, leçons, pages de cours, profils, badges, IA, mise à jour / installation PWA...)
-- `src/stores/` - Stores Pinia (`badgeStore`, `onboardingStore`, `profileStore`, `settingsStore`, `toastStore`)
+- `src/stores/` - Stores Pinia (`badgeStore`, `onboardingStore`, `profileStore`, `settingsStore`, `themeStore`, `toastStore`)
+- `src/themes/` - Registre des thèmes de l'application (`index.js`)
 - `src/utils/`, `src/constants/`, `src/config/` - erreurs API, JWT, politique PIN, formatage, sanitisation HTML ; limites IA, niveaux scolaires ; `pinConfig.js`
-- `src/style.css`, `src/styles/` - Tailwind, `liquid-glass.css`, `preferences.css`
+- `src/style.css`, `src/styles/` - Tailwind, `liquid-glass.css`, `themes/` (un fichier par thème), `preferences.css`
 - `public/` - Assets statiques, `manifest.json`, `version.json` (dev), template du service worker `sw.js`
 - `scripts/` - Build et maintenance du front (`generate-sw.js`, `version-bump.js`, `generate-icons.js`, `validate-manifest.js`, analyse de bundle, git hooks) — aucun script de base de données
 - `tests/` - Vitest (`services/`, `components/`, `stores/`, `utils/`) et Playwright (`e2e/`)

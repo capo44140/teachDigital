@@ -49,6 +49,7 @@ const ParentSettings = () => import('../views/ParentSettings.vue')
 const FamilyGateSettings = () => import('../views/FamilyGateSettings.vue')
 const ChildSettings = () => import('../views/ChildSettings.vue')
 const AISettings = () => import('../views/AISettings.vue')
+const ThemeSettings = () => import('../views/ThemeSettings.vue')
 
 /*
  * Méta des routes :
@@ -194,6 +195,13 @@ const routes = [
     path: '/family-gate-settings',
     name: 'FamilyGateSettings',
     component: FamilyGateSettings,
+    meta: { requiresAdmin: true }
+  },
+  {
+    // Thème de la famille et thème de chaque enfant (src/stores/themeStore.js)
+    path: '/theme-settings',
+    name: 'ThemeSettings',
+    component: ThemeSettings,
     meta: { requiresAdmin: true }
   },
   {

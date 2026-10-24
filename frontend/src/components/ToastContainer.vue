@@ -122,8 +122,8 @@ export default {
   width: 100%;
   max-width: 420px;
   padding: 0.875rem 1rem;
-  border-radius: 1rem;
-  background: rgba(15, 23, 42, 0.85);
+  border-radius: calc(1rem * var(--td-radius-scale, 1));
+  background: var(--td-surface-overlay, rgba(15, 23, 42, 0.85));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--lg-glass-border, rgba(255, 255, 255, 0.15));
@@ -180,7 +180,7 @@ export default {
   font-size: 0.8125rem;
   font-weight: 500;
   padding: 0.375rem 0.75rem;
-  border-radius: 0.5rem;
+  border-radius: calc(0.5rem * var(--td-radius-scale, 1));
   cursor: pointer;
   transition: background 0.2s ease;
 }
@@ -196,7 +196,7 @@ export default {
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.55);
-  border-radius: 0.5rem;
+  border-radius: calc(0.5rem * var(--td-radius-scale, 1));
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
 }

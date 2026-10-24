@@ -92,6 +92,7 @@ const SCREENS = [
   ['PinSettings', () => import('../../src/views/PinSettings.vue'), '/pin-settings'],
   ['FamilyGateSettings', () => import('../../src/views/FamilyGateSettings.vue'), '/family-gate-settings'],
   ['ChildSettings', () => import('../../src/views/ChildSettings.vue'), '/child-settings?profile=2'],
+  ['ThemeSettings', () => import('../../src/views/ThemeSettings.vue'), '/theme-settings'],
   ['UserDashboard', () => import('../../src/views/UserDashboard.vue'), '/user-dashboard?profile=2'],
   ['QuizGenerator', () => import('../../src/views/QuizGenerator.vue'), '/quiz-generator?childId=2&lessonId=5'],
   ['TextQuizGenerator', () => import('../../src/views/TextQuizGenerator.vue'), '/text-quiz-generator'],

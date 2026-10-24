@@ -79,6 +79,7 @@ hors des styles scopés de l'écran.
 - **profileStore** : profils, profil sélectionné (persisté), statistiques ; appelle `ProfileService`
 - **badgeStore** : badges et badges du profil
 - **settingsStore** : préférences enfant appliquées par classes sur `<html>` + `styles/preferences.css`
+- **themeStore** : thème de la famille et de chaque enfant, posé sur `<html>` (`data-app-theme`) ; styles dans `styles/themes/` (voir `doc/THEMES.md`)
 - **onboardingStore** : état de la présentation guidée
 - **toastStore** : file des toasts
 

@@ -12,7 +12,7 @@ Synology**.
 
 | Couche | Technologies |
 | --- | --- |
-| Frontend | Vue 3, Vite 7, Pinia, Vue Router, Tailwind CSS 4 (PostCSS), DOMPurify, PWA (service worker unique, généré au build) |
+| Frontend | Vue 3, Vite 7, Pinia, Vue Router, Tailwind CSS 4 (PostCSS), DOMPurify, PWA (service worker unique, généré au build), thèmes au choix (polices auto-hébergées Fontsource) |
 | Backend | Node.js, Express 4, `pg`, JWT, Zod, Helmet, busboy ; OCR Tesseract.js et fournisseurs IA (LLM local, OpenAI, Gemini, DeepSeek, Groq, Mistral, Kimi, OpenRouter) |
 | Base de données | PostgreSQL, schéma versionné par des migrations SQL (`backend/migrations/`) |
 | Tests | Vitest + Vue Test Utils (frontend), Jest (backend, unitaires et intégration PostgreSQL), Playwright (E2E, API simulée) |
@@ -225,6 +225,7 @@ Dans `backend/` :
 | PWA, service worker, mises à jour | [PWA-INSTALL.md](doc/PWA-INSTALL.md) |
 | Versions | [VERSION-MANAGEMENT.md](doc/VERSION-MANAGEMENT.md) |
 | Design « Liquid Glass » et accessibilité | [LIQUID-GLASS-DESIGN-GUIDE.md](doc/LIQUID-GLASS-DESIGN-GUIDE.md) |
+| Thèmes (Liquid Glass, Netflix, Pat' Patrouille, Desperate Housewives) | [THEMES.md](doc/THEMES.md) |
 | Scanner de leçons / IA | [LESSON-SCANNER.md](doc/LESSON-SCANNER.md) |
 | Badges | [BADGE-SYSTEM-GUIDE.md](doc/BADGE-SYSTEM-GUIDE.md) |
 | Activités | [ACTIVITY-MANAGEMENT-GUIDE.md](doc/ACTIVITY-MANAGEMENT-GUIDE.md) |

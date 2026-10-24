@@ -183,7 +183,7 @@ export default {
 .field-input {
   width: 100%;
   padding: 0.5rem 0.75rem;
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--td-radius-scale, 1));
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
@@ -191,14 +191,14 @@ export default {
 
 .field-input:focus {
   outline: none;
-  border-color: rgba(192, 132, 252, 0.8);
+  border-color: var(--td-focus-border, rgba(192, 132, 252, 0.8));
 }
 
 .action-button {
   display: inline-flex;
   align-items: center;
   padding: 0.5rem 0.875rem;
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--td-radius-scale, 1));
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: rgba(255, 255, 255, 0.9);
   font-size: 0.875rem;
@@ -212,7 +212,7 @@ export default {
 }
 
 .action-button-primary {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.6), rgba(236, 72, 153, 0.6));
+  background: var(--td-accent-gradient-soft, linear-gradient(135deg, rgba(168, 85, 247, 0.6), rgba(236, 72, 153, 0.6)));
   border-color: rgba(255, 255, 255, 0.3);
   color: white;
   font-weight: 600;

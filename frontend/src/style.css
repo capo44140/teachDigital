@@ -1,5 +1,10 @@
 @import "tailwindcss";
 @import "./styles/liquid-glass.css";
+/* Thèmes (registre : src/themes/index.js) — Liquid Glass est le style de base, sans fichier */
+@import "./styles/themes/netflix.css";
+@import "./styles/themes/paw-patrol.css";
+@import "./styles/themes/desperate-housewives.css";
+/* Préférences d'accessibilité en dernier : elles priment sur les thèmes */
 @import "./styles/preferences.css";
 
 /* Styles personnalisés */
@@ -11,14 +16,14 @@ body {
 }
 
 /* Fond de secours sur <html> uniquement : <body> reste transparent pour laisser voir
-   le fond animé partagé (AppBackground, z-index: -1) */
+   le fond animé partagé (AppBackground, z-index: -1). Les thèmes redéfinissent --td-page-*. */
 html {
-  background-color: #0F172A;
-  background-image: linear-gradient(135deg, #0F172A, #4C1D95, #0F172A);
+  background-color: var(--td-page-bg, #0F172A);
+  background-image: var(--td-page-gradient, linear-gradient(135deg, #0F172A, #4C1D95, #0F172A));
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--td-font-body, 'Inter', system-ui, -apple-system, sans-serif);
 }
 
 /* Variables CSS personnalisées */
@@ -78,7 +83,7 @@ header {
    on garantit un anneau visible pour la navigation clavier.
    Les composants peuvent surcharger via focus:ring-* (Tailwind). */
 :focus-visible {
-  outline: 2px solid #a78bfa; /* purple-400 */
+  outline: 2px solid var(--td-focus-ring, #a78bfa); /* purple-400 */
   outline-offset: 2px;
   border-radius: 4px;
 }

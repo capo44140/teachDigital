@@ -1,7 +1,9 @@
 /* ============================================
    PRÉFÉRENCES D'AFFICHAGE (profil enfant/ado)
    Classes posées sur <html> par src/stores/settingsStore.js.
-   Règles volontairement hors @layer : elles priment sur les utilitaires Tailwind.
+   Règles volontairement hors @layer : elles priment sur les utilitaires Tailwind et sur les
+   variables des thèmes (src/styles/themes/, en couche base). Face à l'habillage des thèmes
+   (hors couche, sélecteurs plus forts), les règles concernées sont en !important.
    ============================================ */
 
 /* --- Taille du texte (l'interface est en rem : tout suit) --- */
@@ -31,6 +33,9 @@ html.td-easy-read :is(p, li, label, dd, dt, td, th, blockquote, button, a, span)
 
 html.td-easy-read :is(h1, h2, h3, h4, h5, h6) {
   line-height: 1.35;
+  /* Pas de police décorative de thème dans les titres */
+  font-family: inherit;
+  letter-spacing: normal;
 }
 
 /* --- Contraste élevé : textes opaques, fonds pleins, bordures nettes, sans flou --- */
@@ -81,12 +86,15 @@ html.td-high-contrast :focus-visible {
   outline-offset: 3px;
 }
 
+/* Fond uni, sans décor de thème (pattes, glycines, halos…) */
 html.td-high-contrast .app-background {
-  background: #000;
+  background: #000 !important;
 }
 
-html.td-high-contrast .app-background__blob {
-  display: none;
+html.td-high-contrast .app-background__blob,
+html.td-high-contrast .app-background::before,
+html.td-high-contrast .app-background::after {
+  display: none !important;
 }
 
 /* --- Animations désactivées (même effet que prefers-reduced-motion) --- */
@@ -113,10 +121,11 @@ html.td-reduce-motion *::after {
   }
 }
 
+/* Surfaces presque opaques, dans la teinte de fond du thème (--td-surface-base) */
 @media (prefers-reduced-transparency: reduce) {
   :root {
-    --lg-glass-light: rgba(15, 23, 42, 0.9);
-    --lg-glass-medium: rgba(15, 23, 42, 0.93);
-    --lg-glass-heavy: rgba(15, 23, 42, 0.96);
+    --lg-glass-light: color-mix(in srgb, var(--td-surface-base, #0f172a) 90%, transparent);
+    --lg-glass-medium: color-mix(in srgb, var(--td-surface-base, #0f172a) 93%, transparent);
+    --lg-glass-heavy: color-mix(in srgb, var(--td-surface-base, #0f172a) 96%, transparent);
   }
 }

@@ -258,7 +258,7 @@ export default {
 /* Glass Card PIN Lock */
 .glass-card-pinlock {
   padding: 2rem;
-  border-radius: 2rem;
+  border-radius: calc(2rem * var(--td-radius-scale, 1));
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -269,7 +269,7 @@ export default {
 @media (max-width: 640px) {
   .glass-card-pinlock {
     padding: 1.5rem;
-    border-radius: 1.5rem;
+    border-radius: calc(1.5rem * var(--td-radius-scale, 1));
   }
 
   h1 {

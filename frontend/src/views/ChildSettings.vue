@@ -9,7 +9,7 @@
   -->
   <div class="min-h-screen overflow-hidden">
     <!-- Header avec navigation -->
-    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+    <header class="td-page-header relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
       <nav class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
@@ -91,10 +91,29 @@
           </div>
 
           <div class="space-y-6">
-            <!-- Couleur du fond de l'application -->
+            <!-- Thème de l'application (src/stores/themeStore.js) -->
             <div>
-              <h3 id="settings-theme-label" class="text-lg font-medium text-white mb-1">Choisis ta couleur préférée</h3>
-              <p class="text-sm text-white/70 mb-4">Elle colore le fond de ton espace.</p>
+              <h3 class="text-lg font-medium text-white mb-1">Choisis ton thème</h3>
+              <template v-if="themeStore.childChoice">
+                <p class="text-sm text-white/70 mb-4">Il habille tout ton espace : couleurs, police et décor.</p>
+                <ThemePicker
+                  name="child-app-theme"
+                  legend="Choisis ton thème"
+                  :model-value="ownAppTheme"
+                  :inherit-theme="themeStore.familyTheme"
+                  inherit-label="Comme ma famille"
+                  @update:model-value="selectAppTheme"
+                />
+              </template>
+              <p v-else class="text-sm text-white/70">
+                Ton thème, {{ appTheme.emoji }} {{ appTheme.name }}, est choisi par tes parents.
+              </p>
+            </div>
+
+            <!-- Couleur du fond de l'application (si le thème en tient compte) -->
+            <div v-if="toneConfig">
+              <h3 id="settings-theme-label" class="text-lg font-medium text-white mb-1">{{ toneConfig.title }}</h3>
+              <p class="text-sm text-white/70 mb-4">{{ toneConfig.hint }}</p>
               <div class="grid grid-cols-3 md:grid-cols-7 gap-4" role="group" aria-labelledby="settings-theme-label">
                 <button
                   type="button"
@@ -114,14 +133,15 @@
                   type="button"
                   :class="[
                     'h-20 rounded-xl transition-all duration-300 backdrop-blur-xl border border-white/20 flex flex-col items-center justify-center',
-                    theme.gradient,
+                    toneOption(theme).swatch ? '' : theme.gradient,
                     settings.theme === theme.id ? 'ring-4 ring-offset-2 ring-purple-400 shadow-lg shadow-purple-500/50' : ''
                   ]"
+                  :style="toneOption(theme).swatch ? { backgroundImage: toneOption(theme).swatch } : null"
                   :aria-pressed="settings.theme === theme.id ? 'true' : 'false'"
                   @click="selectTheme(theme.id)"
                 >
-                  <span class="text-white font-semibold text-sm" aria-hidden="true">{{ theme.emoji }}</span>
-                  <span class="text-white text-xs">{{ theme.name }}</span>
+                  <span class="text-white font-semibold text-sm" aria-hidden="true">{{ toneOption(theme).emoji }}</span>
+                  <span class="text-white text-xs">{{ toneOption(theme).name }}</span>
                 </button>
               </div>
             </div>
@@ -159,7 +179,7 @@
                   aria-labelledby="settings-animations-label"
                   aria-describedby="settings-animations-desc"
                 >
-                <span class="toggle-track peer-checked:bg-gradient-to-r peer-checked:from-purple-600 peer-checked:to-pink-600" aria-hidden="true"></span>
+                <span class="toggle-track toggle-track--accent" aria-hidden="true"></span>
               </label>
             </div>
           </div>
@@ -192,7 +212,7 @@
                   aria-labelledby="settings-easy-read-label"
                   aria-describedby="settings-easy-read-desc"
                 >
-                <span class="toggle-track peer-checked:bg-green-600" aria-hidden="true"></span>
+                <span class="toggle-track toggle-track--success" aria-hidden="true"></span>
               </label>
             </div>
 
@@ -211,7 +231,7 @@
                   aria-labelledby="settings-contrast-label"
                   aria-describedby="settings-contrast-desc"
                 >
-                <span class="toggle-track peer-checked:bg-green-600" aria-hidden="true"></span>
+                <span class="toggle-track toggle-track--success" aria-hidden="true"></span>
               </label>
             </div>
           </div>
@@ -270,15 +290,19 @@
 </template>
 
 <script>
+import ThemePicker from '../components/ThemePicker.vue'
 import { useProfileStore } from '../stores/profileStore.js'
 import { useSettingsStore, CHILD_THEMES, DEFAULT_CHILD_SETTINGS } from '../stores/settingsStore.js'
+import { useThemeStore } from '../stores/themeStore.js'
 
 export default {
   name: 'ChildSettings',
+  components: { ThemePicker },
   setup() {
     const profileStore = useProfileStore()
     const settingsStore = useSettingsStore()
-    return { profileStore, settingsStore, colorThemes: CHILD_THEMES }
+    const themeStore = useThemeStore()
+    return { profileStore, settingsStore, themeStore, colorThemes: CHILD_THEMES }
   },
   data() {
     const profileId = this.$route.query.profile
@@ -292,6 +316,18 @@ export default {
   computed: {
     profileId() {
       return this.$route.query.profile
+    },
+    // Thème choisi pour ce profil (null : celui de la famille)
+    ownAppTheme() {
+      return this.themeStore.profileThemeId(this.profileId)
+    },
+    // Thème effectivement appliqué à l'espace de l'enfant
+    appTheme() {
+      return this.themeStore.themeForProfile(this.profileId)
+    },
+    // Choix de couleur proposé par le thème (null : le thème n'en tient pas compte)
+    toneConfig() {
+      return this.appTheme.tones
     }
   },
   watch: {
@@ -323,8 +359,24 @@ export default {
       this.settings.theme = themeId
     },
 
+    // Libellé d'une couleur dans le thème actif (ex. Pat' Patrouille : le chiot de cette couleur)
+    toneOption(tone) {
+      return this.toneConfig?.options?.[tone.id] || tone
+    },
+
+    selectAppTheme(themeId) {
+      if (!this.profileId) return
+      // Espace de l'enfant : son thème s'applique tout de suite (fondu enchaîné)
+      this.themeStore.setProfileTheme(this.profileId, themeId, { animate: true })
+      this.statusMessage = 'Thème appliqué ✔'
+    },
+
     resetSettings() {
       this.settings = { ...DEFAULT_CHILD_SETTINGS }
+      // Le thème n'est remis à celui de la famille que si l'enfant a le droit de le choisir
+      if (this.profileId && this.themeStore.childChoice) {
+        this.themeStore.setProfileTheme(this.profileId, null, { animate: true })
+      }
       this.$toast.success('Réglages remis par défaut')
     },
 
@@ -380,8 +432,20 @@ export default {
   transform: translateX(1.25rem);
 }
 
+/* Piste cochée : couleur posée ici, une classe Tailwind peer-checked:… perdrait face au fond
+   ci-dessus (styles scopés hors couche). Palette Tailwind : les thèmes la recolorent. */
+.peer:checked ~ .toggle-track--accent {
+  background: linear-gradient(to right, var(--color-purple-600, #9333ea), var(--color-pink-600, #db2777));
+  border-color: transparent;
+}
+
+.peer:checked ~ .toggle-track--success {
+  background: var(--color-green-600, #16a34a);
+  border-color: transparent;
+}
+
 .peer:focus-visible ~ .toggle-track {
-  outline: 2px solid #a78bfa;
+  outline: 2px solid var(--td-focus-ring, #a78bfa);
   outline-offset: 2px;
 }
 
@@ -395,7 +459,7 @@ export default {
 
 /* Input styles */
 select option {
-  background: #1e293b;
+  background: var(--td-surface-option, #1e293b);
   color: white;
 }
 </style>

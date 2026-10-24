@@ -9,13 +9,18 @@
 
 <script setup>
 defineProps({
-  // purple (défaut) | blue | green | red | orange | yellow | rainbow
+  // purple (défaut) | blue | green | red | orange | yellow | rainbow ; null : teinte du thème
   tone: {
     type: String,
     default: 'purple'
   }
 })
 </script>
+
+<!--
+  Les thèmes (src/styles/themes/) habillent ce fond par ses classes : .app-background (et ses
+  pseudo-éléments ::before / ::after) et .app-background__blob--1/2/3 (pattes, pomme, pétales…).
+-->
 
 <style scoped>
 /*

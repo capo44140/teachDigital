@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen overflow-hidden">
     <!-- Header avec navigation -->
-    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+    <header class="td-page-header relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
       <nav class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
@@ -29,6 +29,37 @@
     <!-- Pas de <main> imbriqué : App.vue fournit déjà le <main id="main-content"> -->
     <div class="relative z-10 container mx-auto px-6 py-12">
       <div class="max-w-4xl mx-auto space-y-8">
+        <!-- Section Apparence -->
+        <div class="glass-card-dashboard">
+          <h2 class="text-xl font-bold text-white mb-6 flex items-center">
+            <svg aria-hidden="true" class="w-6 h-6 text-pink-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+            </svg>
+            Apparence
+          </h2>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between p-4 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 hover:bg-white/15 transition-all">
+              <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 bg-pink-500/30 rounded-lg flex items-center justify-center text-2xl" aria-hidden="true">
+                  {{ familyTheme.emoji }}
+                </div>
+                <div>
+                  <h3 class="text-lg font-medium text-white">Thèmes de l'application</h3>
+                  <p class="text-sm text-white/70">Thème de la famille : {{ familyTheme.name }} — un thème par enfant possible</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl hover:shadow-lg hover:shadow-pink-500/50 transition-all text-sm"
+                aria-label="Personnaliser les thèmes de l'application"
+                @click="goToThemeSettings"
+              >
+                Personnaliser
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Section Profils et Sécurité -->
         <div class="glass-card-dashboard">
           <h2 class="text-xl font-bold text-white mb-6 flex items-center">
@@ -227,6 +258,7 @@
 <script>
 import InstallAppCard from '../components/InstallAppCard.vue'
 import { useParentNavigation } from '../composables/useParentNavigation.js'
+import { useThemeStore } from '../stores/themeStore.js'
 
 export default {
   name: 'ParentSettings',
@@ -235,11 +267,21 @@ export default {
   },
   setup() {
     const parentNav = useParentNavigation()
-    return { parentNav }
+    const themeStore = useThemeStore()
+    return { parentNav, themeStore }
+  },
+  computed: {
+    familyTheme() {
+      return this.themeStore.familyTheme
+    }
   },
   methods: {
     goBack() {
       this.parentNav.goToDashboard()
+    },
+
+    goToThemeSettings() {
+      this.parentNav.goToParent('/theme-settings')
     },
 
     goToProfileManagement() {

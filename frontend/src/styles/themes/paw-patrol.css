@@ -1,0 +1,447 @@
+/* ============================================
+   THÈME « PAT' PATROUILLE » — :root[data-app-theme="paw-patrol"]
+   Ciel bleu du badge, empreintes de pattes, rouge de Marcus et rose de Stella,
+   titres façon logo (lettres blanches cernées de bleu marine), cartes « autocollants »
+   et boutons en relief. La couleur préférée de l'enfant devient son chiot préféré :
+   elle colore les grandes pattes du fond (libellés dans src/themes/index.js).
+   Registre : src/themes/index.js — guide : doc/THEMES.md
+   ============================================ */
+
+/* Polices auto-hébergées (sous-ensemble latin) : téléchargées seulement quand un texte les utilise */
+@font-face {
+  font-family: 'Luckiest Guy';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/luckiest-guy/files/luckiest-guy-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Fredoka Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('@fontsource-variable/fredoka/files/fredoka-latin-wght-normal.woff2') format('woff2-variations'),
+    url('@fontsource-variable/fredoka/files/fredoka-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* --- Variables et typographie (couche base : les préférences d'accessibilité priment) --- */
+@layer base {
+  :root[data-app-theme="paw-patrol"] {
+    /* Échelles du thème : rouge de Marcus, rose de Stella, bleu marine du badge */
+    --pp-red-50: #FFEBEE;
+    --pp-red-100: #FFCDD2;
+    --pp-red-200: #EF9A9A;
+    --pp-red-300: #E57373;
+    --pp-red-400: #EF5350;
+    --pp-red-500: #D32F2F;
+    --pp-red-600: #C62828;
+    --pp-red-700: #B71C1C;
+    --pp-red-800: #9A1515;
+    --pp-red-900: #7F1010;
+    --pp-red-950: #4A0808;
+
+    --pp-pink-50: #FCE4EC;
+    --pp-pink-100: #F8BBD0;
+    --pp-pink-200: #F48FB1;
+    --pp-pink-300: #F06292;
+    --pp-pink-400: #EC407A;
+    --pp-pink-500: #D81B60;
+    --pp-pink-600: #C2185B;
+    --pp-pink-700: #AD1457;
+    --pp-pink-800: #880E4F;
+    --pp-pink-900: #6A0B3D;
+    --pp-pink-950: #3F0624;
+
+    --pp-navy-50: #F2F6FC;
+    --pp-navy-100: #E1EAF7;
+    --pp-navy-200: #C3D3EE;
+    --pp-navy-300: #9DB6E0;
+    --pp-navy-400: #6F8FC9;
+    --pp-navy-500: #4A6DAF;
+    --pp-navy-600: #36579A;
+    --pp-navy-700: #284682;
+    --pp-navy-800: #1C3768;
+    --pp-navy-900: #102A55;
+    --pp-navy-950: #081B3A;
+
+    /* Palette Tailwind : violet de marque → rouge de Marcus */
+    --color-purple-50: var(--pp-red-50);
+    --color-purple-100: var(--pp-red-100);
+    --color-purple-200: var(--pp-red-200);
+    --color-purple-300: var(--pp-red-300);
+    --color-purple-400: var(--pp-red-400);
+    --color-purple-500: var(--pp-red-500);
+    --color-purple-600: var(--pp-red-600);
+    --color-purple-700: var(--pp-red-700);
+    --color-purple-800: var(--pp-red-800);
+    --color-purple-900: var(--pp-red-900);
+    --color-purple-950: var(--pp-red-950);
+
+    --color-violet-50: var(--pp-red-50);
+    --color-violet-100: var(--pp-red-100);
+    --color-violet-200: var(--pp-red-200);
+    --color-violet-300: var(--pp-red-300);
+    --color-violet-400: var(--pp-red-400);
+    --color-violet-500: var(--pp-red-500);
+    --color-violet-600: var(--pp-red-600);
+    --color-violet-700: var(--pp-red-700);
+    --color-violet-800: var(--pp-red-800);
+    --color-violet-900: var(--pp-red-900);
+    --color-violet-950: var(--pp-red-950);
+
+    --color-fuchsia-50: var(--pp-red-50);
+    --color-fuchsia-100: var(--pp-red-100);
+    --color-fuchsia-200: var(--pp-red-200);
+    --color-fuchsia-300: var(--pp-red-300);
+    --color-fuchsia-400: var(--pp-red-400);
+    --color-fuchsia-500: var(--pp-red-500);
+    --color-fuchsia-600: var(--pp-red-600);
+    --color-fuchsia-700: var(--pp-red-700);
+    --color-fuchsia-800: var(--pp-red-800);
+    --color-fuchsia-900: var(--pp-red-900);
+    --color-fuchsia-950: var(--pp-red-950);
+
+    /* Rose → rose vif de Stella */
+    --color-pink-50: var(--pp-pink-50);
+    --color-pink-100: var(--pp-pink-100);
+    --color-pink-200: var(--pp-pink-200);
+    --color-pink-300: var(--pp-pink-300);
+    --color-pink-400: var(--pp-pink-400);
+    --color-pink-500: var(--pp-pink-500);
+    --color-pink-600: var(--pp-pink-600);
+    --color-pink-700: var(--pp-pink-700);
+    --color-pink-800: var(--pp-pink-800);
+    --color-pink-900: var(--pp-pink-900);
+    --color-pink-950: var(--pp-pink-950);
+
+    --color-rose-50: var(--pp-pink-50);
+    --color-rose-100: var(--pp-pink-100);
+    --color-rose-200: var(--pp-pink-200);
+    --color-rose-300: var(--pp-pink-300);
+    --color-rose-400: var(--pp-pink-400);
+    --color-rose-500: var(--pp-pink-500);
+    --color-rose-600: var(--pp-pink-600);
+    --color-rose-700: var(--pp-pink-700);
+    --color-rose-800: var(--pp-pink-800);
+    --color-rose-900: var(--pp-pink-900);
+    --color-rose-950: var(--pp-pink-950);
+
+    /* Gris → bleu marine (surfaces sombres, listes déroulantes) */
+    --color-slate-50: var(--pp-navy-50);
+    --color-slate-100: var(--pp-navy-100);
+    --color-slate-200: var(--pp-navy-200);
+    --color-slate-300: var(--pp-navy-300);
+    --color-slate-400: var(--pp-navy-400);
+    --color-slate-500: var(--pp-navy-500);
+    --color-slate-600: var(--pp-navy-600);
+    --color-slate-700: var(--pp-navy-700);
+    --color-slate-800: var(--pp-navy-800);
+    --color-slate-900: var(--pp-navy-900);
+    --color-slate-950: var(--pp-navy-950);
+
+    --color-gray-50: var(--pp-navy-50);
+    --color-gray-100: var(--pp-navy-100);
+    --color-gray-200: var(--pp-navy-200);
+    --color-gray-300: var(--pp-navy-300);
+    --color-gray-400: var(--pp-navy-400);
+    --color-gray-500: var(--pp-navy-500);
+    --color-gray-600: var(--pp-navy-600);
+    --color-gray-700: var(--pp-navy-700);
+    --color-gray-800: var(--pp-navy-800);
+    --color-gray-900: var(--pp-navy-900);
+    --color-gray-950: var(--pp-navy-950);
+
+    /* Cartes « autocollants » : verre bleu marine, bord blanc, ombre décalée */
+    --lg-glass-light: rgba(6, 27, 74, 0.5);
+    --lg-glass-medium: rgba(6, 27, 74, 0.58);
+    --lg-glass-heavy: rgba(6, 27, 74, 0.64);
+    --lg-glass-border: rgba(255, 255, 255, 0.42);
+    --lg-glass-border-hover: rgba(255, 255, 255, 0.8);
+    --lg-glass-shadow: rgba(4, 20, 56, 0.6);
+    --lg-glass-elevation: 0 6px 0 rgba(4, 20, 56, 0.55), 0 14px 28px rgba(0, 0, 0, 0.18);
+    --lg-glass-shadow-hover: 0 9px 0 rgba(4, 20, 56, 0.55), 0 18px 34px rgba(0, 0, 0, 0.22);
+
+    /* Formes arrondies */
+    --radius-xs: 0.25rem;
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1.125rem;
+    --radius-2xl: 1.5rem;
+    --radius-3xl: 2rem;
+    --radius-4xl: 2.5rem;
+    --td-radius-scale: 1.25;
+
+    /* Typographie : texte rond et lisible, titres « dessin animé » */
+    --td-font-body: 'Fredoka Variable', 'Fredoka', 'Nunito', 'Segoe UI', system-ui, sans-serif;
+    --td-font-display: 'Luckiest Guy', 'Fredoka Variable', 'Arial Rounded MT Bold', system-ui, sans-serif;
+
+    /* Fonds, surfaces et accents des composants */
+    --td-page-bg: #0D47A1;
+    --td-page-gradient: linear-gradient(180deg, #0D47A1, #0A3478 60%, #082A63);
+    --td-surface-base: #0A2A66;
+    --td-surface-solid: #0B2F72;
+    --td-surface-raised: rgba(8, 36, 92, 0.95);
+    --td-surface-overlay: rgba(8, 36, 92, 0.96);
+    --td-surface-option: #0B2F72;
+    --td-backdrop: rgba(4, 18, 48, 0.72);
+    --td-backdrop-glow: rgba(21, 101, 192, 0.85);
+    --td-backdrop-deep: rgba(4, 18, 48, 0.92);
+    --td-skeleton-bg: linear-gradient(135deg, #1E63C4, #0B3F94);
+    --td-accent: #D32F2F;
+    --td-accent-hover: #B71C1C;
+    --td-accent-gradient: linear-gradient(to right, #D32F2F, #D81B60);
+    --td-accent-gradient-hover: linear-gradient(to right, #B71C1C, #AD1457);
+    --td-accent-gradient-soft: linear-gradient(135deg, rgba(211, 47, 47, 0.8), rgba(216, 27, 96, 0.8));
+    --td-accent-gradient-faint: linear-gradient(135deg, rgba(255, 213, 79, 0.24), rgba(211, 47, 47, 0.24));
+    --td-accent-gradient-faint-hover: linear-gradient(135deg, rgba(255, 213, 79, 0.34), rgba(211, 47, 47, 0.34));
+    --td-accent-text-gradient: linear-gradient(135deg, #FFE082, #FFB300);
+    --td-accent-glow: rgba(255, 213, 79, 0.45);
+    --td-accent-glow-strong: rgba(255, 213, 79, 0.6);
+    --td-accent-muted: rgba(255, 213, 79, 0.6);
+    --td-focus-ring: #FFD54F;
+    --td-focus-border: rgba(255, 213, 79, 0.95);
+    --td-focus-halo: rgba(255, 213, 79, 0.4);
+  }
+
+  /* Titres en Luckiest Guy (une seule graisse : pas de faux gras) */
+  :root[data-app-theme="paw-patrol"] :is(h1, h2) {
+    font-family: var(--td-font-display);
+    font-weight: 400;
+    font-synthesis: none;
+    letter-spacing: 0.03em;
+  }
+
+  :root[data-app-theme="paw-patrol"] h1 {
+    line-height: 1.15;
+  }
+
+  /* Lettrage du logo pour les titres blancs : cerné de bleu marine, avec relief */
+  :root[data-app-theme="paw-patrol"] h1[class~="text-white"] {
+    text-shadow:
+      0.05em 0 0 #0A2A66, -0.05em 0 0 #0A2A66, 0 0.05em 0 #0A2A66, 0 -0.05em 0 #0A2A66,
+      0.035em 0.035em 0 #0A2A66, -0.035em 0.035em 0 #0A2A66, 0.035em -0.035em 0 #0A2A66, -0.035em -0.035em 0 #0A2A66,
+      0 0.12em 0 #0A2A66, 0 0.2em 0.3em rgba(0, 0, 0, 0.35);
+  }
+
+  :root[data-app-theme="paw-patrol"] h2 {
+    text-shadow: 0 0.08em 0 rgba(10, 42, 102, 0.8);
+  }
+
+  :root[data-app-theme="paw-patrol"] h3 {
+    font-weight: 600;
+  }
+}
+
+/* --- Habillage (hors couche : prime sur les utilitaires Tailwind et les styles des composants) --- */
+
+/* Fond : ciel du badge, soleil, nuages, motif de pattes et d'os */
+:root[data-app-theme="paw-patrol"] .app-background {
+  /* Équipe au complet par défaut ; la couleur préférée choisit le chiot (règles data-tone) */
+  --blob-1: #EF5350;
+  --blob-2: #FFCA28;
+  --blob-3: #4FC3F7;
+  background-color: #0D47A1;
+  background-image:
+    radial-gradient(circle at 90% 4%, rgba(255, 213, 79, 0.24), transparent 16rem),
+    linear-gradient(180deg, #0D47A1 0%, #0B3F94 45%, #0A3478 75%, #082A63 100%);
+}
+
+:root[data-app-theme="paw-patrol"] .app-background[data-tone="purple"] { --blob-1: #B39DDB; --blob-2: #4DD0E1; --blob-3: #CE93D8; }
+:root[data-app-theme="paw-patrol"] .app-background[data-tone="blue"] { --blob-1: #64B5F6; --blob-2: #FFCA28; --blob-3: #90CAF9; }
+:root[data-app-theme="paw-patrol"] .app-background[data-tone="green"] { --blob-1: #81C784; --blob-2: #A5D6A7; --blob-3: #B0BEC5; }
+:root[data-app-theme="paw-patrol"] .app-background[data-tone="orange"] { --blob-1: #FFA726; --blob-2: #FFCC80; --blob-3: #4DD0E1; }
+:root[data-app-theme="paw-patrol"] .app-background[data-tone="yellow"] { --blob-1: #FFEE58; --blob-2: #FFCA28; --blob-3: #FFB300; }
+:root[data-app-theme="paw-patrol"] .app-background[data-tone="red"] { --blob-1: #EF5350; --blob-2: #FF8A65; --blob-3: #FFCA28; }
+:root[data-app-theme="paw-patrol"] .app-background[data-tone="rainbow"] { --blob-1: #EF5350; --blob-2: #FFCA28; --blob-3: #F48FB1; }
+
+:root[data-app-theme="paw-patrol"] .app-background::before,
+:root[data-app-theme="paw-patrol"] .app-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+:root[data-app-theme="paw-patrol"] .app-background::before {
+  background-image: url('/src/assets/themes/paw-pattern.svg');
+  background-size: 240px 240px;
+  opacity: 0.07;
+}
+
+:root[data-app-theme="paw-patrol"] .app-background::after {
+  background:
+    radial-gradient(ellipse 16rem 4.5rem at 14% 16%, rgba(255, 255, 255, 0.1), transparent 70%),
+    radial-gradient(ellipse 11rem 3.5rem at 23% 12%, rgba(255, 255, 255, 0.08), transparent 70%),
+    radial-gradient(ellipse 18rem 5rem at 74% 32%, rgba(255, 255, 255, 0.07), transparent 70%),
+    radial-gradient(ellipse 22rem 6rem at 38% 90%, rgba(255, 255, 255, 0.05), transparent 70%);
+}
+
+/* Les trois disques deviennent de grandes pattes aux couleurs du chiot. Couleurs franches
+   (une couleur chaude translucide sur du bleu tournerait au gris), donc rangées dans les coins,
+   à moitié hors de l'écran, loin du texte. */
+:root[data-app-theme="paw-patrol"] .app-background__blob {
+  width: 13rem;
+  height: 13rem;
+  border-radius: 0;
+  opacity: 0.85;
+  filter: none;
+  mix-blend-mode: normal;
+  animation: none;
+  -webkit-mask: url('/src/assets/themes/paw.svg') center / contain no-repeat;
+  mask: url('/src/assets/themes/paw.svg') center / contain no-repeat;
+}
+
+:root[data-app-theme="paw-patrol"] .app-background__blob--1 {
+  top: 5.5rem;
+  right: -3.5rem;
+  background: var(--blob-1);
+  transform: rotate(-28deg);
+}
+
+:root[data-app-theme="paw-patrol"] .app-background__blob--2 {
+  bottom: -3rem;
+  left: -2.5rem;
+  width: 16rem;
+  height: 16rem;
+  background: var(--blob-2);
+  transform: rotate(24deg);
+}
+
+:root[data-app-theme="paw-patrol"] .app-background__blob--3 {
+  top: auto;
+  bottom: 22%;
+  left: auto;
+  right: -2.5rem;
+  width: 8rem;
+  height: 8rem;
+  background: var(--blob-3);
+  transform: rotate(-60deg);
+}
+
+/* Petit écran : le texte occupe toute la largeur, les pattes se font plus discrètes */
+@media (max-width: 640px) {
+  :root[data-app-theme="paw-patrol"] .app-background__blob {
+    opacity: 0.45;
+  }
+
+  :root[data-app-theme="paw-patrol"] .app-background__blob--1 {
+    top: 4.5rem;
+    right: -3rem;
+    width: 8rem;
+    height: 8rem;
+  }
+
+  :root[data-app-theme="paw-patrol"] .app-background__blob--2 {
+    width: 10rem;
+    height: 10rem;
+  }
+
+  :root[data-app-theme="paw-patrol"] .app-background__blob--3 {
+    display: none;
+  }
+}
+
+@keyframes td-paw-float {
+  from { translate: 0 0; }
+  to { translate: 0 -1.25rem; }
+}
+
+/* Sur grand écran seulement, et si les animations sont permises */
+@media (min-width: 641px) and (prefers-reduced-motion: no-preference) {
+  :root[data-app-theme="paw-patrol"] .app-background__blob {
+    animation: td-paw-float 6s ease-in-out infinite alternate;
+  }
+
+  :root[data-app-theme="paw-patrol"] .app-background__blob--2 {
+    animation-delay: 2s;
+  }
+
+  :root[data-app-theme="paw-patrol"] .app-background__blob--3 {
+    animation-delay: 4s;
+  }
+}
+
+/* En-têtes : bandeau bleu marine souligné de jaune */
+:root[data-app-theme="paw-patrol"] .td-page-header {
+  background: rgba(8, 36, 92, 0.6);
+  border-bottom: 4px solid #FFD54F;
+}
+
+/* Logo : écusson rouge et bleu cerclé de jaune */
+:root[data-app-theme="paw-patrol"] .td-brand-mark {
+  position: relative;
+  background: linear-gradient(180deg, #E53935 0 50%, #1565C0 50% 100%);
+  border: 3px solid #FFD54F;
+  border-radius: 0.875rem 0.875rem 50% 50% / 0.875rem 0.875rem 60% 60%;
+  box-shadow: 0 4px 0 #0A2A66;
+}
+
+:root[data-app-theme="paw-patrol"] .td-brand-mark > span {
+  font-family: var(--td-font-display);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 0 #0A2A66;
+}
+
+:root[data-app-theme="paw-patrol"] .td-brand-name {
+  font-family: var(--td-font-display);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-shadow:
+    0.05em 0 0 #0A2A66, -0.05em 0 0 #0A2A66, 0 0.05em 0 #0A2A66, 0 -0.05em 0 #0A2A66,
+    0 0.1em 0 #0A2A66;
+}
+
+/* Cartes : bord blanc épais ; les cartes cliquables rebondissent */
+:root[data-app-theme="paw-patrol"] :is(.glass-card-dashboard, .glass-card-stat, .glass-stat-card, .glass-card-user, .glass-card-challenge) {
+  border-width: 2px;
+}
+
+:root[data-app-theme="paw-patrol"] :is(button, a):is(.glass-card-dashboard, .glass-card-user, .glass-card-challenge) {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+:root[data-app-theme="paw-patrol"] :is(button, a):is(.glass-card-dashboard, .glass-card-user, .glass-card-challenge):hover {
+  transform: translateY(-5px) rotate(-0.6deg);
+}
+
+/* Boutons en relief : ils s'enfoncent quand on appuie */
+:root[data-app-theme="paw-patrol"] :is(button[class*="bg-gradient-to-"], .glass-button-action, .glass-button-quick):not(:disabled) {
+  box-shadow: 0 4px 0 rgba(4, 20, 56, 0.7);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.2s ease, background 0.2s ease;
+}
+
+:root[data-app-theme="paw-patrol"] :is(button[class*="bg-gradient-to-"], .glass-button-action, .glass-button-quick):not(:disabled):hover {
+  filter: brightness(1.08);
+}
+
+:root[data-app-theme="paw-patrol"] :is(button[class*="bg-gradient-to-"], .glass-button-action, .glass-button-quick):not(:disabled):active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 rgba(4, 20, 56, 0.7);
+}
+
+:root[data-app-theme="paw-patrol"] :is(.glass-button-action, .glass-button-quick) {
+  border-width: 2px;
+}
+
+/* « Qui est-ce ? » : médailles de collier, bord blanc, petit saut au survol */
+:root[data-app-theme="paw-patrol"] .profile-image-glass {
+  border-radius: 2rem;
+  border: 4px solid #FFFFFF;
+  box-shadow: 0 6px 0 #0A2A66, 0 12px 24px rgba(0, 0, 0, 0.25);
+}
+
+:root[data-app-theme="paw-patrol"] .profile-card-glass:is(:hover, :focus-visible) .profile-image-glass {
+  border-color: #FFD54F;
+  box-shadow: 0 8px 0 #0A2A66, 0 16px 28px rgba(0, 0, 0, 0.3);
+  transform: scale(1.08) rotate(-4deg);
+}
+
+:root[data-app-theme="paw-patrol"] .profile-name-glass {
+  font-size: 1.125rem;
+  font-weight: 600;
+}

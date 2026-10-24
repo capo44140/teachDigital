@@ -91,7 +91,7 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: radial-gradient(ellipse at center, rgba(76, 29, 149, 0.65), rgba(15, 23, 42, 0.85));
+  background: radial-gradient(ellipse at center, var(--td-backdrop-glow, rgba(76, 29, 149, 0.65)), var(--td-backdrop-deep, rgba(15, 23, 42, 0.85)));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   padding-top: calc(1rem + env(safe-area-inset-top, 0px));
@@ -103,8 +103,8 @@ export default {
   width: 100%;
   max-width: 28rem;
   padding: 2.5rem 1.75rem 1.5rem;
-  border-radius: 1.75rem;
-  background: rgba(15, 23, 42, 0.7);
+  border-radius: calc(1.75rem * var(--td-radius-scale, 1));
+  background: var(--td-surface-raised, rgba(15, 23, 42, 0.7));
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -123,7 +123,7 @@ export default {
   color: rgba(255, 255, 255, 0.8);
   font-size: 0.875rem;
   cursor: pointer;
-  border-radius: 0.5rem;
+  border-radius: calc(0.5rem * var(--td-radius-scale, 1));
   transition: background 0.2s ease, color 0.2s ease;
 }
 .onb-skip:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
@@ -141,14 +141,14 @@ export default {
 .onb-emoji {
   font-size: 4rem;
   line-height: 1;
-  filter: drop-shadow(0 4px 16px rgba(167, 139, 250, 0.4));
+  filter: drop-shadow(0 4px 16px var(--td-accent-glow, rgba(167, 139, 250, 0.4)));
 }
 
 .onb-title {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #C084FC, #F472B6);
+  background: var(--td-accent-text-gradient, linear-gradient(135deg, #C084FC, #F472B6));
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -179,9 +179,9 @@ export default {
 }
 .onb-dot--active {
   width: 1.5rem;
-  background: linear-gradient(90deg, #A78BFA, #EC4899);
+  background: var(--td-accent-gradient, linear-gradient(90deg, #A78BFA, #EC4899));
 }
-.onb-dot--done { background: rgba(167, 139, 250, 0.6); }
+.onb-dot--done { background: var(--td-accent-muted, rgba(167, 139, 250, 0.6)); }
 
 .onb-actions {
   display: flex;
@@ -192,7 +192,7 @@ export default {
 .onb-btn {
   min-height: 48px;
   padding: 0.75rem 1.75rem;
-  border-radius: 0.875rem;
+  border-radius: calc(0.875rem * var(--td-radius-scale, 1));
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -202,11 +202,11 @@ export default {
 .onb-btn:active { transform: scale(0.97); }
 
 .onb-btn--primary {
-  background: linear-gradient(135deg, #8B5CF6, #EC4899);
+  background: var(--td-accent-gradient, linear-gradient(135deg, #8B5CF6, #EC4899));
   color: #fff;
-  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 8px 24px var(--td-accent-glow, rgba(139, 92, 246, 0.4));
 }
-.onb-btn--primary:hover { box-shadow: 0 12px 32px rgba(139, 92, 246, 0.55); }
+.onb-btn--primary:hover { box-shadow: 0 12px 32px var(--td-accent-glow-strong, rgba(139, 92, 246, 0.55)); }
 
 .onb-btn--ghost {
   background: rgba(255, 255, 255, 0.08);

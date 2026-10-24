@@ -9,7 +9,7 @@
   -->
   <div class="min-h-screen overflow-hidden">
     <!-- Header avec bouton retour -->
-    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+    <header class="td-page-header relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
       <nav class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
@@ -432,7 +432,7 @@ header button:active {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1rem;
+  border-radius: calc(1rem * var(--td-radius-scale, 1));
   padding: 1rem;
   text-align: center;
 }
@@ -621,7 +621,7 @@ button:active {
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 2rem;
+  border-radius: calc(2rem * var(--td-radius-scale, 1));
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
   padding: 2rem;
@@ -647,7 +647,7 @@ button:active {
 @media (max-width: 768px) {
   .badge-modal-panel {
     padding: 1.5rem;
-    border-radius: 1.5rem;
+    border-radius: calc(1.5rem * var(--td-radius-scale, 1));
   }
 }
 
@@ -661,7 +661,7 @@ button:active {
 @media (max-width: 480px) {
   .badge-modal-panel {
     padding: 1rem;
-    border-radius: 1rem;
+    border-radius: calc(1rem * var(--td-radius-scale, 1));
   }
 }
 </style>

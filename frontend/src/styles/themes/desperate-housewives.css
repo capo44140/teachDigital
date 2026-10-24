@@ -1,0 +1,516 @@
+/* ============================================
+   THÈME « DESPERATE HOUSEWIVES » — :root[data-app-theme="desperate-housewives"]
+   Une nuit à Wisteria Lane : fond violine, glycines suspendues, palissade blanche,
+   lune et pétales qui tombent ; pomme rouge, liserés dorés et titres en Playfair Display.
+   Registre : src/themes/index.js — guide : doc/THEMES.md
+   ============================================ */
+
+/* Police auto-hébergée (sous-ensemble latin) : téléchargée seulement quand un texte l'utilise */
+@font-face {
+  font-family: 'Playfair Display Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 900;
+  src: url('@fontsource-variable/playfair-display/files/playfair-display-latin-wght-normal.woff2') format('woff2-variations'),
+    url('@fontsource-variable/playfair-display/files/playfair-display-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Playfair Display Variable';
+  font-style: italic;
+  font-display: swap;
+  font-weight: 400 900;
+  src: url('@fontsource-variable/playfair-display/files/playfair-display-latin-wght-italic.woff2') format('woff2-variations'),
+    url('@fontsource-variable/playfair-display/files/playfair-display-latin-wght-italic.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* --- Variables et typographie (couche base : les préférences d'accessibilité priment) --- */
+@layer base {
+  :root[data-app-theme="desperate-housewives"] {
+    /* Échelles du thème : glycine, pomme, or, pelouse, ciel du soir, prune */
+    --dh-wisteria-50: #FAF5FB;
+    --dh-wisteria-100: #F3E7F6;
+    --dh-wisteria-200: #E8D0EE;
+    --dh-wisteria-300: #D6AEE0;
+    --dh-wisteria-400: #BF87CD;
+    --dh-wisteria-500: #8F4FA4;
+    --dh-wisteria-600: #7A4090;
+    --dh-wisteria-700: #66357A;
+    --dh-wisteria-800: #532C63;
+    --dh-wisteria-900: #42244F;
+    --dh-wisteria-950: #2A1533;
+
+    --dh-apple-50: #FFF1F2;
+    --dh-apple-100: #FFE0E4;
+    --dh-apple-200: #FFC5CD;
+    --dh-apple-300: #FF96A6;
+    --dh-apple-400: #F2556E;
+    --dh-apple-500: #C8102E;
+    --dh-apple-600: #A50D26;
+    --dh-apple-700: #870B20;
+    --dh-apple-800: #6E0A1B;
+    --dh-apple-900: #560817;
+    --dh-apple-950: #33040C;
+
+    --dh-gold-50: #FDF9EC;
+    --dh-gold-100: #F9EFCD;
+    --dh-gold-200: #F2DE9B;
+    --dh-gold-300: #EACB69;
+    --dh-gold-400: #E0B84A;
+    --dh-gold-500: #D4AF37;
+    --dh-gold-600: #B48F25;
+    --dh-gold-700: #8F701F;
+    --dh-gold-800: #73591F;
+    --dh-gold-900: #5F4A1E;
+    --dh-gold-950: #36290D;
+
+    --dh-lawn-50: #F3F7F1;
+    --dh-lawn-100: #E2EDDC;
+    --dh-lawn-200: #C6DBBA;
+    --dh-lawn-300: #A2C290;
+    --dh-lawn-400: #7EA76A;
+    --dh-lawn-500: #557F43;
+    --dh-lawn-600: #4A6F3B;
+    --dh-lawn-700: #3B5830;
+    --dh-lawn-800: #314829;
+    --dh-lawn-900: #293C23;
+    --dh-lawn-950: #141F11;
+
+    --dh-dusk-50: #F2F5FB;
+    --dh-dusk-100: #E2E8F5;
+    --dh-dusk-200: #C6D2EA;
+    --dh-dusk-300: #9FB2D9;
+    --dh-dusk-400: #7891C5;
+    --dh-dusk-500: #526BA4;
+    --dh-dusk-600: #475C92;
+    --dh-dusk-700: #3B4C77;
+    --dh-dusk-800: #334063;
+    --dh-dusk-900: #2D3753;
+    --dh-dusk-950: #1D2337;
+
+    --dh-plum-50: #FAF7F9;
+    --dh-plum-100: #F2EBF1;
+    --dh-plum-200: #E3D6E1;
+    --dh-plum-300: #CBB8C8;
+    --dh-plum-400: #A68FA2;
+    --dh-plum-500: #806A7D;
+    --dh-plum-600: #644F62;
+    --dh-plum-700: #4D3B4B;
+    --dh-plum-800: #382836;
+    --dh-plum-900: #261A25;
+    --dh-plum-950: #170E16;
+
+    /* Blanc ivoire : textes et verres plus chauds */
+    --color-white: #FFF9F2;
+
+    /* Palette Tailwind : violet de marque → glycine */
+    --color-purple-50: var(--dh-wisteria-50);
+    --color-purple-100: var(--dh-wisteria-100);
+    --color-purple-200: var(--dh-wisteria-200);
+    --color-purple-300: var(--dh-wisteria-300);
+    --color-purple-400: var(--dh-wisteria-400);
+    --color-purple-500: var(--dh-wisteria-500);
+    --color-purple-600: var(--dh-wisteria-600);
+    --color-purple-700: var(--dh-wisteria-700);
+    --color-purple-800: var(--dh-wisteria-800);
+    --color-purple-900: var(--dh-wisteria-900);
+    --color-purple-950: var(--dh-wisteria-950);
+
+    --color-violet-50: var(--dh-wisteria-50);
+    --color-violet-100: var(--dh-wisteria-100);
+    --color-violet-200: var(--dh-wisteria-200);
+    --color-violet-300: var(--dh-wisteria-300);
+    --color-violet-400: var(--dh-wisteria-400);
+    --color-violet-500: var(--dh-wisteria-500);
+    --color-violet-600: var(--dh-wisteria-600);
+    --color-violet-700: var(--dh-wisteria-700);
+    --color-violet-800: var(--dh-wisteria-800);
+    --color-violet-900: var(--dh-wisteria-900);
+    --color-violet-950: var(--dh-wisteria-950);
+
+    --color-fuchsia-50: var(--dh-wisteria-50);
+    --color-fuchsia-100: var(--dh-wisteria-100);
+    --color-fuchsia-200: var(--dh-wisteria-200);
+    --color-fuchsia-300: var(--dh-wisteria-300);
+    --color-fuchsia-400: var(--dh-wisteria-400);
+    --color-fuchsia-500: var(--dh-wisteria-500);
+    --color-fuchsia-600: var(--dh-wisteria-600);
+    --color-fuchsia-700: var(--dh-wisteria-700);
+    --color-fuchsia-800: var(--dh-wisteria-800);
+    --color-fuchsia-900: var(--dh-wisteria-900);
+    --color-fuchsia-950: var(--dh-wisteria-950);
+
+    --color-indigo-50: var(--dh-wisteria-50);
+    --color-indigo-100: var(--dh-wisteria-100);
+    --color-indigo-200: var(--dh-wisteria-200);
+    --color-indigo-300: var(--dh-wisteria-300);
+    --color-indigo-400: var(--dh-wisteria-400);
+    --color-indigo-500: var(--dh-wisteria-500);
+    --color-indigo-600: var(--dh-wisteria-600);
+    --color-indigo-700: var(--dh-wisteria-700);
+    --color-indigo-800: var(--dh-wisteria-800);
+    --color-indigo-900: var(--dh-wisteria-900);
+    --color-indigo-950: var(--dh-wisteria-950);
+
+    /* Rose → rouge pomme */
+    --color-pink-50: var(--dh-apple-50);
+    --color-pink-100: var(--dh-apple-100);
+    --color-pink-200: var(--dh-apple-200);
+    --color-pink-300: var(--dh-apple-300);
+    --color-pink-400: var(--dh-apple-400);
+    --color-pink-500: var(--dh-apple-500);
+    --color-pink-600: var(--dh-apple-600);
+    --color-pink-700: var(--dh-apple-700);
+    --color-pink-800: var(--dh-apple-800);
+    --color-pink-900: var(--dh-apple-900);
+    --color-pink-950: var(--dh-apple-950);
+
+    --color-rose-50: var(--dh-apple-50);
+    --color-rose-100: var(--dh-apple-100);
+    --color-rose-200: var(--dh-apple-200);
+    --color-rose-300: var(--dh-apple-300);
+    --color-rose-400: var(--dh-apple-400);
+    --color-rose-500: var(--dh-apple-500);
+    --color-rose-600: var(--dh-apple-600);
+    --color-rose-700: var(--dh-apple-700);
+    --color-rose-800: var(--dh-apple-800);
+    --color-rose-900: var(--dh-apple-900);
+    --color-rose-950: var(--dh-apple-950);
+
+    /* Jaunes → or */
+    --color-amber-50: var(--dh-gold-50);
+    --color-amber-100: var(--dh-gold-100);
+    --color-amber-200: var(--dh-gold-200);
+    --color-amber-300: var(--dh-gold-300);
+    --color-amber-400: var(--dh-gold-400);
+    --color-amber-500: var(--dh-gold-500);
+    --color-amber-600: var(--dh-gold-600);
+    --color-amber-700: var(--dh-gold-700);
+    --color-amber-800: var(--dh-gold-800);
+    --color-amber-900: var(--dh-gold-900);
+    --color-amber-950: var(--dh-gold-950);
+
+    --color-yellow-50: var(--dh-gold-50);
+    --color-yellow-100: var(--dh-gold-100);
+    --color-yellow-200: var(--dh-gold-200);
+    --color-yellow-300: var(--dh-gold-300);
+    --color-yellow-400: var(--dh-gold-400);
+    --color-yellow-500: var(--dh-gold-500);
+    --color-yellow-600: var(--dh-gold-600);
+    --color-yellow-700: var(--dh-gold-700);
+    --color-yellow-800: var(--dh-gold-800);
+    --color-yellow-900: var(--dh-gold-900);
+    --color-yellow-950: var(--dh-gold-950);
+
+    /* Verts → pelouse tondue de près */
+    --color-green-50: var(--dh-lawn-50);
+    --color-green-100: var(--dh-lawn-100);
+    --color-green-200: var(--dh-lawn-200);
+    --color-green-300: var(--dh-lawn-300);
+    --color-green-400: var(--dh-lawn-400);
+    --color-green-500: var(--dh-lawn-500);
+    --color-green-600: var(--dh-lawn-600);
+    --color-green-700: var(--dh-lawn-700);
+    --color-green-800: var(--dh-lawn-800);
+    --color-green-900: var(--dh-lawn-900);
+    --color-green-950: var(--dh-lawn-950);
+
+    --color-emerald-50: var(--dh-lawn-50);
+    --color-emerald-100: var(--dh-lawn-100);
+    --color-emerald-200: var(--dh-lawn-200);
+    --color-emerald-300: var(--dh-lawn-300);
+    --color-emerald-400: var(--dh-lawn-400);
+    --color-emerald-500: var(--dh-lawn-500);
+    --color-emerald-600: var(--dh-lawn-600);
+    --color-emerald-700: var(--dh-lawn-700);
+    --color-emerald-800: var(--dh-lawn-800);
+    --color-emerald-900: var(--dh-lawn-900);
+    --color-emerald-950: var(--dh-lawn-950);
+
+    --color-teal-50: var(--dh-lawn-50);
+    --color-teal-100: var(--dh-lawn-100);
+    --color-teal-200: var(--dh-lawn-200);
+    --color-teal-300: var(--dh-lawn-300);
+    --color-teal-400: var(--dh-lawn-400);
+    --color-teal-500: var(--dh-lawn-500);
+    --color-teal-600: var(--dh-lawn-600);
+    --color-teal-700: var(--dh-lawn-700);
+    --color-teal-800: var(--dh-lawn-800);
+    --color-teal-900: var(--dh-lawn-900);
+    --color-teal-950: var(--dh-lawn-950);
+
+    /* Bleus → ciel du soir */
+    --color-blue-50: var(--dh-dusk-50);
+    --color-blue-100: var(--dh-dusk-100);
+    --color-blue-200: var(--dh-dusk-200);
+    --color-blue-300: var(--dh-dusk-300);
+    --color-blue-400: var(--dh-dusk-400);
+    --color-blue-500: var(--dh-dusk-500);
+    --color-blue-600: var(--dh-dusk-600);
+    --color-blue-700: var(--dh-dusk-700);
+    --color-blue-800: var(--dh-dusk-800);
+    --color-blue-900: var(--dh-dusk-900);
+    --color-blue-950: var(--dh-dusk-950);
+
+    --color-sky-50: var(--dh-dusk-50);
+    --color-sky-100: var(--dh-dusk-100);
+    --color-sky-200: var(--dh-dusk-200);
+    --color-sky-300: var(--dh-dusk-300);
+    --color-sky-400: var(--dh-dusk-400);
+    --color-sky-500: var(--dh-dusk-500);
+    --color-sky-600: var(--dh-dusk-600);
+    --color-sky-700: var(--dh-dusk-700);
+    --color-sky-800: var(--dh-dusk-800);
+    --color-sky-900: var(--dh-dusk-900);
+    --color-sky-950: var(--dh-dusk-950);
+
+    --color-cyan-50: var(--dh-dusk-50);
+    --color-cyan-100: var(--dh-dusk-100);
+    --color-cyan-200: var(--dh-dusk-200);
+    --color-cyan-300: var(--dh-dusk-300);
+    --color-cyan-400: var(--dh-dusk-400);
+    --color-cyan-500: var(--dh-dusk-500);
+    --color-cyan-600: var(--dh-dusk-600);
+    --color-cyan-700: var(--dh-dusk-700);
+    --color-cyan-800: var(--dh-dusk-800);
+    --color-cyan-900: var(--dh-dusk-900);
+    --color-cyan-950: var(--dh-dusk-950);
+
+    /* Gris → prune */
+    --color-slate-50: var(--dh-plum-50);
+    --color-slate-100: var(--dh-plum-100);
+    --color-slate-200: var(--dh-plum-200);
+    --color-slate-300: var(--dh-plum-300);
+    --color-slate-400: var(--dh-plum-400);
+    --color-slate-500: var(--dh-plum-500);
+    --color-slate-600: var(--dh-plum-600);
+    --color-slate-700: var(--dh-plum-700);
+    --color-slate-800: var(--dh-plum-800);
+    --color-slate-900: var(--dh-plum-900);
+    --color-slate-950: var(--dh-plum-950);
+
+    --color-gray-50: var(--dh-plum-50);
+    --color-gray-100: var(--dh-plum-100);
+    --color-gray-200: var(--dh-plum-200);
+    --color-gray-300: var(--dh-plum-300);
+    --color-gray-400: var(--dh-plum-400);
+    --color-gray-500: var(--dh-plum-500);
+    --color-gray-600: var(--dh-plum-600);
+    --color-gray-700: var(--dh-plum-700);
+    --color-gray-800: var(--dh-plum-800);
+    --color-gray-900: var(--dh-plum-900);
+    --color-gray-950: var(--dh-plum-950);
+
+    /* Cartes : verre ivoire très léger, liseré doré */
+    --lg-glass-light: rgba(255, 240, 250, 0.07);
+    --lg-glass-medium: rgba(255, 240, 250, 0.09);
+    --lg-glass-heavy: rgba(255, 240, 250, 0.11);
+    --lg-glass-border: rgba(212, 175, 55, 0.32);
+    --lg-glass-border-hover: rgba(230, 195, 92, 0.65);
+    --lg-glass-shadow: rgba(10, 2, 10, 0.5);
+    --lg-glass-elevation: inset 0 1px 0 rgba(255, 249, 242, 0.06), 0 14px 36px rgba(10, 2, 10, 0.45);
+    --lg-glass-shadow-hover: inset 0 1px 0 rgba(255, 249, 242, 0.08), 0 20px 44px rgba(10, 2, 10, 0.55);
+
+    /* Formes sobres */
+    --radius-lg: 0.375rem;
+    --radius-xl: 0.5rem;
+    --radius-2xl: 0.75rem;
+    --radius-3xl: 1rem;
+    --radius-4xl: 1.25rem;
+    --td-radius-scale: 0.6;
+
+    /* Typographie : titres à empattements */
+    --td-font-display: 'Playfair Display Variable', 'Playfair Display', Georgia, 'Times New Roman', serif;
+
+    /* Fonds, surfaces et accents des composants */
+    --td-page-bg: #1E0B1C;
+    --td-page-gradient: linear-gradient(180deg, #1E0B1C, #2E1230 45%, #3B1838);
+    --td-surface-base: #2A1028;
+    --td-surface-solid: #2A1028;
+    --td-surface-raised: rgba(42, 16, 40, 0.95);
+    --td-surface-overlay: rgba(38, 14, 36, 0.96);
+    --td-surface-option: #2A1028;
+    --td-backdrop: rgba(18, 6, 16, 0.75);
+    --td-backdrop-glow: rgba(143, 79, 164, 0.5);
+    --td-backdrop-deep: rgba(18, 6, 16, 0.9);
+    --td-skeleton-bg: linear-gradient(135deg, #4A2147, #2E1230);
+    --td-accent: #C8102E;
+    --td-accent-hover: #A50D26;
+    --td-accent-gradient: linear-gradient(to right, #8F4FA4, #C8102E);
+    --td-accent-gradient-hover: linear-gradient(to right, #7A4090, #A50D26);
+    --td-accent-gradient-soft: linear-gradient(135deg, rgba(143, 79, 164, 0.75), rgba(200, 16, 46, 0.75));
+    --td-accent-gradient-faint: linear-gradient(135deg, rgba(212, 175, 55, 0.16), rgba(143, 79, 164, 0.24));
+    --td-accent-gradient-faint-hover: linear-gradient(135deg, rgba(212, 175, 55, 0.26), rgba(143, 79, 164, 0.34));
+    --td-accent-text-gradient: linear-gradient(135deg, #F2DE9B, #D4AF37);
+    --td-accent-glow: rgba(212, 175, 55, 0.35);
+    --td-accent-glow-strong: rgba(212, 175, 55, 0.5);
+    --td-accent-muted: rgba(212, 175, 55, 0.55);
+    --td-focus-ring: #E6C35C;
+    --td-focus-border: rgba(230, 195, 92, 0.9);
+    --td-focus-halo: rgba(212, 175, 55, 0.35);
+  }
+
+  /* Titres en Playfair Display */
+  :root[data-app-theme="desperate-housewives"] :is(h1, h2, h3) {
+    font-family: var(--td-font-display);
+    letter-spacing: 0.01em;
+  }
+
+  :root[data-app-theme="desperate-housewives"] h1 {
+    font-weight: 700;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
+  }
+
+  :root[data-app-theme="desperate-housewives"] :is(h2, h3) {
+    font-weight: 600;
+  }
+}
+
+/* --- Habillage (hors couche : prime sur les utilitaires Tailwind et les styles des composants) --- */
+
+/* Fond : nuit violine, glycines en haut, lune et palissade blanche, pétales qui tombent */
+:root[data-app-theme="desperate-housewives"] .app-background {
+  background-color: #1E0B1C;
+  background-image: linear-gradient(180deg, #1E0B1C 0%, #2E1230 45%, #3B1838 80%, #2A1028 100%);
+}
+
+:root[data-app-theme="desperate-housewives"] .app-background::before,
+:root[data-app-theme="desperate-housewives"] .app-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+:root[data-app-theme="desperate-housewives"] .app-background::before {
+  bottom: auto;
+  height: 200px;
+  background: url('/src/assets/themes/wisteria.svg') left top / 300px 200px repeat-x;
+  opacity: 0.5;
+}
+
+:root[data-app-theme="desperate-housewives"] .app-background::after {
+  background:
+    radial-gradient(circle at 87% 16%, rgba(255, 244, 214, 0.24) 0 2.5rem, rgba(255, 244, 214, 0.07) 2.6rem, transparent 11rem),
+    url('/src/assets/themes/picket-fence.svg') left bottom / 56px 120px repeat-x;
+}
+
+/* Disques : halo de glycine, pomme en filigrane, pluie de pétales */
+:root[data-app-theme="desperate-housewives"] .app-background__blob {
+  filter: none;
+  mix-blend-mode: normal;
+  animation: none;
+}
+
+:root[data-app-theme="desperate-housewives"] .app-background__blob--1 {
+  top: -6rem;
+  right: auto;
+  left: -6rem;
+  width: 30rem;
+  height: 30rem;
+  background: radial-gradient(circle, rgba(201, 163, 220, 0.4), transparent 70%);
+  opacity: 0.6;
+}
+
+:root[data-app-theme="desperate-housewives"] .app-background__blob--2 {
+  top: auto;
+  bottom: 6.5rem;
+  left: auto;
+  right: 5%;
+  width: 12rem;
+  height: 13.5rem;
+  border-radius: 0;
+  background: linear-gradient(160deg, #F2556E, #870B20);
+  opacity: 0.16;
+  transform: rotate(-10deg);
+  -webkit-mask: url('/src/assets/themes/apple.svg') center / contain no-repeat;
+  mask: url('/src/assets/themes/apple.svg') center / contain no-repeat;
+}
+
+/* Pluie de pétales : tuile de 420 px qui glisse d'un nombre entier de tuiles (boucle sans saut) ;
+   le calque déborde en haut et à droite d'autant que le déplacement */
+:root[data-app-theme="desperate-housewives"] .app-background__blob--3 {
+  inset: -840px -420px 0 0;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: url('/src/assets/themes/wisteria-petals.svg') 0 0 / 420px 420px repeat;
+  opacity: 0.5;
+}
+
+@keyframes td-petals-fall {
+  from { transform: translate(0, 0); }
+  to { transform: translate(-420px, 840px); }
+}
+
+/* Sur grand écran seulement, et si les animations sont permises */
+@media (min-width: 641px) and (prefers-reduced-motion: no-preference) {
+  :root[data-app-theme="desperate-housewives"] .app-background__blob--3 {
+    animation: td-petals-fall 60s linear infinite;
+  }
+}
+
+/* En-têtes : voile violine, filet doré */
+:root[data-app-theme="desperate-housewives"] .td-page-header {
+  background: rgba(30, 10, 28, 0.62);
+  border-bottom-color: rgba(212, 175, 55, 0.35);
+}
+
+/* Logo : une pomme rouge et sa feuille */
+:root[data-app-theme="desperate-housewives"] .td-brand-mark {
+  position: relative;
+  overflow: visible;
+  background: radial-gradient(circle at 32% 28%, #F2556E 0%, #C8102E 42%, #7A0A1C 100%);
+  border-radius: 46% 46% 50% 50% / 56% 56% 44% 44%;
+  box-shadow: inset -0.25rem -0.4rem 0.6rem rgba(0, 0, 0, 0.3), 0 0.5rem 1.2rem rgba(0, 0, 0, 0.4);
+}
+
+:root[data-app-theme="desperate-housewives"] .td-brand-mark::before {
+  content: '';
+  position: absolute;
+  top: -0.45rem;
+  left: 52%;
+  width: 0.95rem;
+  height: 0.5rem;
+  border-radius: 0 100% 0 100%;
+  background: linear-gradient(135deg, #7EA76A, #4A6F3B);
+  transform: rotate(-24deg);
+}
+
+:root[data-app-theme="desperate-housewives"] .td-brand-mark > span,
+:root[data-app-theme="desperate-housewives"] .td-brand-name {
+  font-family: var(--td-font-display);
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* Cartes cliquables : légère élévation */
+:root[data-app-theme="desperate-housewives"] :is(button, a):is(.glass-card-dashboard, .glass-card-user, .glass-card-challenge):hover {
+  transform: translateY(-3px);
+}
+
+/* Boutons d'action : filet doré */
+:root[data-app-theme="desperate-housewives"] button[class*="bg-gradient-to-"]:not(:disabled) {
+  box-shadow: inset 0 0 0 1px rgba(242, 222, 155, 0.35), 0 6px 16px rgba(10, 2, 10, 0.4);
+}
+
+/* « Qui est-ce ? » : portraits encadrés d'or, noms en italique */
+:root[data-app-theme="desperate-housewives"] .profile-image-glass {
+  border-radius: 0.5rem;
+  border: 2px solid #D4AF37;
+  box-shadow: 0 0 0 4px rgba(30, 10, 28, 0.9), 0 0 0 5px rgba(212, 175, 55, 0.45), 0 14px 30px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-app-theme="desperate-housewives"] .profile-card-glass:is(:hover, :focus-visible) .profile-image-glass {
+  border-color: #F2DE9B;
+  box-shadow: 0 0 0 4px rgba(30, 10, 28, 0.9), 0 0 0 5px rgba(242, 222, 155, 0.7), 0 18px 36px rgba(0, 0, 0, 0.5);
+}
+
+:root[data-app-theme="desperate-housewives"] .profile-name-glass {
+  font-family: var(--td-font-display);
+  font-size: 1.125rem;
+  font-style: italic;
+}

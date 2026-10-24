@@ -98,7 +98,7 @@ export default {
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 1.5rem;
+  border-radius: calc(1.5rem * var(--td-radius-scale, 1));
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   padding: 1.5rem;
@@ -112,9 +112,9 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .glass-quiz-item { padding: 1.5rem; border-radius: 1.5rem; }
+  .glass-quiz-item { padding: 1.5rem; border-radius: calc(1.5rem * var(--td-radius-scale, 1)); }
 }
 @media (max-width: 480px) {
-  .glass-quiz-item { padding: 1rem; border-radius: 1rem; }
+  .glass-quiz-item { padding: 1rem; border-radius: calc(1rem * var(--td-radius-scale, 1)); }
 }
 </style>

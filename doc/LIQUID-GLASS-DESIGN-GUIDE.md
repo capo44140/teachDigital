@@ -12,8 +12,25 @@ supprimé. Le style repose sur Tailwind CSS 4 et sur quelques classes partagées
 | Imports globaux (Tailwind, styles partagés), safe areas iOS, focus visible, `prefers-reduced-motion` | `src/style.css` |
 | Variables `--lg-*` et cartes partagées | `src/styles/liquid-glass.css` |
 | Préférences d'affichage des enfants (taille du texte, lecture facile, contraste, animations) | `src/styles/preferences.css` + `src/stores/settingsStore.js` |
+| Thèmes (Netflix, Pat' Patrouille, Desperate Housewives) | `src/styles/themes/*.css` + `src/themes/index.js` + `src/stores/themeStore.js` — voir [THEMES.md](THEMES.md) |
 | Fond animé commun | `src/components/AppBackground.vue` |
 | Fenêtres modales | `src/components/BaseModal.vue`, `src/components/ConfirmDialog.vue` |
+
+## 🎭 Thèmes
+
+Liquid Glass est le **thème par défaut**. Les autres thèmes redéfinissent les variables de
+l'interface sous `:root[data-app-theme="<id>"]` : la palette Tailwind (`--color-*`), les rayons
+(`--radius-*`), les variables `--lg-*` et des jetons `--td-*`. Pour qu'un nouvel écran suive
+les thèmes :
+
+- utiliser les classes Tailwind de la palette (elles suivent le thème) plutôt que des couleurs
+  écrites en dur ;
+- dans un `<style>`, lire un jeton avec la couleur d'origine en repli
+  (`var(--td-accent-gradient, linear-gradient(…))`) et écrire les rayons
+  `calc(1rem * var(--td-radius-scale, 1))` ;
+- un en-tête de page porte la classe `td-page-header`.
+
+Détails, liste des jetons et ajout d'un thème : [THEMES.md](THEMES.md).
 
 ## 🌌 Fond partagé (`AppBackground`)
 
@@ -23,6 +40,9 @@ disques flous animés.
 
 - Teinte : `meta.bgTone` de la route (`blue`, `green`, `red`, `orange`, `yellow`, `rainbow` ;
   violet par défaut). La couleur choisie par l'enfant dans « Mes paramètres » est prioritaire.
+  Seuls les thèmes qui en tiennent compte la reçoivent (Liquid Glass, Pat' Patrouille).
+- Chaque thème redessine ce fond (pattes, glycines, halo rouge…) par ses classes
+  `.app-background` et `.app-background__blob--1/2/3`.
 - Sur petit écran, avec « réduire les animations » ou « réduire la transparence », les disques
   deviennent des dégradés statiques, sans filtre ni animation.
 
@@ -71,6 +91,8 @@ ou des emoji. Il n'y a pas de bibliothèque d'icônes.
   - en contraste élevé, les classes contenant `bg-white/`, `text-white/`, `glass-card`,
     `glass-stat`… sont surchargées. Un nouveau motif translucide doit reprendre ces préfixes, ou
     être ajouté à `preferences.css`.
+  - ces préférences priment sur les thèmes (fond uni sans décor en contraste élevé, police
+    lisible dans les titres en lecture facile).
 - `prefers-reduced-motion` est respecté globalement (`style.css`).
 - Un anneau de focus visible est défini par défaut (`:focus-visible`) ; ne pas le supprimer sans
   le remplacer.

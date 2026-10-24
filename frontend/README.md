@@ -32,8 +32,13 @@ proxy) et `VITE_API_URL_PROD` (build de production ; vide par défaut = même or
   `parentAccessService`), la PWA (`installService`, `updateService`) et
   `clientErrorReporter`
 - `src/stores/` — Pinia : `profileStore`, `badgeStore`, `settingsStore` (préférences d'affichage
-  des enfants, appliquées par `src/styles/preferences.css`), `toastStore`, `onboardingStore`, `notificationStore` (notifications du parent : compteur de la cloche du tableau de bord)
-- `src/styles/` — `liquid-glass.css` (variables et cartes partagées), `preferences.css` ;
+  des enfants, appliquées par `src/styles/preferences.css`), `themeStore` (thème de la famille et
+  de chaque enfant, posé sur `<html>` en `data-app-theme`), `toastStore`, `onboardingStore`, `notificationStore` (notifications du parent : compteur de la cloche du tableau de bord)
+- `src/themes/` — registre des thèmes ; `src/components/ThemePicker.vue` (sélecteur) ;
+  `public/theme-boot.js` (thème posé avant le premier rendu) — voir `../doc/THEMES.md`
+- `src/styles/` — `liquid-glass.css` (variables et cartes partagées), `themes/` (un fichier par
+  thème : Netflix, Pat' Patrouille, Desperate Housewives ; décors dans `src/assets/themes/`),
+  `preferences.css` ;
   `src/utils/` (`apiErrors`, `jwt`, `pinPolicy`, `sanitizeHtml`…), `src/constants/`, `src/config/`
 - `public/` — assets statiques, `manifest.json`, modèle du service worker `sw.js`
 - `scripts/` — build (`generate-sw.js`, `generate-icons.js`, `validate-manifest.js`), versioning

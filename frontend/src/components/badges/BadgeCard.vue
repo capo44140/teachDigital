@@ -84,7 +84,7 @@ export default {
   text-align: inherit;
   font: inherit;
   background: white;
-  border-radius: 1rem;
+  border-radius: calc(1rem * var(--td-radius-scale, 1));
   padding: 1.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -121,7 +121,7 @@ export default {
   font-size: 3rem;
   text-align: center;
   padding: 1rem;
-  border-radius: 1rem;
+  border-radius: calc(1rem * var(--td-radius-scale, 1));
   background-color: #f3f4f6;
 }
 
@@ -249,7 +249,7 @@ export default {
   margin-top: 0.75rem;
   padding: 0.5rem;
   background-color: #fef3c7;
-  border-radius: 0.5rem;
+  border-radius: calc(0.5rem * var(--td-radius-scale, 1));
 }
 
 .points-icon {

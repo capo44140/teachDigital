@@ -123,7 +123,7 @@ famille / enfant peut voir.
 
 ## Gestion des États avec Pinia
 Pas de store « API » générique : les composants appellent les services ; les stores
-(`profileStore`, `badgeStore`, `settingsStore`, `onboardingStore`, `toastStore`) gardent l'état partagé
+(`profileStore`, `badgeStore`, `settingsStore`, `themeStore`, `onboardingStore`, `toastStore`) gardent l'état partagé
 et appellent eux-mêmes les services quand il le faut (ex. `profileStore` → `ProfileService`).
 
 ## Bonnes Pratiques

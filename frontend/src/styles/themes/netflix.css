@@ -1,0 +1,382 @@
+/* ============================================
+   THÈME « NETFLIX » — :root[data-app-theme="netflix"]
+   Noir profond, rouge cinéma (#E50914), titres en Bebas Neue, coins vifs,
+   en-têtes en dégradé noir et tuiles qui s'agrandissent au survol.
+   Registre : src/themes/index.js — guide : doc/THEMES.md
+   ============================================ */
+
+/* Police auto-hébergée (sous-ensemble latin) : téléchargée seulement quand un texte l'utilise */
+@font-face {
+  font-family: 'Bebas Neue';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/bebas-neue/files/bebas-neue-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* --- Variables et typographie (couche base : les préférences d'accessibilité priment) --- */
+@layer base {
+  :root[data-app-theme="netflix"] {
+    /* Échelles du thème */
+    --nf-red-50: #FEF2F2;
+    --nf-red-100: #FDE3E4;
+    --nf-red-200: #FBC9CC;
+    --nf-red-300: #F79CA1;
+    --nf-red-400: #F2545C;
+    --nf-red-500: #E50914;
+    --nf-red-600: #C11119;
+    --nf-red-700: #9B0D14;
+    --nf-red-800: #7A0C11;
+    --nf-red-900: #5C0A0E;
+    --nf-red-950: #330507;
+
+    --nf-crimson-50: #FDF2F3;
+    --nf-crimson-100: #FBE2E4;
+    --nf-crimson-200: #F6C6CA;
+    --nf-crimson-300: #EE9AA1;
+    --nf-crimson-400: #D9505A;
+    --nf-crimson-500: #B20710;
+    --nf-crimson-600: #970610;
+    --nf-crimson-700: #7A0710;
+    --nf-crimson-800: #5E070D;
+    --nf-crimson-900: #43060A;
+    --nf-crimson-950: #260306;
+
+    --nf-grey-50: #F5F5F5;
+    --nf-grey-100: #E5E5E5;
+    --nf-grey-200: #D2D2D2;
+    --nf-grey-300: #B3B3B3;
+    --nf-grey-400: #8C8C8C;
+    --nf-grey-500: #6D6D6E;
+    --nf-grey-600: #545454;
+    --nf-grey-700: #404040;
+    --nf-grey-800: #2F2F2F;
+    --nf-grey-900: #1F1F1F;
+    --nf-grey-950: #141414;
+
+    /* Palette Tailwind : violet de marque → rouge Netflix */
+    --color-purple-50: var(--nf-red-50);
+    --color-purple-100: var(--nf-red-100);
+    --color-purple-200: var(--nf-red-200);
+    --color-purple-300: var(--nf-red-300);
+    --color-purple-400: var(--nf-red-400);
+    --color-purple-500: var(--nf-red-500);
+    --color-purple-600: var(--nf-red-600);
+    --color-purple-700: var(--nf-red-700);
+    --color-purple-800: var(--nf-red-800);
+    --color-purple-900: var(--nf-red-900);
+    --color-purple-950: var(--nf-red-950);
+
+    --color-violet-50: var(--nf-red-50);
+    --color-violet-100: var(--nf-red-100);
+    --color-violet-200: var(--nf-red-200);
+    --color-violet-300: var(--nf-red-300);
+    --color-violet-400: var(--nf-red-400);
+    --color-violet-500: var(--nf-red-500);
+    --color-violet-600: var(--nf-red-600);
+    --color-violet-700: var(--nf-red-700);
+    --color-violet-800: var(--nf-red-800);
+    --color-violet-900: var(--nf-red-900);
+    --color-violet-950: var(--nf-red-950);
+
+    --color-fuchsia-50: var(--nf-red-50);
+    --color-fuchsia-100: var(--nf-red-100);
+    --color-fuchsia-200: var(--nf-red-200);
+    --color-fuchsia-300: var(--nf-red-300);
+    --color-fuchsia-400: var(--nf-red-400);
+    --color-fuchsia-500: var(--nf-red-500);
+    --color-fuchsia-600: var(--nf-red-600);
+    --color-fuchsia-700: var(--nf-red-700);
+    --color-fuchsia-800: var(--nf-red-800);
+    --color-fuchsia-900: var(--nf-red-900);
+    --color-fuchsia-950: var(--nf-red-950);
+
+    --color-red-50: var(--nf-red-50);
+    --color-red-100: var(--nf-red-100);
+    --color-red-200: var(--nf-red-200);
+    --color-red-300: var(--nf-red-300);
+    --color-red-400: var(--nf-red-400);
+    --color-red-500: var(--nf-red-500);
+    --color-red-600: var(--nf-red-600);
+    --color-red-700: var(--nf-red-700);
+    --color-red-800: var(--nf-red-800);
+    --color-red-900: var(--nf-red-900);
+    --color-red-950: var(--nf-red-950);
+
+    /* Rose et indigo (fins de dégradés) → rouge sombre */
+    --color-pink-50: var(--nf-crimson-50);
+    --color-pink-100: var(--nf-crimson-100);
+    --color-pink-200: var(--nf-crimson-200);
+    --color-pink-300: var(--nf-crimson-300);
+    --color-pink-400: var(--nf-crimson-400);
+    --color-pink-500: var(--nf-crimson-500);
+    --color-pink-600: var(--nf-crimson-600);
+    --color-pink-700: var(--nf-crimson-700);
+    --color-pink-800: var(--nf-crimson-800);
+    --color-pink-900: var(--nf-crimson-900);
+    --color-pink-950: var(--nf-crimson-950);
+
+    --color-rose-50: var(--nf-crimson-50);
+    --color-rose-100: var(--nf-crimson-100);
+    --color-rose-200: var(--nf-crimson-200);
+    --color-rose-300: var(--nf-crimson-300);
+    --color-rose-400: var(--nf-crimson-400);
+    --color-rose-500: var(--nf-crimson-500);
+    --color-rose-600: var(--nf-crimson-600);
+    --color-rose-700: var(--nf-crimson-700);
+    --color-rose-800: var(--nf-crimson-800);
+    --color-rose-900: var(--nf-crimson-900);
+    --color-rose-950: var(--nf-crimson-950);
+
+    --color-indigo-50: var(--nf-crimson-50);
+    --color-indigo-100: var(--nf-crimson-100);
+    --color-indigo-200: var(--nf-crimson-200);
+    --color-indigo-300: var(--nf-crimson-300);
+    --color-indigo-400: var(--nf-crimson-400);
+    --color-indigo-500: var(--nf-crimson-500);
+    --color-indigo-600: var(--nf-crimson-600);
+    --color-indigo-700: var(--nf-crimson-700);
+    --color-indigo-800: var(--nf-crimson-800);
+    --color-indigo-900: var(--nf-crimson-900);
+    --color-indigo-950: var(--nf-crimson-950);
+
+    /* Gris, bleus et cyans → gris neutres (boutons « Plus d'infos ») */
+    --color-slate-50: var(--nf-grey-50);
+    --color-slate-100: var(--nf-grey-100);
+    --color-slate-200: var(--nf-grey-200);
+    --color-slate-300: var(--nf-grey-300);
+    --color-slate-400: var(--nf-grey-400);
+    --color-slate-500: var(--nf-grey-500);
+    --color-slate-600: var(--nf-grey-600);
+    --color-slate-700: var(--nf-grey-700);
+    --color-slate-800: var(--nf-grey-800);
+    --color-slate-900: var(--nf-grey-900);
+    --color-slate-950: var(--nf-grey-950);
+
+    --color-gray-50: var(--nf-grey-50);
+    --color-gray-100: var(--nf-grey-100);
+    --color-gray-200: var(--nf-grey-200);
+    --color-gray-300: var(--nf-grey-300);
+    --color-gray-400: var(--nf-grey-400);
+    --color-gray-500: var(--nf-grey-500);
+    --color-gray-600: var(--nf-grey-600);
+    --color-gray-700: var(--nf-grey-700);
+    --color-gray-800: var(--nf-grey-800);
+    --color-gray-900: var(--nf-grey-900);
+    --color-gray-950: var(--nf-grey-950);
+
+    --color-blue-50: var(--nf-grey-50);
+    --color-blue-100: var(--nf-grey-100);
+    --color-blue-200: var(--nf-grey-200);
+    --color-blue-300: var(--nf-grey-300);
+    --color-blue-400: var(--nf-grey-400);
+    --color-blue-500: var(--nf-grey-500);
+    --color-blue-600: var(--nf-grey-600);
+    --color-blue-700: var(--nf-grey-700);
+    --color-blue-800: var(--nf-grey-800);
+    --color-blue-900: var(--nf-grey-900);
+    --color-blue-950: var(--nf-grey-950);
+
+    --color-sky-50: var(--nf-grey-50);
+    --color-sky-100: var(--nf-grey-100);
+    --color-sky-200: var(--nf-grey-200);
+    --color-sky-300: var(--nf-grey-300);
+    --color-sky-400: var(--nf-grey-400);
+    --color-sky-500: var(--nf-grey-500);
+    --color-sky-600: var(--nf-grey-600);
+    --color-sky-700: var(--nf-grey-700);
+    --color-sky-800: var(--nf-grey-800);
+    --color-sky-900: var(--nf-grey-900);
+    --color-sky-950: var(--nf-grey-950);
+
+    --color-cyan-50: var(--nf-grey-50);
+    --color-cyan-100: var(--nf-grey-100);
+    --color-cyan-200: var(--nf-grey-200);
+    --color-cyan-300: var(--nf-grey-300);
+    --color-cyan-400: var(--nf-grey-400);
+    --color-cyan-500: var(--nf-grey-500);
+    --color-cyan-600: var(--nf-grey-600);
+    --color-cyan-700: var(--nf-grey-700);
+    --color-cyan-800: var(--nf-grey-800);
+    --color-cyan-900: var(--nf-grey-900);
+    --color-cyan-950: var(--nf-grey-950);
+
+    --color-teal-50: var(--nf-grey-50);
+    --color-teal-100: var(--nf-grey-100);
+    --color-teal-200: var(--nf-grey-200);
+    --color-teal-300: var(--nf-grey-300);
+    --color-teal-400: var(--nf-grey-400);
+    --color-teal-500: var(--nf-grey-500);
+    --color-teal-600: var(--nf-grey-600);
+    --color-teal-700: var(--nf-grey-700);
+    --color-teal-800: var(--nf-grey-800);
+    --color-teal-900: var(--nf-grey-900);
+    --color-teal-950: var(--nf-grey-950);
+
+    /* Cartes : surfaces pleines et sobres */
+    --lg-glass-light: #1F1F1F;
+    --lg-glass-medium: #242424;
+    --lg-glass-heavy: #2A2A2A;
+    --lg-glass-border: rgba(255, 255, 255, 0.06);
+    --lg-glass-border-hover: rgba(255, 255, 255, 0.2);
+    --lg-glass-shadow: rgba(0, 0, 0, 0.55);
+    --lg-glass-elevation: 0 4px 16px rgba(0, 0, 0, 0.45);
+    --lg-glass-shadow-hover: 0 18px 40px rgba(0, 0, 0, 0.75);
+
+    /* Coins vifs */
+    --radius-xs: 0.125rem;
+    --radius-sm: 0.125rem;
+    --radius-md: 0.1875rem;
+    --radius-lg: 0.25rem;
+    --radius-xl: 0.25rem;
+    --radius-2xl: 0.375rem;
+    --radius-3xl: 0.5rem;
+    --radius-4xl: 0.625rem;
+    --td-radius-scale: 0.25;
+
+    /* Typographie */
+    --td-font-body: 'Helvetica Neue', Helvetica, Arial, 'Segoe UI', Roboto, sans-serif;
+    --td-font-display: 'Bebas Neue', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+
+    /* Fonds, surfaces et accents des composants */
+    --td-page-bg: #141414;
+    --td-page-gradient: none;
+    --td-surface-base: #181818;
+    --td-surface-solid: #181818;
+    --td-surface-raised: rgba(24, 24, 24, 0.97);
+    --td-surface-overlay: rgba(28, 28, 28, 0.97);
+    --td-surface-option: #181818;
+    --td-backdrop: rgba(0, 0, 0, 0.78);
+    --td-backdrop-glow: rgba(229, 9, 20, 0.3);
+    --td-backdrop-deep: rgba(0, 0, 0, 0.9);
+    --td-skeleton-bg: linear-gradient(135deg, #232323, #2F2F2F);
+    --td-accent: #E50914;
+    --td-accent-hover: #C11119;
+    --td-accent-gradient: linear-gradient(to right, #E50914, #B20710);
+    --td-accent-gradient-hover: linear-gradient(to right, #C11119, #970610);
+    --td-accent-gradient-soft: linear-gradient(135deg, rgba(229, 9, 20, 0.75), rgba(178, 7, 16, 0.75));
+    --td-accent-gradient-faint: rgba(255, 255, 255, 0.1);
+    --td-accent-gradient-faint-hover: rgba(255, 255, 255, 0.18);
+    --td-accent-text-gradient: linear-gradient(135deg, #FFFFFF, #FF9EA5);
+    --td-accent-glow: rgba(229, 9, 20, 0.45);
+    --td-accent-glow-strong: rgba(229, 9, 20, 0.6);
+    --td-accent-muted: rgba(229, 9, 20, 0.55);
+    --td-focus-ring: #FFFFFF;
+    --td-focus-border: rgba(255, 255, 255, 0.85);
+    --td-focus-halo: rgba(229, 9, 20, 0.45);
+  }
+
+  /* Titres de page en Bebas Neue (une seule graisse : pas de faux gras) */
+  :root[data-app-theme="netflix"] h1 {
+    font-family: var(--td-font-display);
+    font-weight: 400;
+    font-synthesis: none;
+    letter-spacing: 0.03em;
+    line-height: 1.05;
+  }
+}
+
+/* --- Habillage (hors couche : prime sur les utilitaires Tailwind et les styles des composants) --- */
+
+/* Fond : noir, halo rouge en haut, vignettage ; pas de disques */
+:root[data-app-theme="netflix"] .app-background {
+  background-color: #141414;
+  background-image: none;
+}
+
+:root[data-app-theme="netflix"] .app-background::before,
+:root[data-app-theme="netflix"] .app-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+:root[data-app-theme="netflix"] .app-background::before {
+  background: radial-gradient(120% 55% at 50% -12%, rgba(229, 9, 20, 0.3), rgba(229, 9, 20, 0.06) 45%, transparent 70%);
+}
+
+:root[data-app-theme="netflix"] .app-background::after {
+  background: radial-gradient(ellipse at 50% 35%, transparent 55%, rgba(0, 0, 0, 0.7) 100%);
+}
+
+:root[data-app-theme="netflix"] .app-background__blob {
+  display: none;
+}
+
+/* En-têtes : dégradé noir vers transparent, sans bordure */
+:root[data-app-theme="netflix"] .td-page-header {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.55) 70%, rgba(0, 0, 0, 0) 100%);
+  border-bottom-color: transparent;
+}
+
+/* Logo : « TD » rouge en Bebas Neue, sans pastille */
+:root[data-app-theme="netflix"] .td-brand-mark {
+  background: none;
+  box-shadow: none;
+}
+
+:root[data-app-theme="netflix"] .td-brand-mark > :is(span, svg) {
+  color: #E50914;
+}
+
+:root[data-app-theme="netflix"] .td-brand-mark > span {
+  font-family: var(--td-font-display);
+  font-size: 2.5rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+:root[data-app-theme="netflix"] .td-brand-mark > svg {
+  width: 3.25rem;
+  height: 3.25rem;
+}
+
+:root[data-app-theme="netflix"] .td-brand-name {
+  font-family: var(--td-font-display);
+  font-size: 2.125rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #E50914;
+}
+
+/* Tuiles cliquables : zoom façon catalogue */
+:root[data-app-theme="netflix"] :is(button, a):is(.glass-card-dashboard, .glass-card-user, .glass-card-challenge) {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
+}
+
+:root[data-app-theme="netflix"] :is(button, a):is(.glass-card-dashboard, .glass-card-user, .glass-card-challenge):hover {
+  transform: scale(1.04);
+  z-index: 2;
+}
+
+/* « Qui est-ce ? » : vignettes carrées, cadre blanc et nom éclairé au survol */
+:root[data-app-theme="netflix"] .profile-card-glass:hover {
+  transform: none;
+}
+
+:root[data-app-theme="netflix"] .profile-image-glass {
+  border-radius: 0.25rem;
+  border: 3px solid transparent;
+  box-shadow: none;
+}
+
+:root[data-app-theme="netflix"] .profile-card-glass:is(:hover, :focus-visible) .profile-image-glass {
+  border-color: #E5E5E5;
+  box-shadow: none;
+  transform: none;
+}
+
+:root[data-app-theme="netflix"] .profile-name-glass {
+  color: #808080;
+  font-weight: 400;
+}
+
+:root[data-app-theme="netflix"] .profile-card-glass:is(:hover, :focus-visible) .profile-name-glass {
+  color: #FFFFFF;
+  text-shadow: none;
+}

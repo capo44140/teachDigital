@@ -85,5 +85,6 @@ description: Fonctionnalités spécifiques de l'application TeachDigital
 - **Journal d'audit / sécurité (parent)** : `SecurityDashboard.vue`,
   [auditLogService.js](mdc:frontend/src/services/auditLogService.js), `controllers/auditController.js`.
 - **Paramètres parent** : `ParentSettings.vue` (dont `InstallAppCard` pour installer la PWA).
-- **Paramètres enfant** : `ChildSettings.vue` (`settingsStore` : classes sur `<html>` + `styles/preferences.css`).
+- **Paramètres enfant** : `ChildSettings.vue` (`settingsStore` : classes sur `<html>` + `styles/preferences.css` ; choix du thème avec `themeStore`).
+- **Thèmes** : `ThemeSettings.vue` (thème de la famille et de chaque enfant), `ThemePicker.vue`, `themeStore`, registre `src/themes/index.js`, styles `src/styles/themes/` (voir `doc/THEMES.md`).
 - **Aide et découverte** : `ChildHelp.vue`, `OnboardingTour.vue` (`onboardingStore`).

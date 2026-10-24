@@ -1,11 +1,11 @@
 <template>
-  <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+  <header class="td-page-header relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
     <nav class="container mx-auto px-6 py-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-4">
           <!-- Logo décoratif : le nom de l'application est porté par le titre h1 -->
           <div
-            class="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center group relative backdrop-blur-xl shadow-lg"
+            class="td-brand-mark w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center group relative backdrop-blur-xl shadow-lg"
             title="TeachDigital"
             aria-hidden="true"
           >
@@ -15,7 +15,7 @@
             </div>
           </div>
           <!-- Titre masqué visuellement sur mobile mais toujours lu par les lecteurs d'écran -->
-          <h1 class="text-2xl font-bold text-white sr-only sm:not-sr-only">TeachDigital</h1>
+          <h1 class="td-brand-name text-2xl font-bold text-white sr-only sm:not-sr-only">TeachDigital</h1>
         </div>
 
         <div class="flex items-center space-x-2 sm:space-x-4">

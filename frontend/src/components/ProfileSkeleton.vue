@@ -66,8 +66,8 @@ export default {
 
 /* Skeleton pour ProfileSelector */
 .profile-card-skeleton {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 1rem;
+  background: var(--td-skeleton-bg, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+  border-radius: calc(1rem * var(--td-radius-scale, 1));
   padding: 1.25rem;
   text-align: center;
   min-width: 160px;
@@ -77,7 +77,7 @@ export default {
 .skeleton-image {
   width: 72px;
   height: 72px;
-  border-radius: 0.5rem;
+  border-radius: calc(0.5rem * var(--td-radius-scale, 1));
   background: rgba(255, 255, 255, 0.2);
   margin: 0 auto 0.75rem;
 }
@@ -99,7 +99,7 @@ export default {
 
 .skeleton-item {
   background: rgba(31, 41, 55, 0.5);
-  border-radius: 0.5rem;
+  border-radius: calc(0.5rem * var(--td-radius-scale, 1));
   padding: 1rem;
   display: flex;
   align-items: center;
@@ -109,7 +109,7 @@ export default {
 .skeleton-avatar {
   width: 56px;
   height: 56px;
-  border-radius: 0.5rem;
+  border-radius: calc(0.5rem * var(--td-radius-scale, 1));
   background: rgba(107, 114, 128, 0.3);
   flex-shrink: 0;
 }
@@ -150,7 +150,7 @@ export default {
 .skeleton-button {
   width: 36px;
   height: 36px;
-  border-radius: 0.5rem;
+  border-radius: calc(0.5rem * var(--td-radius-scale, 1));
   background: rgba(107, 114, 128, 0.3);
 }
 
@@ -163,7 +163,7 @@ export default {
   height: 2rem;
   width: 250px;
   background: rgba(107, 114, 128, 0.3);
-  border-radius: 0.5rem;
+  border-radius: calc(0.5rem * var(--td-radius-scale, 1));
   margin-bottom: 1.5rem;
 }
 
@@ -176,7 +176,7 @@ export default {
 .skeleton-card {
   height: 160px;
   background: rgba(31, 41, 55, 0.5);
-  border-radius: 1rem;
+  border-radius: calc(1rem * var(--td-radius-scale, 1));
 }
 
 /* Animation shimmer pour un effet plus moderne */

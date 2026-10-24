@@ -49,6 +49,7 @@ import OnboardingTour from './components/OnboardingTour.vue'
 import { useProfileStore } from './stores/profileStore.js'
 import { useOnboardingStore } from './stores/onboardingStore.js'
 import { useSettingsStore, resolveActiveChildProfileId } from './stores/settingsStore.js'
+import { useThemeStore } from './stores/themeStore.js'
 
 export default {
   name: 'App',
@@ -65,12 +66,14 @@ export default {
     const profileStore = useProfileStore()
     const onboardingStore = useOnboardingStore()
     const settingsStore = useSettingsStore()
+    const themeStore = useThemeStore()
 
     return {
       updateService,
       profileStore,
       onboardingStore,
-      settingsStore
+      settingsStore,
+      themeStore
     }
   },
   data() {
@@ -90,9 +93,17 @@ export default {
     activeChildProfileId() {
       return resolveActiveChildProfileId(this.$route, this.profileStore.selectedProfile)
     },
-    // Couleur préférée de l'enfant, sinon teinte propre à la page
+    // Profil dont le thème s'applique, une fois la première navigation résolue (undefined avant :
+    // le thème posé par public/theme-boot.js reste affiché, sans passer par celui de la famille)
+    themeProfileId() {
+      if (!this.$route?.matched?.length) return undefined
+      return this.activeChildProfileId
+    },
+    // Couleur préférée de l'enfant, sinon teinte propre à la page (null : teinte du thème),
+    // seulement si le thème actif en tient compte
     backgroundTone() {
-      return this.settingsStore.activeSettings.theme || this.$route?.meta?.bgTone || 'purple'
+      if (!this.themeStore.activeTheme.tones) return null
+      return this.settingsStore.activeSettings.theme || this.$route?.meta?.bgTone || null
     },
     isPullToRefreshDisabled() {
       return !!this.$route?.meta?.disablePullToRefresh
@@ -110,6 +121,13 @@ export default {
     activeChildProfileId: {
       handler(profileId) {
         this.settingsStore.setActiveProfile(profileId)
+      },
+      immediate: true
+    },
+    // Appliquer le thème du profil actif (ou celui de la famille)
+    themeProfileId: {
+      handler(profileId) {
+        if (profileId !== undefined) this.themeStore.setActiveProfile(profileId)
       },
       immediate: true
     }
@@ -138,8 +156,8 @@ export default {
   left: 0.5rem;
   z-index: 10001;
   padding: 0.5rem 1rem;
-  border-radius: 0.75rem;
-  background: #1e1b4b;
+  border-radius: calc(0.75rem * var(--td-radius-scale, 1));
+  background: var(--td-surface-solid, #1e1b4b);
   color: #fff;
   font-weight: 600;
   transform: translateY(-200%);

@@ -6,7 +6,7 @@
   -->
   <div class="min-h-screen overflow-hidden">
     <!-- Header avec navigation -->
-    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+    <header class="td-page-header relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
       <nav class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
@@ -355,7 +355,7 @@ button:active {
 .child-avatar {
   width: 5rem;
   height: 5rem;
-  border-radius: 1rem;
+  border-radius: calc(1rem * var(--td-radius-scale, 1));
   overflow: hidden;
   background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
   display: flex;
@@ -390,14 +390,14 @@ button:active {
 }
 
 @media (max-width: 768px) {
-  .glass-card-dashboard { padding: 1.5rem; border-radius: 1.5rem; }
+  .glass-card-dashboard { padding: 1.5rem; border-radius: calc(1.5rem * var(--td-radius-scale, 1)); }
   .max-w-6xl { max-width: 100%; padding: 0 1rem; }
   .child-avatar { width: 4rem; height: 4rem; font-size: 1.5rem; }
   .grid-cols-3 { grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 1rem; }
 }
 
 @media (max-width: 480px) {
-  .glass-card-dashboard { padding: 1rem; border-radius: 1rem; }
+  .glass-card-dashboard { padding: 1rem; border-radius: calc(1rem * var(--td-radius-scale, 1)); }
   .child-avatar { width: 3rem; height: 3rem; font-size: 1.25rem; }
 }
 
@@ -412,7 +412,7 @@ select {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.75rem;
+  border-radius: calc(0.75rem * var(--td-radius-scale, 1));
   color: white;
   transition: all 0.3s ease;
 }
@@ -423,7 +423,7 @@ select:hover {
 }
 
 select option {
-  background: #1e293b;
+  background: var(--td-surface-option, #1e293b);
   color: white;
 }
 </style>

@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen overflow-hidden">
     <!-- Header -->
-    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+    <header class="td-page-header relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
       <nav class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <!-- Bouton retour et titre -->
@@ -645,7 +645,7 @@ export default {
 .glass-card-profile {
   display: flex;
   padding: 1.5rem;
-  border-radius: 1.5rem;
+  border-radius: calc(1.5rem * var(--td-radius-scale, 1));
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -664,7 +664,7 @@ export default {
 @media (max-width: 640px) {
   .glass-card-profile {
     padding: 1rem;
-    border-radius: 1rem;
+    border-radius: calc(1rem * var(--td-radius-scale, 1));
   }
 
   h1 {
@@ -675,7 +675,7 @@ export default {
 @media (max-width: 768px) {
   .glass-card-profile {
     padding: 1.25rem;
-    border-radius: 1.25rem;
+    border-radius: calc(1.25rem * var(--td-radius-scale, 1));
   }
 }
 </style>

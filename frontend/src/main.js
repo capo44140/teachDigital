@@ -8,6 +8,7 @@ import { updateService, isChunkLoadError, reloadOnceAfterChunkError } from './se
 import { safeHtmlDirective } from './utils/sanitizeHtml.js'
 import { useToastStore } from './stores/toastStore.js'
 import { useSettingsStore } from './stores/settingsStore.js'
+import { useThemeStore } from './stores/themeStore.js'
 import { confirmAction } from './composables/useConfirm.js'
 import { reportClientError } from './services/clientErrorReporter.js'
 
@@ -94,6 +95,8 @@ app.use(pinia).use(router)
 
 // Préférences d'affichage : nettoyage des anciennes clés et état par défaut dès le démarrage
 useSettingsStore(pinia).initialize()
+// Thème de l'application (déjà posé par public/theme-boot.js) et synchronisation entre onglets
+useThemeStore(pinia).initialize()
 
 // Exposer $toast globalement pour les composants Options API
 // Usage : this.$toast.success('Profil créé') / this.$toast.errorFrom(error, 'Échec')

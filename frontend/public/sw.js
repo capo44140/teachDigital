@@ -17,6 +17,8 @@ const CURRENT_CACHES = [STATIC_CACHE, ASSET_CACHE];
 const urlsToCache = [
   '/',
   '/index.html',
+  // Thème posé avant le premier rendu (script de index.html)
+  '/theme-boot.js',
   '/manifest.json',
   '/icon.svg',
   '/icons/icon-192x192.png',

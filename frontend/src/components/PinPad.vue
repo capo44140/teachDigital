@@ -149,7 +149,7 @@ defineExpose({ focus })
   display: block;
   width: 100%;
   padding: 0.75rem 1rem;
-  border-radius: 1rem;
+  border-radius: calc(1rem * var(--td-radius-scale, 1));
   border: 2px solid rgba(255, 255, 255, 0.3);
   background: rgba(255, 255, 255, 0.06);
   color: #fff;
@@ -161,8 +161,8 @@ defineExpose({ focus })
 
 .pin-pad__input:focus {
   outline: none;
-  border-color: rgba(192, 132, 252, 0.9);
-  box-shadow: 0 0 0 3px rgba(192, 132, 252, 0.35);
+  border-color: var(--td-focus-border, rgba(192, 132, 252, 0.9));
+  box-shadow: 0 0 0 3px var(--td-focus-halo, rgba(192, 132, 252, 0.35));
 }
 
 .pin-pad__hint {
@@ -183,7 +183,7 @@ defineExpose({ focus })
   align-items: center;
   justify-content: center;
   min-height: 3rem;
-  border-radius: 1rem;
+  border-radius: calc(1rem * var(--td-radius-scale, 1));
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -211,12 +211,12 @@ defineExpose({ focus })
 }
 
 .pin-pad__key--submit {
-  background: linear-gradient(to right, #a855f7, #ec4899);
+  background: var(--td-accent-gradient, linear-gradient(to right, #a855f7, #ec4899));
   border-color: rgba(255, 255, 255, 0.25);
   font-size: 1rem;
 }
 
 .pin-pad__key--submit:hover:not(:disabled) {
-  background: linear-gradient(to right, #9333ea, #db2777);
+  background: var(--td-accent-gradient-hover, linear-gradient(to right, #9333ea, #db2777));
 }
 </style>

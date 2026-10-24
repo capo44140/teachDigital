@@ -9,7 +9,7 @@
   -->
   <div class="min-h-screen overflow-hidden">
     <!-- Header -->
-    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+    <header class="td-page-header relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
       <nav class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
@@ -592,7 +592,7 @@ export default {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1rem;
+  border-radius: calc(1rem * var(--td-radius-scale, 1));
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   padding: 1.5rem;
@@ -649,7 +649,7 @@ button:disabled {
   .glass-card-dashboard,
   .glass-quiz-item {
     padding: 1.5rem;
-    border-radius: 1.5rem;
+    border-radius: calc(1.5rem * var(--td-radius-scale, 1));
   }
 
   .max-w-6xl {
@@ -666,7 +666,7 @@ button:disabled {
   .glass-card-dashboard,
   .glass-quiz-item {
     padding: 1rem;
-    border-radius: 1rem;
+    border-radius: calc(1rem * var(--td-radius-scale, 1));
   }
 }
 

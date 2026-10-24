@@ -14,7 +14,7 @@
       <!-- En-tête avec logo -->
       <div class="text-center mb-16">
         <div class="flex items-center justify-center mb-6">
-          <div class="w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center backdrop-blur-xl shadow-lg">
+          <div class="td-brand-mark w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center backdrop-blur-xl shadow-lg">
             <svg aria-hidden="true" class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
             </svg>
@@ -375,7 +375,7 @@ export default {
 .profile-image-glass {
   width: 6.5rem;
   height: 6.5rem;
-  border-radius: 1.5rem;
+  border-radius: calc(1.5rem * var(--td-radius-scale, 1));
   position: relative;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.08);
@@ -409,7 +409,7 @@ export default {
 }
 
 .profile-card-glass:hover .profile-name-glass {
-  text-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+  text-shadow: 0 0 20px var(--td-accent-glow, rgba(168, 85, 247, 0.5));
 }
 
 .admin-badge-glass {

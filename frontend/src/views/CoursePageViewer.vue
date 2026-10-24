@@ -1,6 +1,6 @@
 <template>
   <div class="h-dvh flex flex-col bg-slate-900">
-    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+    <header class="td-page-header relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
       <nav class="flex items-center gap-3 px-4 py-3">
         <button
           type="button"

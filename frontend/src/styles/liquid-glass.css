@@ -3,6 +3,9 @@
    - Variables de couleur / verre
    - Cartes partagées (.glass-card-dashboard, .glass-card-stat, .glass-stat-card)
    - Animation du fond partagé (src/components/AppBackground.vue)
+   Liquid Glass est le thème par défaut : les autres thèmes (src/styles/themes/) redéfinissent
+   ces variables, ainsi que celles lues avec une valeur de repli (--lg-glass-blur,
+   --lg-glass-elevation, --lg-glass-border-hover, --lg-glass-shadow-hover, --td-radius-scale).
    ============================================ */
 
 @layer base {
@@ -54,20 +57,20 @@
     align-items: stretch;
     gap: 0.75rem;
     padding: 1.5rem;
-    border-radius: 1.5rem;
+    border-radius: calc(1.5rem * var(--td-radius-scale, 1));
     background: var(--lg-glass-light);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(var(--lg-glass-blur, 20px));
+    -webkit-backdrop-filter: blur(var(--lg-glass-blur, 20px));
     border: 1px solid var(--lg-glass-border);
-    box-shadow: 0 8px 32px var(--lg-glass-shadow);
+    box-shadow: var(--lg-glass-elevation, 0 8px 32px var(--lg-glass-shadow));
     transition: var(--lg-transition-normal);
     width: 100%;
   }
 
   .glass-card-dashboard:hover {
     background: var(--lg-glass-heavy);
-    border-color: rgba(255, 255, 255, 0.25);
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+    border-color: var(--lg-glass-border-hover, rgba(255, 255, 255, 0.25));
+    box-shadow: var(--lg-glass-shadow-hover, 0 12px 48px rgba(0, 0, 0, 0.15));
   }
 
   /* Statistique en ligne (icône + valeur) */
@@ -76,38 +79,38 @@
     align-items: center;
     gap: 1rem;
     padding: 1.5rem;
-    border-radius: 1.5rem;
+    border-radius: calc(1.5rem * var(--td-radius-scale, 1));
     background: var(--lg-glass-light);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(var(--lg-glass-blur, 20px));
+    -webkit-backdrop-filter: blur(var(--lg-glass-blur, 20px));
     border: 1px solid var(--lg-glass-border);
-    box-shadow: 0 8px 32px var(--lg-glass-shadow);
+    box-shadow: var(--lg-glass-elevation, 0 8px 32px var(--lg-glass-shadow));
     transition: var(--lg-transition-normal);
   }
 
   .glass-card-stat:hover {
     background: var(--lg-glass-heavy);
-    border-color: rgba(255, 255, 255, 0.25);
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+    border-color: var(--lg-glass-border-hover, rgba(255, 255, 255, 0.25));
+    box-shadow: var(--lg-glass-shadow-hover, 0 12px 48px rgba(0, 0, 0, 0.15));
     transform: translateY(-4px);
   }
 
   /* Bloc de statistique (badges, quiz, progrès) : mise en page laissée au composant */
   .glass-stat-card {
     padding: 1.5rem;
-    border-radius: 1.5rem;
+    border-radius: calc(1.5rem * var(--td-radius-scale, 1));
     background: var(--lg-glass-light);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(var(--lg-glass-blur, 20px));
+    -webkit-backdrop-filter: blur(var(--lg-glass-blur, 20px));
     border: 1px solid var(--lg-glass-border);
-    box-shadow: 0 8px 32px var(--lg-glass-shadow);
+    box-shadow: var(--lg-glass-elevation, 0 8px 32px var(--lg-glass-shadow));
     transition: var(--lg-transition-normal);
   }
 
   .glass-stat-card:hover {
     background: var(--lg-glass-heavy);
-    border-color: rgba(255, 255, 255, 0.25);
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+    border-color: var(--lg-glass-border-hover, rgba(255, 255, 255, 0.25));
+    box-shadow: var(--lg-glass-shadow-hover, 0 12px 48px rgba(0, 0, 0, 0.15));
   }
 }
 
@@ -115,14 +118,14 @@
   @media (max-width: 640px) {
     .glass-card-dashboard {
       padding: 1rem;
-      border-radius: 1rem;
+      border-radius: calc(1rem * var(--td-radius-scale, 1));
     }
   }
 
   @media (max-width: 480px) {
     .glass-stat-card {
       padding: 1rem;
-      border-radius: 1rem;
+      border-radius: calc(1rem * var(--td-radius-scale, 1));
     }
   }
 }

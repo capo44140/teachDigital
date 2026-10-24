@@ -9,18 +9,18 @@
   -->
   <div class="min-h-screen overflow-hidden">
     <!-- Header avec profil sélectionné -->
-    <header class="relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
+    <header class="td-page-header relative z-10 backdrop-blur-xl bg-white/5 border-b border-white/10">
       <nav class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <!-- Logo -->
           <div class="flex items-center space-x-4">
             <div
-              class="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center backdrop-blur-xl shadow-lg"
+              class="td-brand-mark w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center backdrop-blur-xl shadow-lg"
               aria-hidden="true"
             >
               <span class="text-white font-bold text-lg">TD</span>
             </div>
-            <p class="text-2xl font-bold text-white hidden sm:block">TeachDigital</p>
+            <p class="td-brand-name text-2xl font-bold text-white hidden sm:block">TeachDigital</p>
           </div>
 
           <!-- Profil et actions -->
@@ -560,18 +560,18 @@ export default {
   display: flex;
   flex-direction: column;
   padding: 1.5rem;
-  border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border-radius: calc(1.5rem * var(--td-radius-scale, 1));
+  background: var(--lg-glass-light);
+  backdrop-filter: blur(var(--lg-glass-blur, 20px));
+  border: 1px solid var(--lg-glass-border);
+  box-shadow: var(--lg-glass-elevation, 0 8px 32px var(--lg-glass-shadow));
   transition: all 0.3s ease;
 }
 
 .glass-card-user:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  background: var(--lg-glass-heavy);
+  border-color: var(--lg-glass-border-hover, rgba(255, 255, 255, 0.25));
+  box-shadow: var(--lg-glass-shadow-hover, 0 12px 48px rgba(0, 0, 0, 0.15));
   transform: translateY(-4px);
 }
 
@@ -580,18 +580,18 @@ export default {
   display: flex;
   flex-direction: column;
   padding: 1.5rem;
-  border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border-radius: calc(1.5rem * var(--td-radius-scale, 1));
+  background: var(--lg-glass-light);
+  backdrop-filter: blur(var(--lg-glass-blur, 20px));
+  border: 1px solid var(--lg-glass-border);
+  box-shadow: var(--lg-glass-elevation, 0 8px 32px var(--lg-glass-shadow));
   transition: all 0.3s ease;
 }
 
 .glass-card-challenge:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+  background: var(--lg-glass-heavy);
+  border-color: var(--lg-glass-border-hover, rgba(255, 255, 255, 0.25));
+  box-shadow: var(--lg-glass-shadow-hover, 0 12px 48px rgba(0, 0, 0, 0.15));
   transform: translateY(-4px);
 }
 
@@ -600,7 +600,7 @@ export default {
   display: flex;
   flex-direction: column;
   padding: 1rem;
-  border-radius: 1rem;
+  border-radius: calc(1rem * var(--td-radius-scale, 1));
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -620,7 +620,7 @@ export default {
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 2rem;
-  border-radius: 1.25rem;
+  border-radius: calc(1.25rem * var(--td-radius-scale, 1));
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -644,8 +644,8 @@ export default {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  border-radius: 1rem;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.2));
+  border-radius: calc(1rem * var(--td-radius-scale, 1));
+  background: var(--td-accent-gradient-faint, linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.2)));
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
@@ -657,7 +657,7 @@ export default {
 }
 
 .glass-button-quick:hover {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3));
+  background: var(--td-accent-gradient-faint-hover, linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3)));
   border-color: rgba(255, 255, 255, 0.3);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
@@ -676,12 +676,12 @@ export default {
   .glass-card-user,
   .glass-card-challenge {
     padding: 1rem;
-    border-radius: 1rem;
+    border-radius: calc(1rem * var(--td-radius-scale, 1));
   }
 
   .glass-card-activity {
     padding: 0.75rem;
-    border-radius: 0.75rem;
+    border-radius: calc(0.75rem * var(--td-radius-scale, 1));
   }
 
   h1 {
@@ -706,7 +706,7 @@ export default {
   .glass-card-user,
   .glass-card-challenge {
     padding: 1.25rem;
-    border-radius: 1.25rem;
+    border-radius: calc(1.25rem * var(--td-radius-scale, 1));
   }
 }
 
