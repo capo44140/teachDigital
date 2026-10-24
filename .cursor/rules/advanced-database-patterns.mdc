@@ -78,7 +78,7 @@ const result = await withTransaction(async (client) => {
   pour éviter deux migrations simultanées.
 - Numérotation : `0001-0099` infrastructure / schéma de base, `0100-0199` fonctionnalités.
 - Existant : `0001_baseline.sql` (schéma complet, idempotent), `0100_token_version.sql`,
-  `0101_pin_codes_unique_profile.sql`, `0102_deactivate_learning_time_badges.sql`.
+  `0101_pin_codes_unique_profile.sql`, `0102_deactivate_learning_time_badges.sql`, `0103_games.sql`.
 
 ### Écrire une migration
 ```sql

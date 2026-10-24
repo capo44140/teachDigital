@@ -23,8 +23,9 @@ Les commandes `pnpm ...` se lancent dans le dossier concerné (`cd frontend` ou 
 ### Structure des dossiers
 Frontend (`frontend/`) :
 - `src/views/` - Écrans routés (FamilyGate, ProfileSelector, PinLock, Dashboard, UserDashboard, ParentSettings...)
-- `src/components/` - Composants partagés (BaseModal, ConfirmDialog, PinPad, ToastContainer...) et sous-dossiers `quiz/`, `lesson-scanner/`, `course-pages/`, `badges/`, `dashboard/`, `progress/`
-- `src/composables/` - `useParentNavigation`, `useQuizGeneration`, `useConfirm`
+- `src/components/` - Composants partagés (BaseModal, ConfirmDialog, PinPad, ToastContainer...) et sous-dossiers `quiz/`, `lesson-scanner/`, `course-pages/`, `badges/`, `dashboard/`, `progress/`, `games/`
+- `src/games/` - Logique des jeux sans DOM (Pac-Man, Tetris) et leur affichage (`catalog.js`)
+- `src/composables/` - `useParentNavigation`, `useQuizGeneration`, `useConfirm`, `useGameLoop`
 - `src/services/` - `apiService.js` (client HTTP) + un service par domaine (auth, leçons, pages de cours, profils, badges, IA, mise à jour / installation PWA...)
 - `src/stores/` - Stores Pinia (`badgeStore`, `onboardingStore`, `profileStore`, `settingsStore`, `themeStore`, `toastStore`)
 - `src/themes/` - Registre des thèmes de l'application (`index.js`)
@@ -32,11 +33,11 @@ Frontend (`frontend/`) :
 - `src/style.css`, `src/styles/` - Tailwind, `liquid-glass.css`, `themes/` (un fichier par thème), `preferences.css`
 - `public/` - Assets statiques, `manifest.json`, `version.json` (dev), template du service worker `sw.js`
 - `scripts/` - Build et maintenance du front (`generate-sw.js`, `version-bump.js`, `generate-icons.js`, `validate-manifest.js`, analyse de bundle, git hooks) — aucun script de base de données
-- `tests/` - Vitest (`services/`, `components/`, `stores/`, `utils/`) et Playwright (`e2e/`)
+- `tests/` - Vitest (`services/`, `components/`, `stores/`, `utils/`, `games/`) et Playwright (`e2e/`)
 
 Backend (`backend/`) :
 - `api/` - Routeur (`index.js`), badges (`badges.js`), routes IA (`api/ai/**`)
-- `controllers/` - Contrôleurs métier (auth, profils, leçons, pages de cours, notifications, activités, YouTube, audit, progression)
+- `controllers/` - Contrôleurs métier (auth, profils, leçons, pages de cours, notifications, activités, YouTube, jeux, audit, progression)
 - `lib/` - database, queries, transaction, http, response, auth, scope, validation/schemas, logger, migrate...
 - `migrations/` - Schéma de la base : fichiers `NNNN_description.sql`
 - `scripts/` - CLI : `migrate.js`, `init-family-gate.js`, `init-default-pins.js`, `reset-pin.js`, `init-badges.js`

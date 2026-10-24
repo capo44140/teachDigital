@@ -61,6 +61,7 @@ Le routeur est monté sur `/api` et sur `/` (nginx relaie `/api/x` vers `/x`).
 | `POST /auth/family-gate`, `POST /auth/logout`, `GET /auth/verify`, `GET /course-pages/render?t=` | publiques |
 | `POST /auth/login` | jeton famille ou profil (`requireMember`) |
 | `/profiles`, `/lessons`, `/course-pages`, `/notifications`, `/activities`, `/youtube-videos` | membre ; écritures parent (`requireAdmin`) |
+| `/games` | membre (profil accessible) ; règles d'accès : parent (`requireAdmin`) |
 | `/badges` | lecture membre, écriture parent (`requireAdminForWrites`) |
 | `/ai/*` | parent (`requireAdmin`) |
 | `POST /audit/logs` | membre (rate limité) ; lecture / stats / export : parent |

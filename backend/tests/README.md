@@ -19,7 +19,7 @@ backend/tests/
 ├── app/                    # Application Express (app.js) : limites de corps, multipart, erreurs, santé
 ├── controllers/            # Contrôleurs testés sur base réelle (résumé de progression)
 ├── lib/                    # auth, bruteForce, pinPolicy, migrate, database, queries, transaction,
-│                           #   logger (masquage), shutdown, cors, rateLimit, badges, streaks, coursePageView
+│                           #   logger (masquage), shutdown, cors, rateLimit, badges, streaks, coursePageView, jeux
 ├── services/               # Routes et services IA (fournisseurs simulés), OCR, réglages chiffrés
 ├── helpers/testHelpers.js  # describeWithDb, en-têtes de jetons, création et nettoyage de données
 ├── init-test-db.js         # Vide la base de test dédiée puis applique les migrations

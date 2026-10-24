@@ -230,6 +230,7 @@ Dans `backend/` :
 | Badges | [BADGE-SYSTEM-GUIDE.md](doc/BADGE-SYSTEM-GUIDE.md) |
 | Activités | [ACTIVITY-MANAGEMENT-GUIDE.md](doc/ACTIVITY-MANAGEMENT-GUIDE.md) |
 | Vidéos YouTube | [YOUTUBE-KIDS-GUIDE.md](doc/YOUTUBE-KIDS-GUIDE.md) |
+| Jeux (Pac-Man, Tetris) ouverts par le parent sous conditions | [GAMES-GUIDE.md](doc/GAMES-GUIDE.md) |
 | Portage React Native (API de référence) | [REACT-NATIVE-PORTING-GUIDE.md](doc/REACT-NATIVE-PORTING-GUIDE.md) |
 
 ## 🤝 Contribution

@@ -13,14 +13,15 @@ description: Architecture et patterns pour les composants Vue.js et la gestion d
   PinSettings, LessonScanner, QuizGenerator, TextQuizGenerator, SecurityDashboard, ParentQuizManagement,
   LessonDetails, CoursePageManager, CoursePageViewer, ParentActivityManagement, ProgressTracking,
   ParentProgressTracking, ParentSettings, FamilyGateSettings, ChildSettings, YouTubeVideoManager,
-  YouTubeKidsViewerSimple, ChildHelp, BadgeManager, BadgeAdminManager, AISettings, NotFound).
+  YouTubeKidsViewerSimple, GameArcade, GamePlayer, ParentGameManagement, ChildHelp, BadgeManager,
+  BadgeAdminManager, AISettings, NotFound).
   Un nouvel écran va dans `views/` + une route avec le bon `meta` (`public`, `requiresAdmin`, `requiresChildOrTeen`).
 - **`src/components/`** : composants partagés (AppBackground, BaseModal, ConfirmDialog, InstallAppCard,
   OfflineBanner, PinPad, ImageUpload, OnboardingTour, ProfileSkeleton, PullToRefresh, ToastContainer,
   UpdateNotification, VersionInfo, AIProviderConfig) et sous-dossiers par domaine : `quiz/`,
-  `lesson-scanner/`, `course-pages/`, `badges/`, `dashboard/`, `progress/`.
+  `lesson-scanner/`, `course-pages/`, `badges/`, `dashboard/`, `progress/`, `games/`.
 - **`src/composables/`** : `useParentNavigation` (navigation dans l'espace parent), `useQuizGeneration`,
-  `useConfirm`.
+  `useConfirm`, `useGameLoop` (boucle d'animation et clavier des jeux).
 
 ### Template standard
 ```vue

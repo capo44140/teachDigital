@@ -23,11 +23,12 @@ proxy) et `VITE_API_URL_PROD` (build de production ; vide par défaut = même or
   (le guard vérifie la session famille, l'accès parent et le profil enfant)
 - `src/components/` — composants partagés (`AppBackground`, `BaseModal`, `ConfirmDialog`,
   `PinPad`, `OfflineBanner`, `InstallAppCard`, `UpdateNotification`, `ToastContainer`…) et par
-  domaine (`quiz/`, `lesson-scanner/`, `course-pages/`, `badges/`, `dashboard/`, `notifications/`, `progress/`)
-- `src/composables/` — `useParentNavigation`, `useQuizGeneration`, `useConfirm`
+  domaine (`quiz/`, `lesson-scanner/`, `course-pages/`, `badges/`, `dashboard/`, `notifications/`, `progress/`, `games/`)
+- `src/games/` — logique des jeux sans DOM (`pacman.js`, `tetris.js`) et affichage (`catalog.js`)
+- `src/composables/` — `useParentNavigation`, `useQuizGeneration`, `useConfirm`, `useGameLoop`
 - `src/services/` — `apiService.js` est uniquement le client HTTP (jetons, erreurs `ApiError`,
   délais). Chaque domaine a son service : `authService`, `lessonService`, `coursePageService`,
-  `profile/profileService`, `activityService`, `badgeService`, `youtubeVideoService`,
+  `profile/profileService`, `activityService`, `badgeService`, `youtubeVideoService`, `gameService`,
   `aiService`, `auditLogService`, `notificationService`… ; plus les sessions (`familyGateService`, `sessionService`,
   `parentAccessService`), la PWA (`installService`, `updateService`) et
   `clientErrorReporter`

@@ -53,6 +53,16 @@ description: Fonctionnalités spécifiques de l'application TeachDigital
 - **Services** : [youtubeVideoService.js](mdc:frontend/src/services/youtubeVideoService.js) ;
   backend `controllers/youtubeController.js` (table `youtube_videos`).
 
+## Jeux
+
+- **Parent** : `ParentGameManagement.vue` (règle par enfant et par jeu : autorisation, condition,
+  minutes par jour) ; **enfant** : `GameArcade.vue` (jeux et verrous), `GamePlayer.vue` (partie).
+- **Jeux** : logique sans DOM `src/games/pacman.js`, `src/games/tetris.js` ; composants
+  `components/games/` ; [gameService.js](mdc:frontend/src/services/gameService.js).
+- **Backend** : `controllers/gameController.js`, `lib/games.js` (catalogue, conditions, accès
+  évalué par le serveur), tables `game_access_rules` et `game_sessions` (temps compté par signaux
+  de vie, 45 s au plus par signal). Jeu verrouillé : 409 `GAME_LOCKED`. Voir doc/GAMES-GUIDE.md.
+
 ## Activités, progression et badges
 
 - **Activités** assignées par le parent : `ParentActivityManagement.vue`,

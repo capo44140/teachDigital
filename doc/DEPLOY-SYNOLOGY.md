@@ -187,7 +187,7 @@ existant :
    - `[OK] /api/health repond via le nginx du frontend`.
 8. **Vérifier les migrations** :
    `docker exec teachdigital-backend node scripts/migrate.js --status`. Les migrations
-   `0001_baseline` à `0102_deactivate_learning_time_badges` doivent être appliquées, sans aucune
+   `0001_baseline` à `0103_games` doivent être appliquées, sans aucune
    en attente.
 9. **Vérifier que le port 3001 n'est plus exposé**
    - depuis un poste du réseau local, `curl -m 5 http://<ip-du-nas>:3001/health` doit **échouer** ;

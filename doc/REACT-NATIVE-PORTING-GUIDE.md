@@ -85,6 +85,8 @@ ado.
 | `/parent-activity-management` | `ActivityManagementScreen` | parent |
 | `/youtube-video-manager` | `YouTubeVideoManagerScreen` | parent |
 | `/youtube-kids-viewer` | `YouTubeKidsViewerScreen` | enfant |
+| `/games`, `/games/:gameKey` | `GameArcadeScreen`, `GamePlayerScreen` (aperçu sans partie en session parent) | enfant |
+| `/parent-game-management` | `GameManagementScreen` | parent |
 | `/progress-tracking` | `ProgressTrackingScreen` | enfant |
 | `/parent-progress-tracking` | `ParentProgressTrackingScreen` | parent |
 | `/badge-manager?profile=` | `BadgeManagerScreen` | enfant |
@@ -182,6 +184,9 @@ toute façon chaque droit.
 | POST | `/api/notifications/mark-all-read` | Tout marquer comme lu |
 | GET / POST / PUT / DELETE | `/api/activities[/:id]` | Activités (écriture : parent) |
 | GET / POST / PUT / DELETE | `/api/youtube-videos[/:id]` | Vidéos (écriture : parent) |
+| GET | `/api/games?profileId=` | Jeux d'un profil, règles et accès évalué par le serveur |
+| PUT | `/api/games/:gameKey/rules/:profileId` | Règle d'accès d'un enfant (parent) |
+| POST / PUT | `/api/games/:gameKey/sessions`, `/api/games/sessions/:id` | Partie : début (409 `GAME_LOCKED` si verrouillé), signaux de vie, fin |
 | GET / POST / PUT / DELETE | `/api/badges[/:id]` | Badges (écriture : parent) |
 | GET | `/api/badges/profile/:id`, `/unlocked`, `/stats`, `/recent` | Badges d'un profil |
 | POST | `/api/badges/check-unlock` | Réévaluation (parent). Après un quiz, le serveur le fait seul |
