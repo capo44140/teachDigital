@@ -20,6 +20,12 @@ importers:
       '@fontsource/luckiest-guy':
         specifier: '5'
         version: 5.3.0
+      '@fontsource/permanent-marker':
+        specifier: '5'
+        version: 5.3.0
+      '@fontsource/titillium-web':
+        specifier: '5'
+        version: 5.3.0
       dompurify:
         specifier: ^3.4.2
         version: 3.4.2
@@ -379,6 +385,12 @@ packages:
 
   '@fontsource/luckiest-guy@5.3.0':
     resolution: {integrity: sha512-wCtuVkExxmKeW0FngmKVTcCK9T0elvjoP4/ZZaINqsUjlk9CB17Rr9FQ6pIDlN4nzouDMGSuqYvge3VoKqslPA==}
+
+  '@fontsource/permanent-marker@5.3.0':
+    resolution: {integrity: sha512-ZO/NtYW4SCc/iY8N3dmjWyDITcXJ/vhWZFgnwRcvzwCKKnScMrM/a2/6VHlsjCVuIgmPzNrCFbedEYhv+/jJBg==}
+
+  '@fontsource/titillium-web@5.3.0':
+    resolution: {integrity: sha512-+nO3ACtHoBgBgq5rzKYImyJqcbRR5cG7D5O73Iu9qMEVlpQ4KVpdDs+XJexZ6Tgcek4xSlkCI82Xd3yLNF++6w==}
 
   '@formatjs/ecma402-abstract@2.3.5':
     resolution: {integrity: sha512-1HTESOq1IUa23g1lFZEGIXsfZKZOwWmB9RROwGn+xariiQnd++wwTMvlRAbZ8wtXRHFUamJPxsKcxpSzeCvFWQ==}
@@ -3472,6 +3484,10 @@ snapshots:
   '@fontsource/bebas-neue@5.3.0': {}
 
   '@fontsource/luckiest-guy@5.3.0': {}
+
+  '@fontsource/permanent-marker@5.3.0': {}
+
+  '@fontsource/titillium-web@5.3.0': {}
 
   '@formatjs/ecma402-abstract@2.3.5':
     dependencies:

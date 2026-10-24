@@ -16,9 +16,12 @@ const themeColor = () => document.querySelector('meta[name="theme-color"]').getA
 const stored = () => JSON.parse(localStorage.getItem(THEME_STORAGE_KEY))
 
 describe('registre des thèmes', () => {
-  it('propose le thème d\'origine par défaut, puis Netflix, Pat\' Patrouille et Desperate Housewives', () => {
-    expect(APP_THEMES.map(theme => theme.id)).toEqual(['liquid-glass', 'netflix', 'paw-patrol', 'desperate-housewives'])
+  it('propose le thème d\'origine par défaut, puis les thèmes des séries et de la Formule 1', () => {
+    expect(APP_THEMES.map(theme => theme.id)).toEqual([
+      'liquid-glass', 'netflix', 'paw-patrol', 'desperate-housewives', 'one-tree-hill', 'formula-1'
+    ])
     expect(DEFAULT_THEME_ID).toBe('liquid-glass')
+    expect(new Set(APP_THEMES.map(theme => theme.id)).size).toBe(APP_THEMES.length)
   })
 
   it('décrit chaque thème complètement (nom, aperçu, couleur de la barre d\'état)', () => {
@@ -39,14 +42,21 @@ describe('registre des thèmes', () => {
     expect(isAppThemeId(null)).toBe(false)
   })
 
-  it('Pat\' Patrouille : un chiot pour chaque couleur préférée proposée à l\'enfant', () => {
-    const { options } = getAppTheme('paw-patrol').tones
+  it.each([
+    ['paw-patrol', 'un chiot'],
+    ['formula-1', 'une écurie']
+  ])('%s : %s pour chaque couleur préférée proposée à l\'enfant', (themeId) => {
+    const { options } = getAppTheme(themeId).tones
     for (const tone of CHILD_THEMES) {
       expect(options[tone.id], tone.id).toMatchObject({ name: expect.any(String), emoji: expect.any(String), swatch: expect.any(String) })
     }
-    // Netflix et Desperate Housewives ignorent la couleur préférée
-    expect(getAppTheme('netflix').tones).toBeNull()
-    expect(getAppTheme('desperate-housewives').tones).toBeNull()
+  })
+
+  it('les autres thèmes ignorent la couleur préférée, ou gardent les couleurs d\'origine', () => {
+    for (const themeId of ['netflix', 'desperate-housewives', 'one-tree-hill']) {
+      expect(getAppTheme(themeId).tones, themeId).toBeNull()
+    }
+    expect(getAppTheme('liquid-glass').tones.options).toBeUndefined()
   })
 })
 

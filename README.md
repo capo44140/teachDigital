@@ -225,7 +225,7 @@ Dans `backend/` :
 | PWA, service worker, mises à jour | [PWA-INSTALL.md](doc/PWA-INSTALL.md) |
 | Versions | [VERSION-MANAGEMENT.md](doc/VERSION-MANAGEMENT.md) |
 | Design « Liquid Glass » et accessibilité | [LIQUID-GLASS-DESIGN-GUIDE.md](doc/LIQUID-GLASS-DESIGN-GUIDE.md) |
-| Thèmes (Liquid Glass, Netflix, Pat' Patrouille, Desperate Housewives) | [THEMES.md](doc/THEMES.md) |
+| Thèmes (Liquid Glass, Netflix, Pat' Patrouille, Desperate Housewives, Les Frères Scott, Formule 1) | [THEMES.md](doc/THEMES.md) |
 | Scanner de leçons / IA | [LESSON-SCANNER.md](doc/LESSON-SCANNER.md) |
 | Badges | [BADGE-SYSTEM-GUIDE.md](doc/BADGE-SYSTEM-GUIDE.md) |
 | Activités | [ACTIVITY-MANAGEMENT-GUIDE.md](doc/ACTIVITY-MANAGEMENT-GUIDE.md) |

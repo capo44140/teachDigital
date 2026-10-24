@@ -15,7 +15,7 @@ describe('ThemePicker', () => {
     expect(wrapper.find('fieldset legend').text()).toBe('Thème de la famille')
     expect(radios).toHaveLength(APP_THEMES.length)
     expect(radios.map(radio => radio.element.name)).toEqual(APP_THEMES.map(() => 'family-theme'))
-    expect(radios.map(radio => radio.element.checked)).toEqual([false, true, false, false])
+    expect(radios.map(radio => radio.element.checked)).toEqual(APP_THEMES.map(theme => theme.id === 'netflix'))
     expect(wrapper.find('.theme-card--selected').text()).toContain('Netflix')
   })
 

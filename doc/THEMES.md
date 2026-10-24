@@ -1,8 +1,8 @@
 # Thèmes de l'application
 
-TeachDigital propose quatre thèmes. **Liquid Glass**, le design d'origine, reste le thème par
-défaut ; les trois autres en sont des clins d'œil à des séries, sans logo ni image officiels
-(décors dessinés en SVG, polices libres OFL / Apache).
+TeachDigital propose six thèmes. **Liquid Glass**, le design d'origine, reste le thème par
+défaut ; les autres sont des clins d'œil à des séries et à la Formule 1, sans logo ni image
+officiels (décors dessinés en SVG ou en CSS, polices libres OFL / Apache).
 
 | Thème | `data-app-theme` | Ambiance | Polices | Couleur préférée de l'enfant |
 | --- | --- | --- | --- | --- |
@@ -10,6 +10,8 @@ défaut ; les trois autres en sont des clins d'œil à des séries, sans logo ni
 | 🍿 Netflix | `netflix` | Noir #141414, rouge #E50914, coins vifs, en-têtes en dégradé noir, tuiles qui zooment au survol, « Qui est-ce ? » façon écran de profils | Bebas Neue (titres) | Ignorée |
 | 🐶 Pat' Patrouille | `paw-patrol` | Ciel bleu du badge, pattes et os, titres blancs cernés de bleu marine, logo en écusson, cartes « autocollants », boutons en relief | Luckiest Guy (titres), Fredoka (texte) | Chiot préféré : Everest, Chase, Rocky, Zuma, Ruben ou toute l'équipe (couleur des grandes pattes) |
 | 🍎 Desperate Housewives | `desperate-housewives` | Nuit violine sur Wisteria Lane : glycines, lune, palissade blanche, pétales qui tombent, pomme rouge, liserés dorés, logo en pomme | Playfair Display (titres) | Ignorée |
+| 🏀 Les Frères Scott | `one-tree-hill` | Coucher de soleil sur le River Court : ciel étoilé, soleil derrière l'arbre seul sur la colline, panier en silhouette, orange du ballon, logo en ballon de basket | Permanent Marker (titres, façon graffiti) | Ignorée |
+| 🏎️ Formule 1 | `formula-1` | Fibre de carbone, rouge #E10600, damier, vibreur rouge et blanc, lignes de vitesse, titres en italique majuscule, cartes au liseré rouge façon chronométrage, logo en plaque inclinée | Titillium Web (titres et texte) | Écurie : Secteur violet, Red Bull, Aston Martin, McLaren, Renault ou toute la grille (couleur des lignes de vitesse) |
 
 ## 👪 Qui choisit quoi
 
@@ -130,6 +132,6 @@ Liquid Glass ne les définit pas : il garde exactement son apparence.
 
 ## 📦 Poids
 
-Les trois thèmes ajoutent environ 6 Ko (gzip) au CSS. Les polices (woff2, 14 à 39 Ko chacune)
+Les cinq thèmes ajoutent environ 10 Ko (gzip) au CSS. Les polices (woff2, 12 à 39 Ko chacune)
 ne sont téléchargées que lorsqu'un thème les affiche ; comme tous les fichiers du build, elles
 sont précachées par le service worker pour le mode hors ligne.

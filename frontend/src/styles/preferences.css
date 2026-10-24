@@ -33,9 +33,11 @@ html.td-easy-read :is(p, li, label, dd, dt, td, th, blockquote, button, a, span)
 
 html.td-easy-read :is(h1, h2, h3, h4, h5, h6) {
   line-height: 1.35;
-  /* Pas de police décorative de thème dans les titres */
+  /* Pas de police décorative de thème dans les titres (ni italique, ni majuscules forcées) */
   font-family: inherit;
+  font-style: normal;
   letter-spacing: normal;
+  text-transform: none;
 }
 
 /* --- Contraste élevé : textes opaques, fonds pleins, bordures nettes, sans flou --- */

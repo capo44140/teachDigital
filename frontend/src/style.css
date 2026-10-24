@@ -4,6 +4,8 @@
 @import "./styles/themes/netflix.css";
 @import "./styles/themes/paw-patrol.css";
 @import "./styles/themes/desperate-housewives.css";
+@import "./styles/themes/one-tree-hill.css";
+@import "./styles/themes/formula-1.css";
 /* Préférences d'accessibilité en dernier : elles priment sur les thèmes */
 @import "./styles/preferences.css";
 

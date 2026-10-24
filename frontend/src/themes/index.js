@@ -28,7 +28,8 @@ export const DEFAULT_THEME_ID = 'liquid-glass'
  * @property {string} themeColor - <meta name="theme-color"> (barre d'état de la PWA)
  * @property {null|{ title: string, hint: string, options?: Object<string, ThemeTone> }} tones -
  *   la couleur préférée de l'enfant teinte-t-elle le fond ? (null : le thème l'ignore)
- * @property {Object} preview - couleurs de la miniature du sélecteur (ThemePicker)
+ * @property {Object} preview - couleurs et polices de la miniature du sélecteur (ThemePicker) ;
+ *   titleStyle et titleTransform sont facultatifs
  */
 
 /** @type {ReadonlyArray<AppTheme>} */
@@ -125,6 +126,59 @@ export const APP_THEMES = Object.freeze([
       font: '\'Inter\', system-ui, sans-serif',
       titleFont: '\'Playfair Display Variable\', \'Playfair Display\', Georgia, serif',
       titleWeight: 700
+    }
+  },
+  {
+    id: 'one-tree-hill',
+    name: 'Les Frères Scott',
+    emoji: '🏀',
+    tagline: 'Bienvenue à Tree Hill',
+    description: 'Coucher de soleil sur le River Court, l\'arbre sur la colline et le ballon orange.',
+    themeColor: '#0D1730',
+    tones: null,
+    preview: {
+      background: 'radial-gradient(circle at 30% 100%, rgba(255, 166, 94, 0.6), transparent 45%), linear-gradient(180deg, #0D1730, #3A2E52 70%, #5E3443)',
+      surface: 'rgba(255, 228, 200, 0.1)',
+      border: 'rgba(255, 170, 110, 0.45)',
+      accent: 'linear-gradient(90deg, #B84E0F, #B8322F)',
+      text: '#FFFFFF',
+      radius: '0.5rem',
+      font: '\'Inter\', system-ui, sans-serif',
+      titleFont: '\'Permanent Marker\', \'Comic Sans MS\', cursive',
+      titleWeight: 400
+    }
+  },
+  {
+    id: 'formula-1',
+    name: 'Formule 1',
+    emoji: '🏎️',
+    tagline: 'Extinction des feux, et c\'est parti !',
+    description: 'Fibre de carbone, rouge course, damier et lignes de vitesse.',
+    themeColor: '#15151E',
+    tones: {
+      title: 'Choisis ton écurie',
+      hint: 'Ses couleurs filent sur ta piste.',
+      options: {
+        purple: { name: 'Secteur violet', emoji: '⏱️', swatch: 'linear-gradient(135deg, #6E2BD9, #B266FF)' },
+        blue: { name: 'Red Bull', emoji: '🐂', swatch: 'linear-gradient(135deg, #1E2A5A, #3671C6 60%, #CC1E4A)' },
+        green: { name: 'Aston Martin', emoji: '💚', swatch: 'linear-gradient(135deg, #00594F, #229971 60%, #CEDC00)' },
+        orange: { name: 'McLaren', emoji: '🧡', swatch: 'linear-gradient(135deg, #FF8000, #FFB15C 70%, #47C7FC)' },
+        yellow: { name: 'Renault', emoji: '💛', swatch: 'linear-gradient(135deg, #FFD800, #FFE45C 60%, #0057B8)' },
+        rainbow: { name: 'Toute la grille', emoji: '🏁', swatch: 'linear-gradient(135deg, #E8002D, #FF8000, #229971, #3671C6)' }
+      }
+    },
+    preview: {
+      background: 'repeating-conic-gradient(rgba(255, 255, 255, 0.08) 0 25%, transparent 0 50%) 100% 0 / 12px 12px, linear-gradient(160deg, #15151E 60%, #2B0100)',
+      surface: '#1F1F2B',
+      border: 'rgba(225, 6, 0, 0.75)',
+      accent: '#E10600',
+      text: '#FFFFFF',
+      radius: '0.125rem',
+      font: '\'Titillium Web\', \'Segoe UI\', system-ui, sans-serif',
+      titleFont: '\'Titillium Web\', \'Segoe UI\', system-ui, sans-serif',
+      titleWeight: 700,
+      titleStyle: 'italic',
+      titleTransform: 'uppercase'
     }
   }
 ])

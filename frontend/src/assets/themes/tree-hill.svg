@@ -1,0 +1,18 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='240' viewBox='0 0 1200 240' fill='#0a0f1e'>
+  <path d='M0 240V178c90-14 180-46 270-60 70-11 130-8 190 8 90 24 170 64 270 76 150 18 320 0 470-10v58z'/>
+  <path d='M318 124c2-18 2-34-4-50l-16-14 3-3 17 12c-2-10-8-18-18-26l3-3c10 7 17 16 21 27 3-13 10-24 22-31l3 3c-11 8-17 19-19 32l14-10 3 3-17 14c-3 14-3 28 0 38z'/>
+  <ellipse cx='326' cy='46' rx='42' ry='30'/>
+  <ellipse cx='284' cy='58' rx='34' ry='22'/>
+  <ellipse cx='370' cy='58' rx='36' ry='22'/>
+  <ellipse cx='246' cy='74' rx='26' ry='13'/>
+  <ellipse cx='408' cy='74' rx='28' ry='13'/>
+  <ellipse cx='306' cy='74' rx='30' ry='14'/>
+  <ellipse cx='350' cy='76' rx='30' ry='14'/>
+  <ellipse cx='330' cy='26' rx='26' ry='18'/>
+  <rect x='880' y='196' width='300' height='4'/>
+  <rect x='1086' y='96' width='9' height='102'/>
+  <path d='M1090 100h-58v7h58z'/>
+  <rect x='1026' y='70' width='7' height='58'/>
+  <rect x='1000' y='112' width='27' height='3'/>
+  <path d='M1002 115h22l-4 18h-14z' fill-opacity='.7'/>
+</svg>

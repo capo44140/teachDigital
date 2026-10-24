@@ -1,0 +1,363 @@
+/* ============================================
+   THÈME « LES FRÈRES SCOTT » — :root[data-app-theme="one-tree-hill"]
+   Coucher de soleil sur le River Court : ciel de crépuscule étoilé, soleil derrière l'arbre
+   seul sur la colline, panier de basket en silhouette, orange du ballon et titres façon
+   graffiti (les noms peints sur le terrain).
+   Registre : src/themes/index.js — guide : doc/THEMES.md
+   ============================================ */
+
+/* Police auto-hébergée (sous-ensemble latin) : téléchargée seulement quand un texte l'utilise */
+@font-face {
+  font-family: 'Permanent Marker';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/permanent-marker/files/permanent-marker-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* --- Variables et typographie (couche base : les préférences d'accessibilité priment) --- */
+@layer base {
+  :root[data-app-theme="one-tree-hill"] {
+    /* Échelles du thème : ballon de basket, soleil couchant, crépuscule, nuit sur la rivière */
+    --oth-ball-50: #FFF5EC;
+    --oth-ball-100: #FFE6CF;
+    --oth-ball-200: #FFC999;
+    --oth-ball-300: #FFA65E;
+    --oth-ball-400: #F5863A;
+    --oth-ball-500: #B84E0F;
+    --oth-ball-600: #9E420C;
+    --oth-ball-700: #82360D;
+    --oth-ball-800: #682C0E;
+    --oth-ball-900: #55250E;
+    --oth-ball-950: #301205;
+
+    --oth-sunset-50: #FFF1F0;
+    --oth-sunset-100: #FFDEDB;
+    --oth-sunset-200: #FFBDB7;
+    --oth-sunset-300: #FF8F86;
+    --oth-sunset-400: #F2635A;
+    --oth-sunset-500: #B8322F;
+    --oth-sunset-600: #9C2826;
+    --oth-sunset-700: #802120;
+    --oth-sunset-800: #661C1C;
+    --oth-sunset-900: #521818;
+    --oth-sunset-950: #2E0A0A;
+
+    --oth-dusk-50: #F2F4FB;
+    --oth-dusk-100: #E2E6F5;
+    --oth-dusk-200: #C5CDEA;
+    --oth-dusk-300: #9EABD9;
+    --oth-dusk-400: #7584C2;
+    --oth-dusk-500: #4F5FA6;
+    --oth-dusk-600: #424F8C;
+    --oth-dusk-700: #374173;
+    --oth-dusk-800: #2E365E;
+    --oth-dusk-900: #282F4F;
+    --oth-dusk-950: #191D33;
+
+    --oth-night-50: #F5F6FA;
+    --oth-night-100: #E8EAF2;
+    --oth-night-200: #CDD2E2;
+    --oth-night-300: #A9B0C9;
+    --oth-night-400: #7F88A6;
+    --oth-night-500: #5D6586;
+    --oth-night-600: #48506E;
+    --oth-night-700: #39405A;
+    --oth-night-800: #282E45;
+    --oth-night-900: #1A2036;
+    --oth-night-950: #0E1324;
+
+    /* Palette Tailwind : violet de marque → orange du ballon */
+    --color-purple-50: var(--oth-ball-50);
+    --color-purple-100: var(--oth-ball-100);
+    --color-purple-200: var(--oth-ball-200);
+    --color-purple-300: var(--oth-ball-300);
+    --color-purple-400: var(--oth-ball-400);
+    --color-purple-500: var(--oth-ball-500);
+    --color-purple-600: var(--oth-ball-600);
+    --color-purple-700: var(--oth-ball-700);
+    --color-purple-800: var(--oth-ball-800);
+    --color-purple-900: var(--oth-ball-900);
+    --color-purple-950: var(--oth-ball-950);
+
+    --color-violet-50: var(--oth-ball-50);
+    --color-violet-100: var(--oth-ball-100);
+    --color-violet-200: var(--oth-ball-200);
+    --color-violet-300: var(--oth-ball-300);
+    --color-violet-400: var(--oth-ball-400);
+    --color-violet-500: var(--oth-ball-500);
+    --color-violet-600: var(--oth-ball-600);
+    --color-violet-700: var(--oth-ball-700);
+    --color-violet-800: var(--oth-ball-800);
+    --color-violet-900: var(--oth-ball-900);
+    --color-violet-950: var(--oth-ball-950);
+
+    --color-fuchsia-50: var(--oth-ball-50);
+    --color-fuchsia-100: var(--oth-ball-100);
+    --color-fuchsia-200: var(--oth-ball-200);
+    --color-fuchsia-300: var(--oth-ball-300);
+    --color-fuchsia-400: var(--oth-ball-400);
+    --color-fuchsia-500: var(--oth-ball-500);
+    --color-fuchsia-600: var(--oth-ball-600);
+    --color-fuchsia-700: var(--oth-ball-700);
+    --color-fuchsia-800: var(--oth-ball-800);
+    --color-fuchsia-900: var(--oth-ball-900);
+    --color-fuchsia-950: var(--oth-ball-950);
+
+    /* Rose → rouge du soleil couchant */
+    --color-pink-50: var(--oth-sunset-50);
+    --color-pink-100: var(--oth-sunset-100);
+    --color-pink-200: var(--oth-sunset-200);
+    --color-pink-300: var(--oth-sunset-300);
+    --color-pink-400: var(--oth-sunset-400);
+    --color-pink-500: var(--oth-sunset-500);
+    --color-pink-600: var(--oth-sunset-600);
+    --color-pink-700: var(--oth-sunset-700);
+    --color-pink-800: var(--oth-sunset-800);
+    --color-pink-900: var(--oth-sunset-900);
+    --color-pink-950: var(--oth-sunset-950);
+
+    --color-rose-50: var(--oth-sunset-50);
+    --color-rose-100: var(--oth-sunset-100);
+    --color-rose-200: var(--oth-sunset-200);
+    --color-rose-300: var(--oth-sunset-300);
+    --color-rose-400: var(--oth-sunset-400);
+    --color-rose-500: var(--oth-sunset-500);
+    --color-rose-600: var(--oth-sunset-600);
+    --color-rose-700: var(--oth-sunset-700);
+    --color-rose-800: var(--oth-sunset-800);
+    --color-rose-900: var(--oth-sunset-900);
+    --color-rose-950: var(--oth-sunset-950);
+
+    /* Indigo → bleu du crépuscule */
+    --color-indigo-50: var(--oth-dusk-50);
+    --color-indigo-100: var(--oth-dusk-100);
+    --color-indigo-200: var(--oth-dusk-200);
+    --color-indigo-300: var(--oth-dusk-300);
+    --color-indigo-400: var(--oth-dusk-400);
+    --color-indigo-500: var(--oth-dusk-500);
+    --color-indigo-600: var(--oth-dusk-600);
+    --color-indigo-700: var(--oth-dusk-700);
+    --color-indigo-800: var(--oth-dusk-800);
+    --color-indigo-900: var(--oth-dusk-900);
+    --color-indigo-950: var(--oth-dusk-950);
+
+    /* Gris → bleu nuit de la rivière */
+    --color-slate-50: var(--oth-night-50);
+    --color-slate-100: var(--oth-night-100);
+    --color-slate-200: var(--oth-night-200);
+    --color-slate-300: var(--oth-night-300);
+    --color-slate-400: var(--oth-night-400);
+    --color-slate-500: var(--oth-night-500);
+    --color-slate-600: var(--oth-night-600);
+    --color-slate-700: var(--oth-night-700);
+    --color-slate-800: var(--oth-night-800);
+    --color-slate-900: var(--oth-night-900);
+    --color-slate-950: var(--oth-night-950);
+
+    --color-gray-50: var(--oth-night-50);
+    --color-gray-100: var(--oth-night-100);
+    --color-gray-200: var(--oth-night-200);
+    --color-gray-300: var(--oth-night-300);
+    --color-gray-400: var(--oth-night-400);
+    --color-gray-500: var(--oth-night-500);
+    --color-gray-600: var(--oth-night-600);
+    --color-gray-700: var(--oth-night-700);
+    --color-gray-800: var(--oth-night-800);
+    --color-gray-900: var(--oth-night-900);
+    --color-gray-950: var(--oth-night-950);
+
+    /* Cartes : verre chaud, bord orangé */
+    --lg-glass-light: rgba(255, 228, 200, 0.07);
+    --lg-glass-medium: rgba(255, 228, 200, 0.09);
+    --lg-glass-heavy: rgba(255, 228, 200, 0.12);
+    --lg-glass-border: rgba(255, 170, 110, 0.28);
+    --lg-glass-border-hover: rgba(255, 170, 110, 0.6);
+    --lg-glass-shadow: rgba(5, 8, 20, 0.45);
+    --lg-glass-shadow-hover: 0 16px 40px rgba(5, 8, 20, 0.5), 0 0 24px rgba(245, 134, 58, 0.15);
+
+    /* Formes */
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.625rem;
+    --radius-2xl: 0.875rem;
+    --radius-3xl: 1.25rem;
+    --radius-4xl: 1.5rem;
+    --td-radius-scale: 0.85;
+
+    /* Typographie : titres façon graffiti du River Court */
+    --td-font-display: 'Permanent Marker', 'Comic Sans MS', 'Segoe Print', cursive;
+
+    /* Fonds, surfaces et accents des composants */
+    --td-page-bg: #0D1730;
+    --td-page-gradient: linear-gradient(180deg, #0D1730, #2A2A4C 60%, #4A2A35);
+    --td-surface-base: #141C33;
+    --td-surface-solid: #18213D;
+    --td-surface-raised: rgba(20, 28, 51, 0.95);
+    --td-surface-overlay: rgba(20, 28, 51, 0.96);
+    --td-surface-option: #18213D;
+    --td-backdrop: rgba(8, 12, 26, 0.75);
+    --td-backdrop-glow: rgba(184, 78, 15, 0.45);
+    --td-backdrop-deep: rgba(8, 12, 26, 0.92);
+    --td-skeleton-bg: linear-gradient(135deg, #2A3354, #1A2036);
+    --td-accent: #B84E0F;
+    --td-accent-hover: #9E420C;
+    --td-accent-gradient: linear-gradient(to right, #B84E0F, #B8322F);
+    --td-accent-gradient-hover: linear-gradient(to right, #9E420C, #9C2826);
+    --td-accent-gradient-soft: linear-gradient(135deg, rgba(232, 113, 28, 0.7), rgba(184, 50, 47, 0.7));
+    --td-accent-gradient-faint: linear-gradient(135deg, rgba(245, 134, 58, 0.2), rgba(79, 95, 166, 0.22));
+    --td-accent-gradient-faint-hover: linear-gradient(135deg, rgba(245, 134, 58, 0.3), rgba(79, 95, 166, 0.32));
+    --td-accent-text-gradient: linear-gradient(135deg, #FFC999, #F5863A);
+    --td-accent-glow: rgba(245, 134, 58, 0.45);
+    --td-accent-glow-strong: rgba(245, 134, 58, 0.6);
+    --td-accent-muted: rgba(245, 134, 58, 0.6);
+    --td-focus-ring: #FFA65E;
+    --td-focus-border: rgba(255, 166, 94, 0.9);
+    --td-focus-halo: rgba(245, 134, 58, 0.35);
+  }
+
+  /* Titres façon graffiti (une seule graisse : pas de faux gras) */
+  :root[data-app-theme="one-tree-hill"] :is(h1, h2) {
+    font-family: var(--td-font-display);
+    font-weight: 400;
+    font-synthesis: none;
+    letter-spacing: 0.02em;
+    text-shadow: 0 2px 0 rgba(5, 8, 20, 0.45);
+  }
+
+  :root[data-app-theme="one-tree-hill"] h1 {
+    line-height: 1.2;
+  }
+}
+
+/* --- Habillage (hors couche : prime sur les utilitaires Tailwind et les styles des composants) --- */
+
+/* Fond : crépuscule étoilé, soleil derrière la colline, arbre et panier en silhouette */
+:root[data-app-theme="one-tree-hill"] .app-background {
+  background-color: #0D1730;
+  background-image: linear-gradient(180deg, #0D1730 0%, #1B2547 35%, #3A2E52 62%, #5E3443 84%, #4A2A35 100%);
+}
+
+:root[data-app-theme="one-tree-hill"] .app-background::before,
+:root[data-app-theme="one-tree-hill"] .app-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Étoiles, de plus en plus rares vers l'horizon */
+:root[data-app-theme="one-tree-hill"] .app-background::before {
+  background-image:
+    radial-gradient(1.5px 1.5px at 18px 24px, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(1px 1px at 72px 88px, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 130px 40px, rgba(255, 240, 220, 0.8), transparent),
+    radial-gradient(1px 1px at 170px 130px, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 40px 160px, rgba(255, 255, 255, 0.5), transparent);
+  background-size: 200px 200px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 60%);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 60%);
+  opacity: 0.8;
+}
+
+/* Colline, arbre et panier du River Court */
+:root[data-app-theme="one-tree-hill"] .app-background::after {
+  background: url('/src/assets/themes/tree-hill.svg') center bottom / 100% auto no-repeat;
+  opacity: 0.95;
+}
+
+/* Soleil couchant derrière l'arbre ; les autres disques sont masqués */
+:root[data-app-theme="one-tree-hill"] .app-background__blob {
+  filter: none;
+  mix-blend-mode: normal;
+  animation: none;
+}
+
+:root[data-app-theme="one-tree-hill"] .app-background__blob--1 {
+  top: auto;
+  right: auto;
+  bottom: -6rem;
+  left: 8%;
+  width: 30rem;
+  height: 30rem;
+  background: radial-gradient(circle, rgba(255, 196, 120, 0.7) 0%, rgba(255, 140, 70, 0.35) 30%, rgba(184, 50, 47, 0.12) 55%, transparent 70%);
+  opacity: 0.9;
+}
+
+:root[data-app-theme="one-tree-hill"] :is(.app-background__blob--2, .app-background__blob--3) {
+  display: none;
+}
+
+/* En-têtes : bleu nuit, filet orange */
+:root[data-app-theme="one-tree-hill"] .td-page-header {
+  background: rgba(13, 23, 48, 0.68);
+  border-bottom: 2px solid rgba(245, 134, 58, 0.6);
+}
+
+/* Logo : un ballon de basket et ses coutures */
+:root[data-app-theme="one-tree-hill"] .td-brand-mark {
+  position: relative;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FFB878 0%, #E8711C 45%, #A9480C 100%);
+  box-shadow: inset -0.3rem -0.3rem 0.6rem rgba(0, 0, 0, 0.3), 0 0.4rem 1rem rgba(0, 0, 0, 0.4);
+}
+
+:root[data-app-theme="one-tree-hill"] .td-brand-mark::before,
+:root[data-app-theme="one-tree-hill"] .td-brand-mark::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+:root[data-app-theme="one-tree-hill"] .td-brand-mark::before {
+  inset: 0;
+  background:
+    linear-gradient(rgba(58, 26, 8, 0.75), rgba(58, 26, 8, 0.75)) center / 2px 100% no-repeat,
+    linear-gradient(rgba(58, 26, 8, 0.75), rgba(58, 26, 8, 0.75)) center / 100% 2px no-repeat;
+}
+
+:root[data-app-theme="one-tree-hill"] .td-brand-mark::after {
+  inset: 0 22%;
+  border: 2px solid rgba(58, 26, 8, 0.75);
+  border-radius: 50%;
+}
+
+:root[data-app-theme="one-tree-hill"] .td-brand-mark > :is(span, svg) {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-app-theme="one-tree-hill"] .td-brand-mark > span {
+  font-family: var(--td-font-display);
+  font-weight: 400;
+}
+
+:root[data-app-theme="one-tree-hill"] .td-brand-name {
+  font-family: var(--td-font-display);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+/* Cartes cliquables : petit rebond */
+:root[data-app-theme="one-tree-hill"] :is(button, a):is(.glass-card-dashboard, .glass-card-user, .glass-card-challenge):hover {
+  transform: translateY(-4px);
+}
+
+/* « Qui est-ce ? » : cerclées de l'orange du cercle, elles tournent comme un ballon au survol */
+:root[data-app-theme="one-tree-hill"] .profile-image-glass {
+  border-radius: 1.25rem;
+  border: 3px solid #F5863A;
+  box-shadow: 0 10px 26px rgba(5, 8, 20, 0.45);
+}
+
+:root[data-app-theme="one-tree-hill"] .profile-card-glass:is(:hover, :focus-visible) .profile-image-glass {
+  border-color: #FFC999;
+  transform: scale(1.06) rotate(-6deg);
+}
+
+:root[data-app-theme="one-tree-hill"] .profile-name-glass {
+  font-family: var(--td-font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+}

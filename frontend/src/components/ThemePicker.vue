@@ -106,7 +106,9 @@ function previewStyle (theme) {
     '--pv-radius': preview.radius,
     '--pv-font': preview.font,
     '--pv-title-font': preview.titleFont,
-    '--pv-title-weight': preview.titleWeight
+    '--pv-title-weight': preview.titleWeight,
+    '--pv-title-style': preview.titleStyle || 'normal',
+    '--pv-title-transform': preview.titleTransform || 'none'
   }
 }
 </script>
@@ -190,7 +192,9 @@ function previewStyle (theme) {
   font-family: var(--pv-title-font);
   font-size: 1.05rem;
   font-weight: var(--pv-title-weight);
+  font-style: var(--pv-title-style);
   font-synthesis: none;
+  text-transform: var(--pv-title-transform);
   line-height: 1.15;
   white-space: nowrap;
   text-overflow: ellipsis;

@@ -51,6 +51,8 @@
     "@fontsource-variable/playfair-display": "5",
     "@fontsource/bebas-neue": "5",
     "@fontsource/luckiest-guy": "5",
+    "@fontsource/permanent-marker": "5",
+    "@fontsource/titillium-web": "5",
     "dompurify": "^3.4.2",
     "pinia": "^3.0.3",
     "vue": "^3.4.0",
