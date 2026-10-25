@@ -1,0 +1,15 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='520' height='300' viewBox='0 0 520 300' fill='none' stroke-linecap='round' stroke-linejoin='round'>
+  <!-- Même tracé que offset-path dans src/styles/themes/mclaren.css -->
+  <defs>
+    <path id='t' d='M120 260L380 260C450 260 480 220 470 170C462 128 420 118 400 140C384 158 360 170 330 160L230 110C200 95 190 50 150 50C90 50 50 90 50 150L50 200C50 240 80 260 120 260Z'/>
+  </defs>
+  <use href='#t' stroke='#FF8000' stroke-opacity='.7' stroke-width='22' stroke-dasharray='7 7'/>
+  <use href='#t' stroke='#18191D' stroke-width='17'/>
+  <use href='#t' stroke='#FFFFFF' stroke-opacity='.22' stroke-width='1.2' stroke-dasharray='8 9'/>
+  <g fill='#FFFFFF' fill-opacity='.85'>
+    <rect x='300' y='252' width='4' height='4'/>
+    <rect x='304' y='256' width='4' height='4'/>
+    <rect x='300' y='260' width='4' height='4'/>
+    <rect x='304' y='264' width='4' height='4'/>
+  </g>
+</svg>

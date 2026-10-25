@@ -1,0 +1,7 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='300' viewBox='0 0 1200 300'>
+  <path fill='#0A0A0C' opacity='.85' d='M0 300V262C340 258 760 228 1200 120V300Z'/>
+  <path fill='#FF8000' opacity='.5' d='M220 252C560 240 880 205 1200 108V115C880 214 560 247 220 252Z'/>
+  <path fill='#FF8000' d='M0 270C360 266 780 236 1200 130V176C790 262 380 286 0 292Z'/>
+  <path fill='#FFA552' opacity='.6' d='M0 270C360 266 780 236 1200 130V138C790 242 370 274 0 276Z'/>
+  <path fill='#D7FF3A' opacity='.8' d='M0 296C390 292 800 270 1200 190V200C800 280 400 299 0 300Z'/>
+</svg>

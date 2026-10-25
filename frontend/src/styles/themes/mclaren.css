@@ -1,0 +1,532 @@
+/* ============================================
+   THÈME « McLAREN · LANDO NORRIS » — :root[data-app-theme="mclaren"]
+   Orange papaya et noir anthracite de la livrée, jaune fluo du casque de Lando : bandes de
+   livrée en bas de l'écran, damier en coin, grand « 4 » en double contour, feux de départ
+   qui s'allument un à un puis s'éteignent, petite voiture qui fait des tours de circuit,
+   titres italiques en majuscules condensées avec ombre papaya, logo en plaque papaya
+   cerclée de fluo. Clin d'œil sans logo ni image officiels (décors dessinés en SVG et CSS).
+   Registre : src/themes/index.js — guide : doc/THEMES.md
+   ============================================ */
+
+/* Police auto-hébergée (sous-ensemble latin, gras italique seul) : téléchargée seulement quand un texte l'utilise */
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: italic;
+  font-display: swap;
+  font-weight: 800;
+  src: url('@fontsource/barlow-condensed/files/barlow-condensed-latin-800-italic.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* --- Variables et typographie (couche base : les préférences d'accessibilité priment) --- */
+@layer base {
+  :root[data-app-theme="mclaren"] {
+    /* Échelles du thème : papaya (500/600 assombris pour le texte blanc des boutons),
+       braise (rouge orangé des dégradés), anthracite de la livrée */
+    --mc-papaya-50: #FFF3E6;
+    --mc-papaya-100: #FFE3C4;
+    --mc-papaya-200: #FFC78A;
+    --mc-papaya-300: #FFA040;
+    --mc-papaya-400: #FF8000;
+    --mc-papaya-500: #BF5500;
+    --mc-papaya-600: #A04600;
+    --mc-papaya-700: #823900;
+    --mc-papaya-800: #672E00;
+    --mc-papaya-900: #552600;
+    --mc-papaya-950: #301400;
+
+    --mc-ember-50: #FFF1EC;
+    --mc-ember-100: #FFDDD1;
+    --mc-ember-200: #FFBBA3;
+    --mc-ember-300: #FF9070;
+    --mc-ember-400: #FF5A2E;
+    --mc-ember-500: #C23A12;
+    --mc-ember-600: #A32F0E;
+    --mc-ember-700: #85270D;
+    --mc-ember-800: #6A200C;
+    --mc-ember-900: #561B0B;
+    --mc-ember-950: #300C04;
+
+    --mc-anthracite-50: #F5F5F6;
+    --mc-anthracite-100: #E6E7E9;
+    --mc-anthracite-200: #CBCDD1;
+    --mc-anthracite-300: #A6A9B0;
+    --mc-anthracite-400: #80848D;
+    --mc-anthracite-500: #646872;
+    --mc-anthracite-600: #4D5059;
+    --mc-anthracite-700: #3A3D44;
+    --mc-anthracite-800: #2A2C31;
+    --mc-anthracite-900: #1C1D21;
+    --mc-anthracite-950: #0F1012;
+
+    /* Palette Tailwind : violet de marque → papaya */
+    --color-purple-50: var(--mc-papaya-50);
+    --color-purple-100: var(--mc-papaya-100);
+    --color-purple-200: var(--mc-papaya-200);
+    --color-purple-300: var(--mc-papaya-300);
+    --color-purple-400: var(--mc-papaya-400);
+    --color-purple-500: var(--mc-papaya-500);
+    --color-purple-600: var(--mc-papaya-600);
+    --color-purple-700: var(--mc-papaya-700);
+    --color-purple-800: var(--mc-papaya-800);
+    --color-purple-900: var(--mc-papaya-900);
+    --color-purple-950: var(--mc-papaya-950);
+
+    --color-violet-50: var(--mc-papaya-50);
+    --color-violet-100: var(--mc-papaya-100);
+    --color-violet-200: var(--mc-papaya-200);
+    --color-violet-300: var(--mc-papaya-300);
+    --color-violet-400: var(--mc-papaya-400);
+    --color-violet-500: var(--mc-papaya-500);
+    --color-violet-600: var(--mc-papaya-600);
+    --color-violet-700: var(--mc-papaya-700);
+    --color-violet-800: var(--mc-papaya-800);
+    --color-violet-900: var(--mc-papaya-900);
+    --color-violet-950: var(--mc-papaya-950);
+
+    --color-fuchsia-50: var(--mc-papaya-50);
+    --color-fuchsia-100: var(--mc-papaya-100);
+    --color-fuchsia-200: var(--mc-papaya-200);
+    --color-fuchsia-300: var(--mc-papaya-300);
+    --color-fuchsia-400: var(--mc-papaya-400);
+    --color-fuchsia-500: var(--mc-papaya-500);
+    --color-fuchsia-600: var(--mc-papaya-600);
+    --color-fuchsia-700: var(--mc-papaya-700);
+    --color-fuchsia-800: var(--mc-papaya-800);
+    --color-fuchsia-900: var(--mc-papaya-900);
+    --color-fuchsia-950: var(--mc-papaya-950);
+
+    /* Rose, rose vif et indigo → braise (dégradés papaya → rouge orangé) */
+    --color-pink-50: var(--mc-ember-50);
+    --color-pink-100: var(--mc-ember-100);
+    --color-pink-200: var(--mc-ember-200);
+    --color-pink-300: var(--mc-ember-300);
+    --color-pink-400: var(--mc-ember-400);
+    --color-pink-500: var(--mc-ember-500);
+    --color-pink-600: var(--mc-ember-600);
+    --color-pink-700: var(--mc-ember-700);
+    --color-pink-800: var(--mc-ember-800);
+    --color-pink-900: var(--mc-ember-900);
+    --color-pink-950: var(--mc-ember-950);
+
+    --color-rose-50: var(--mc-ember-50);
+    --color-rose-100: var(--mc-ember-100);
+    --color-rose-200: var(--mc-ember-200);
+    --color-rose-300: var(--mc-ember-300);
+    --color-rose-400: var(--mc-ember-400);
+    --color-rose-500: var(--mc-ember-500);
+    --color-rose-600: var(--mc-ember-600);
+    --color-rose-700: var(--mc-ember-700);
+    --color-rose-800: var(--mc-ember-800);
+    --color-rose-900: var(--mc-ember-900);
+    --color-rose-950: var(--mc-ember-950);
+
+    --color-indigo-50: var(--mc-ember-50);
+    --color-indigo-100: var(--mc-ember-100);
+    --color-indigo-200: var(--mc-ember-200);
+    --color-indigo-300: var(--mc-ember-300);
+    --color-indigo-400: var(--mc-ember-400);
+    --color-indigo-500: var(--mc-ember-500);
+    --color-indigo-600: var(--mc-ember-600);
+    --color-indigo-700: var(--mc-ember-700);
+    --color-indigo-800: var(--mc-ember-800);
+    --color-indigo-900: var(--mc-ember-900);
+    --color-indigo-950: var(--mc-ember-950);
+
+    /* Gris → anthracite de la livrée */
+    --color-slate-50: var(--mc-anthracite-50);
+    --color-slate-100: var(--mc-anthracite-100);
+    --color-slate-200: var(--mc-anthracite-200);
+    --color-slate-300: var(--mc-anthracite-300);
+    --color-slate-400: var(--mc-anthracite-400);
+    --color-slate-500: var(--mc-anthracite-500);
+    --color-slate-600: var(--mc-anthracite-600);
+    --color-slate-700: var(--mc-anthracite-700);
+    --color-slate-800: var(--mc-anthracite-800);
+    --color-slate-900: var(--mc-anthracite-900);
+    --color-slate-950: var(--mc-anthracite-950);
+
+    --color-gray-50: var(--mc-anthracite-50);
+    --color-gray-100: var(--mc-anthracite-100);
+    --color-gray-200: var(--mc-anthracite-200);
+    --color-gray-300: var(--mc-anthracite-300);
+    --color-gray-400: var(--mc-anthracite-400);
+    --color-gray-500: var(--mc-anthracite-500);
+    --color-gray-600: var(--mc-anthracite-600);
+    --color-gray-700: var(--mc-anthracite-700);
+    --color-gray-800: var(--mc-anthracite-800);
+    --color-gray-900: var(--mc-anthracite-900);
+    --color-gray-950: var(--mc-anthracite-950);
+
+    /* Cartes : verre anthracite, liseré et halo papaya au survol */
+    --lg-glass-light: rgba(255, 255, 255, 0.05);
+    --lg-glass-medium: rgba(255, 255, 255, 0.07);
+    --lg-glass-heavy: rgba(255, 255, 255, 0.09);
+    --lg-glass-border: rgba(255, 255, 255, 0.1);
+    --lg-glass-border-hover: rgba(255, 128, 0, 0.6);
+    --lg-glass-shadow: rgba(0, 0, 0, 0.5);
+    --lg-glass-blur: 18px;
+    --lg-glass-elevation: 0 10px 28px rgba(0, 0, 0, 0.4);
+    --lg-glass-shadow-hover: 0 16px 36px rgba(0, 0, 0, 0.5), 0 0 28px rgba(255, 128, 0, 0.18);
+
+    /* Formes : sportives mais pas tranchantes */
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.75rem;
+    --radius-2xl: 1rem;
+    --radius-3xl: 1.25rem;
+    --radius-4xl: 1.5rem;
+    --td-radius-scale: 0.8;
+
+    /* Typographie : titres italiques condensés, comme sur un paddock */
+    --td-font-display: 'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', Impact, sans-serif;
+
+    /* Fonds, surfaces et accents des composants */
+    --td-page-bg: #111215;
+    --td-page-gradient: linear-gradient(160deg, #1A1B1F, #121316 50%, #0B0B0D);
+    --td-surface-base: #17181C;
+    --td-surface-solid: #1C1D21;
+    --td-surface-raised: rgba(23, 24, 28, 0.96);
+    --td-surface-overlay: rgba(28, 29, 33, 0.97);
+    --td-surface-option: #1C1D21;
+    --td-backdrop: rgba(0, 0, 0, 0.75);
+    --td-backdrop-glow: rgba(255, 128, 0, 0.3);
+    --td-backdrop-deep: rgba(0, 0, 0, 0.92);
+    --td-skeleton-bg: linear-gradient(135deg, #2A2C31, #1C1D21);
+    --td-accent: #BF5500;
+    --td-accent-hover: #A04600;
+    --td-accent-gradient: linear-gradient(to right, #BF5500, #C23A12);
+    --td-accent-gradient-hover: linear-gradient(to right, #A04600, #A32F0E);
+    --td-accent-gradient-soft: linear-gradient(135deg, rgba(255, 128, 0, 0.75), rgba(194, 58, 18, 0.75));
+    --td-accent-gradient-faint: linear-gradient(135deg, rgba(255, 128, 0, 0.16), rgba(215, 255, 58, 0.08));
+    --td-accent-gradient-faint-hover: linear-gradient(135deg, rgba(255, 128, 0, 0.26), rgba(215, 255, 58, 0.14));
+    --td-accent-text-gradient: linear-gradient(120deg, #FFB366, #FF8000 45%, #D7FF3A);
+    --td-accent-glow: rgba(255, 128, 0, 0.45);
+    --td-accent-glow-strong: rgba(255, 128, 0, 0.6);
+    --td-accent-muted: rgba(255, 128, 0, 0.55);
+    --td-focus-ring: #D7FF3A;
+    --td-focus-border: rgba(215, 255, 58, 0.9);
+    --td-focus-halo: rgba(215, 255, 58, 0.35);
+
+    /* Cases à cocher, boutons radio et curseurs natifs */
+    accent-color: #FF8000;
+  }
+
+  /* Titres : majuscules italiques condensées (une seule graisse : pas de faux gras) */
+  :root[data-app-theme="mclaren"] :is(h1, h2) {
+    font-family: var(--td-font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-synthesis: none;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  :root[data-app-theme="mclaren"] h1 {
+    line-height: 1;
+  }
+
+  /* Titres blancs : ombre papaya décalée, façon autocollant de course */
+  :root[data-app-theme="mclaren"] h1[class~="text-white"] {
+    text-shadow: 0.05em 0.05em 0 rgba(255, 128, 0, 0.85);
+  }
+
+  :root[data-app-theme="mclaren"] h2[class~="text-white"] {
+    text-shadow: 0.04em 0.04em 0 rgba(255, 128, 0, 0.55);
+  }
+
+  :root[data-app-theme="mclaren"] ::selection {
+    background: rgba(255, 128, 0, 0.4);
+    color: #FFFFFF;
+  }
+}
+
+/* --- Habillage (hors couche : prime sur les utilitaires Tailwind et les styles des composants) --- */
+
+/* Fond : anthracite, lueur papaya en bas à gauche et fluo en haut à droite */
+:root[data-app-theme="mclaren"] .app-background {
+  background-color: #111215;
+  background-image:
+    radial-gradient(70% 55% at 0% 100%, rgba(255, 128, 0, 0.2), transparent 70%),
+    radial-gradient(55% 45% at 100% 0%, rgba(215, 255, 58, 0.06), transparent 70%),
+    linear-gradient(160deg, #1A1B1F 0%, #121316 50%, #0B0B0D 100%);
+}
+
+:root[data-app-theme="mclaren"] .app-background::before,
+:root[data-app-theme="mclaren"] .app-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Damier qui s'efface depuis le coin, sous les feux de départ */
+:root[data-app-theme="mclaren"] .app-background::before {
+  background: repeating-conic-gradient(#FFFFFF 0 25%, transparent 0 50%) 0 0 / 36px 36px;
+  -webkit-mask-image: radial-gradient(circle at 0 0, #000 0, transparent 22rem);
+  mask-image: radial-gradient(circle at 0 0, #000 0, transparent 22rem);
+  opacity: 0.06;
+}
+
+/* Bandes de livrée papaya et fluo qui montent vers la droite. Atténuées : le texte défile
+   par-dessus et le blanc doit y rester lisible (papaya à 55 % : contraste 6,5:1) */
+:root[data-app-theme="mclaren"] .app-background::after {
+  background: url('/src/assets/themes/mclaren-swoosh.svg') right bottom / max(100%, 60rem) auto no-repeat;
+  opacity: 0.55;
+}
+
+:root[data-app-theme="mclaren"] .app-background__blob {
+  border-radius: 0;
+  filter: none;
+  mix-blend-mode: normal;
+  animation: none;
+  opacity: 1;
+}
+
+/* Premier disque : le grand « 4 » de Lando, double contour fluo et papaya */
+:root[data-app-theme="mclaren"] .app-background__blob--1 {
+  top: 5.5rem;
+  right: 3vw;
+  bottom: auto;
+  left: auto;
+  width: auto;
+  height: auto;
+  background: none;
+  font-family: var(--td-font-display);
+  font-size: min(52vh, 34rem);
+  font-style: italic;
+  font-weight: 800;
+  line-height: 0.8;
+  color: transparent;
+}
+
+:root[data-app-theme="mclaren"] .app-background__blob--1::before,
+:root[data-app-theme="mclaren"] .app-background__blob--1::after {
+  content: '4';
+  display: block;
+}
+
+:root[data-app-theme="mclaren"] .app-background__blob--1::before {
+  -webkit-text-stroke: 3px rgba(215, 255, 58, 0.5);
+  text-shadow: 0 0 40px rgba(215, 255, 58, 0.1);
+}
+
+:root[data-app-theme="mclaren"] .app-background__blob--1::after {
+  position: absolute;
+  top: 0;
+  left: 0;
+  translate: -0.05em 0.035em;
+  -webkit-text-stroke: 2px rgba(255, 128, 0, 0.45);
+}
+
+/* Deuxième disque : feux de départ (cinq feux rouges, éteints par défaut) */
+:root[data-app-theme="mclaren"] .app-background__blob--2 {
+  --mc-light-1: #3A1416;
+  --mc-light-2: #3A1416;
+  --mc-light-3: #3A1416;
+  --mc-light-4: #3A1416;
+  --mc-light-5: #3A1416;
+  top: 6.5rem;
+  right: auto;
+  bottom: auto;
+  left: 2rem;
+  width: 10.5rem;
+  height: 2.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  background:
+    radial-gradient(circle at 12% 50%, var(--mc-light-1) 0 0.55rem, transparent 0.6rem),
+    radial-gradient(circle at 31% 50%, var(--mc-light-2) 0 0.55rem, transparent 0.6rem),
+    radial-gradient(circle at 50% 50%, var(--mc-light-3) 0 0.55rem, transparent 0.6rem),
+    radial-gradient(circle at 69% 50%, var(--mc-light-4) 0 0.55rem, transparent 0.6rem),
+    radial-gradient(circle at 88% 50%, var(--mc-light-5) 0 0.55rem, transparent 0.6rem),
+    linear-gradient(180deg, #1C1D21, #0B0B0D);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  opacity: 0.9;
+}
+
+/* Troisième disque : mini-circuit, et sa voiture qui suit le même tracé (offset-path) */
+:root[data-app-theme="mclaren"] .app-background__blob--3 {
+  top: auto;
+  right: auto;
+  bottom: 7rem;
+  left: 2vw;
+  width: 520px;
+  height: 300px;
+  background: url('/src/assets/themes/mclaren-circuit.svg') 0 0 / 520px 300px no-repeat;
+  opacity: 0.85;
+  transform-origin: 0 100%;
+  scale: 0.65;
+}
+
+:root[data-app-theme="mclaren"] .app-background__blob--3::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 34px;
+  height: 15px;
+  background: url('/src/assets/themes/mclaren-car.svg') center / contain no-repeat;
+  offset-path: path('M120 260L380 260C450 260 480 220 470 170C462 128 420 118 400 140C384 158 360 170 330 160L230 110C200 95 190 50 150 50C90 50 50 90 50 150L50 200C50 240 80 260 120 260Z');
+  offset-rotate: auto;
+  offset-distance: 12%;
+}
+
+/* Petit écran : le texte occupe toute la largeur ; ni feux ni circuit, « 4 » plus discret */
+@media (max-width: 640px) {
+  :root[data-app-theme="mclaren"] .app-background__blob--1 {
+    top: 4rem;
+    right: -1.5rem;
+    font-size: 26vh;
+    opacity: 0.4;
+  }
+
+  :root[data-app-theme="mclaren"] :is(.app-background__blob--2, .app-background__blob--3) {
+    display: none;
+  }
+}
+
+/* Grand écran : le circuit grandit dans la marge laissée par le contenu */
+@media (min-width: 1280px) {
+  :root[data-app-theme="mclaren"] .app-background__blob--3 {
+    scale: 0.8;
+  }
+}
+
+/* Feux : ils s'allument un à un, puis s'éteignent tous d'un coup (« c'est parti ! ») ;
+   steps(1, end) garde chaque étape jusqu'à la suivante */
+@keyframes td-mclaren-lights {
+  0%, 52%, 100% { --mc-light-1: #3A1416; --mc-light-2: #3A1416; --mc-light-3: #3A1416; --mc-light-4: #3A1416; --mc-light-5: #3A1416; }
+  8% { --mc-light-1: #FF3030; --mc-light-2: #3A1416; --mc-light-3: #3A1416; --mc-light-4: #3A1416; --mc-light-5: #3A1416; }
+  16% { --mc-light-1: #FF3030; --mc-light-2: #FF3030; --mc-light-3: #3A1416; --mc-light-4: #3A1416; --mc-light-5: #3A1416; }
+  24% { --mc-light-1: #FF3030; --mc-light-2: #FF3030; --mc-light-3: #FF3030; --mc-light-4: #3A1416; --mc-light-5: #3A1416; }
+  32% { --mc-light-1: #FF3030; --mc-light-2: #FF3030; --mc-light-3: #FF3030; --mc-light-4: #FF3030; --mc-light-5: #3A1416; }
+  40% { --mc-light-1: #FF3030; --mc-light-2: #FF3030; --mc-light-3: #FF3030; --mc-light-4: #FF3030; --mc-light-5: #FF3030; }
+}
+
+@keyframes td-mclaren-lap {
+  from { offset-distance: 0%; }
+  to { offset-distance: 100%; }
+}
+
+/* Sur grand écran seulement, et si les animations sont permises */
+@media (min-width: 641px) and (prefers-reduced-motion: no-preference) {
+  :root[data-app-theme="mclaren"] .app-background__blob--2 {
+    animation: td-mclaren-lights 10s steps(1, end) infinite;
+  }
+
+  :root[data-app-theme="mclaren"] .app-background__blob--3::before {
+    animation: td-mclaren-lap 9s linear infinite;
+  }
+}
+
+/* En-têtes : anthracite, double filet papaya et fluo */
+:root[data-app-theme="mclaren"] .td-page-header {
+  background: rgba(14, 15, 18, 0.82);
+  border-bottom: 3px solid #FF8000;
+  box-shadow: 0 2px 0 #D7FF3A;
+}
+
+/* Logo : plaque papaya inclinée, cerclée de fluo ; elle se redresse au survol */
+:root[data-app-theme="mclaren"] .td-brand-mark {
+  background: linear-gradient(135deg, #FF9A33, #FF8000 55%, #E06F00);
+  border-radius: 30%;
+  box-shadow: 0 0 0 2px #121316, 0 0 0 4px #D7FF3A, 0 8px 20px rgba(255, 128, 0, 0.35);
+  rotate: -6deg;
+  transition: rotate 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:root[data-app-theme="mclaren"] .td-brand-mark:hover {
+  rotate: 0deg;
+}
+
+/* Contenu (et infobulle) redressés */
+:root[data-app-theme="mclaren"] .td-brand-mark > * {
+  rotate: 6deg;
+}
+
+:root[data-app-theme="mclaren"] .td-brand-mark:hover > * {
+  rotate: 0deg;
+}
+
+:root[data-app-theme="mclaren"] .td-brand-mark > :is(span, svg) {
+  color: #121316;
+}
+
+:root[data-app-theme="mclaren"] .td-brand-mark > span {
+  font-family: var(--td-font-display);
+  font-size: 1.35em;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* Nom de l'application : majuscules italiques, ombre papaya décalée */
+:root[data-app-theme="mclaren"] .td-brand-name {
+  font-family: var(--td-font-display);
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow: 0.06em 0.06em 0 #FF8000;
+}
+
+/* Cartes : reflet papaya dans le coin ; les cartes cliquables bondissent */
+:root[data-app-theme="mclaren"] :is(.glass-card-dashboard, .glass-card-stat, .glass-stat-card, .glass-card-user, .glass-card-challenge) {
+  background-image: linear-gradient(135deg, rgba(255, 128, 0, 0.16) 0%, transparent 32%);
+}
+
+:root[data-app-theme="mclaren"] :is(button, a):is(.glass-card-dashboard, .glass-card-user, .glass-card-challenge) {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+:root[data-app-theme="mclaren"] :is(button, a):is(.glass-card-dashboard, .glass-card-user, .glass-card-challenge):hover {
+  transform: translateY(-4px);
+}
+
+/* Boutons d'action : halo papaya, petit enfoncement au clic (anneaux de focus Tailwind conservés) */
+:root[data-app-theme="mclaren"] button[class*="bg-gradient-to-"]:not(:disabled) {
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 8px 22px -8px rgba(255, 128, 0, 0.7);
+  transition: scale 0.12s ease, translate 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+:root[data-app-theme="mclaren"] button[class*="bg-gradient-to-"]:not(:disabled):hover {
+  filter: brightness(1.1);
+  translate: 0 -1px;
+}
+
+:root[data-app-theme="mclaren"] button[class*="bg-gradient-to-"]:not(:disabled):active {
+  scale: 0.97;
+}
+
+/* Libellés des boutons d'action dans la police des titres (sauf en lecture facile) */
+:root[data-app-theme="mclaren"]:not(.td-easy-read) button[class*="bg-gradient-to-"][class*="px-"] {
+  font-family: var(--td-font-display);
+  font-style: italic;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* « Qui est-ce ? » : cadres papaya ; au survol, liseré fluo et petit coup de volant */
+:root[data-app-theme="mclaren"] .profile-image-glass {
+  border-radius: 1.25rem;
+  border: 3px solid #FF8000;
+  box-shadow: 0 0 0 3px #121316, 0 10px 24px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+:root[data-app-theme="mclaren"] .profile-card-glass:is(:hover, :focus-visible) .profile-image-glass {
+  border-color: #D7FF3A;
+  box-shadow: 0 0 0 3px #121316, 0 0 26px rgba(215, 255, 58, 0.35), 0 14px 30px rgba(0, 0, 0, 0.55);
+  transform: scale(1.07) rotate(-3deg);
+}
+
+:root[data-app-theme="mclaren"] .profile-name-glass {
+  font-family: var(--td-font-display);
+  font-size: 1.25rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

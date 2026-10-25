@@ -201,6 +201,28 @@ export const APP_THEMES = Object.freeze([
       titleFont: '\'Bricolage Grotesque Variable\', \'Bricolage Grotesque\', system-ui, sans-serif',
       titleWeight: 800
     }
+  },
+  {
+    id: 'mclaren',
+    name: 'McLaren · Lando Norris',
+    emoji: '🧡',
+    tagline: 'Papaya power !',
+    description: 'Orange papaya, jaune fluo de Lando, feux de départ et petite voiture qui fait des tours de circuit.',
+    themeColor: '#111215',
+    tones: null,
+    preview: {
+      background: 'linear-gradient(160deg, transparent 62%, #FF8000 62% 70%, #D7FF3A 70% 73%, transparent 73%), radial-gradient(70% 60% at 0% 100%, rgba(255, 128, 0, 0.35), transparent 70%), #121316',
+      surface: 'rgba(255, 255, 255, 0.07)',
+      border: 'rgba(255, 128, 0, 0.7)',
+      accent: 'linear-gradient(90deg, #FF8000, #D7FF3A)',
+      text: '#FFFFFF',
+      radius: '0.5rem',
+      font: '\'Inter\', system-ui, sans-serif',
+      titleFont: '\'Barlow Condensed\', \'Arial Narrow\', sans-serif',
+      titleWeight: 800,
+      titleStyle: 'italic',
+      titleTransform: 'uppercase'
+    }
   }
 ])
 
