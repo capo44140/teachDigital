@@ -71,7 +71,7 @@ describe('Jeux - GET /games', () => {
     expect(res.statusCode).toBe(200);
     const { games, conditionTypes, profileId } = res.body.data;
     expect(profileId).toBe(7);
-    expect(games.map(g => g.key)).toEqual(['pacman', 'tetris']);
+    expect(games.map(g => g.key)).toEqual(['pacman', 'tetris', 'mario']);
     expect(games.every(g => g.access.unlocked === false && g.access.reason === 'disabled')).toBe(true);
     expect(conditionTypes.map(c => c.type)).toContain('quizzes_today');
     // Statistiques bornées au jour et à la semaine en cours

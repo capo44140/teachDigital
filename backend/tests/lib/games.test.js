@@ -19,8 +19,9 @@ const NO_ACTIVITY = { quizzesToday: 0, quizzesThisWeek: 0, averageScoreThisWeek:
 const openRule = (overrides = {}) => ({ ...DEFAULT_RULE, isEnabled: true, ...overrides });
 
 describe('catalogue', () => {
-  test('Pac-Man et Tetris', () => {
-    expect(GAME_KEYS).toEqual(['pacman', 'tetris']);
+  test('Pac-Man, Tetris et Mario Bros', () => {
+    expect(GAME_KEYS).toEqual(['pacman', 'tetris', 'mario']);
+    expect(findGame('mario').title).toBe('Mario Bros');
     expect(findGame('tetris').title).toBe('Tetris');
     expect(findGame('inconnu')).toBeNull();
   });

@@ -5,8 +5,10 @@ import { onMounted, onBeforeUnmount } from 'vue'
  * @param {(dt: number) => void} onFrame - appelé à chaque image ; dt en secondes (borné à 0,25 s)
  * @param {(event: KeyboardEvent) => boolean} [onKey] - renvoie true si la touche a servi
  *   (le défilement de la page ou l'activation d'un bouton est alors empêché)
+ * @param {(event: KeyboardEvent) => boolean} [onKeyUp] - touche relâchée (jeux à touches
+ *   maintenues) ; même convention de retour
  */
-export function useGameLoop (onFrame, onKey) {
+export function useGameLoop (onFrame, onKey, onKeyUp) {
   let frame = null
   let last = null
 
@@ -24,16 +26,23 @@ export function useGameLoop (onFrame, onKey) {
     if (onKey && onKey(event)) event.preventDefault()
   }
 
+  // Une touche relâchée l'est toujours, même avec un modificateur ou dans un champ
+  const handleKeyUp = (event) => {
+    if (onKeyUp && onKeyUp(event)) event.preventDefault()
+  }
+
   onMounted(() => {
     if (typeof window.requestAnimationFrame === 'function') {
       frame = window.requestAnimationFrame(loop)
     }
     window.addEventListener('keydown', handleKey)
+    window.addEventListener('keyup', handleKeyUp)
   })
 
   onBeforeUnmount(() => {
     if (frame !== null) window.cancelAnimationFrame(frame)
     window.removeEventListener('keydown', handleKey)
+    window.removeEventListener('keyup', handleKeyUp)
   })
 }
 

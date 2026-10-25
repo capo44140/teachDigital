@@ -18,6 +18,11 @@ const GAMES = Object.freeze([
         key: 'tetris',
         title: 'Tetris',
         description: 'Empile les pièces qui tombent et complète des lignes pour les faire disparaître.'
+    }),
+    Object.freeze({
+        key: 'mario',
+        title: 'Mario Bros',
+        description: 'Cours, saute sur les ennemis et attrape le drapeau au bout de chaque niveau, comme sur Game Boy.'
     })
 ]);
 

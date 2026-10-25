@@ -92,7 +92,7 @@ import { describeError } from '../utils/apiErrors.js'
 
 const TIME_UP_MESSAGE = 'Tu as utilisé tout ton temps de jeu pour aujourd\'hui. Reviens demain !'
 const INTERRUPTED_MESSAGE = 'Cette partie a été interrompue. Reviens à tes jeux pour en commencer une autre.'
-const TITLES = { pacman: 'Pac-Man', tetris: 'Tetris' }
+const TITLES = { pacman: 'Pac-Man', tetris: 'Tetris', mario: 'Mario Bros' }
 
 export default {
   name: 'GamePlayer',

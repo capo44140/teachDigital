@@ -14,6 +14,11 @@ export const GAME_DISPLAY = {
     icon: '🧱',
     gradient: 'from-cyan-400 to-violet-500',
     component: defineAsyncComponent(() => import('../components/games/TetrisGame.vue'))
+  },
+  mario: {
+    icon: '🍄',
+    gradient: 'from-lime-400 to-green-700',
+    component: defineAsyncComponent(() => import('../components/games/MarioGame.vue'))
   }
 }
 

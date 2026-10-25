@@ -137,7 +137,7 @@
       <div class="mb-16">
         <h2 class="text-3xl font-bold text-white mb-8 text-center">Mes jeux <span aria-hidden="true">🎮</span></h2>
         <div class="text-center mb-8">
-          <p class="text-white/70 mb-6 text-lg">Pac-Man, Tetris… regarde quels jeux tu as débloqués !</p>
+          <p class="text-white/70 mb-6 text-lg">Pac-Man, Tetris, Mario… regarde quels jeux tu as débloqués !</p>
           <button
             type="button"
             class="glass-button-action group"

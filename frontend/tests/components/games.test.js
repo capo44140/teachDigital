@@ -1,6 +1,6 @@
 /**
- * Composants de jeu (Tetris, Pac-Man) : écrans de début / pause / fin, commandes clavier,
- * tactiles et glissements, événements envoyés à l'écran de partie (score, running).
+ * Composants de jeu (Tetris, Pac-Man, Mario) : écrans de début / pause / fin, commandes
+ * clavier, tactiles et glissements, événements envoyés à l'écran de partie (score, running).
  * Le dessin passe par un faux contexte 2D ; les images sont avancées à la main.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
@@ -8,6 +8,7 @@ import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import TetrisGame from '../../src/components/games/TetrisGame.vue'
 import PacmanGame from '../../src/components/games/PacmanGame.vue'
+import MarioGame from '../../src/components/games/MarioGame.vue'
 
 // Contexte 2D factice : toute méthode est une fonction neutre, toute propriété est assignable
 const noop = () => {}
@@ -205,6 +206,86 @@ describe('PacmanGame', () => {
     await nextTick()
     expect(wrapper.emitted('running').at(-1)).toEqual([false])
     await buttonByText(wrapper.find('.pacman-hud'), 'Reprendre').trigger('click')
+    expect(wrapper.emitted('running').at(-1)).toEqual([true])
+  })
+})
+
+describe('MarioGame', () => {
+  it('écran de départ, bandeau du monde, puis le chrono tourne', async () => {
+    const wrapper = mountGame(MarioGame, { bestScore: 900 })
+    expect(wrapper.text()).toContain('Mario Bros')
+    expect(wrapper.text()).toContain('900')
+    expect(wrapper.text()).toMatch(/Temps\s*300/)
+
+    await buttonByText(wrapper, 'Jouer').trigger('click')
+    await frames(3)
+    expect(wrapper.emitted('running')).toEqual([[true]])
+    expect(wrapper.find('.game-overlay').exists()).toBe(false)
+    // 1,8 s de bandeau « MONDE 1-1 », puis le chrono démarre
+    expect(wrapper.text()).toMatch(/Temps\s*299/)
+  })
+
+  it('clavier : touches retenues pendant la partie seulement ; P met en pause puis reprend', async () => {
+    const wrapper = mountGame(MarioGame)
+    const early = new KeyboardEvent('keydown', { code: 'ArrowRight', cancelable: true })
+    window.dispatchEvent(early)
+    expect(early.defaultPrevented).toBe(false)
+
+    await buttonByText(wrapper, 'Jouer').trigger('click')
+    const jump = new KeyboardEvent('keydown', { code: 'Space', cancelable: true })
+    window.dispatchEvent(jump)
+    expect(jump.defaultPrevented).toBe(true)
+    const release = new KeyboardEvent('keyup', { code: 'Space', cancelable: true })
+    window.dispatchEvent(release)
+    expect(release.defaultPrevented).toBe(true)
+
+    key('KeyP')
+    await nextTick()
+    expect(wrapper.emitted('running').at(-1)).toEqual([false])
+    expect(wrapper.find('.game-overlay').text()).toContain('Pause')
+    key('KeyP')
+    await nextTick()
+    expect(wrapper.emitted('running').at(-1)).toEqual([true])
+  })
+
+  it('bouton « Droite » maintenu : le héros fonce dans un ennemi et perd une vie', async () => {
+    const wrapper = mountGame(MarioGame)
+    await buttonByText(wrapper, 'Jouer').trigger('click')
+    await wrapper.find('[aria-label="Droite"]').trigger('pointerdown')
+    await frames(8.5)
+    expect(wrapper.text()).toMatch(/Vies\s*2/)
+  })
+
+  it('fenêtre quittée touche enfoncée : la touche est relâchée', async () => {
+    const wrapper = mountGame(MarioGame)
+    await buttonByText(wrapper, 'Jouer').trigger('click')
+    key('ArrowRight')
+    window.dispatchEvent(new Event('blur'))
+    await frames(8.5)
+    expect(wrapper.text()).toMatch(/Vies\s*3/)
+  })
+
+  it('trois vies perdues : partie terminée, « Rejouer » recommence', async () => {
+    const wrapper = mountGame(MarioGame)
+    await buttonByText(wrapper, 'Jouer').trigger('click')
+    key('ArrowRight')
+    await frames(25)
+    expect(wrapper.emitted('game-over')).toHaveLength(1)
+    expect(wrapper.text()).toContain('Partie terminée')
+
+    await buttonByText(wrapper, 'Rejouer').trigger('click')
+    expect(wrapper.find('.game-overlay').exists()).toBe(false)
+    expect(wrapper.text()).toMatch(/Vies\s*3/)
+    expect(wrapper.text()).toMatch(/Monde\s*1-1/)
+  }, 20000)
+
+  it('pause imposée (onglet masqué) : l\'enfant reprend lui-même', async () => {
+    const wrapper = mountGame(MarioGame)
+    await buttonByText(wrapper, 'Jouer').trigger('click')
+    await wrapper.setProps({ paused: true })
+    await wrapper.setProps({ paused: false })
+    expect(wrapper.emitted('running').at(-1)).toEqual([false])
+    await buttonByText(wrapper.find('.game-overlay'), 'Reprendre').trigger('click')
     expect(wrapper.emitted('running').at(-1)).toEqual([true])
   })
 })
