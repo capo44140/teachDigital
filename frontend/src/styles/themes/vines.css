@@ -1,0 +1,464 @@
+/* ============================================
+   THÈME « SYMPHONIE DES VIGNES » — :root[data-app-theme="vines"]
+   Ambiance de film d'époque, inspirée de l'expérience web « The Symphony of Vines »
+   (Unseen Studio) sans en reprendre les images ni les polices commerciales : noir sépia,
+   lumière dorée qui filtre en rayons, poussière en suspension, grain de pellicule et vignettage,
+   strates du terroir, grandes capitales à empattements, cercles cuivrés dessinés à la main,
+   cartes à double filet et texte crème.
+   Registre : src/themes/index.js — guide : doc/THEMES.md
+   ============================================ */
+
+/* Police auto-hébergée (sous-ensemble latin) : téléchargée seulement quand un texte l'utilise */
+@font-face {
+  font-family: 'Bellefair';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/bellefair/files/bellefair-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* --- Variables et typographie (couche base : les préférences d'accessibilité priment) --- */
+@layer base {
+  :root[data-app-theme="vines"] {
+    /* Échelles du thème : cuivre, lie-de-vin, sépia */
+    --vn-copper-50: #FAF4EE;
+    --vn-copper-100: #F2E4D5;
+    --vn-copper-200: #E4C9AC;
+    --vn-copper-300: #D4AB83;
+    --vn-copper-400: #C08D60;
+    --vn-copper-500: #8F6340;
+    --vn-copper-600: #774F31;
+    --vn-copper-700: #5F3F27;
+    --vn-copper-800: #4B3220;
+    --vn-copper-900: #3B2819;
+    --vn-copper-950: #21160D;
+
+    --vn-wine-50: #FBF2F1;
+    --vn-wine-100: #F4DEDB;
+    --vn-wine-200: #E7BCB6;
+    --vn-wine-300: #D4928A;
+    --vn-wine-400: #B96A62;
+    --vn-wine-500: #7E3A36;
+    --vn-wine-600: #692F2C;
+    --vn-wine-700: #552624;
+    --vn-wine-800: #441F1D;
+    --vn-wine-900: #371917;
+    --vn-wine-950: #1F0D0C;
+
+    --vn-sepia-50: #F6F3EF;
+    --vn-sepia-100: #EAE4DC;
+    --vn-sepia-200: #D3CABE;
+    --vn-sepia-300: #B7AC9C;
+    --vn-sepia-400: #978B7A;
+    --vn-sepia-500: #786D5E;
+    --vn-sepia-600: #5E554A;
+    --vn-sepia-700: #48413A;
+    --vn-sepia-800: #332E28;
+    --vn-sepia-900: #1F1B16;
+    --vn-sepia-950: #100E0A;
+
+    /* Blanc → crème de pellicule (textes, voiles et bordures en white/…) */
+    --color-white: #F3F1ED;
+
+    /* Palette Tailwind : violet de marque → cuivre */
+    --color-purple-50: var(--vn-copper-50);
+    --color-purple-100: var(--vn-copper-100);
+    --color-purple-200: var(--vn-copper-200);
+    --color-purple-300: var(--vn-copper-300);
+    --color-purple-400: var(--vn-copper-400);
+    --color-purple-500: var(--vn-copper-500);
+    --color-purple-600: var(--vn-copper-600);
+    --color-purple-700: var(--vn-copper-700);
+    --color-purple-800: var(--vn-copper-800);
+    --color-purple-900: var(--vn-copper-900);
+    --color-purple-950: var(--vn-copper-950);
+
+    --color-violet-50: var(--vn-copper-50);
+    --color-violet-100: var(--vn-copper-100);
+    --color-violet-200: var(--vn-copper-200);
+    --color-violet-300: var(--vn-copper-300);
+    --color-violet-400: var(--vn-copper-400);
+    --color-violet-500: var(--vn-copper-500);
+    --color-violet-600: var(--vn-copper-600);
+    --color-violet-700: var(--vn-copper-700);
+    --color-violet-800: var(--vn-copper-800);
+    --color-violet-900: var(--vn-copper-900);
+    --color-violet-950: var(--vn-copper-950);
+
+    --color-fuchsia-50: var(--vn-copper-50);
+    --color-fuchsia-100: var(--vn-copper-100);
+    --color-fuchsia-200: var(--vn-copper-200);
+    --color-fuchsia-300: var(--vn-copper-300);
+    --color-fuchsia-400: var(--vn-copper-400);
+    --color-fuchsia-500: var(--vn-copper-500);
+    --color-fuchsia-600: var(--vn-copper-600);
+    --color-fuchsia-700: var(--vn-copper-700);
+    --color-fuchsia-800: var(--vn-copper-800);
+    --color-fuchsia-900: var(--vn-copper-900);
+    --color-fuchsia-950: var(--vn-copper-950);
+
+    /* Rose, rose vif et indigo → lie-de-vin (dégradés cuivre → vin) */
+    --color-pink-50: var(--vn-wine-50);
+    --color-pink-100: var(--vn-wine-100);
+    --color-pink-200: var(--vn-wine-200);
+    --color-pink-300: var(--vn-wine-300);
+    --color-pink-400: var(--vn-wine-400);
+    --color-pink-500: var(--vn-wine-500);
+    --color-pink-600: var(--vn-wine-600);
+    --color-pink-700: var(--vn-wine-700);
+    --color-pink-800: var(--vn-wine-800);
+    --color-pink-900: var(--vn-wine-900);
+    --color-pink-950: var(--vn-wine-950);
+
+    --color-rose-50: var(--vn-wine-50);
+    --color-rose-100: var(--vn-wine-100);
+    --color-rose-200: var(--vn-wine-200);
+    --color-rose-300: var(--vn-wine-300);
+    --color-rose-400: var(--vn-wine-400);
+    --color-rose-500: var(--vn-wine-500);
+    --color-rose-600: var(--vn-wine-600);
+    --color-rose-700: var(--vn-wine-700);
+    --color-rose-800: var(--vn-wine-800);
+    --color-rose-900: var(--vn-wine-900);
+    --color-rose-950: var(--vn-wine-950);
+
+    --color-indigo-50: var(--vn-wine-50);
+    --color-indigo-100: var(--vn-wine-100);
+    --color-indigo-200: var(--vn-wine-200);
+    --color-indigo-300: var(--vn-wine-300);
+    --color-indigo-400: var(--vn-wine-400);
+    --color-indigo-500: var(--vn-wine-500);
+    --color-indigo-600: var(--vn-wine-600);
+    --color-indigo-700: var(--vn-wine-700);
+    --color-indigo-800: var(--vn-wine-800);
+    --color-indigo-900: var(--vn-wine-900);
+    --color-indigo-950: var(--vn-wine-950);
+
+    /* Gris → sépia */
+    --color-slate-50: var(--vn-sepia-50);
+    --color-slate-100: var(--vn-sepia-100);
+    --color-slate-200: var(--vn-sepia-200);
+    --color-slate-300: var(--vn-sepia-300);
+    --color-slate-400: var(--vn-sepia-400);
+    --color-slate-500: var(--vn-sepia-500);
+    --color-slate-600: var(--vn-sepia-600);
+    --color-slate-700: var(--vn-sepia-700);
+    --color-slate-800: var(--vn-sepia-800);
+    --color-slate-900: var(--vn-sepia-900);
+    --color-slate-950: var(--vn-sepia-950);
+
+    --color-gray-50: var(--vn-sepia-50);
+    --color-gray-100: var(--vn-sepia-100);
+    --color-gray-200: var(--vn-sepia-200);
+    --color-gray-300: var(--vn-sepia-300);
+    --color-gray-400: var(--vn-sepia-400);
+    --color-gray-500: var(--vn-sepia-500);
+    --color-gray-600: var(--vn-sepia-600);
+    --color-gray-700: var(--vn-sepia-700);
+    --color-gray-800: var(--vn-sepia-800);
+    --color-gray-900: var(--vn-sepia-900);
+    --color-gray-950: var(--vn-sepia-950);
+
+    /* Cartes : voile crème à peine visible, filet intérieur cuivré (habillage plus bas) */
+    --lg-glass-light: rgba(225, 217, 209, 0.045);
+    --lg-glass-medium: rgba(225, 217, 209, 0.06);
+    --lg-glass-heavy: rgba(225, 217, 209, 0.08);
+    --lg-glass-border: rgba(225, 217, 209, 0.12);
+    --lg-glass-border-hover: rgba(192, 141, 96, 0.55);
+    --lg-glass-shadow: rgba(0, 0, 0, 0.55);
+    --lg-glass-blur: 14px;
+    --lg-glass-elevation: 0 12px 34px rgba(0, 0, 0, 0.45);
+    --lg-glass-shadow-hover: 0 18px 44px rgba(0, 0, 0, 0.55), 0 0 30px rgba(232, 196, 150, 0.08);
+
+    /* Formes sobres */
+    --radius-lg: 0.375rem;
+    --radius-xl: 0.5rem;
+    --radius-2xl: 0.625rem;
+    --radius-3xl: 0.875rem;
+    --radius-4xl: 1.125rem;
+    --td-radius-scale: 0.6;
+
+    /* Typographie : grandes capitales à empattements contrastés */
+    --td-font-display: 'Bellefair', 'Cormorant Garamond', Didot, 'Bodoni 72', Georgia, serif;
+
+    /* Fonds, surfaces et accents des composants */
+    --td-page-bg: #0A0901;
+    --td-page-gradient: linear-gradient(180deg, #1A1610, #0A0901 60%, #050402);
+    --td-surface-base: #14120C;
+    --td-surface-solid: #1A1711;
+    --td-surface-raised: rgba(20, 18, 12, 0.96);
+    --td-surface-overlay: rgba(26, 23, 17, 0.97);
+    --td-surface-option: #1A1711;
+    --td-backdrop: rgba(5, 4, 2, 0.78);
+    --td-backdrop-glow: rgba(192, 141, 96, 0.3);
+    --td-backdrop-deep: rgba(5, 4, 2, 0.93);
+    --td-skeleton-bg: linear-gradient(135deg, #332E28, #1A1711);
+    --td-accent: #8F6340;
+    --td-accent-hover: #774F31;
+    --td-accent-gradient: linear-gradient(to right, #8F6340, #7E3A36);
+    --td-accent-gradient-hover: linear-gradient(to right, #774F31, #692F2C);
+    --td-accent-gradient-soft: linear-gradient(135deg, rgba(192, 141, 96, 0.75), rgba(126, 58, 54, 0.75));
+    --td-accent-gradient-faint: linear-gradient(135deg, rgba(192, 141, 96, 0.14), rgba(225, 217, 209, 0.06));
+    --td-accent-gradient-faint-hover: linear-gradient(135deg, rgba(192, 141, 96, 0.22), rgba(225, 217, 209, 0.1));
+    --td-accent-text-gradient: linear-gradient(120deg, #F3F1ED, #E4C9AC 50%, #C08D60);
+    --td-accent-glow: rgba(232, 196, 150, 0.35);
+    --td-accent-glow-strong: rgba(232, 196, 150, 0.5);
+    --td-accent-muted: rgba(192, 141, 96, 0.55);
+    --td-focus-ring: #E8C9A0;
+    --td-focus-border: rgba(232, 201, 160, 0.9);
+    --td-focus-halo: rgba(232, 201, 160, 0.3);
+
+    /* Cases à cocher, boutons radio et curseurs natifs */
+    accent-color: #9C6E49;
+  }
+
+  /* Titres : une seule graisse (pas de faux gras), approche légèrement serrée */
+  :root[data-app-theme="vines"] :is(h1, h2) {
+    font-family: var(--td-font-display);
+    font-weight: 400;
+    font-synthesis: none;
+    letter-spacing: -0.01em;
+  }
+
+  /* Grand titre en capitales, comme un générique */
+  :root[data-app-theme="vines"] h1 {
+    line-height: 1;
+    letter-spacing: -0.015em;
+    text-transform: uppercase;
+  }
+
+  :root[data-app-theme="vines"] h1[class~="text-white"] {
+    text-shadow: 0 2px 30px rgba(0, 0, 0, 0.55);
+  }
+
+  :root[data-app-theme="vines"] ::selection {
+    background: rgba(192, 141, 96, 0.4);
+    color: #F3F1ED;
+  }
+}
+
+/* --- Habillage (hors couche : prime sur les utilitaires Tailwind et les styles des composants) --- */
+
+/* Fond : noir sépia, halo doré en haut à gauche (la source de lumière), reflet lie-de-vin en bas */
+:root[data-app-theme="vines"] .app-background {
+  background-color: #0A0901;
+  background-image:
+    radial-gradient(ellipse 90% 65% at 18% -5%, rgba(214, 170, 120, 0.36), transparent 65%),
+    radial-gradient(ellipse 70% 50% at 100% 100%, rgba(126, 58, 54, 0.12), transparent 70%),
+    linear-gradient(180deg, #1A1610 0%, #0D0B05 55%, #050402 100%);
+}
+
+:root[data-app-theme="vines"] .app-background::before,
+:root[data-app-theme="vines"] .app-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Strates du terroir, qui se resserrent sur les collines */
+:root[data-app-theme="vines"] .app-background::before {
+  background: url('/src/assets/themes/vines-strata.svg') center bottom / 100% 62% no-repeat;
+  -webkit-mask-image: linear-gradient(to top, #000 35%, transparent 95%);
+  mask-image: linear-gradient(to top, #000 35%, transparent 95%);
+  opacity: 0.45;
+}
+
+/* Vignettage de vieille pellicule, par-dessus tout le décor */
+:root[data-app-theme="vines"] .app-background::after {
+  background: radial-gradient(ellipse 120% 90% at 50% 40%, transparent 50%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+:root[data-app-theme="vines"] .app-background__blob {
+  border-radius: 0;
+  filter: none;
+  mix-blend-mode: normal;
+  animation: none;
+  opacity: 1;
+}
+
+/* Premier disque : rayons de lumière qui partent du coin (deux faisceaux de périodes
+   différentes, pour un rythme irrégulier) */
+:root[data-app-theme="vines"] .app-background__blob--1 {
+  top: -10vh;
+  right: auto;
+  bottom: auto;
+  left: -10vw;
+  width: 130vw;
+  height: 130vh;
+  background:
+    repeating-conic-gradient(from 95deg at 0 0, rgba(255, 228, 190, 0) 0deg 2.2deg, rgba(255, 228, 190, 0.11) 3.4deg, rgba(255, 228, 190, 0) 4.6deg 6.8deg),
+    repeating-conic-gradient(from 97deg at 0 0, rgba(255, 228, 190, 0) 0deg 3.1deg, rgba(255, 228, 190, 0.07) 4.4deg, rgba(255, 228, 190, 0) 6deg 9.5deg);
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 0 0, #000 0%, rgba(0, 0, 0, 0.4) 45%, transparent 75%);
+  mask-image: radial-gradient(ellipse 85% 75% at 0 0, #000 0%, rgba(0, 0, 0, 0.4) 45%, transparent 75%);
+  transform-origin: 0 0;
+  opacity: 0.9;
+}
+
+/* Deuxième disque : poussière en suspension. Tuile de 400 px qui glisse d'une tuile entière
+   (boucle sans saut) ; le calque déborde en bas et à gauche d'autant que le déplacement */
+:root[data-app-theme="vines"] .app-background__blob--2 {
+  top: 0;
+  right: 0;
+  bottom: -400px;
+  left: -400px;
+  width: auto;
+  height: auto;
+  background: url('/src/assets/themes/vines-dust.svg') 0 0 / 400px 400px repeat;
+  opacity: 0.7;
+}
+
+/* Troisième disque : grain de pellicule (déborde pour pouvoir trembler sans montrer ses bords) */
+:root[data-app-theme="vines"] .app-background__blob--3 {
+  inset: -60px;
+  width: auto;
+  height: auto;
+  background: url('/src/assets/themes/vines-grain.svg') 0 0 / 200px 200px repeat;
+}
+
+/* Petit écran : les strates, étirées en hauteur, se font plus discrètes */
+@media (max-width: 640px) {
+  :root[data-app-theme="vines"] .app-background::before {
+    opacity: 0.3;
+  }
+}
+
+@keyframes td-vines-rays {
+  from { transform: rotate(-2deg); opacity: 0.75; }
+  to { transform: rotate(3deg); opacity: 1; }
+}
+
+@keyframes td-vines-dust {
+  from { transform: translate(0, 0); }
+  to { transform: translate(400px, -400px); }
+}
+
+/* Le grain saute d'une position à l'autre, comme une pellicule qui défile */
+@keyframes td-vines-grain {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-18px, 12px); }
+  40% { transform: translate(14px, -20px); }
+  60% { transform: translate(-10px, -6px); }
+  80% { transform: translate(22px, 16px); }
+}
+
+/* Sur grand écran seulement, et si les animations sont permises */
+@media (min-width: 641px) and (prefers-reduced-motion: no-preference) {
+  :root[data-app-theme="vines"] :is(.app-background__blob--1, .app-background__blob--2) {
+    mix-blend-mode: screen;
+  }
+
+  :root[data-app-theme="vines"] .app-background__blob--1 {
+    animation: td-vines-rays 26s ease-in-out infinite alternate;
+  }
+
+  :root[data-app-theme="vines"] .app-background__blob--2 {
+    animation: td-vines-dust 90s linear infinite;
+  }
+
+  :root[data-app-theme="vines"] .app-background__blob--3 {
+    animation: td-vines-grain 1s steps(1, end) infinite;
+  }
+}
+
+/* En-têtes : voile noir, filet cuivré */
+:root[data-app-theme="vines"] .td-page-header {
+  background: rgba(10, 9, 1, 0.55);
+  border-bottom: 1px solid rgba(156, 110, 73, 0.35);
+}
+
+/* Logo : initiales crème dans un cercle cuivré tracé à la main */
+:root[data-app-theme="vines"] .td-brand-mark {
+  background: url('/src/assets/themes/vines-ring.svg') center / 100% 100% no-repeat;
+  border-radius: 50%;
+  box-shadow: none;
+}
+
+:root[data-app-theme="vines"] .td-brand-mark > :is(span, svg) {
+  color: #F3F1ED;
+}
+
+:root[data-app-theme="vines"] .td-brand-mark > span {
+  font-family: var(--td-font-display);
+  font-size: 1.15em;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+/* Nom de l'application : petites capitales très espacées, comme le nom d'un domaine */
+:root[data-app-theme="vines"] .td-brand-name {
+  font-family: var(--td-font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* Cartes : double filet (bordure claire + filet cuivré en retrait), comme un carton d'invitation */
+:root[data-app-theme="vines"] :is(.glass-card-dashboard, .glass-card-stat, .glass-stat-card, .glass-card-user, .glass-card-challenge) {
+  outline: 1px solid rgba(192, 141, 96, 0.28);
+  outline-offset: -6px;
+}
+
+:root[data-app-theme="vines"] :is(button, a):is(.glass-card-dashboard, .glass-card-user, .glass-card-challenge) {
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), outline-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+}
+
+:root[data-app-theme="vines"] :is(button, a):is(.glass-card-dashboard, .glass-card-user, .glass-card-challenge):hover {
+  outline-color: rgba(232, 201, 160, 0.55);
+  transform: translateY(-3px);
+}
+
+/* Le filet intérieur remplace l'anneau de focus : on le rétablit au clavier */
+:root[data-app-theme="vines"] :is(.glass-card-dashboard, .glass-card-stat, .glass-stat-card, .glass-card-user, .glass-card-challenge):focus-visible {
+  outline: 2px solid var(--td-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Boutons d'action : liseré cuivré et filet crème intérieur (anneaux de focus Tailwind conservés) */
+:root[data-app-theme="vines"] button[class*="bg-gradient-to-"]:not(:disabled) {
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+    inset 0 0 0 1px rgba(243, 241, 237, 0.18), 0 0 0 1px rgba(156, 110, 73, 0.55), 0 10px 24px -12px rgba(0, 0, 0, 0.8);
+  transition: box-shadow 0.3s ease, filter 0.3s ease;
+}
+
+:root[data-app-theme="vines"] button[class*="bg-gradient-to-"]:not(:disabled):hover {
+  filter: brightness(1.08);
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+    inset 0 0 0 1px rgba(243, 241, 237, 0.28), 0 0 0 1px rgba(232, 201, 160, 0.8), 0 0 24px rgba(232, 196, 150, 0.18);
+}
+
+/* Libellés des boutons d'action en capitales espacées (sauf en lecture facile) */
+:root[data-app-theme="vines"]:not(.td-easy-read) button[class*="bg-gradient-to-"][class*="px-"] {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* « Qui est-ce ? » : portraits ronds cerclés de cuivre, fond sombre (les strates ne
+   transparaissent pas) ; le second cercle s'écarte au survol */
+:root[data-app-theme="vines"] .profile-image-glass {
+  background-color: rgba(20, 18, 12, 0.85);
+  border-radius: 50%;
+  border: 1px solid rgba(192, 141, 96, 0.75);
+  outline: 1px solid rgba(192, 141, 96, 0.4);
+  outline-offset: 5px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55);
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), outline-offset 0.4s ease, outline-color 0.3s ease, border-color 0.3s ease;
+}
+
+:root[data-app-theme="vines"] .profile-card-glass:is(:hover, :focus-visible) .profile-image-glass {
+  border-color: #E8C9A0;
+  outline-color: rgba(232, 201, 160, 0.8);
+  outline-offset: 9px;
+  transform: scale(1.04);
+}
+
+:root[data-app-theme="vines"] .profile-name-glass {
+  font-family: var(--td-font-display);
+  font-size: 1.375rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}

@@ -223,6 +223,27 @@ export const APP_THEMES = Object.freeze([
       titleStyle: 'italic',
       titleTransform: 'uppercase'
     }
+  },
+  {
+    // Ambiance inspirée de l'expérience web « The Symphony of Vines » (Unseen Studio)
+    id: 'vines',
+    name: 'Symphonie des vignes',
+    emoji: '🍇',
+    tagline: 'Un film d\'époque au château',
+    description: 'Noir sépia, lumière dorée qui filtre, poussière qui danse, grain de pellicule et grandes lettres classiques.',
+    themeColor: '#0A0901',
+    tones: null,
+    preview: {
+      background: 'repeating-conic-gradient(from 100deg at 0 0, rgba(255, 228, 190, 0) 0deg 4deg, rgba(255, 228, 190, 0.12) 6deg, rgba(255, 228, 190, 0) 8deg 11deg), radial-gradient(90% 70% at 15% 0%, rgba(214, 170, 120, 0.45), transparent 65%), linear-gradient(180deg, #2A2318, #0A0901)',
+      surface: 'rgba(225, 217, 209, 0.06)',
+      border: 'rgba(156, 110, 73, 0.7)',
+      accent: 'linear-gradient(90deg, #8F6340, #7E3A36)',
+      text: '#F3F1ED',
+      radius: '0.375rem',
+      font: '\'Inter\', system-ui, sans-serif',
+      titleFont: '\'Bellefair\', Georgia, serif',
+      titleWeight: 400
+    }
   }
 ])
 

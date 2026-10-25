@@ -1,9 +1,11 @@
 # Thèmes de l'application
 
-TeachDigital propose huit thèmes. **Liquid Glass**, le design d'origine, reste le thème par
+TeachDigital propose neuf thèmes. **Liquid Glass**, le design d'origine, reste le thème par
 défaut ; les autres sont des clins d'œil à des séries et à la Formule 1 (Mercedes, McLaren et Lando Norris), sans logo ni image
-officiels (décors dessinés en SVG ou en CSS, polices libres OFL / Apache), et une **Aurore boréale**
-pensée pour toute la famille.
+officiels (décors dessinés en SVG ou en CSS, polices libres OFL / Apache), une **Aurore boréale**
+pensée pour toute la famille et une **Symphonie des vignes** inspirée de l'expérience web
+*The Symphony of Vines* d'Unseen Studio (ambiance seulement : ni ses images ni ses polices
+commerciales).
 
 | Thème | `data-app-theme` | Ambiance | Polices | Couleur préférée de l'enfant |
 | --- | --- | --- | --- | --- |
@@ -15,6 +17,7 @@ pensée pour toute la famille.
 | 🏎️ Mercedes F1 | `formula-1` (identifiant historique conservé) | Les Flèches d'Argent : noir carbone, argent métallisé, turquoise de l'écurie #00D2BE, points argentés qui s'effacent comme sur la livrée, lignes de vitesse, titres en majuscules espacées, cartes au liseré turquoise façon chronométrage, logo en plaque argent inclinée | Titillium Web (titres et texte) | Ignorée |
 | 🌌 Aurore boréale | `aurora` | Nuit polaire : rideaux d'aurore qui ondulent (rayons verts, franges violettes), ciel étoilé et étoile filante, montagnes enneigées, sapins et chalet à la fenêtre allumée, grain léger, verre givré, avatars en squircle cerclés de menthe, logo en dégradé « mesh » | Bricolage Grotesque (titres) | Couleur des aurores : magique, glacier, des sapins, de feu, dorée ou toutes les aurores |
 | 🧡 McLaren · Lando Norris | `mclaren` | Papaya #FF8000, anthracite et jaune fluo du casque de Lando : bandes de livrée, damier, grand « 4 » en double contour, feux de départ qui s'allument un à un puis s'éteignent, petite voiture qui fait des tours de circuit, titres italiques en majuscules avec ombre papaya, cartes au reflet papaya, logo en plaque papaya cerclée de fluo | Barlow Condensed (titres, libellés des boutons d'action) | Ignorée |
+| 🍇 Symphonie des vignes | `vines` | Film d'époque : noir sépia, halo doré et rayons de lumière qui pivotent lentement, poussière en suspension, grain de pellicule qui défile, vignettage, strates du terroir, texte crème, grands titres en capitales à empattements, cercles cuivrés tracés à la main (logo), cartes à double filet, portraits ronds à double cercle, boutons au liseré cuivré | Bellefair (titres) | Ignorée |
 
 ## 👪 Qui choisit quoi
 
@@ -130,7 +133,10 @@ Liquid Glass ne les définit pas : il garde exactement son apparence.
   fondu au changement de thème.
 - **Petit écran** : décors immobiles et sans flou ; les pattes de la Pat' Patrouille se font
   plus discrètes, les aurores moins hautes (et sans étoile filante, qui n'apparaît qu'animée) ;
-  McLaren y retire les feux de départ et le circuit, et estompe le « 4 ».
+  McLaren y retire les feux de départ et le circuit, et estompe le « 4 » ; les strates de la
+  Symphonie des vignes s'estompent aussi.
+- Symphonie des vignes : le filet intérieur des cartes utilise `outline`, l'anneau de focus
+  clavier est donc rétabli explicitement sur les cartes cliquables.
 - Les bandes de livrée McLaren restent atténuées : le texte qui défile par-dessus garde un
   contraste d'au moins 6:1 sur la bande papaya.
 - **Réduire la transparence** : surfaces presque opaques, dans la teinte du thème.
@@ -138,6 +144,6 @@ Liquid Glass ne les définit pas : il garde exactement son apparence.
 
 ## 📦 Poids
 
-Les sept thèmes ajoutent environ 17 Ko (gzip) au CSS. Les polices (woff2, 12 à 41 Ko chacune)
+Les huit thèmes ajoutent environ 20 Ko (gzip) au CSS. Les polices (woff2, 12 à 41 Ko chacune)
 ne sont téléchargées que lorsqu'un thème les affiche ; comme tous les fichiers du build, elles
 sont précachées par le service worker pour le mode hors ligne.

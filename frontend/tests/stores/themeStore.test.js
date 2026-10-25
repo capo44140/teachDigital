@@ -16,9 +16,9 @@ const themeColor = () => document.querySelector('meta[name="theme-color"]').getA
 const stored = () => JSON.parse(localStorage.getItem(THEME_STORAGE_KEY))
 
 describe('registre des thèmes', () => {
-  it('propose le thème d\'origine par défaut, puis les thèmes des séries, de la Formule 1, l\'aurore boréale et McLaren', () => {
+  it('propose le thème d\'origine par défaut, puis les thèmes des séries, de la Formule 1, l\'aurore boréale, McLaren et la symphonie des vignes', () => {
     expect(APP_THEMES.map(theme => theme.id)).toEqual([
-      'liquid-glass', 'netflix', 'paw-patrol', 'desperate-housewives', 'one-tree-hill', 'formula-1', 'aurora', 'mclaren'
+      'liquid-glass', 'netflix', 'paw-patrol', 'desperate-housewives', 'one-tree-hill', 'formula-1', 'aurora', 'mclaren', 'vines'
     ])
     expect(DEFAULT_THEME_ID).toBe('liquid-glass')
     expect(new Set(APP_THEMES.map(theme => theme.id)).size).toBe(APP_THEMES.length)
@@ -57,7 +57,7 @@ describe('registre des thèmes', () => {
   })
 
   it('les autres thèmes ignorent la couleur préférée, ou gardent les couleurs d\'origine', () => {
-    for (const themeId of ['netflix', 'desperate-housewives', 'one-tree-hill', 'formula-1', 'mclaren']) {
+    for (const themeId of ['netflix', 'desperate-housewives', 'one-tree-hill', 'formula-1', 'mclaren', 'vines']) {
       expect(getAppTheme(themeId).tones, themeId).toBeNull()
     }
     expect(getAppTheme('liquid-glass').tones.options).toBeUndefined()

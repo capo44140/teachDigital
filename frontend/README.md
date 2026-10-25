@@ -38,7 +38,7 @@ proxy) et `VITE_API_URL_PROD` (build de production ; vide par défaut = même or
 - `src/themes/` — registre des thèmes ; `src/components/ThemePicker.vue` (sélecteur) ;
   `public/theme-boot.js` (thème posé avant le premier rendu) — voir `../doc/THEMES.md`
 - `src/styles/` — `liquid-glass.css` (variables et cartes partagées), `themes/` (un fichier par
-  thème : Netflix, Pat' Patrouille, Desperate Housewives, Les Frères Scott, Mercedes F1, Aurore boréale, McLaren · Lando Norris ; décors dans `src/assets/themes/`),
+  thème : Netflix, Pat' Patrouille, Desperate Housewives, Les Frères Scott, Mercedes F1, Aurore boréale, McLaren · Lando Norris, Symphonie des vignes ; décors dans `src/assets/themes/`),
   `preferences.css` ;
   `src/utils/` (`apiErrors`, `jwt`, `pinPolicy`, `sanitizeHtml`…), `src/constants/`, `src/config/`
 - `public/` — assets statiques, `manifest.json`, modèle du service worker `sw.js`

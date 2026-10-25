@@ -23,6 +23,9 @@ importers:
       '@fontsource/bebas-neue':
         specifier: '5'
         version: 5.3.0
+      '@fontsource/bellefair':
+        specifier: '5'
+        version: 5.3.0
       '@fontsource/luckiest-guy':
         specifier: '5'
         version: 5.3.0
@@ -394,6 +397,9 @@ packages:
 
   '@fontsource/bebas-neue@5.3.0':
     resolution: {integrity: sha512-nCxMEb9Bg9sjNWm9TIOsvHKDMLRUfEZPWpLgYu6m9KavZZVSA/WoHzI5wROwqA+eNwEi/PNBAcB5Co7HA3S0Cw==}
+
+  '@fontsource/bellefair@5.3.0':
+    resolution: {integrity: sha512-cS1NiCWjlAjG/XsM86PgevJy7Z7YNJTEauJcOqfhTZ4efjS5emaBUMbEYGHDFIzoeXiWcN6Zj+jx0wz8jbpgCg==}
 
   '@fontsource/luckiest-guy@5.3.0':
     resolution: {integrity: sha512-wCtuVkExxmKeW0FngmKVTcCK9T0elvjoP4/ZZaINqsUjlk9CB17Rr9FQ6pIDlN4nzouDMGSuqYvge3VoKqslPA==}
@@ -3498,6 +3504,8 @@ snapshots:
   '@fontsource/barlow-condensed@5.3.0': {}
 
   '@fontsource/bebas-neue@5.3.0': {}
+
+  '@fontsource/bellefair@5.3.0': {}
 
   '@fontsource/luckiest-guy@5.3.0': {}
 
