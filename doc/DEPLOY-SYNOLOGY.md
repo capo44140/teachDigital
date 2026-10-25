@@ -159,6 +159,7 @@ existant :
 
 1. **Sauvegarder la base**
    `pg_dump -Fc -h <hôte> -U <utilisateur> <base> > teachdigital-avant-maj.dump`
+   (ou `sh backend/scripts/backup-db.sh`, cf. [Sauvegardes de la base](#-sauvegardes-de-la-base))
 2. **Vérifier le propriétaire des tables** : les migrations doivent pouvoir les modifier.
 
    ```sql
@@ -221,6 +222,62 @@ curl http://127.0.0.1:3000/api/health     # chaîne nginx -> backend
   `docker restart teachdigital-backend` les lève.
 - Une variable du `.env` modifiée n'est prise en compte qu'à la recréation du conteneur
   (`docker compose up -d`, ou un nouveau déploiement) ; `docker compose restart` ne la recharge pas.
+
+## 💾 Sauvegardes de la base
+
+`backend/scripts/backup-db.sh` fait un `pg_dump` (format custom) de la base, vérifie que
+l'archive est lisible, puis supprime les sauvegardes de plus de 14 jours. Il lit la connexion
+dans le `.env` du backend (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) et lance
+`pg_dump` dans un conteneur `postgres:16-alpine` jetable, sur le réseau `teachdigital` comme le
+backend : même `DB_HOST`, même sous-réseau autorisé dans `pg_hba.conf`.
+
+Les fichiers sont écrits dans `/volume1/docker/teachdigital/backups/` (à côté de `backend/`, hors
+de ce que `deploy.ps1` remplace), lisibles par root seulement : ils contiennent les données des
+enfants et les hash des PIN.
+
+### Planifier la sauvegarde (DSM)
+
+1. **Panneau de configuration** → **Planificateur de tâches** → **Créer** → **Tâche planifiée** →
+   **Script défini par l'utilisateur**
+2. **Utilisateur** : `root` ; **Programme** : tous les jours (ex. 3 h du matin)
+3. **Script** :
+   ```bash
+   sh /volume1/docker/teachdigital/backend/scripts/backup-db.sh
+   ```
+4. Dans **Paramètres**, cocher l'envoi d'un e-mail **en cas d'échec** : le script sort en erreur
+   si `pg_dump` échoue ou si l'archive est illisible.
+
+Options (variables à placer devant la commande) :
+- `BACKUP_DIR=/volume1/backups/teachdigital` : autre dossier de destination ;
+- `BACKUP_RETENTION_DAYS=30` : durée de conservation ;
+- `PG_DUMP_IMAGE=postgres:17-alpine` : à aligner sur la version **majeure** du serveur
+  (`pg_dump` refuse un serveur plus récent que lui).
+
+> Une copie sur le même disque ne protège pas d'une panne du NAS : ajouter le dossier `backups/`
+> à une tâche **Hyper Backup** vers un disque externe ou un stockage distant.
+
+### Restaurer une sauvegarde
+
+Tester la restauration au moins une fois, dans une base jetable :
+
+```bash
+# Mot de passe de la base (DB_PASSWORD du .env), sans le laisser dans l'historique
+read -rs PGPASSWORD && export PGPASSWORD
+
+# Créer une base de test et y restaurer la sauvegarde (<DB_HOST> : valeur du .env)
+docker run --rm -e PGPASSWORD --network teachdigital --add-host=host.docker.internal:host-gateway \
+  -v /volume1/docker/teachdigital/backups:/backup postgres:16-alpine sh -c '
+    createdb -h <DB_HOST> -U teachdigital teachdigital_restore_test &&
+    pg_restore -h <DB_HOST> -U teachdigital -d teachdigital_restore_test \
+      --no-owner /backup/teachdigital-AAAAMMJJ-HHMMSS.dump'
+
+# Vérifier (psql ... -d teachdigital_restore_test -c "SELECT count(*) FROM profiles;")
+# puis supprimer la base de test (dropdb ... teachdigital_restore_test)
+```
+
+En cas de perte réelle : arrêter le backend (`docker compose down` dans le dossier backend), puis
+restaurer dans la base de production avec
+`pg_restore --clean --if-exists --no-owner -d teachdigital <fichier>.dump`.
 
 ## 🤖 Déploiement par GitHub Actions (optionnel)
 
