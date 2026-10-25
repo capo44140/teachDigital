@@ -1,3 +1,7 @@
+# Scripts exécutés sur le NAS (Linux) : toujours en LF, même extraits depuis Windows
+# (core.autocrlf=true ajouterait des \r qui cassent sh : « $'\r': command not found »)
+*.sh text eol=lf
+
 # Playwright
 *.webm binary
 *.png binary
