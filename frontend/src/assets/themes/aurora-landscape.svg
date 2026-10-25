@@ -1,0 +1,49 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='260' viewBox='0 0 1200 260'>
+  <defs>
+    <path id='f' d='M0 0L-8 13H-4L-11 25H-6L-14 38H-2V44H2V38H14L6 25H11L4 13H8Z'/>
+    <radialGradient id='w'>
+      <stop offset='0' stop-color='#FFC56E' stop-opacity='.55'/>
+      <stop offset='1' stop-color='#FFC56E' stop-opacity='0'/>
+    </radialGradient>
+  </defs>
+  <path fill='#0E1733' d='M0 160L80 112L130 136L220 64L285 112L330 92L415 150L485 104L560 140L650 74L720 124L770 104L860 156L940 96L1010 130L1090 70L1150 116L1200 98V260H0Z'/>
+  <g fill='#3A5A82' opacity='.75'>
+    <path d='M198 81.6L220 64L246 83.2L236 80L229 88L219 80L208 87Z'/>
+    <path d='M626 91.6L650 74L672 89.7L663 87L656 95L647 87L637 94Z'/>
+    <path d='M922 109.5L940 96L960 105.7L951 104L944 111L936 104L929 110Z'/>
+    <path d='M1068 86.5L1090 70L1112 86.9L1103 84L1096 92L1087 84L1077 91Z'/>
+  </g>
+  <g fill='#0A1129'>
+    <path d='M0 200C120 178 220 176 330 190S560 214 690 196S940 172 1060 188S1160 200 1200 194V260H0Z'/>
+    <use href='#f' transform='translate(380 161.4) scale(.9)'/>
+    <use href='#f' transform='translate(404 152.4) scale(1.15)'/>
+    <use href='#f' transform='translate(430 169.8) scale(.8)'/>
+    <use href='#f' transform='translate(770 150.4) scale(.9)'/>
+    <use href='#f' transform='translate(792 140.6) scale(1.1)'/>
+    <use href='#f' transform='translate(842 149.8) scale(.8)'/>
+  </g>
+  <circle cx='1018' cy='196' r='34' fill='url(#w)'/>
+  <g fill='#060A1C'>
+    <path d='M0 226C150 206 280 210 420 222S700 236 840 220S1080 204 1200 214V260H0Z'/>
+    <use href='#f' transform='translate(36 160) scale(1.5)'/>
+    <use href='#f' transform='translate(68 135) scale(2)'/>
+    <use href='#f' transform='translate(100 159.4) scale(1.4)'/>
+    <use href='#f' transform='translate(134 144.2) scale(1.7)'/>
+    <use href='#f' transform='translate(975 153.8) scale(1.3)'/>
+    <use href='#f' transform='translate(1060 139.6) scale(1.6)'/>
+    <use href='#f' transform='translate(1090 117.6) scale(2.1)'/>
+    <use href='#f' transform='translate(1125 149.4) scale(1.4)'/>
+    <use href='#f' transform='translate(1160 133.8) scale(1.8)'/>
+    <rect x='1004' y='190' width='34' height='22'/>
+    <rect x='1030' y='174' width='5' height='12'/>
+    <path d='M998 191L1021 174L1044 191Z'/>
+  </g>
+  <path fill='#C8DCFF' opacity='.22' d='M998 191L1021 174L1044 191H1040L1021 178L1002 191Z'/>
+  <rect x='1013' y='196' width='10' height='8' rx='1' fill='#FFC56E'/>
+  <g fill='#C8DCFF'>
+    <circle cx='1034' cy='167' r='3' opacity='.1'/>
+    <circle cx='1038' cy='160' r='4' opacity='.07'/>
+    <circle cx='1043' cy='152' r='5' opacity='.04'/>
+  </g>
+  <path fill='none' stroke='#BFD6FF' stroke-opacity='.1' stroke-width='1.5' d='M0 226C150 206 280 210 420 222S700 236 840 220S1080 204 1200 214'/>
+</svg>

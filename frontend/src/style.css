@@ -6,6 +6,7 @@
 @import "./styles/themes/desperate-housewives.css";
 @import "./styles/themes/one-tree-hill.css";
 @import "./styles/themes/formula-1.css";
+@import "./styles/themes/aurora.css";
 /* Préférences d'accessibilité en dernier : elles priment sur les thèmes */
 @import "./styles/preferences.css";
 

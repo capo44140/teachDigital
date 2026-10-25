@@ -16,9 +16,9 @@ const themeColor = () => document.querySelector('meta[name="theme-color"]').getA
 const stored = () => JSON.parse(localStorage.getItem(THEME_STORAGE_KEY))
 
 describe('registre des thèmes', () => {
-  it('propose le thème d\'origine par défaut, puis les thèmes des séries et de la Formule 1', () => {
+  it('propose le thème d\'origine par défaut, puis les thèmes des séries, de la Formule 1 et l\'aurore boréale', () => {
     expect(APP_THEMES.map(theme => theme.id)).toEqual([
-      'liquid-glass', 'netflix', 'paw-patrol', 'desperate-housewives', 'one-tree-hill', 'formula-1'
+      'liquid-glass', 'netflix', 'paw-patrol', 'desperate-housewives', 'one-tree-hill', 'formula-1', 'aurora'
     ])
     expect(DEFAULT_THEME_ID).toBe('liquid-glass')
     expect(new Set(APP_THEMES.map(theme => theme.id)).size).toBe(APP_THEMES.length)
@@ -44,6 +44,13 @@ describe('registre des thèmes', () => {
 
   it('Pat\' Patrouille : un chiot pour chaque couleur préférée proposée à l\'enfant', () => {
     const { options } = getAppTheme('paw-patrol').tones
+    for (const tone of CHILD_THEMES) {
+      expect(options[tone.id], tone.id).toMatchObject({ name: expect.any(String), emoji: expect.any(String), swatch: expect.any(String) })
+    }
+  })
+
+  it('Aurore boréale : une couleur d\'aurore pour chaque couleur préférée proposée à l\'enfant', () => {
+    const { options } = getAppTheme('aurora').tones
     for (const tone of CHILD_THEMES) {
       expect(options[tone.id], tone.id).toMatchObject({ name: expect.any(String), emoji: expect.any(String), swatch: expect.any(String) })
     }

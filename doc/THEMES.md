@@ -1,8 +1,9 @@
 # Thèmes de l'application
 
-TeachDigital propose six thèmes. **Liquid Glass**, le design d'origine, reste le thème par
+TeachDigital propose sept thèmes. **Liquid Glass**, le design d'origine, reste le thème par
 défaut ; les autres sont des clins d'œil à des séries et à l'écurie Mercedes de Formule 1, sans logo ni image
-officiels (décors dessinés en SVG ou en CSS, polices libres OFL / Apache).
+officiels (décors dessinés en SVG ou en CSS, polices libres OFL / Apache), et une **Aurore boréale**
+pensée pour toute la famille.
 
 | Thème | `data-app-theme` | Ambiance | Polices | Couleur préférée de l'enfant |
 | --- | --- | --- | --- | --- |
@@ -12,6 +13,7 @@ officiels (décors dessinés en SVG ou en CSS, polices libres OFL / Apache).
 | 🍎 Desperate Housewives | `desperate-housewives` | Nuit violine sur Wisteria Lane : glycines, lune, palissade blanche, pétales qui tombent, pomme rouge, liserés dorés, logo en pomme | Playfair Display (titres) | Ignorée |
 | 🏀 Les Frères Scott | `one-tree-hill` | Coucher de soleil sur le River Court : ciel étoilé, soleil derrière l'arbre seul sur la colline, panier en silhouette, orange du ballon, logo en ballon de basket | Permanent Marker (titres, façon graffiti) | Ignorée |
 | 🏎️ Mercedes F1 | `formula-1` (identifiant historique conservé) | Les Flèches d'Argent : noir carbone, argent métallisé, turquoise de l'écurie #00D2BE, points argentés qui s'effacent comme sur la livrée, lignes de vitesse, titres en majuscules espacées, cartes au liseré turquoise façon chronométrage, logo en plaque argent inclinée | Titillium Web (titres et texte) | Ignorée |
+| 🌌 Aurore boréale | `aurora` | Nuit polaire : rideaux d'aurore qui ondulent (rayons verts, franges violettes), ciel étoilé et étoile filante, montagnes enneigées, sapins et chalet à la fenêtre allumée, grain léger, verre givré, avatars en squircle cerclés de menthe, logo en dégradé « mesh » | Bricolage Grotesque (titres) | Couleur des aurores : magique, glacier, des sapins, de feu, dorée ou toutes les aurores |
 
 ## 👪 Qui choisit quoi
 
@@ -126,12 +128,12 @@ Liquid Glass ne les définit pas : il garde exactement son apparence.
 - **Animations réduites** (préférence de l'enfant ou du système) : décors immobiles, pas de
   fondu au changement de thème.
 - **Petit écran** : décors immobiles et sans flou ; les pattes de la Pat' Patrouille se font
-  plus discrètes.
+  plus discrètes, les aurores moins hautes (et sans étoile filante, qui n'apparaît qu'animée).
 - **Réduire la transparence** : surfaces presque opaques, dans la teinte du thème.
 - Le focus clavier reste visible dans chaque thème (blanc, jaune ou doré selon le fond).
 
 ## 📦 Poids
 
-Les cinq thèmes ajoutent environ 10 Ko (gzip) au CSS. Les polices (woff2, 12 à 39 Ko chacune)
+Les six thèmes ajoutent environ 14 Ko (gzip) au CSS. Les polices (woff2, 12 à 41 Ko chacune)
 ne sont téléchargées que lorsqu'un thème les affiche ; comme tous les fichiers du build, elles
 sont précachées par le service worker pour le mode hors ligne.

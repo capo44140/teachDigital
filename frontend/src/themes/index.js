@@ -170,6 +170,37 @@ export const APP_THEMES = Object.freeze([
       titleWeight: 700,
       titleTransform: 'uppercase'
     }
+  },
+  {
+    id: 'aurora',
+    name: 'Aurore boréale',
+    emoji: '🌌',
+    tagline: 'La magie du Grand Nord',
+    description: 'Aurores boréales qui dansent, ciel étoilé et chalet douillet sous la neige.',
+    themeColor: '#070B1F',
+    tones: {
+      title: 'Choisis la couleur de ton aurore',
+      hint: 'Elle colore les aurores boréales de ton ciel.',
+      options: {
+        purple: { name: 'Aurore magique', emoji: '🔮', swatch: 'linear-gradient(135deg, #7C3AED, #C026D3)' },
+        blue: { name: 'Aurore glacier', emoji: '🧊', swatch: 'linear-gradient(135deg, #0284C7, #4F46E5)' },
+        green: { name: 'Aurore des sapins', emoji: '🌲', swatch: 'linear-gradient(135deg, #047857, #0D9488)' },
+        orange: { name: 'Aurore de feu', emoji: '🔥', swatch: 'linear-gradient(135deg, #C2410C, #BE185D)' },
+        yellow: { name: 'Aurore dorée', emoji: '🌟', swatch: 'linear-gradient(135deg, #B45309, #CA8A04)' },
+        rainbow: { name: 'Toutes les aurores', emoji: '🌈', swatch: 'linear-gradient(135deg, #047857, #4F46E5, #BE185D)' }
+      }
+    },
+    preview: {
+      background: 'radial-gradient(120% 60% at 30% 0%, rgba(61, 245, 176, 0.45), transparent 60%), radial-gradient(90% 50% at 85% 10%, rgba(177, 140, 255, 0.4), transparent 60%), linear-gradient(180deg, #050816, #0B1430 60%, #0C2034)',
+      surface: 'rgba(190, 220, 255, 0.1)',
+      border: 'rgba(110, 233, 194, 0.4)',
+      accent: 'linear-gradient(90deg, #0F7F6E, #6A3FE0)',
+      text: '#FFFFFF',
+      radius: '0.875rem',
+      font: '\'Inter\', system-ui, sans-serif',
+      titleFont: '\'Bricolage Grotesque Variable\', \'Bricolage Grotesque\', system-ui, sans-serif',
+      titleWeight: 800
+    }
   }
 ])
 

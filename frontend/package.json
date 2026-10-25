@@ -47,6 +47,7 @@
     "performance:check": "pnpm run build && pnpm run bundle:analyze && pnpm run lighthouse"
   },
   "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "5",
     "@fontsource-variable/fredoka": "5",
     "@fontsource-variable/playfair-display": "5",
     "@fontsource/bebas-neue": "5",

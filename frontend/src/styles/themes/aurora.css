@@ -1,0 +1,486 @@
+/* ============================================
+   THÈME « AURORE BORÉALE » — :root[data-app-theme="aurora"]
+   Nuit polaire : aurores boréales qui ondulent (rayons verts au bord inférieur, franges
+   violettes en haut), ciel étoilé et étoile filante, montagnes enneigées, sapins et chalet à
+   la fenêtre allumée ; grain léger, verre givré, titres en Bricolage Grotesque, logo en
+   dégradé « mesh ». La couleur préférée de l'enfant devient la couleur de ses aurores
+   (libellés dans src/themes/index.js).
+   Registre : src/themes/index.js — guide : doc/THEMES.md
+   ============================================ */
+
+/* Police auto-hébergée (sous-ensemble latin, axe de graisse seul) : téléchargée seulement quand un texte l'utilise */
+@font-face {
+  font-family: 'Bricolage Grotesque Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2') format('woff2-variations'),
+    url('@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* --- Variables et typographie (couche base : les préférences d'accessibilité priment) --- */
+@layer base {
+  :root[data-app-theme="aurora"] {
+    /* Échelles du thème : vert d'aurore, violet des franges, nuit polaire */
+    --au-teal-50: #ECFDF7;
+    --au-teal-100: #D1FAEC;
+    --au-teal-200: #A4F4D9;
+    --au-teal-300: #6EE9C2;
+    --au-teal-400: #2DD4A8;
+    --au-teal-500: #0F7F6E;
+    --au-teal-600: #0B6B5D;
+    --au-teal-700: #0A574C;
+    --au-teal-800: #09463E;
+    --au-teal-900: #083A34;
+    --au-teal-950: #03211D;
+
+    --au-violet-50: #F4F1FF;
+    --au-violet-100: #EAE4FF;
+    --au-violet-200: #D6CCFF;
+    --au-violet-300: #BBA8FF;
+    --au-violet-400: #9B7BFF;
+    --au-violet-500: #6A3FE0;
+    --au-violet-600: #5A30C8;
+    --au-violet-700: #4B27A6;
+    --au-violet-800: #3E2187;
+    --au-violet-900: #331D6C;
+    --au-violet-950: #1E1042;
+
+    --au-night-50: #F3F5FB;
+    --au-night-100: #E4E8F4;
+    --au-night-200: #C9D0E6;
+    --au-night-300: #A3AED0;
+    --au-night-400: #7886B3;
+    --au-night-500: #5F6DA0;
+    --au-night-600: #47538A;
+    --au-night-700: #353F6B;
+    --au-night-800: #242D52;
+    --au-night-900: #161D3A;
+    --au-night-950: #0A0F26;
+
+    /* Palette Tailwind : violet de marque → vert d'aurore */
+    --color-purple-50: var(--au-teal-50);
+    --color-purple-100: var(--au-teal-100);
+    --color-purple-200: var(--au-teal-200);
+    --color-purple-300: var(--au-teal-300);
+    --color-purple-400: var(--au-teal-400);
+    --color-purple-500: var(--au-teal-500);
+    --color-purple-600: var(--au-teal-600);
+    --color-purple-700: var(--au-teal-700);
+    --color-purple-800: var(--au-teal-800);
+    --color-purple-900: var(--au-teal-900);
+    --color-purple-950: var(--au-teal-950);
+
+    --color-violet-50: var(--au-teal-50);
+    --color-violet-100: var(--au-teal-100);
+    --color-violet-200: var(--au-teal-200);
+    --color-violet-300: var(--au-teal-300);
+    --color-violet-400: var(--au-teal-400);
+    --color-violet-500: var(--au-teal-500);
+    --color-violet-600: var(--au-teal-600);
+    --color-violet-700: var(--au-teal-700);
+    --color-violet-800: var(--au-teal-800);
+    --color-violet-900: var(--au-teal-900);
+    --color-violet-950: var(--au-teal-950);
+
+    --color-fuchsia-50: var(--au-teal-50);
+    --color-fuchsia-100: var(--au-teal-100);
+    --color-fuchsia-200: var(--au-teal-200);
+    --color-fuchsia-300: var(--au-teal-300);
+    --color-fuchsia-400: var(--au-teal-400);
+    --color-fuchsia-500: var(--au-teal-500);
+    --color-fuchsia-600: var(--au-teal-600);
+    --color-fuchsia-700: var(--au-teal-700);
+    --color-fuchsia-800: var(--au-teal-800);
+    --color-fuchsia-900: var(--au-teal-900);
+    --color-fuchsia-950: var(--au-teal-950);
+
+    /* Rose et indigo → violet des franges (dégradés vert → violet, comme une aurore) */
+    --color-pink-50: var(--au-violet-50);
+    --color-pink-100: var(--au-violet-100);
+    --color-pink-200: var(--au-violet-200);
+    --color-pink-300: var(--au-violet-300);
+    --color-pink-400: var(--au-violet-400);
+    --color-pink-500: var(--au-violet-500);
+    --color-pink-600: var(--au-violet-600);
+    --color-pink-700: var(--au-violet-700);
+    --color-pink-800: var(--au-violet-800);
+    --color-pink-900: var(--au-violet-900);
+    --color-pink-950: var(--au-violet-950);
+
+    --color-rose-50: var(--au-violet-50);
+    --color-rose-100: var(--au-violet-100);
+    --color-rose-200: var(--au-violet-200);
+    --color-rose-300: var(--au-violet-300);
+    --color-rose-400: var(--au-violet-400);
+    --color-rose-500: var(--au-violet-500);
+    --color-rose-600: var(--au-violet-600);
+    --color-rose-700: var(--au-violet-700);
+    --color-rose-800: var(--au-violet-800);
+    --color-rose-900: var(--au-violet-900);
+    --color-rose-950: var(--au-violet-950);
+
+    --color-indigo-50: var(--au-violet-50);
+    --color-indigo-100: var(--au-violet-100);
+    --color-indigo-200: var(--au-violet-200);
+    --color-indigo-300: var(--au-violet-300);
+    --color-indigo-400: var(--au-violet-400);
+    --color-indigo-500: var(--au-violet-500);
+    --color-indigo-600: var(--au-violet-600);
+    --color-indigo-700: var(--au-violet-700);
+    --color-indigo-800: var(--au-violet-800);
+    --color-indigo-900: var(--au-violet-900);
+    --color-indigo-950: var(--au-violet-950);
+
+    /* Gris → bleu de la nuit polaire */
+    --color-slate-50: var(--au-night-50);
+    --color-slate-100: var(--au-night-100);
+    --color-slate-200: var(--au-night-200);
+    --color-slate-300: var(--au-night-300);
+    --color-slate-400: var(--au-night-400);
+    --color-slate-500: var(--au-night-500);
+    --color-slate-600: var(--au-night-600);
+    --color-slate-700: var(--au-night-700);
+    --color-slate-800: var(--au-night-800);
+    --color-slate-900: var(--au-night-900);
+    --color-slate-950: var(--au-night-950);
+
+    --color-gray-50: var(--au-night-50);
+    --color-gray-100: var(--au-night-100);
+    --color-gray-200: var(--au-night-200);
+    --color-gray-300: var(--au-night-300);
+    --color-gray-400: var(--au-night-400);
+    --color-gray-500: var(--au-night-500);
+    --color-gray-600: var(--au-night-600);
+    --color-gray-700: var(--au-night-700);
+    --color-gray-800: var(--au-night-800);
+    --color-gray-900: var(--au-night-900);
+    --color-gray-950: var(--au-night-950);
+
+    /* Cartes : verre givré bleuté, reflet clair en haut, halo vert au survol */
+    --lg-glass-light: rgba(190, 220, 255, 0.07);
+    --lg-glass-medium: rgba(190, 220, 255, 0.09);
+    --lg-glass-heavy: rgba(190, 220, 255, 0.12);
+    --lg-glass-border: rgba(170, 230, 225, 0.18);
+    --lg-glass-border-hover: rgba(110, 233, 194, 0.5);
+    --lg-glass-shadow: rgba(2, 6, 20, 0.45);
+    --lg-glass-blur: 24px;
+    --lg-glass-elevation: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 30px rgba(2, 6, 20, 0.35);
+    --lg-glass-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 16px 40px rgba(2, 6, 20, 0.45), 0 0 32px rgba(45, 212, 168, 0.16);
+
+    /* Formes généreuses, presque des « squircles » */
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.375rem;
+    --radius-3xl: 1.75rem;
+    --radius-4xl: 2.25rem;
+    --td-radius-scale: 1.15;
+
+    /* Typographie : titres en Bricolage Grotesque, serrés et généreux */
+    --td-font-display: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+
+    /* Fonds, surfaces et accents des composants */
+    --td-page-bg: #070B1F;
+    --td-page-gradient: linear-gradient(180deg, #050816, #0B1430 55%, #0C2034);
+    --td-surface-base: #0E1530;
+    --td-surface-solid: #111A38;
+    --td-surface-raised: rgba(14, 21, 48, 0.95);
+    --td-surface-overlay: rgba(14, 21, 48, 0.96);
+    --td-surface-option: #111A38;
+    --td-backdrop: rgba(4, 7, 20, 0.72);
+    --td-backdrop-glow: rgba(45, 212, 168, 0.35);
+    --td-backdrop-deep: rgba(4, 7, 20, 0.92);
+    --td-skeleton-bg: linear-gradient(135deg, #1E2A50, #111A38);
+    --td-accent: #0F7F6E;
+    --td-accent-hover: #0B6B5D;
+    --td-accent-gradient: linear-gradient(to right, #0F7F6E, #6A3FE0);
+    --td-accent-gradient-hover: linear-gradient(to right, #0B6B5D, #5A30C8);
+    --td-accent-gradient-soft: linear-gradient(135deg, rgba(15, 127, 110, 0.8), rgba(106, 63, 224, 0.8));
+    --td-accent-gradient-faint: linear-gradient(135deg, rgba(45, 212, 168, 0.18), rgba(155, 123, 255, 0.2));
+    --td-accent-gradient-faint-hover: linear-gradient(135deg, rgba(45, 212, 168, 0.28), rgba(155, 123, 255, 0.3));
+    --td-accent-text-gradient: linear-gradient(120deg, #6EF5C6, #7DD3FC 45%, #C4B5FD);
+    --td-accent-glow: rgba(45, 212, 168, 0.4);
+    --td-accent-glow-strong: rgba(45, 212, 168, 0.55);
+    --td-accent-muted: rgba(45, 212, 168, 0.55);
+    --td-focus-ring: #6EF5C6;
+    --td-focus-border: rgba(110, 245, 198, 0.9);
+    --td-focus-halo: rgba(45, 212, 168, 0.35);
+
+    /* Cases à cocher, boutons radio et curseurs natifs */
+    accent-color: #2DD4A8;
+  }
+
+  /* Titres : grotesque à la mode, approche serrée, lignes équilibrées */
+  :root[data-app-theme="aurora"] :is(h1, h2) {
+    font-family: var(--td-font-display);
+    font-synthesis: none;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  :root[data-app-theme="aurora"] h1 {
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  :root[data-app-theme="aurora"] h2 {
+    font-weight: 700;
+  }
+
+  /* Titres blancs : lueur d'aurore (pas sur les titres en dégradé, que l'ombre salirait) */
+  :root[data-app-theme="aurora"] h1[class~="text-white"] {
+    text-shadow: 0 0 32px rgba(61, 245, 176, 0.28);
+  }
+
+  :root[data-app-theme="aurora"] ::selection {
+    background: rgba(61, 245, 176, 0.35);
+    color: #FFFFFF;
+  }
+}
+
+/* --- Habillage (hors couche : prime sur les utilitaires Tailwind et les styles des composants) --- */
+
+/* Fond : nuit polaire et grain ; couleurs des aurores selon la couleur préférée (règles data-tone) */
+:root[data-app-theme="aurora"] .app-background {
+  --au-1: #3DF5B0;
+  --au-2: #38D9F5;
+  --au-3: #B18CFF;
+  background-color: #070B1F;
+  background-image:
+    radial-gradient(120% 60% at 50% 110%, rgba(56, 217, 245, 0.12), transparent 60%),
+    linear-gradient(180deg, #050816 0%, #0A1230 40%, #0D1B3A 72%, #0B2236 100%);
+}
+
+:root[data-app-theme="aurora"] .app-background[data-tone="purple"] { --au-1: #C08BFF; --au-2: #F07BD8; --au-3: #7DD3FC; }
+:root[data-app-theme="aurora"] .app-background[data-tone="blue"] { --au-1: #3FC8FF; --au-2: #6EE7F9; --au-3: #8B9BFF; }
+:root[data-app-theme="aurora"] .app-background[data-tone="green"] { --au-1: #4BEA8A; --au-2: #2DE0C0; --au-3: #B6F36B; }
+:root[data-app-theme="aurora"] .app-background[data-tone="red"] { --au-1: #FF6B7A; --au-2: #FF9A5C; --au-3: #E879F9; }
+:root[data-app-theme="aurora"] .app-background[data-tone="orange"] { --au-1: #FF9F45; --au-2: #FF6FA8; --au-3: #FFD15C; }
+:root[data-app-theme="aurora"] .app-background[data-tone="yellow"] { --au-1: #FFE45C; --au-2: #FFC23D; --au-3: #8CF0B0; }
+:root[data-app-theme="aurora"] .app-background[data-tone="rainbow"] { --au-1: #3DF5B0; --au-2: #FF7AC6; --au-3: #8B9BFF; }
+
+:root[data-app-theme="aurora"] .app-background::before,
+:root[data-app-theme="aurora"] .app-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Étoiles (deux tuiles décalées, de tailles différentes, pour casser la répétition),
+   de plus en plus rares vers l'horizon */
+:root[data-app-theme="aurora"] .app-background::before {
+  background:
+    url('/src/assets/themes/aurora-stars.svg') 0 0 / 320px 320px,
+    url('/src/assets/themes/aurora-stars.svg') 140px 90px / 480px 480px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.6) 45%, transparent 75%);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.6) 45%, transparent 75%);
+  opacity: 0.85;
+}
+
+/* Montagnes, sapins et chalet (calés à droite : le chalet reste visible sur mobile), grain par-dessus */
+:root[data-app-theme="aurora"] .app-background::after {
+  background:
+    url('/src/assets/themes/aurora-grain.svg') 0 0 / 180px 180px,
+    url('/src/assets/themes/aurora-landscape.svg') right bottom / max(100%, 48rem) auto no-repeat;
+}
+
+/* Les deux premiers disques deviennent des rideaux d'aurore : rayons verticaux du masque SVG,
+   colorés par un dégradé (bord inférieur --au-1, franges --au-3) */
+:root[data-app-theme="aurora"] .app-background__blob {
+  border-radius: 0;
+  filter: none;
+  mix-blend-mode: normal;
+  animation: none;
+  transform-origin: 50% 100%;
+  -webkit-mask: url('/src/assets/themes/aurora-curtain.svg') center / 100% 100% no-repeat;
+  mask: url('/src/assets/themes/aurora-curtain.svg') center / 100% 100% no-repeat;
+}
+
+:root[data-app-theme="aurora"] .app-background__blob--1 {
+  --au-opacity: 0.55;
+  top: 2%;
+  right: auto;
+  bottom: auto;
+  left: -10%;
+  width: 120%;
+  height: max(46vh, 18rem);
+  background: linear-gradient(0deg, var(--au-1) 0%, var(--au-1) 35%, var(--au-3) 85%);
+  opacity: var(--au-opacity);
+}
+
+:root[data-app-theme="aurora"] .app-background__blob--2 {
+  --au-opacity: 0.35;
+  top: 15%;
+  right: auto;
+  bottom: auto;
+  left: 18%;
+  width: 95%;
+  height: max(34vh, 13rem);
+  background: linear-gradient(0deg, var(--au-2) 25%, var(--au-3) 90%);
+  opacity: var(--au-opacity);
+  scale: -1 1;
+}
+
+/* Le troisième devient une étoile filante, visible seulement quand elle est animée */
+:root[data-app-theme="aurora"] .app-background__blob--3 {
+  top: 9%;
+  right: auto;
+  bottom: auto;
+  left: 56%;
+  width: 7rem;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.95));
+  opacity: 0;
+  rotate: 18deg;
+  -webkit-mask: none;
+  mask: none;
+}
+
+@media (max-width: 640px) {
+  :root[data-app-theme="aurora"] .app-background__blob--1 {
+    height: max(36vh, 15rem);
+  }
+
+  :root[data-app-theme="aurora"] .app-background__blob--2 {
+    height: max(26vh, 11rem);
+  }
+}
+
+@keyframes td-aurora-sway {
+  0% { transform: translateX(0) skewX(0deg) scaleY(1); }
+  50% { transform: translateX(-3%) skewX(-6deg) scaleY(1.08); }
+  100% { transform: translateX(2%) skewX(4deg) scaleY(0.94); }
+}
+
+@keyframes td-aurora-pulse {
+  0%, 100% { opacity: var(--au-opacity); }
+  50% { opacity: calc(var(--au-opacity) * 1.4); }
+}
+
+@keyframes td-aurora-twinkle {
+  from { opacity: 0.6; }
+  to { opacity: 0.95; }
+}
+
+/* Une traînée de 1 s environ toutes les 14 s, dans l'axe de l'étoile (18°) */
+@keyframes td-aurora-shooting-star {
+  0%, 88% { opacity: 0; translate: 0 0; }
+  90% { opacity: 1; }
+  96%, 100% { opacity: 0; translate: 16rem 5.2rem; }
+}
+
+@keyframes td-aurora-mesh {
+  to { background-position: 100% 60%, 0% 100%, 30% 0%, 0 0; }
+}
+
+/* Sur grand écran seulement, et si les animations sont permises */
+@media (min-width: 641px) and (prefers-reduced-motion: no-preference) {
+  :root[data-app-theme="aurora"] :is(.app-background__blob--1, .app-background__blob--2) {
+    mix-blend-mode: screen;
+    animation: td-aurora-sway 18s ease-in-out infinite alternate, td-aurora-pulse 7s ease-in-out infinite;
+  }
+
+  :root[data-app-theme="aurora"] .app-background__blob--2 {
+    animation-duration: 23s, 9s;
+    animation-delay: -6s, -3s;
+  }
+
+  :root[data-app-theme="aurora"] .app-background__blob--3 {
+    animation: td-aurora-shooting-star 14s ease-in infinite 4s;
+  }
+
+  :root[data-app-theme="aurora"] .app-background::before {
+    animation: td-aurora-twinkle 5s ease-in-out infinite alternate;
+  }
+
+  :root[data-app-theme="aurora"] .td-brand-mark {
+    animation: td-aurora-mesh 10s ease-in-out infinite alternate;
+  }
+}
+
+/* En-têtes : voile de nuit, filet aux couleurs de l'aurore */
+:root[data-app-theme="aurora"] .td-page-header {
+  background: rgba(7, 11, 31, 0.55);
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, rgba(61, 245, 176, 0), rgba(61, 245, 176, 0.6) 25%, rgba(56, 217, 245, 0.6) 50%, rgba(177, 140, 255, 0.6) 75%, rgba(177, 140, 255, 0)) 1;
+}
+
+/* Logo : dégradé « mesh » vert, bleu et violet, qui ondule doucement */
+:root[data-app-theme="aurora"] .td-brand-mark {
+  background:
+    radial-gradient(circle at 30% 30%, #19C9A0 0, transparent 42%),
+    radial-gradient(circle at 70% 40%, #2FA8EE 0, transparent 40%),
+    radial-gradient(circle at 50% 75%, #9B7BFF 0, transparent 46%),
+    #4B2BB8;
+  background-size: 200% 200%, 200% 200%, 200% 200%, auto;
+  background-position: 0% 0%, 100% 0%, 50% 100%, 0 0;
+  border-radius: 32%;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5), inset 0 -6px 12px rgba(30, 16, 66, 0.35), 0 8px 24px -6px rgba(61, 245, 176, 0.45);
+}
+
+:root[data-app-theme="aurora"] .td-brand-mark > span {
+  font-family: var(--td-font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-shadow: 0 1px 3px rgba(15, 10, 50, 0.5);
+}
+
+/* Nom de l'application : dégradé blanc → menthe → ciel → lilas */
+:root[data-app-theme="aurora"] .td-brand-name {
+  font-family: var(--td-font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-shadow: none;
+  background: linear-gradient(100deg, #FFFFFF 10%, #A7F3D0 45%, #BAE6FD 65%, #DDD6FE 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Cartes cliquables : elles s'élèvent avec un léger rebond */
+:root[data-app-theme="aurora"] :is(button, a):is(.glass-card-dashboard, .glass-card-user, .glass-card-challenge) {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
+}
+
+:root[data-app-theme="aurora"] :is(button, a):is(.glass-card-dashboard, .glass-card-user, .glass-card-challenge):hover {
+  transform: translateY(-4px);
+}
+
+/* Boutons d'action : reflet en haut et halo vert (les anneaux de focus Tailwind sont conservés) */
+:root[data-app-theme="aurora"] button[class*="bg-gradient-to-"]:not(:disabled) {
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 10px 24px -10px rgba(61, 245, 176, 0.6);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+:root[data-app-theme="aurora"] button[class*="bg-gradient-to-"]:not(:disabled):hover {
+  filter: brightness(1.08);
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 14px 32px -10px rgba(61, 245, 176, 0.75);
+}
+
+/* « Qui est-ce ? » : avatars en squircle cerclés de menthe ; halo d'aurore au survol */
+:root[data-app-theme="aurora"] .profile-image-glass {
+  border-radius: 34%;
+  border-color: rgba(110, 233, 194, 0.35);
+  box-shadow: 0 0 0 4px rgba(7, 11, 31, 0.65), 0 0 0 5.5px rgba(110, 233, 194, 0.4), 0 14px 30px rgba(2, 6, 20, 0.5);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+:root[data-app-theme="aurora"] .profile-card-glass:is(:hover, :focus-visible) .profile-image-glass {
+  border-color: rgba(196, 181, 253, 0.8);
+  box-shadow: 0 0 0 4px rgba(7, 11, 31, 0.65), 0 0 0 5.5px #C4B5FD, 0 0 40px rgba(61, 245, 176, 0.35), 0 18px 36px rgba(2, 6, 20, 0.55);
+  transform: translateY(-4px) scale(1.05);
+}
+
+:root[data-app-theme="aurora"] .profile-name-glass {
+  font-family: var(--td-font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
