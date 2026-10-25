@@ -64,6 +64,10 @@ listées dans `environment:` du compose, la valeur du compose l'emporte. Ce comp
 | `OCR_MODE` | `llm` | `llm` (vision) ou `tesseract` |
 | `OCR_TIMEOUT_MS` | 60000 | Délai Tesseract par image. Les langues sont mises en cache dans le volume `.cache/tesseract` |
 | `COURSE_PAGE_MAX_TOKENS` / `COURSE_PAGE_TIMEOUT_MS` | 16000 / 540000 | Génération de pages de cours |
+| `AI_CHILD_DATA_PROVIDERS` | Mistral | Services IA autorisés à recevoir les devoirs des enfants (RGPD), séparés par des virgules. LM Studio l'est toujours. Le choix fait dans Configuration IA est prioritaire. Un service non autorisé n'est jamais utilisé, même configuré |
+| `AI_DAILY_CALL_LIMIT` | 200 | Appels par jour aux services IA payants (tous sauf LM Studio) ; `0` = illimité. La consommation du jour s'affiche dans Configuration IA |
+| `AI_RATE_LIMIT_MAX` / `AI_RATE_LIMIT_WINDOW_MS` | 30 / 600000 | Générations par parent sur la fenêtre |
+| `AI_MAX_CONCURRENT` | 2 | Générations IA simultanées |
 
 ## Logs, ports, volumes
 

@@ -9,6 +9,7 @@ const { fetchWithTimeout, handleOpenAIResponse } = require('../../utils/fetch.js
 const { callTimeout } = require('../../utils/requestContext.js');
 const { API_TIMEOUT_MS, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE } = require('../../utils/constants.js');
 const { buildAnalysisPrompt, buildQuizSystemPrompt, buildQuizUserPrompt, quizMaxTokens } = require('../../prompts/quiz.js');
+const { recordAiCall, usageFromOpenAI } = require('../aiUsage.js');
 const logger = require('../../../../lib/logger.js');
 
 class OpenAICompatibleProvider extends AIProviderBase {
@@ -24,6 +25,7 @@ class OpenAICompatibleProvider extends AIProviderBase {
      * @param {boolean} [options.openAIErrors] - Traitement des erreurs OpenAI (429...)
      * @param {number} [options.timeoutMs] - Timeout d'un appel (borné par le délai de la requête)
      * @param {Object} [options.fetchOptions] - Options fetch supplémentaires (ex: redirect)
+     * @param {Object} [options.extraBody] - Champs ajoutés au corps de chaque requête
      */
     constructor(name, {
         baseUrl,
@@ -34,7 +36,8 @@ class OpenAICompatibleProvider extends AIProviderBase {
         temperature = DEFAULT_TEMPERATURE,
         openAIErrors = false,
         timeoutMs = API_TIMEOUT_MS,
-        fetchOptions = {}
+        fetchOptions = {},
+        extraBody = {}
     } = {}) {
         super(name);
         this.baseUrl = baseUrl;
@@ -46,6 +49,7 @@ class OpenAICompatibleProvider extends AIProviderBase {
         this.openAIErrors = openAIErrors;
         this.timeoutMs = Number.isFinite(timeoutMs) ? timeoutMs : API_TIMEOUT_MS;
         this.fetchOptions = fetchOptions;
+        this.extraBody = extraBody;
     }
 
     isAvailable() {
@@ -68,7 +72,7 @@ class OpenAICompatibleProvider extends AIProviderBase {
      */
     async chatText(messages, { maxTokens = DEFAULT_MAX_TOKENS, temperature = this.temperature, ctx, operation = 'chat', allowEmpty = false } = {}) {
         const timeoutMs = callTimeout(ctx, this.timeoutMs);
-        const body = { model: this.model, messages, max_tokens: maxTokens };
+        const body = { ...this.extraBody, model: this.model, messages, max_tokens: maxTokens };
         if (temperature !== null && temperature !== undefined) body.temperature = temperature;
 
         const response = await fetchWithTimeout(`${this.baseUrl}/chat/completions`, {
@@ -86,6 +90,7 @@ class OpenAICompatibleProvider extends AIProviderBase {
         }
 
         const data = await response.json();
+        await recordAiCall(this.name, usageFromOpenAI(data && data.usage));
         const content = data && data.choices && data.choices[0] && data.choices[0].message
             ? data.choices[0].message.content
             : '';

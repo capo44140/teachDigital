@@ -14,6 +14,9 @@ const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 const MISTRAL_BASE_URL = 'https://api.mistral.ai/v1';
 const KIMI_BASE_URL = 'https://api.moonshot.cn/v1';
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+// Routage OpenRouter : seulement vers des fournisseurs qui ne conservent pas et ne réutilisent pas
+// les données envoyées (devoirs d'enfants). Un modèle sans tel fournisseur est refusé par OpenRouter.
+const OPENROUTER_PROVIDER_PREFERENCES = Object.freeze({ data_collection: 'deny' });
 
 // Le serveur coupe toute requête après 180s (server.timeout) : un appel IA plus long
 // ne peut de toute façon pas aboutir. On borne donc les timeouts juste en dessous.
@@ -60,6 +63,7 @@ module.exports = {
     MISTRAL_BASE_URL,
     KIMI_BASE_URL,
     OPENROUTER_BASE_URL,
+    OPENROUTER_PROVIDER_PREFERENCES,
 
     // Timeouts
     API_TIMEOUT_MS,

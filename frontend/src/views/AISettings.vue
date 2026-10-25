@@ -293,6 +293,9 @@
                     <p class="text-xs text-white/70 font-mono truncate">
                       {{ row.model }}<span v-if="!row.config"> · réglé dans la section LM Studio</span>
                     </p>
+                    <p :class="['text-xs', row.childDataAllowed ? 'text-green-300' : 'text-amber-300']">
+                      {{ row.dataRegion }} · {{ row.childDataAllowed ? 'autorisé pour les devoirs' : 'non autorisé pour les devoirs' }}
+                    </p>
                   </div>
                 </div>
                 <div class="flex items-center space-x-3 flex-shrink-0">
@@ -317,7 +320,11 @@
             </div>
           </div>
 
-          <p class="text-xs text-white/70 mt-4">Ordre de priorité : LocalLLM, OpenAI, Gemini, DeepSeek, Groq, Mistral, Kimi, OpenRouter</p>
+          <p class="text-xs text-white/70 mt-4">
+            Ordre de priorité : LocalLLM, OpenAI, Gemini, DeepSeek, Groq, Mistral, Kimi, OpenRouter.
+            Seuls les services autorisés pour les devoirs des enfants sont utilisés (par défaut : LM Studio et Mistral, hébergé dans l'UE).
+          </p>
+          <p v-if="aiUsageText" class="text-xs text-white/70 mt-2" data-testid="ai-usage">{{ aiUsageText }}</p>
         </div>
 
         <!-- Section Pages de cours -->
@@ -336,13 +343,13 @@
               :key="option.name || 'auto'"
               type="button"
               :aria-pressed="coursePage.provider === option.name ? 'true' : 'false'"
-              :disabled="savingCoursePageProvider || (option.name && !option.configured)"
+              :disabled="savingCoursePageProvider || (option.name && (!option.configured || !option.childDataAllowed))"
               :class="[
                 'w-full text-left p-4 rounded-xl border-2 transition-all duration-300',
                 coursePage.provider === option.name
                   ? 'border-purple-400 bg-purple-500/15 shadow-lg shadow-purple-500/10'
                   : 'border-white/10 bg-white/5 hover:border-white/30 hover:bg-white/10',
-                option.name && !option.configured ? 'opacity-40 cursor-not-allowed' : ''
+                option.name && (!option.configured || !option.childDataAllowed) ? 'opacity-40 cursor-not-allowed' : ''
               ]"
               @click="saveCoursePageProvider(option.name)"
             >
@@ -364,6 +371,9 @@
                 </div>
                 <span v-if="option.name && !option.configured" class="text-xs px-2 py-0.5 rounded-full bg-slate-500/20 text-slate-300 border border-slate-500/30">
                   Non configuré
+                </span>
+                <span v-else-if="option.name && !option.childDataAllowed" class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/30">
+                  Non autorisé pour les devoirs
                 </span>
               </div>
             </button>
@@ -460,6 +470,8 @@ export default {
       providers: [],
       providersConfig: [],
       providersConfigError: null,
+      // Consommation IA du jour (null : indisponible)
+      aiUsage: null,
       expandedProvider: null,
       coursePage: {
         provider: null,
@@ -473,9 +485,17 @@ export default {
     // Mode automatique (null) suivi des providers capables de lire des photos
     coursePageOptions() {
       return [
-        { name: null, label: 'Automatique', description: 'Premier provider vision disponible, dans l\'ordre de priorité', configured: true },
+        { name: null, label: 'Automatique', description: 'Premier provider vision disponible et autorisé, dans l\'ordre de priorité', configured: true, childDataAllowed: true },
         ...this.coursePage.options.map(option => ({ ...option, description: option.model || '' }))
       ]
+    },
+    // Consommation du jour : « 12 appels aux services payants sur 200 · 3 avec LM Studio »
+    aiUsageText() {
+      if (!this.aiUsage) return ''
+      const { paidCalls, localCalls, dailyLimit } = this.aiUsage
+      const limit = dailyLimit > 0 ? ` sur ${dailyLimit} autorisés` : ' (sans limite)'
+      const local = localCalls > 0 ? ` · ${localCalls} avec LM Studio` : ''
+      return `Aujourd'hui : ${paidCalls} appel${paidCalls > 1 ? 's' : ''} aux services payants${limit}${local}`
     },
     localLLMUrlChanged() {
       const savedUrl = this.status.baseUrlSource === 'ui' ? this.status.baseUrl : ''
@@ -492,6 +512,9 @@ export default {
           label: 'LM Studio',
           model: this.status.activeModel,
           keyConfigured: localLLM ? localLLM.keyConfigured : !!this.status.baseUrl,
+          // Les données restent sur le réseau de la famille
+          dataRegion: 'Local (réseau de la famille)',
+          childDataAllowed: true,
           config: null
         },
         ...this.providersConfig.map(config => ({
@@ -499,6 +522,8 @@ export default {
           label: config.label,
           model: config.model,
           keyConfigured: config.keyConfigured,
+          dataRegion: config.dataRegion,
+          childDataAllowed: config.childDataAllowed,
           config
         }))
       ].map(row => ({ ...row, reachable: statusByName[row.name]?.reachable ?? null }))
@@ -570,7 +595,9 @@ export default {
     async loadProvidersConfig(aiService = new AIService()) {
       this.providersConfigError = null
       try {
-        this.providersConfig = await aiService.getProvidersConfig()
+        const { providers, usage } = await aiService.getProvidersConfig()
+        this.providersConfig = providers
+        this.aiUsage = usage
       } catch (err) {
         this.providersConfigError = 'Impossible de charger la configuration des providers: ' + (err.message || 'erreur inconnue')
       }

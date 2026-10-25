@@ -5,13 +5,16 @@
 
 // Sépare la page HTML du résumé destiné au parent dans la réponse du modèle
 const SUMMARY_MARKER = '===RESUME_PARENT===';
+// Le prénom de l'enfant n'est pas envoyé au service IA : le modèle écrit ce marqueur à la place,
+// remplacé par fillChildName() une fois la page reçue
+const CHILD_NAME_PLACEHOLDER = '{{PRENOM}}';
 
 const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
 
 /**
  * Construit le prompt de génération
  * @param {Object} options
- * @param {Object} options.childProfile - Profil de l'enfant (name, level)
+ * @param {Object} options.childProfile - Profil de l'enfant (level ; le prénom n'est pas envoyé)
  * @param {string} [options.subject] - Matière (maths, français, SVT…)
  * @param {string} [options.topic] - Sujet de l'interro (ex. « le théorème de Pythagore »)
  * @param {string} [options.instructions] - Consignes libres du parent
@@ -19,17 +22,16 @@ const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
  * @returns {string}
  */
 function buildCoursePagePrompt({ childProfile = {}, subject, topic, instructions, photoCount }) {
-    const childName = clean(childProfile.name) || 'mon enfant';
     const level = clean(childProfile.level) || 'non précisée';
     const subjectText = clean(subject) || 'à déduire des photos';
     const topicText = clean(topic) ? `« ${clean(topic)} »` : 'à déduire des photos';
     const extra = clean(instructions);
 
-    return `Je joins ${photoCount} photo${photoCount > 1 ? 's' : ''} de la leçon / du contrôle de mon enfant, ${childName}, en classe : ${level}, matière : ${subjectText}. Sujet de l'interro : ${topicText}.
+    return `Je joins ${photoCount} photo${photoCount > 1 ? 's' : ''} de la leçon / du contrôle de mon enfant, en classe : ${level}, matière : ${subjectText}. Sujet de l'interro : ${topicText}.
 
 Crée une page HTML d'entraînement, livrée sous forme d'un fichier HTML unique et autonome, en suivant ce modèle :
 
-1. EN-TÊTE style cahier (lignes Seyès, marge rouge), titre court, une phrase d'intro qui s'adresse à l'enfant (tutoiement).
+1. EN-TÊTE style cahier (lignes Seyès, marge rouge), titre court, une phrase d'intro qui s'adresse à l'enfant (tutoiement). Pour son prénom, écris exactement ${CHILD_NAME_PLACEHOLDER} (il sera remplacé) ; n'écris jamais un prénom lu sur les photos.
 
 2. « À CORRIGER » (seulement si les photos montrent des erreurs ou un contrôle corrigé) : reprends ses vraies erreurs, une carte par erreur, avec ce qu'il/elle a écrit (barré en rouge) → la bonne réponse (en vert) et une explication en une phrase. Signale aussi les erreurs de la leçon recopiée.
 
@@ -58,6 +60,25 @@ CONTRAINTES TECHNIQUES (la page est affichée dans l'application TeachDigital, d
 FORMAT DE RÉPONSE (obligatoire) :
 - Commence directement par <!DOCTYPE html>, sans bloc de code markdown ni texte avant.
 - Après </html>, écris une ligne contenant exactement ${SUMMARY_MARKER} puis, en quelques lignes en français destinées au parent : ce que contient la page, quelles erreurs tu as repérées, et ce qu'il doit vérifier (un prénom ou une date mal lus, par exemple).`;
+}
+
+/**
+ * Remplace le marqueur du prénom dans la page ou le résumé reçus du modèle.
+ * Le prénom est réduit à des lettres, espaces, tirets et apostrophes typographiques :
+ * il peut ainsi apparaître sans risque dans du HTML, un attribut ou une chaîne JavaScript.
+ * @param {string} text
+ * @param {string} [childName]
+ * @returns {string}
+ */
+function fillChildName(text, childName) {
+    const safeName = String(childName || '')
+        .normalize('NFC')
+        .replace(/'/g, '’')
+        .replace(/[^\p{L}\p{M}\s’-]/gu, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 50);
+    return String(text || '').split(CHILD_NAME_PLACEHOLDER).join(safeName);
 }
 
 /**
@@ -92,6 +113,8 @@ function parseCoursePageResponse(rawText) {
 
 module.exports = {
     SUMMARY_MARKER,
+    CHILD_NAME_PLACEHOLDER,
     buildCoursePagePrompt,
-    parseCoursePageResponse
+    parseCoursePageResponse,
+    fillChildName
 };

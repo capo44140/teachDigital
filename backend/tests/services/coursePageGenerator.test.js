@@ -4,7 +4,15 @@
 
 jest.mock('../../api/ai/services/aiProviders/index.js', () => ({
   getAvailableProviders: jest.fn(),
-  getProviderByName: jest.fn()
+  getProviderByName: jest.fn(),
+  isAllowedForChildData: jest.fn(() => true),
+  createNoProviderError: jest.fn(reason => Object.assign(new Error(`Tous les services IA ont échoué : ${reason}`), { code: 'AI_UNAVAILABLE' }))
+}));
+
+// Consommation IA : pas d'écriture en base pendant ces tests
+jest.mock('../../api/ai/services/aiUsage.js', () => ({
+  ...jest.requireActual('../../api/ai/services/aiUsage.js'),
+  recordAiCall: jest.fn(async () => {})
 }));
 
 jest.mock('../../api/ai/services/coursePageConfig.js', () => ({
@@ -12,13 +20,16 @@ jest.mock('../../api/ai/services/coursePageConfig.js', () => ({
   getProvider: jest.fn(() => null)
 }));
 
-const { getAvailableProviders, getProviderByName } = require('../../api/ai/services/aiProviders/index.js');
+const { getAvailableProviders, getProviderByName, isAllowedForChildData } = require('../../api/ai/services/aiProviders/index.js');
+const { recordAiCall } = require('../../api/ai/services/aiUsage.js');
 const coursePageConfig = require('../../api/ai/services/coursePageConfig.js');
 const { generateCoursePageFromImages } = require('../../api/ai/services/coursePageGenerator.js');
 const {
   SUMMARY_MARKER,
+  CHILD_NAME_PLACEHOLDER,
   buildCoursePagePrompt,
-  parseCoursePageResponse
+  parseCoursePageResponse,
+  fillChildName
 } = require('../../api/ai/prompts/coursePageHtml.js');
 
 const PAGE = '<!DOCTYPE html><html><head><title>Pythagore</title></head><body><span id="sOk">0</span></body></html>';
@@ -35,11 +46,17 @@ describe('buildCoursePagePrompt', () => {
       photoCount: 3
     });
     expect(prompt).toContain('3 photos');
-    expect(prompt).toContain('Léa, en classe : 4ème, matière : Mathématiques');
+    expect(prompt).toContain('mon enfant, en classe : 4ème, matière : Mathématiques');
     expect(prompt).toContain('« le théorème de Pythagore »');
     expect(prompt).toContain('insister sur la réciproque');
     expect(prompt).toContain('id="sOk"');
     expect(prompt).toContain(SUMMARY_MARKER);
+  });
+
+  it('n\'envoie pas le prénom de l\'enfant : le modèle écrit un marqueur', () => {
+    const prompt = buildCoursePagePrompt({ childProfile: { name: 'Léa', level: '4ème' }, photoCount: 1 });
+    expect(prompt).not.toContain('Léa');
+    expect(prompt).toContain(CHILD_NAME_PLACEHOLDER);
   });
 
   it('laisse l\'IA déduire matière et sujet quand ils manquent', () => {
@@ -68,6 +85,21 @@ describe('parseCoursePageResponse', () => {
   });
 });
 
+describe('fillChildName', () => {
+  it('remplace le marqueur par le prénom', () => {
+    expect(fillChildName(`<h1>Bravo ${CHILD_NAME_PLACEHOLDER} !</h1>`, 'Léa')).toBe('<h1>Bravo Léa !</h1>');
+  });
+
+  it('ne garde que des caractères sûrs dans du HTML ou une chaîne JavaScript', () => {
+    const html = `<script>const nom = "${CHILD_NAME_PLACEHOLDER}";</script>`;
+    expect(fillChildName(html, 'Zoé-Anne d\'Arc"</script><img src=x>')).toBe('<script>const nom = "Zoé-Anne d’Arcscriptimg srcx";</script>');
+  });
+
+  it('retire le marqueur sans prénom', () => {
+    expect(fillChildName(`Salut ${CHILD_NAME_PLACEHOLDER}`, '')).toBe('Salut ');
+  });
+});
+
 describe('generateCoursePageFromImages', () => {
   const images = [{ base64: 'AAAA', mimeType: 'image/png' }];
   const childProfile = { name: 'Léa', level: '4ème' };
@@ -80,6 +112,34 @@ describe('generateCoursePageFromImages', () => {
   afterEach(() => {
     delete global.fetch;
     coursePageConfig.getProvider.mockReturnValue(null);
+    isAllowedForChildData.mockReturnValue(true);
+  });
+
+  it('remplit le prénom dans la page et le résumé, et compte l\'appel', async () => {
+    getAvailableProviders.mockReturnValue([fakeProvider('LocalLLM', 'qwen-vl')]);
+    const page = PAGE.replace('<body>', `<body><h1>Allez ${CHILD_NAME_PLACEHOLDER} !</h1>`);
+    global.fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ choices: [{ message: { content: `${page}\n${SUMMARY_MARKER}\nPage pour ${CHILD_NAME_PLACEHOLDER}` } }], usage: { prompt_tokens: 900, completion_tokens: 4000 } })
+    });
+
+    const result = await generateCoursePageFromImages({ images, childProfile });
+
+    expect(result.html).toContain('<h1>Allez Léa !</h1>');
+    expect(result.summary).toBe('Page pour Léa');
+    expect(JSON.stringify(global.fetch.mock.calls[0][1].body)).not.toContain('Léa');
+    expect(recordAiCall).toHaveBeenCalledWith('LocalLLM', { promptTokens: 900, completionTokens: 4000 });
+  });
+
+  it('refuse (409) le provider choisi s\'il n\'est pas autorisé pour les données des enfants', async () => {
+    coursePageConfig.getProvider.mockReturnValue('OpenAI');
+    getProviderByName.mockReturnValue(fakeProvider('OpenAI', 'gpt-4o'));
+    isAllowedForChildData.mockReturnValue(false);
+
+    await expect(generateCoursePageFromImages({ images, childProfile }))
+      .rejects.toMatchObject({ status: 409, code: 'AI_CHILD_DATA_NOT_ALLOWED' });
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('utilise le modèle LM Studio configuré et envoie toutes les photos', async () => {
@@ -136,6 +196,8 @@ describe('generateCoursePageFromImages', () => {
     expect(url).toBe('https://openrouter.ai/api/v1/chat/completions');
     expect(options.headers.Authorization).toBe('Bearer key-OpenRouter');
     expect(JSON.parse(options.body).model).toBe('google/gemini-2.5-flash');
+    // Seulement des fournisseurs qui ne conservent pas les données
+    expect(JSON.parse(options.body).provider).toEqual({ data_collection: 'deny' });
   });
 
   it('ne bascule pas sur un autre provider quand le provider choisi échoue', async () => {

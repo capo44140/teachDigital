@@ -6,7 +6,7 @@
 const OpenAICompatibleProvider = require('./openaiCompatible.js');
 const providerSettings = require('./providerSettings.js');
 const { isValidOpenRouterKey } = require('../../utils/validation.js');
-const { OPENROUTER_BASE_URL } = require('../../utils/constants.js');
+const { OPENROUTER_BASE_URL, OPENROUTER_PROVIDER_PREFERENCES } = require('../../utils/constants.js');
 
 class OpenRouterProvider extends OpenAICompatibleProvider {
     constructor() {
@@ -16,7 +16,8 @@ class OpenRouterProvider extends OpenAICompatibleProvider {
             model: providerSettings.getModel('OpenRouter'),
             isValidKey: isValidOpenRouterKey,
             // En-tête d'attribution recommandé par OpenRouter (optionnel)
-            extraHeaders: { 'X-Title': 'TeachDigital' }
+            extraHeaders: { 'X-Title': 'TeachDigital' },
+            extraBody: { provider: OPENROUTER_PROVIDER_PREFERENCES }
         });
     }
 }

@@ -32,7 +32,7 @@ jest.mock('../../api/ai/utils/fetch.js', () => ({
 const { fetchWithTimeout } = require('../../api/ai/utils/fetch.js');
 const providerSettings = require('../../api/ai/services/aiProviders/providerSettings.js');
 const localLLMConfig = require('../../api/ai/services/aiProviders/localLLMConfig.js');
-const { getProviderByName } = require('../../api/ai/services/aiProviders/index.js');
+const { getProviderByName, getAvailableProviders } = require('../../api/ai/services/aiProviders/index.js');
 const { validateApiKey } = require('../../api/ai/utils/validation.js');
 const handleAI = require('../../api/ai/index.js');
 const { createMockRequest, createMockResponse } = require('../helpers/testHelpers.js');
@@ -53,7 +53,7 @@ const VALID_KEYS = {
 
 const ENV_VARS = ['OPENAI', 'GEMINI', 'DEEPSEEK', 'GROQ', 'MISTRAL', 'KIMI', 'OPENROUTER']
   .flatMap(prefix => [`${prefix}_API_KEY`, `${prefix}_MODEL`])
-  .concat(['LOCAL_LLM_URL', 'LOCAL_LLM_MODEL']);
+  .concat(['LOCAL_LLM_URL', 'LOCAL_LLM_MODEL', 'AI_CHILD_DATA_PROVIDERS', 'AI_PROVIDER']);
 
 const mockReq = (method, url, body = {}) => createMockRequest(method, url, body);
 const mockRes = createMockResponse;
@@ -155,6 +155,65 @@ describe('providerSettings', () => {
 
   it('accepte une clé Mistral sans préfixe', () => {
     expect(providerSettings.isValidKeyFormat('Mistral', VALID_KEYS.Mistral)).toBe(true);
+  });
+
+  describe('données des enfants (RGPD)', () => {
+    const availableNames = () => getAvailableProviders().map(provider => provider.getName());
+
+    it('n\'autorise par défaut que les providers hébergés dans l\'UE', () => {
+      expect(providerSettings.NAMES.filter(name => providerSettings.isChildDataAllowed(name))).toEqual(['Mistral']);
+      expect(providerSettings.getPublicConfig('Kimi')).toMatchObject({
+        dataRegion: 'Chine',
+        childDataAllowed: false,
+        childDataSource: 'default'
+      });
+    });
+
+    it('exclut de la cascade un provider configuré mais non autorisé', () => {
+      process.env.OPENAI_API_KEY = VALID_KEYS.OpenAI;
+      process.env.MISTRAL_API_KEY = VALID_KEYS.Mistral;
+      expect(availableNames()).toEqual(['Mistral']);
+    });
+
+    it('AI_CHILD_DATA_PROVIDERS remplace la liste par défaut (noms insensibles à la casse)', () => {
+      process.env.AI_CHILD_DATA_PROVIDERS = 'openai, Gemini, inconnu';
+      expect(providerSettings.isChildDataAllowed('OpenAI')).toBe(true);
+      expect(providerSettings.isChildDataAllowed('Gemini')).toBe(true);
+      expect(providerSettings.isChildDataAllowed('Mistral')).toBe(false);
+      expect(providerSettings.getChildDataSource('OpenAI')).toBe('env');
+    });
+
+    it('le choix de l\'interface prime sur le .env et survit au rechargement', async () => {
+      process.env.AI_CHILD_DATA_PROVIDERS = 'OpenAI';
+      await providerSettings.setChildDataAllowed('OpenAI', false);
+      await providerSettings.setChildDataAllowed('Kimi', true);
+      expect(mockRows.get('openai_child_data')).toBe('deny');
+
+      await providerSettings.load();
+
+      expect(providerSettings.isChildDataAllowed('OpenAI')).toBe(false);
+      expect(providerSettings.isChildDataAllowed('Kimi')).toBe(true);
+      expect(providerSettings.getChildDataSource('Kimi')).toBe('ui');
+    });
+
+    it('POST /providers/:name/config enregistre l\'autorisation sans vérifier de clé', async () => {
+      process.env.OPENAI_API_KEY = VALID_KEYS.OpenAI;
+      const res = mockRes();
+      await handleAI(mockReq('POST', '/providers/OpenAI/config', { childDataAllowed: true }), res);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.data).toMatchObject({ childDataAllowed: true, childDataSource: 'ui' });
+      expect(fetchWithTimeout).not.toHaveBeenCalled();
+      expect(availableNames()).toContain('OpenAI');
+    });
+
+    it('refuse une autorisation qui n\'est pas un booléen', async () => {
+      const res = mockRes();
+      await handleAI(mockReq('POST', '/providers/OpenAI/config', { childDataAllowed: 'oui' }), res);
+
+      expect(res.statusCode).toBe(400);
+      expect(mockRows.has('openai_child_data')).toBe(false);
+    });
   });
 
   describe('routes providers', () => {

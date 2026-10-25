@@ -81,6 +81,8 @@ const SESSION_REJECTED_CODES = new Set(['UNAUTHORIZED', 'TOKEN_REVOKED'])
 
 // 429 liés à un code saisi (PIN parent, code familial) : verrouillage temporaire
 const CODE_LOCK_CODES = new Set(['PIN_LOCKED', 'RATE_LIMIT_PIN', 'FAMILY_GATE_LOCKED'])
+// Limites des générations IA (429) : quota du jour, génération en cours, trop de générations
+const AI_LIMIT_CODES = new Set(['AI_DAILY_QUOTA', 'AI_BUSY', 'RATE_LIMIT_AI'])
 
 async function readJsonSafely (response) {
   try {
@@ -351,6 +353,9 @@ class ApiService {
         message = `Trop de codes incorrects : l'accès est temporairement bloqué.${wait}`
       } else if (code === 'RATE_LIMIT_LOGIN') {
         message = `Trop de tentatives de connexion.${wait}`
+      } else if (AI_LIMIT_CODES.has(code) && serverMessage) {
+        // Quota du jour, génération déjà en cours… : le message du serveur explique quoi faire
+        message = serverMessage
       } else {
         message = `Trop de requêtes envoyées au serveur.${wait}`
       }

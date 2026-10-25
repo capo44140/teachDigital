@@ -1,7 +1,14 @@
 /**
- * Paramètres des providers IA à clé API (clé et modèle), modifiables depuis l'interface
- * Stockés dans ai_settings : "<provider>_api_key" (chiffrée) et "<provider>_model".
+ * Paramètres des providers IA à clé API (clé, modèle, autorisation des données d'enfants),
+ * modifiables depuis l'interface
+ * Stockés dans ai_settings : "<provider>_api_key" (chiffrée), "<provider>_model" et
+ * "<provider>_child_data" ("allow" / "deny").
  * Priorité : valeur enregistrée depuis l'interface > variable d'environnement > défaut.
+ *
+ * Données d'enfants (RGPD) : leçons, photos et textes envoyés à l'IA viennent des devoirs des
+ * enfants. Un provider n'est utilisé que s'il est autorisé pour ces données : par défaut,
+ * seuls les providers hébergés dans l'UE (Mistral) le sont ; les autres doivent être autorisés
+ * explicitement par un parent (interface) ou par AI_CHILD_DATA_PROVIDERS (.env).
  */
 
 const { encrypt, decryptWithInfo, loadSettings, saveSetting } = require('../aiSettingsStore.js');
@@ -15,12 +22,15 @@ const MAX_MODEL_LENGTH = 200;
 
 /**
  * Providers à clé API, dans l'ordre de priorité
+ * - dataRegion : où les données envoyées sont traitées (affiché dans l'interface)
+ * - childDataByDefault : autorisé pour les données d'enfants sans réglage explicite (UE seulement)
  * - auth : 'bearer' (Authorization: Bearer, défaut) ou 'google' (x-goog-api-key)
  * - modelsPath : GET listant les modèles (défaut /models) ; checkPath : GET validant la clé (défaut modelsPath)
  */
 const PROVIDERS = {
     OpenAI: {
         label: 'OpenAI',
+        dataRegion: 'États-Unis',
         envKey: 'OPENAI_API_KEY',
         envModel: 'OPENAI_MODEL',
         defaultModel: constants.DEFAULT_OPENAI_MODEL,
@@ -32,6 +42,7 @@ const PROVIDERS = {
     },
     Gemini: {
         label: 'Google Gemini',
+        dataRegion: 'États-Unis (Google)',
         envKey: 'GEMINI_API_KEY',
         envModel: 'GEMINI_MODEL',
         defaultModel: constants.DEFAULT_GEMINI_MODEL,
@@ -49,6 +60,7 @@ const PROVIDERS = {
     },
     DeepSeek: {
         label: 'DeepSeek',
+        dataRegion: 'Chine',
         envKey: 'DEEPSEEK_API_KEY',
         envModel: 'DEEPSEEK_MODEL',
         defaultModel: constants.DEFAULT_DEEPSEEK_MODEL,
@@ -60,6 +72,7 @@ const PROVIDERS = {
     },
     Groq: {
         label: 'Groq',
+        dataRegion: 'États-Unis',
         envKey: 'GROQ_API_KEY',
         envModel: 'GROQ_MODEL',
         defaultModel: constants.DEFAULT_GROQ_MODEL,
@@ -70,6 +83,8 @@ const PROVIDERS = {
     },
     Mistral: {
         label: 'Mistral',
+        dataRegion: 'Union européenne (France)',
+        childDataByDefault: true,
         envKey: 'MISTRAL_API_KEY',
         envModel: 'MISTRAL_MODEL',
         defaultModel: constants.DEFAULT_MISTRAL_MODEL,
@@ -80,6 +95,7 @@ const PROVIDERS = {
     },
     Kimi: {
         label: 'Kimi (Moonshot)',
+        dataRegion: 'Chine',
         envKey: 'KIMI_API_KEY',
         envModel: 'KIMI_MODEL',
         defaultModel: constants.DEFAULT_KIMI_MODEL,
@@ -91,6 +107,7 @@ const PROVIDERS = {
     },
     OpenRouter: {
         label: 'OpenRouter',
+        dataRegion: 'Variable selon le modèle (souvent États-Unis)',
         envKey: 'OPENROUTER_API_KEY',
         envModel: 'OPENROUTER_MODEL',
         defaultModel: constants.DEFAULT_OPENROUTER_MODEL,
@@ -109,10 +126,12 @@ const PROVIDERS = {
 const NAMES = Object.keys(PROVIDERS);
 
 // Cache mémoire : chargé au démarrage (load), mis à jour à chaque enregistrement
-const uiValues = Object.fromEntries(NAMES.map(name => [name, { apiKey: null, model: null }]));
+// childData : true / false (choix enregistré depuis l'interface) ou null (non réglé)
+const uiValues = Object.fromEntries(NAMES.map(name => [name, { apiKey: null, model: null, childData: null }]));
 
 const apiKeySetting = name => `${name.toLowerCase()}_api_key`;
 const modelSetting = name => `${name.toLowerCase()}_model`;
+const childDataSetting = name => `${name.toLowerCase()}_child_data`;
 
 function getDefinition(name) {
     const definition = PROVIDERS[name];
@@ -145,7 +164,7 @@ async function reencryptApiKey(name, apiKey) {
  * Charge les paramètres enregistrés depuis la base (au démarrage du serveur, cf. aiSettingsLoader.js)
  */
 async function load() {
-    const settings = await loadSettings(NAMES.flatMap(name => [apiKeySetting(name), modelSetting(name)]));
+    const settings = await loadSettings(NAMES.flatMap(name => [apiKeySetting(name), modelSetting(name), childDataSetting(name)]));
     for (const name of NAMES) {
         let apiKey = null;
         const storedKey = settings.get(apiKeySetting(name));
@@ -159,7 +178,12 @@ async function load() {
                 logger.warn(`Clé ${name} enregistrée illisible (JWT_SECRET ou AI_SETTINGS_KEY modifié ?)`, { error: error.message });
             }
         }
-        uiValues[name] = { apiKey, model: settings.get(modelSetting(name)) || null };
+        const childData = settings.get(childDataSetting(name));
+        uiValues[name] = {
+            apiKey,
+            model: settings.get(modelSetting(name)) || null,
+            childData: childData === 'allow' ? true : childData === 'deny' ? false : null
+        };
     }
 }
 
@@ -234,6 +258,47 @@ async function setModel(name, model) {
     logger.info(`Modèle ${name} : ${model || '(défaut)'}`);
 }
 
+/**
+ * Providers autorisés par AI_CHILD_DATA_PROVIDERS (noms séparés par des virgules), ou null si absent
+ */
+function getEnvChildDataProviders() {
+    const raw = String(process.env.AI_CHILD_DATA_PROVIDERS || '').trim();
+    if (!raw) return null;
+    return new Set(raw.split(',').map(value => resolveName(value.trim())).filter(Boolean));
+}
+
+/**
+ * Le provider peut-il recevoir les données des enfants (leçons, photos, textes) ?
+ * Priorité : choix enregistré depuis l'interface > AI_CHILD_DATA_PROVIDERS > défaut (UE seulement)
+ */
+function isChildDataAllowed(name) {
+    const definition = getDefinition(name);
+    const uiChoice = uiValues[name]?.childData;
+    if (uiChoice === true || uiChoice === false) return uiChoice;
+    const envProviders = getEnvChildDataProviders();
+    if (envProviders) return envProviders.has(name);
+    return definition.childDataByDefault === true;
+}
+
+/**
+ * @returns {'ui'|'env'|'default'} Origine de l'autorisation des données d'enfants
+ */
+function getChildDataSource(name) {
+    if (uiValues[name]?.childData === true || uiValues[name]?.childData === false) return 'ui';
+    return getEnvChildDataProviders() ? 'env' : 'default';
+}
+
+/**
+ * Enregistre l'autorisation des données d'enfants choisie dans l'interface
+ * @param {boolean} allowed
+ */
+async function setChildDataAllowed(name, allowed) {
+    getDefinition(name);
+    await saveSetting(childDataSetting(name), allowed ? 'allow' : 'deny');
+    uiValues[name] = { ...uiValues[name], childData: !!allowed };
+    logger.info(`Données d'enfants ${allowed ? 'autorisées' : 'refusées'} pour ${name}`);
+}
+
 function authHeaders(definition, apiKey) {
     return definition.auth === 'google' ? { 'x-goog-api-key': apiKey } : { Authorization: `Bearer ${apiKey}` };
 }
@@ -290,7 +355,10 @@ function getPublicConfig(name) {
         keyUrl: definition.keyUrl,
         model: getModel(name),
         modelSource: getModelSource(name),
-        defaultModel: getDefaultModel(name)
+        defaultModel: getDefaultModel(name),
+        dataRegion: definition.dataRegion,
+        childDataAllowed: isChildDataAllowed(name),
+        childDataSource: getChildDataSource(name)
     };
 }
 
@@ -311,6 +379,9 @@ module.exports = {
     isValidModel,
     getModelFormatHint,
     setModel,
+    isChildDataAllowed,
+    getChildDataSource,
+    setChildDataAllowed,
     getCheckRequest,
     getModelsRequest,
     parseModels,

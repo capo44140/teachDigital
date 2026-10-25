@@ -25,6 +25,24 @@
       </span>
     </div>
 
+    <!-- Données des enfants (RGPD) : sans autorisation, le provider n'est jamais utilisé -->
+    <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+      <label :for="`${config.name}-child-data`" class="flex items-start gap-3 cursor-pointer">
+        <input
+          :id="`${config.name}-child-data`"
+          v-model="childDataInput"
+          type="checkbox"
+          :aria-describedby="`${config.name}-child-data-hint`"
+          class="mt-0.5 w-4 h-4 flex-shrink-0 accent-purple-500"
+        >
+        <span class="text-sm text-white">Autoriser l'envoi des devoirs des enfants à {{ config.label }}</span>
+      </label>
+      <p :id="`${config.name}-child-data-hint`" class="text-xs text-white/70 mt-1 ml-7">
+        Données traitées : {{ config.dataRegion }}. Photos, leçons et textes viennent des devoirs des enfants :
+        sans cette autorisation, {{ config.label }} n'est jamais utilisé, même avec une clé.
+      </p>
+    </div>
+
     <div>
       <label :for="`${config.name}-key`" class="block text-xs text-white/70 uppercase tracking-wider mb-2">
         {{ config.keyConfigured ? 'Remplacer la clé API' : 'Clé API' }}
@@ -103,7 +121,8 @@
 import { AIService } from '../services/aiService.js'
 
 /**
- * Formulaire clé API + modèle d'un provider IA (section Providers de Configuration IA)
+ * Formulaire autorisation des données d'enfants + clé API + modèle d'un provider IA
+ * (section Providers de Configuration IA)
  */
 export default {
   name: 'AIProviderConfig',
@@ -119,6 +138,7 @@ export default {
     return {
       keyInput: '',
       modelInput: '',
+      childDataInput: false,
       modelSuggestions: [],
       loadingModels: false,
       saving: false,
@@ -131,7 +151,9 @@ export default {
       return this.config.modelSource === 'ui' ? this.config.model : ''
     },
     hasChanges() {
-      return this.keyInput.trim() !== '' || this.modelInput.trim() !== this.savedModelInput
+      return this.keyInput.trim() !== '' ||
+        this.modelInput.trim() !== this.savedModelInput ||
+        this.childDataInput !== !!this.config.childDataAllowed
     }
   },
   watch: {
@@ -140,6 +162,7 @@ export default {
       handler(config, previous) {
         this.keyInput = ''
         this.modelInput = this.savedModelInput
+        this.childDataInput = !!config.childDataAllowed
         // Nouvelle clé : les modèles disponibles peuvent changer
         if (!previous || previous.maskedKey !== config.maskedKey) {
           this.loadModels()
@@ -173,6 +196,7 @@ export default {
       const model = this.modelInput.trim()
       if (apiKey) payload.apiKey = apiKey
       if (model !== this.savedModelInput) payload.model = model || null
+      if (this.childDataInput !== !!this.config.childDataAllowed) payload.childDataAllowed = this.childDataInput
 
       try {
         const config = await new AIService().saveProviderConfig(this.config.name, payload)

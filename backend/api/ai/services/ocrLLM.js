@@ -8,6 +8,7 @@ const { fetchWithTimeout, handleOpenAIResponse } = require('../utils/fetch.js');
 const { callGeminiGenerateContent } = require('../utils/gemini.js');
 const { OPENAI_BASE_URL, API_TIMEOUT_MS } = require('../utils/constants.js');
 const { isAbortError, callTimeout, isDeadlineReached, createAiTimeoutError } = require('../utils/requestContext.js');
+const { recordAiCall, usageFromOpenAI } = require('./aiUsage.js');
 const logger = require('../../../lib/logger.js');
 
 const OCR_PROMPT = 'Extrais TOUT le texte visible dans cette image. Retourne UNIQUEMENT le texte brut, sans commentaires, sans formatage, sans explications. Si l\'image contient du texte, retourne-le tel quel. Si l\'image ne contient pas de texte, retourne "Aucun texte détecté dans l\'image."';
@@ -40,7 +41,9 @@ async function extractTextFromImageWithLLM(base64Image, ctx) {
 
 /**
  * Extrait le texte d'une image en utilisant les APIs de vision des LLM
- * Priorité: LocalLLM → OpenAI → Gemini. S'arrête dès que la requête est annulée.
+ * Priorité: LocalLLM → OpenAI → Gemini, parmi les providers retenus par getAvailableProviders()
+ * (AI_PROVIDER, AI_DISABLE_PROVIDERS, autorisation des données d'enfants).
+ * S'arrête dès que la requête est annulée.
  *
  * @param {string} base64Image - Image en base64
  * @param {string} prompt - Prompt pour l'extraction
@@ -49,18 +52,23 @@ async function extractTextFromImageWithLLM(base64Image, ctx) {
  */
 async function extractTextWithVisionAPI(base64Image, prompt, ctx) {
     // require local : aiProviders/index.js charge tous les providers
-    const { getAvailableProviders } = require('./aiProviders/index.js');
+    const { getAvailableProviders, createNoProviderError } = require('./aiProviders/index.js');
     const attempts = [];
 
-    const localLLMProvider = getAvailableProviders().find(p => p.getName() === 'LocalLLM');
+    const available = getAvailableProviders();
+    const isAvailable = name => available.some(provider => provider.getName() === name);
+    const localLLMProvider = available.find(p => p.getName() === 'LocalLLM');
     if (localLLMProvider && typeof localLLMProvider.extractTextWithVision === 'function') {
         attempts.push(['LocalLLM', () => localLLMProvider.extractTextWithVision(base64Image, prompt, ctx)]);
     }
-    if (providerSettings.isConfigured('OpenAI')) {
+    if (isAvailable('OpenAI')) {
         attempts.push(['OpenAI', () => extractTextWithOpenAIVision(base64Image, prompt, ctx)]);
     }
-    if (providerSettings.isConfigured('Gemini')) {
+    if (isAvailable('Gemini')) {
         attempts.push(['Gemini', () => extractTextWithGeminiVision(base64Image, prompt, ctx)]);
+    }
+    if (attempts.length === 0) {
+        throw createNoProviderError('aucun provider de vision disponible (LocalLLM, OpenAI ou Gemini requis)', ['OpenAI', 'Gemini']);
     }
 
     for (const [name, attempt] of attempts) {
@@ -111,6 +119,7 @@ async function extractTextWithOpenAIVision(base64Image, prompt, ctx) {
     await handleOpenAIResponse(response, 'OpenAI Vision (OCR)');
 
     const data = await response.json();
+    await recordAiCall('OpenAI', usageFromOpenAI(data && data.usage));
     return (data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
 }
 

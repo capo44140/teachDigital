@@ -4,7 +4,7 @@
  * Base et réseau simulés : un seul provider (OpenRouter), fetch global mocké.
  */
 
-// Table ai_settings simulée (vide)
+// Table ai_settings simulée (vide) ; ai_usage simulée (aucun appel aujourd'hui)
 jest.mock('../../lib/database.js', () => ({
   pool: {
     query: jest.fn(async (sql) => {
@@ -14,8 +14,12 @@ jest.mock('../../lib/database.js', () => ({
   }
 }));
 
+// Limite de générations par parent : relevée ici (testée dans aiUsage.test.js)
+process.env.AI_RATE_LIMIT_MAX = '1000';
+
 const http = require('http');
 const express = require('express');
+const { pool } = require('../../lib/database.js');
 const handleAI = require('../../api/ai/index.js');
 const quizGenerator = require('../../api/ai/services/quizGenerator.js');
 const { createMockRequest, createMockResponse } = require('../helpers/testHelpers.js');
@@ -62,7 +66,12 @@ async function call(method, url, body, headers = {}) {
 }
 
 const savedEnv = {};
-const ENV_KEYS = ['AI_PROVIDER', 'OPENROUTER_API_KEY', 'AI_REQUEST_TIMEOUT_MS', 'OCR_MODE', 'LOCAL_LLM_URL', 'OPENAI_API_KEY', 'GEMINI_API_KEY'];
+const ENV_KEYS = [
+  'AI_PROVIDER', 'OPENROUTER_API_KEY', 'AI_REQUEST_TIMEOUT_MS', 'OCR_MODE', 'LOCAL_LLM_URL', 'OPENAI_API_KEY', 'GEMINI_API_KEY',
+  'AI_CHILD_DATA_PROVIDERS', 'AI_DAILY_CALL_LIMIT', 'AI_MAX_CONCURRENT'
+];
+// Tous les providers autorisés pour les données des enfants (sauf tests dédiés)
+const ALL_PROVIDERS = 'OpenAI,Gemini,DeepSeek,Groq,Mistral,Kimi,OpenRouter';
 
 beforeAll(() => {
   ENV_KEYS.forEach((key) => { savedEnv[key] = process.env[key]; });
@@ -80,6 +89,7 @@ beforeEach(() => {
   ENV_KEYS.forEach((key) => delete process.env[key]);
   process.env.AI_PROVIDER = 'OpenRouter';
   process.env.OPENROUTER_API_KEY = OPENROUTER_KEY;
+  process.env.AI_CHILD_DATA_PROVIDERS = ALL_PROVIDERS;
   global.fetch = jest.fn(async () => chatResponse(JSON.stringify(QUIZ)));
 });
 
@@ -106,6 +116,69 @@ describe('POST /generate-quiz-from-text', () => {
     expect(body.messages[0].content).toContain('Générez exactement 3 questions');
     // L'avatar (image_data) du profil n'est jamais envoyé au LLM
     expect(options.body).not.toContain('image_data');
+    // OpenRouter : seulement des fournisseurs qui ne conservent pas les données
+    expect(body.provider).toEqual({ data_collection: 'deny' });
+  });
+
+  it('refuse (409) quand aucun provider configuré n\'est autorisé pour les données des enfants', async () => {
+    delete process.env.AI_CHILD_DATA_PROVIDERS;
+    const res = await call('POST', '/generate-quiz-from-text', { text: 'abc', childProfile: PROFILE, options: { questionCount: 3 } });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.code).toBe('AI_CHILD_DATA_NOT_ALLOWED');
+    expect(res.body.message).toContain('OpenRouter');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('refuse (429) une génération quand le quota du jour est atteint, sans appeler l\'IA', async () => {
+    process.env.AI_DAILY_CALL_LIMIT = '5';
+    const defaultQuery = pool.query.getMockImplementation();
+    pool.query.mockImplementation(async (sql, params) => (
+      sql.includes('SUM(calls)') ? { rows: [{ calls: '5' }] } : defaultQuery(sql, params)
+    ));
+    try {
+      const res = await call('POST', '/generate-quiz-from-text', { text: 'abc', childProfile: PROFILE, options: { questionCount: 3 } });
+
+      expect(res.statusCode).toBe(429);
+      expect(res.body.code).toBe('AI_DAILY_QUOTA');
+      expect(res.body.message).toContain('5 appels');
+      expect(global.fetch).not.toHaveBeenCalled();
+    } finally {
+      pool.query.mockImplementation(defaultQuery);
+    }
+  });
+
+  it('compte chaque appel réussi dans ai_usage avec les jetons', async () => {
+    global.fetch.mockResolvedValue({
+      ...chatResponse(JSON.stringify(QUIZ)),
+      json: async () => ({ choices: [{ message: { content: JSON.stringify(QUIZ) } }], usage: { prompt_tokens: 120, completion_tokens: 800 } })
+    });
+    pool.query.mockClear();
+
+    const res = await call('POST', '/generate-quiz-from-text', { text: 'abc', childProfile: PROFILE, options: { questionCount: 3 } });
+
+    expect(res.statusCode).toBe(200);
+    const insert = pool.query.mock.calls.find(([sql]) => sql.includes('INSERT INTO ai_usage'));
+    expect(insert[1]).toEqual(['OpenRouter', 120, 800]);
+  });
+
+  it('refuse (429) une deuxième génération simultanée au-delà de AI_MAX_CONCURRENT, puis libère la place', async () => {
+    process.env.AI_MAX_CONCURRENT = '1';
+    process.env.AI_REQUEST_TIMEOUT_MS = '300';
+    global.fetch = hangingFetch({});
+
+    const first = call('POST', '/generate-quiz-from-text', { text: 'abc', childProfile: PROFILE });
+    // Laisser la première requête réserver sa place
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const second = await call('POST', '/generate-quiz-from-text', { text: 'abc', childProfile: PROFILE });
+    expect(second.statusCode).toBe(429);
+    expect(second.body.code).toBe('AI_BUSY');
+
+    expect((await first).statusCode).toBe(504);
+    // Place libérée après le délai dépassé
+    global.fetch = jest.fn(async () => chatResponse(JSON.stringify(QUIZ)));
+    const third = await call('POST', '/generate-quiz-from-text', { text: 'abc', childProfile: PROFILE, options: { questionCount: 3 } });
+    expect(third.statusCode).toBe(200);
   });
 
   it.each([
@@ -270,6 +343,8 @@ describe('Documents : seules les images sont acceptées', () => {
   });
 
   it('enchaîne OCR (LLM vision) puis analyse et renvoie les extractions', async () => {
+    // Pas de provider forcé : OpenAI (vision) est le premier de la cascade
+    delete process.env.AI_PROVIDER;
     process.env.OPENAI_API_KEY = 'sk-test-openai-not-a-real-key';
     global.fetch
       .mockResolvedValueOnce(chatResponse('Texte de la leçon'))
@@ -280,10 +355,25 @@ describe('Documents : seules les images sont acceptées', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.data.count).toBe(1);
     expect(res.body.data.extractions[0]).toMatchObject({ type: 'image', fileName: 'p1.jpg', extractedText: 'Texte de la leçon' });
-    // OCR via OpenAI Vision (image sans préfixe data:), puis analyse via OpenRouter
+    // OCR via OpenAI Vision (image sans préfixe data:), puis analyse avec le premier provider
     expect(global.fetch.mock.calls[0][0]).toBe('https://api.openai.com/v1/chat/completions');
     expect(global.fetch.mock.calls[0][1].body).toContain('data:image/jpeg;base64,AAAA"');
-    expect(global.fetch.mock.calls[1][0]).toBe('https://openrouter.ai/api/v1/chat/completions');
+    expect(global.fetch.mock.calls[1][0]).toBe('https://api.openai.com/v1/chat/completions');
+  });
+
+  it.each([
+    ['AI_PROVIDER force un autre provider', () => { process.env.AI_PROVIDER = 'OpenRouter'; }],
+    ['OpenAI non autorisé pour les données des enfants', () => {
+      delete process.env.AI_PROVIDER;
+      process.env.AI_CHILD_DATA_PROVIDERS = 'OpenRouter';
+    }]
+  ])('l\'OCR n\'envoie pas la photo à OpenAI quand %s', async (label, configure) => {
+    process.env.OPENAI_API_KEY = 'sk-test-openai-not-a-real-key';
+    configure();
+
+    await call('POST', '/extract-text-from-documents', { documents: [{ name: 'p1.jpg', type: 'image/jpeg', base64: 'data:image/jpeg;base64,AAAA' }] });
+
+    expect(global.fetch.mock.calls.map(([url]) => url)).not.toContain('https://api.openai.com/v1/chat/completions');
   });
 });
 

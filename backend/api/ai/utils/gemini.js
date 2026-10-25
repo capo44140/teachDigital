@@ -7,6 +7,7 @@
 const { fetchWithTimeout } = require('./fetch.js');
 const { GEMINI_BASE_URL, API_TIMEOUT_MS } = require('./constants.js');
 const { callTimeout } = require('./requestContext.js');
+const { recordAiCall, usageFromGemini } = require('../services/aiUsage.js');
 
 /**
  * @param {Object} options
@@ -38,6 +39,7 @@ async function callGeminiGenerateContent({ apiKey, model, parts, generationConfi
     }
 
     const data = await response.json();
+    await recordAiCall('Gemini', usageFromGemini(data && data.usageMetadata));
     const responseParts = data && data.candidates && data.candidates[0] && data.candidates[0].content
         ? data.candidates[0].content.parts
         : null;

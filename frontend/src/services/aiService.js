@@ -254,13 +254,20 @@ class AIService {
   }
 
   /**
-   * Récupère la configuration de chaque provider à clé API (clé masquée, modèle actif)
-   * @returns {Promise<Array>} [{ name, label, keyConfigured, keySource, maskedKey, model, modelSource, defaultModel, ... }]
+   * Récupère la configuration de chaque provider à clé API (clé masquée, modèle actif,
+   * autorisation des données d'enfants) et la consommation IA du jour
+   * @returns {Promise<{providers: Array, usage: Object|null}>}
+   *   providers : [{ name, label, keyConfigured, keySource, maskedKey, model, modelSource, defaultModel,
+   *   dataRegion, childDataAllowed, childDataSource }]
+   *   usage : { paidCalls, localCalls, promptTokens, completionTokens, dailyLimit } (null si indisponible)
    */
   async getProvidersConfig () {
     try {
       const response = await apiService.request('/api/ai/providers/config')
-      return response.data?.providers || []
+      return {
+        providers: response.data?.providers || [],
+        usage: response.data?.usage || null
+      }
     } catch (error) {
       console.error('Erreur lors de la récupération de la configuration des providers:', error)
       throw error
@@ -268,9 +275,10 @@ class AIService {
   }
 
   /**
-   * Enregistre la clé API et/ou le modèle d'un provider (la clé est vérifiée par le serveur)
+   * Enregistre la clé API, le modèle et/ou l'autorisation des données d'enfants d'un provider
+   * (la clé est vérifiée par le serveur)
    * @param {string} name - Nom du provider (ex: "OpenAI")
-   * @param {Object} config - { apiKey?: string, model?: string|null } (model null = défaut)
+   * @param {Object} config - { apiKey?: string, model?: string|null, childDataAllowed?: boolean } (model null = défaut)
    * @returns {Promise<Object|null>} Configuration du provider mise à jour
    */
   async saveProviderConfig (name, config) {
@@ -313,7 +321,7 @@ class AIService {
 
   /**
    * Récupère le provider IA utilisé pour la génération de pages de cours
-   * @returns {Promise<Object|null>} { provider: string|null, options: [{ name, label, configured, model }] }
+   * @returns {Promise<Object|null>} { provider: string|null, options: [{ name, label, configured, childDataAllowed, model }] }
    */
   async getCoursePageProvider () {
     try {

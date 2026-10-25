@@ -24,6 +24,7 @@ const aiSettingsLoader = require('./services/aiSettingsLoader.js');
 const localLLMConfig = require('./services/aiProviders/localLLMConfig.js');
 const providerSettings = require('./services/aiProviders/providerSettings.js');
 const coursePageConfig = require('./services/coursePageConfig.js');
+const aiUsage = require('./services/aiUsage.js');
 const { parseFormData, bufferToBase64 } = require('./middleware/formDataParser.js');
 const { validateApiKey, hasAtLeastOneValidKey, isLocalLLMAvailable } = require('./utils/validation.js');
 const { validateAndNormalizeQuiz } = require('./utils/quizFormat.js');
@@ -100,15 +101,20 @@ function route(handler, errorMessages) {
 }
 
 /**
- * Route de génération : contexte avec délai global et annulation sur déconnexion du client
+ * Route de génération : quota du jour, nombre de générations simultanées limité,
+ * contexte avec délai global et annulation sur déconnexion du client
  */
 function aiRoute(handler, errorMessages, getTimeoutMs = getAiRequestTimeoutMs) {
     return route(async (req, res) => {
-        const ctx = createRequestContext({ res, timeoutMs: getTimeoutMs() });
+        await aiUsage.assertWithinDailyQuota();
+        const releaseSlot = aiUsage.acquireGenerationSlot();
+        let ctx = null;
         try {
+            ctx = createRequestContext({ res, timeoutMs: getTimeoutMs() });
             await handler(req, res, ctx);
         } finally {
-            ctx.dispose();
+            if (ctx) ctx.dispose();
+            releaseSlot();
         }
     }, errorMessages);
 }
@@ -126,13 +132,14 @@ function withProvider(handler) {
     };
 }
 
-// Génération (délai global + annulation)
-router.post('/generate-quiz-from-image', aiRoute(handleGenerateQuizFromImage, IMAGE_QUIZ_MESSAGES));
-router.post('/generate-quiz-from-documents', aiRoute(handleGenerateQuizFromDocuments, QUIZ_MESSAGES));
-router.post('/extract-text-from-documents', aiRoute(handleExtractTextFromDocuments, EXTRACTION_MESSAGES));
-router.post('/generate-quiz-from-analyses', aiRoute(handleGenerateQuizFromAnalyses, QUIZ_MESSAGES));
-router.post('/generate-quiz-from-text', aiRoute(handleGenerateQuizFromText, QUIZ_MESSAGES));
-router.post('/generate-course-page', aiRoute(handleGenerateCoursePage, COURSE_PAGE_MESSAGES, () => COURSE_PAGE_TIMEOUT_MS));
+// Génération (limite par parent, quota du jour, délai global + annulation)
+const { aiRateLimiter } = aiUsage;
+router.post('/generate-quiz-from-image', aiRateLimiter, aiRoute(handleGenerateQuizFromImage, IMAGE_QUIZ_MESSAGES));
+router.post('/generate-quiz-from-documents', aiRateLimiter, aiRoute(handleGenerateQuizFromDocuments, QUIZ_MESSAGES));
+router.post('/extract-text-from-documents', aiRateLimiter, aiRoute(handleExtractTextFromDocuments, EXTRACTION_MESSAGES));
+router.post('/generate-quiz-from-analyses', aiRateLimiter, aiRoute(handleGenerateQuizFromAnalyses, QUIZ_MESSAGES));
+router.post('/generate-quiz-from-text', aiRateLimiter, aiRoute(handleGenerateQuizFromText, QUIZ_MESSAGES));
+router.post('/generate-course-page', aiRateLimiter, aiRoute(handleGenerateCoursePage, COURSE_PAGE_MESSAGES, () => COURSE_PAGE_TIMEOUT_MS));
 
 // Clés API
 router.get('/validate-key', route(handleValidateKey));
@@ -633,14 +640,23 @@ async function handleSetLocalLLMUrl(req, res) {
  * Retourne les paramètres de chaque provider à clé API (les clés ne sont jamais renvoyées en clair)
  */
 async function handleGetProvidersConfig(req, res) {
+    let usage = null;
+    try {
+        usage = await aiUsage.getTodayUsage();
+    } catch (error) {
+        // Consommation facultative : la configuration reste affichable
+        logger.warn('Consommation IA du jour illisible', { requestId: getRequestId(req), error: error.message });
+    }
     return res.status(200).json(createResponse('Configuration des providers', {
-        providers: providerSettings.NAMES.map(name => providerSettings.getPublicConfig(name))
+        providers: providerSettings.NAMES.map(name => providerSettings.getPublicConfig(name)),
+        usage
     }));
 }
 
 /**
- * Enregistre la clé API et/ou le modèle d'un provider
- * Body: { apiKey?: string, model?: string|null } (model null ou vide = retour au défaut)
+ * Enregistre la clé API, le modèle et/ou l'autorisation des données d'enfants d'un provider
+ * Body: { apiKey?: string, model?: string|null, childDataAllowed?: boolean }
+ * (model null ou vide = retour au défaut)
  * La clé est vérifiée auprès du provider avant d'être enregistrée.
  */
 async function handleSetProviderConfig(name, req, res) {
@@ -648,9 +664,14 @@ async function handleSetProviderConfig(name, req, res) {
     const body = getJsonBody(req);
     const apiKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : undefined;
     const model = typeof body.model === 'string' ? body.model.trim() : body.model;
+    const childDataAllowed = body.childDataAllowed;
 
-    if (apiKey === undefined && model === undefined) {
-        return sendClientError(req, res, 400, 'apiKey ou model requis');
+    if (apiKey === undefined && model === undefined && childDataAllowed === undefined) {
+        return sendClientError(req, res, 400, 'apiKey, model ou childDataAllowed requis');
+    }
+
+    if (childDataAllowed !== undefined && typeof childDataAllowed !== 'boolean') {
+        return sendClientError(req, res, 400, 'childDataAllowed doit être true ou false');
     }
 
     if (apiKey !== undefined && !providerSettings.isValidKeyFormat(name, apiKey)) {
@@ -683,6 +704,10 @@ async function handleSetProviderConfig(name, req, res) {
 
     if (model !== undefined) {
         await providerSettings.setModel(name, model || null);
+    }
+
+    if (childDataAllowed !== undefined) {
+        await providerSettings.setChildDataAllowed(name, childDataAllowed);
     }
 
     return res.status(200).json(createResponse(`Configuration ${label} enregistrée`, providerSettings.getPublicConfig(name)));
@@ -737,6 +762,7 @@ function getCoursePageProviderPayload() {
                 name,
                 label: COURSE_PAGE_PROVIDER_LABELS[name] || name,
                 configured: !!instance?.isAvailable(),
+                childDataAllowed: aiProviders.isAllowedForChildData(name),
                 model: instance?.model || ''
             };
         })

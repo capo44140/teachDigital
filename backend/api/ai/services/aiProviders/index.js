@@ -11,11 +11,54 @@ const GroqProvider = require('./groq.js');
 const MistralProvider = require('./mistral.js');
 const KimiProvider = require('./kimi.js');
 const OpenRouterProvider = require('./openrouter.js');
+const providerSettings = require('./providerSettings.js');
 const { isAbortError, throwIfAborted, callTimeout, toAbortError, isDeadlineReached, createAiTimeoutError } = require('../../utils/requestContext.js');
+const { AiHttpError } = require('../../utils/httpErrors.js');
 const logger = require('../../../../lib/logger.js');
 
 /**
- * Crée et retourne tous les providers disponibles dans l'ordre de priorité
+ * Le provider peut-il recevoir les données des enfants (cf. providerSettings) ?
+ * LM Studio / LLM local : oui, les données restent sur le réseau de la famille.
+ */
+function isAllowedForChildData(name) {
+    if (name === 'LocalLLM') return true;
+    const resolved = providerSettings.resolveName(name);
+    return !!resolved && providerSettings.isChildDataAllowed(resolved);
+}
+
+/**
+ * Providers configurés (clé valide) mais non autorisés pour les données des enfants
+ * @param {string[]} [candidates] - Restreindre à ces providers (ex: providers vision)
+ */
+function getProvidersBlockedForChildData(candidates = providerSettings.NAMES) {
+    return candidates.filter(name => {
+        const resolved = providerSettings.resolveName(name);
+        return resolved && providerSettings.isConfigured(resolved) && !providerSettings.isChildDataAllowed(resolved);
+    });
+}
+
+/**
+ * Erreur « aucun provider utilisable » : message explicite (409) si des providers configurés
+ * sont seulement bloqués faute d'autorisation pour les données des enfants.
+ * @param {string} reason - Détail journalisé (cas « rien de configuré »)
+ * @param {string[]} [candidates] - Providers pertinents pour l'opération
+ */
+function createNoProviderError(reason, candidates) {
+    const blocked = getProvidersBlockedForChildData(candidates);
+    if (blocked.length > 0) {
+        logger.warn('Aucun provider IA autorisé pour les données des enfants', { blocked });
+        return new AiHttpError(
+            409,
+            `Aucun service IA n'est autorisé à recevoir les devoirs des enfants. Dans Configuration IA, autorisez l'un des services configurés (${blocked.map(name => providerSettings.getLabel(name)).join(', ')}) ou utilisez LM Studio.`,
+            'AI_CHILD_DATA_NOT_ALLOWED'
+        );
+    }
+    return createAllProvidersFailedError(reason);
+}
+
+/**
+ * Crée et retourne tous les providers disponibles dans l'ordre de priorité, en ne gardant
+ * que ceux autorisés pour les données des enfants
  * Ordre: LocalLLM → OpenAI → Gemini → DeepSeek → Groq → Mistral → Kimi → OpenRouter
  * @returns {Array} Liste des providers disponibles
  */
@@ -37,6 +80,8 @@ function getAvailableProviders() {
         if (disabledSet.has(name)) return;
         if (forcedProvider && forcedProvider !== name) return;
         if (orderList.length > 0 && !orderList.includes(name)) return;
+        // Données des enfants : seulement les providers autorisés (RGPD)
+        if (!isAllowedForChildData(provider.getName())) return;
         if (provider.isAvailable()) providers.push(provider);
     };
 
@@ -107,7 +152,7 @@ async function runWithFallback(operation, ctx, call) {
     const providers = getAvailableProviders();
 
     if (providers.length === 0) {
-        throw createAllProvidersFailedError('Aucun provider IA configuré');
+        throw createNoProviderError('Aucun provider IA configuré');
     }
 
     for (const provider of providers) {
@@ -159,6 +204,8 @@ async function generateQuizWithAI(analysis, childProfile, questionCount = 5, ctx
 module.exports = {
     getAvailableProviders,
     getProviderByName,
+    isAllowedForChildData,
+    createNoProviderError,
     analyzeWithAI,
     generateQuizWithAI
 };
