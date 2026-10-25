@@ -1,7 +1,8 @@
 /**
  * Service de hachage sécurisé pour les codes PIN.
  *
- * - Nouveaux PIN : bcrypt (cost factor 10) — KDF dédié, résistant GPU.
+ * - Nouveaux PIN : bcrypt (cost factor 12) — KDF dédié, résistant GPU.
+ * - Hash bcrypt d'un coût inférieur : re-hachés de la même façon (needsRehash).
  * - Anciens PIN au format `$native$<salt>$<sha256>` : toujours vérifiables
  *   pour permettre une migration transparente. À la prochaine vérification
  *   réussie, l'appelant peut re-hacher avec hashPin() pour mettre à jour la BDD.
@@ -10,7 +11,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { checkNewPin } = require('./pinPolicy.js');
 
-const BCRYPT_ROUNDS = 10;
+const BCRYPT_ROUNDS = 12;
 const LEGACY_PREFIX = '$native$';
 
 class NativeHashService {
@@ -40,12 +41,18 @@ class NativeHashService {
   }
 
   /**
-   * Indique si le hash stocké utilise un format obsolète et devrait être re-haché.
+   * Indique si le hash stocké utilise un format obsolète (SHA-256 ou bcrypt de coût inférieur)
+   * et devrait être re-haché.
    * Permet à l'appelant de faire une migration transparente après un login réussi.
    */
   static needsRehash(hashedPin) {
     if (!hashedPin || typeof hashedPin !== 'string') return false;
-    return hashedPin.startsWith(LEGACY_PREFIX);
+    if (hashedPin.startsWith(LEGACY_PREFIX)) return true;
+    try {
+      return bcrypt.getRounds(hashedPin) < BCRYPT_ROUNDS;
+    } catch (_) {
+      return false;
+    }
   }
 
   // Politique appliquée aux nouveaux codes (voir lib/pinPolicy.js)

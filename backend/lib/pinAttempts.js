@@ -57,7 +57,7 @@ function recordPinFailure(req, profile) {
   return outcome;
 }
 
-// Migration transparente bcrypt (non bloquante) si le hash est à l'ancien format.
+// Migration transparente bcrypt (non bloquante) si le hash est obsolète (SHA-256, coût inférieur).
 // « AND pin_code = ancien hash » : un PIN changé pendant le hachage n'est pas écrasé.
 function rehashLegacyPin(pin, storedHash, profileId) {
   if (!NativeHashService.needsRehash(storedHash)) return;
