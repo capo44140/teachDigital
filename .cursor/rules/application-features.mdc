@@ -57,7 +57,8 @@ description: Fonctionnalités spécifiques de l'application TeachDigital
 
 - **Parent** : `ParentGameManagement.vue` (règle par enfant et par jeu : autorisation, condition,
   minutes par jour) ; **enfant** : `GameArcade.vue` (jeux et verrous), `GamePlayer.vue` (partie).
-- **Jeux** : logique sans DOM `src/games/pacman.js`, `src/games/tetris.js` ; composants
+- **Jeux** : logique sans DOM `src/games/pacman.js`, `src/games/tetris.js`, `src/games/mario.js`
+  (niveaux `marioLevels.js`, pixel art `marioSprites.js`) ; composants
   `components/games/` ; [gameService.js](mdc:frontend/src/services/gameService.js).
 - **Backend** : `controllers/gameController.js`, `lib/games.js` (catalogue, conditions, accès
   évalué par le serveur), tables `game_access_rules` et `game_sessions` (temps compté par signaux

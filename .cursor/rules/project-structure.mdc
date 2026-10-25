@@ -24,7 +24,7 @@ Les commandes `pnpm ...` se lancent dans le dossier concerné (`cd frontend` ou 
 Frontend (`frontend/`) :
 - `src/views/` - Écrans routés (FamilyGate, ProfileSelector, PinLock, Dashboard, UserDashboard, ParentSettings...)
 - `src/components/` - Composants partagés (BaseModal, ConfirmDialog, PinPad, ToastContainer...) et sous-dossiers `quiz/`, `lesson-scanner/`, `course-pages/`, `badges/`, `dashboard/`, `progress/`, `games/`
-- `src/games/` - Logique des jeux sans DOM (Pac-Man, Tetris) et leur affichage (`catalog.js`)
+- `src/games/` - Logique des jeux sans DOM (Pac-Man, Tetris, Mario Bros) et leur affichage (`catalog.js`)
 - `src/composables/` - `useParentNavigation`, `useQuizGeneration`, `useConfirm`, `useGameLoop`
 - `src/services/` - `apiService.js` (client HTTP) + un service par domaine (auth, leçons, pages de cours, profils, badges, IA, mise à jour / installation PWA...)
 - `src/stores/` - Stores Pinia (`badgeStore`, `onboardingStore`, `profileStore`, `settingsStore`, `themeStore`, `toastStore`)

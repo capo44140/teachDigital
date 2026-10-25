@@ -1,4 +1,4 @@
-# 🎮 Jeux (Pac-Man, Tetris)
+# 🎮 Jeux (Pac-Man, Tetris, Mario Bros)
 
 Les enfants disposent d'une section « Jeux ». Chaque jeu est **fermé par défaut** : le parent
 l'ouvre enfant par enfant, avec une condition éventuelle et une durée de jeu maximale par jour.
@@ -49,11 +49,15 @@ Partie : `/games/<clé>?profile=<id>` (`src/views/GamePlayer.vue`).
   l'écran de fin. Quand l'onglet est masqué, le jeu se met en pause ; l'enfant reprend lui-même.
 - Commandes : flèches ou ZQSD (WASD en QWERTY), P ou Échap pour la pause. Sur tablette : boutons
   à l'écran (maintenir pour répéter dans Tetris) et glissement du doigt dans Pac-Man.
+- Mario Bros : Q / D (ou flèches) pour avancer, Z, ↑ ou Espace pour sauter (plus haut en gardant
+  la touche enfoncée), Maj pour courir. Sur tablette : croix ◀ ▶, bouton A (sauter) et B (courir),
+  à maintenir. Le jeu s'affiche dans une console façon Game Boy (écran 160 × 144, 4 teintes de vert).
 
 | Jeu | Règles |
 | --- | --- |
 | **Pac-Man** | Labyrinthe 19 × 21, 3 vies. Pastille 10 points, super-pastille 50 points (les fantômes ont peur et fuient). Fantôme mangé : 200, 400, 800 puis 1 600 points. Niveau suivant quand toutes les pastilles sont mangées : un peu plus rapide, peur plus courte |
 | **Tetris** | Grille 10 × 20, sac de 7 pièces, pièce suivante et pièce fantôme. 1 à 4 lignes : 100, 300, 500, 800 points × niveau ; descente douce 1 point par case, chute immédiate 2 points. Niveau suivant toutes les 10 lignes |
+| **Mario Bros** | 3 niveaux (mondes 1-1 à 1-3), 3 vies, 300 s par niveau. Pièce 100 points (100 pièces = une vie). Bloc « ? » : pièce, champignon (le héros grandit et casse les briques, 1 000 points ; touché, il rapetisse au lieu de perdre une vie) ou cœur (une vie). Ennemi écrasé : 100, 200, 400… points d'affilée sans toucher le sol ; la tortue laisse une carapace qu'on lance sur les autres. Drapeau : 100 à 5 000 points selon la hauteur, puis 10 points par seconde restante. Trou ou chrono à zéro : une vie en moins, reprise au milieu du niveau si on l'a dépassé. Après le monde 1-3, retour au 1-1 avec des ennemis plus rapides (2-1…) |
 
 ## 🔧 Technique
 
@@ -65,7 +69,8 @@ Partie : `/games/<clé>?profile=<id>` (`src/views/GamePlayer.vue`).
 | `PUT /api/games/:gameKey/rules/:profileId` | Parent uniquement (`requireAdmin`), corps `gameRuleUpdateSchema`. Profil enfant ou ado uniquement (404 sinon) |
 | `POST /api/games/:gameKey/sessions` | Début de partie (`{ profileId }`). Jeu verrouillé : **409 `GAME_LOCKED`**, avec le motif dans `message` et `access` |
 | `PUT /api/games/sessions/:id` | Signal de vie `{ score, ended, idle }`. Ajoute le temps écoulé depuis le signal précédent, **au plus 45 s** (onglet en veille, page fermée sans prévenir) ; `idle` : reprise après une pause, rien n'est ajouté. Réévalue l'accès et répond `stop: true` si la partie doit s'arrêter |
-| Client | `src/services/gameService.js` (signal toutes les 15 s pendant une partie, fin envoyée en `keepalive` à la fermeture), logique des jeux sans DOM dans `src/games/` (`pacman.js`, `tetris.js`), composants `src/components/games/` |
+| Client | `src/services/gameService.js` (signal toutes les 15 s pendant une partie, fin envoyée en `keepalive` à la fermeture), logique des jeux sans DOM dans `src/games/` (`pacman.js`, `tetris.js`, `mario.js`), composants `src/components/games/` |
+| Niveaux de Mario Bros | `src/games/marioLevels.js` : 9 rangées de tuiles par niveau, légende en tête du fichier. Après une modification, `tests/games/mario.test.js` vérifie que chaque niveau peut encore être terminé en marchant (recherche sur les commandes avec la vraie physique, sans ennemis). Dessins en pixel art : `src/games/marioSprites.js` |
 | Jour et semaine | Bornes calculées à l'heure locale du serveur (`lib/streaks.js`), comme le résumé de progression |
 
 Ajouter un jeu : une entrée dans `GAMES` (`backend/lib/games.js`), un composant dans
