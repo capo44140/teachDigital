@@ -50,6 +50,8 @@ import { useProfileStore } from './stores/profileStore.js'
 import { useOnboardingStore } from './stores/onboardingStore.js'
 import { useSettingsStore, resolveActiveChildProfileId } from './stores/settingsStore.js'
 import { useThemeStore } from './stores/themeStore.js'
+import { useParentIdleLock } from './composables/useParentIdleLock.js'
+import { useRouter } from 'vue-router'
 
 export default {
   name: 'App',
@@ -67,6 +69,8 @@ export default {
     const onboardingStore = useOnboardingStore()
     const settingsStore = useSettingsStore()
     const themeStore = useThemeStore()
+    // Espace parent verrouillé après 15 min sans activité
+    useParentIdleLock(useRouter())
 
     return {
       updateService,

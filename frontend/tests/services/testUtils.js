@@ -39,7 +39,7 @@ export function jsonResponse (status, body, headers = {}) {
 }
 
 /**
- * Ouvrir une session parent (30 min) pour un profil, comme après la saisie du PIN
+ * Ouvrir une session parent pour un profil, comme après la saisie du PIN
  */
 export function storeParentSession (profileId, profileName = 'Parent') {
   localStorage.setItem('teachdigital_session', JSON.stringify({

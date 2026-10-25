@@ -1,6 +1,6 @@
 /**
  * Accès à l'espace parent.
- * Exige une session parent déverrouillée (PIN, 30 min) pour ce profil ET un jeton
+ * Exige une session parent déverrouillée (PIN, 15 min d'inactivité) pour ce profil ET un jeton
  * profil administrateur du même profil. Ni `?profile=` ni `?unlocked=true` ne suffisent.
  */
 

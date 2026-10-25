@@ -210,7 +210,8 @@ import sessionService from '../services/sessionService.js'
 import ProfileSkeleton from '../components/ProfileSkeleton.vue'
 import BaseModal from '../components/BaseModal.vue'
 import { ProfileService } from '../services/profile/index.js'
-import { hasParentAccess, leaveParentSpace } from '../services/parentAccessService.js'
+import { leaveParentSpace } from '../services/parentAccessService.js'
+import { apiService } from '../services/apiService.js'
 
 export default {
   name: 'ProfileSelector',
@@ -242,18 +243,10 @@ export default {
     }
   },
   async mounted() {
-    // Session parent encore active (PIN saisi il y a moins de 30 min) : reprendre l'espace parent
-    const session = sessionService.getValidSession()
-    if (session && hasParentAccess(session.profileId)) {
-      this.$router.push({
-        path: '/dashboard',
-        query: { profile: session.profileId }
-      })
-      return
-    }
-    // Session parent sans jeton valide : la supprimer
-    if (session) {
-      sessionService.clearSession()
+    // Revenir au choix du profil verrouille l'espace parent : la tablette peut passer à un
+    // enfant sans qu'il retrouve l'espace parent ouvert. Le PIN sera redemandé.
+    if (sessionService.hasSession() || apiService.getProfileToken()) {
+      leaveParentSpace()
     }
 
     await this.profileStore.loadProfiles()

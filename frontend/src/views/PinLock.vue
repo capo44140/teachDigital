@@ -157,7 +157,7 @@ export default {
 
       try {
         // Vérification unique : le serveur contrôle le PIN et délivre le jeton parent.
-        // La session parent (30 min) n'est ouverte qu'en cas de succès.
+        // La session parent n'est ouverte qu'en cas de succès.
         const data = await authService.login(Number(profileId), enteredPin)
 
         if (data?.profile?.isAdmin !== true || !hasParentAccess(profileId)) {

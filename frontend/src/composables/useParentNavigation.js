@@ -11,7 +11,7 @@ import { hasParentAccess } from '../services/parentAccessService.js'
  */
 
 /**
- * Identifiant du profil parent de la session (30 min), ou null
+ * Identifiant du profil parent de la session (15 min d'inactivité), ou null
  * @returns {string|null}
  */
 export function getParentProfileId () {

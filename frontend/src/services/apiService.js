@@ -7,7 +7,7 @@
  * Deux jetons possibles (cf. backend/lib/auth.js) :
  * - jeton famille (scope « family ») : délivré par le code d'entrée familial, accès « enfant » ;
  * - jeton profil (scope « profile ») : délivré par le PIN parent, requis pour l'espace parent.
- * Le jeton profil est envoyé en priorité ; il ne survit pas à la session parent de 30 min.
+ * Le jeton profil est envoyé en priorité ; il ne survit pas à la session parent.
  */
 
 import sessionService from './sessionService.js'
@@ -131,7 +131,7 @@ class ApiService {
       return null
     }
 
-    // Les droits parent ne survivent pas à la session parent (30 min)
+    // Les droits parent ne survivent pas à la session parent
     if (payload.isAdmin === true && !sessionService.isUnlocked(payload.profileId)) {
       clearProfileToken()
       return null

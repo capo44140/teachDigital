@@ -15,7 +15,7 @@ Ce document décrit l'accès à TeachDigital tel qu'il est implémenté. Côté 
      ├─ profil enfant / ado ──▶ /user-dashboard?profile=<id>   (jeton famille, sans PIN)
      └─ profil parent ──▶ /pin-lock ── POST /api/auth/login { profileId, pin } ──▶ jeton « profil » (4 h)
                                          (exige le jeton famille dans Authorization)
-                                         ──▶ /dashboard  (session parent de 30 min glissantes)
+                                         ──▶ /dashboard  (session parent : 15 min sans activité)
 ```
 
 1. **Code d'entrée familial** (`POST /api/auth/family-gate`, public, limité par IP). Il délivre un
@@ -26,8 +26,12 @@ Ce document décrit l'accès à TeachDigital tel qu'il est implémenté. Côté 
    profil) valide : le code familial passe toujours en premier. Elle délivre un jeton de scope
    `profile`.
 3. **Espace parent**. Le guard du router exige à la fois une session parent déverrouillée
-   (`sessionService`, 30 min glissantes) et un jeton profil administrateur **du même profil**
+   (`sessionService`) et un jeton profil administrateur **du même profil**
    (`hasParentAccess`). Les paramètres `?profile=` et `?unlocked=true` ne donnent aucun droit.
+   L'espace parent se verrouille (session et jeton parent supprimés) :
+   - après **15 min sans activité** (toucher, clavier), même sans navigation (`useParentIdleLock`) ;
+   - dès le **retour au choix du profil** (`/`) : la tablette peut passer à un enfant, le PIN
+     sera redemandé.
    Côté serveur, `requireAdmin` revérifie en base que le profil est actif et administrateur.
 4. **Jetons utilisés par le client** (`apiService`) : le jeton profil d'abord, à défaut le jeton
    famille. Sur un 401, le client renvoie au code familial (jeton famille refusé) ou au PIN

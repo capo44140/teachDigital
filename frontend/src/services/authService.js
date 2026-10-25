@@ -34,7 +34,7 @@ class AuthService {
    * Connexion avec profil et code PIN (le serveur exige le jeton famille).
    * Un 401 signifie « code PIN incorrect », sauf code UNAUTHORIZED : session famille expirée,
    * l'erreur porte alors le code SESSION_EXPIRED et le router revient au code familial.
-   * Pour un profil administrateur, la session parent (30 min) est ouverte ici.
+   * Pour un profil administrateur, la session parent est ouverte ici.
    */
   async login (profileId, pin) {
     const response = await apiService.request(LOGIN_ENDPOINT, {
@@ -113,7 +113,7 @@ class AuthService {
     }
     const data = response.data || {}
     // Changement de son propre PIN : l'ancien jeton est révoqué, le nouveau le remplace
-    // (la session parent de 30 min reste ouverte : même profil)
+    // (la session parent reste ouverte : même profil)
     if (typeof data.token === 'string' && data.token) {
       const payload = decodeJwtPayload(data.token)
       const current = apiService.getProfileTokenPayload()

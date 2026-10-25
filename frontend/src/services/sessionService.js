@@ -2,13 +2,14 @@ import { clearProfileToken } from './authStorage.js'
 
 /**
  * Service de gestion de session pour éviter de ressaisir le code PIN
- * La session parent (30 min glissantes) et le jeton profil vont de pair :
+ * La session parent (15 min sans activité, prolongée par la navigation et par l'activité dans
+ * l'espace parent, cf. useParentIdleLock) et le jeton profil vont de pair :
  * quand la session expire ou est effacée, le jeton profil est supprimé.
  */
 class SessionService {
   constructor () {
     this.SESSION_KEY = 'teachdigital_session'
-    this.SESSION_DURATION = 30 * 60 * 1000 // 30 minutes en millisecondes
+    this.SESSION_DURATION = 15 * 60 * 1000 // 15 minutes d'inactivité en millisecondes
   }
 
   /**

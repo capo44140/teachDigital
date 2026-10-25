@@ -86,6 +86,7 @@ async function mountScreen (loader, path, props = {}, interact = null) {
 
 const SCREENS = [
   ['FamilyGate', () => import('../../src/views/FamilyGate.vue'), '/family-gate'],
+  ['ProfileSelector', () => import('../../src/views/ProfileSelector.vue'), '/'],
   ['PinLock', () => import('../../src/views/PinLock.vue'), '/pin-lock?profile=1'],
   ['Dashboard', () => import('../../src/views/Dashboard.vue'), '/dashboard?profile=1'],
   ['ParentSettings', () => import('../../src/views/ParentSettings.vue'), '/parent-settings'],
@@ -131,6 +132,16 @@ describe('rendu des écrans retravaillés', () => {
     const { warnings, text } = await mountScreen(loader, path, props)
     expect(warnings).toEqual([])
     expect(text.length).toBeGreaterThan(0)
+  })
+
+  it('ProfileSelector verrouille l\'espace parent au lieu de le reprendre', async () => {
+    const { text } = await mountScreen(() => import('../../src/views/ProfileSelector.vue'), '/')
+
+    // Le choix des profils est affiché ; jeton et session parent sont supprimés
+    expect(text).toContain('Enfant')
+    expect(localStorage.getItem('auth_token')).toBeNull()
+    expect(localStorage.getItem('teachdigital_session')).toBeNull()
+    expect(fetch.mock.calls.some(([url]) => String(url).includes('/api/auth/logout'))).toBe(true)
   })
 
   const clickButton = async (el, label) => {

@@ -40,7 +40,7 @@ describe('apiService - choix du jeton', () => {
     expect(apiService.hasAdminTokenFor(2)).toBe(false)
   })
 
-  it('jette le jeton parent quand la session parent (30 min) a expiré', () => {
+  it('jette le jeton parent quand la session parent a expiré', () => {
     const family = storeFamilySession()
     localStorage.setItem(PROFILE_TOKEN_KEY, profileToken({ profileId: 1, isAdmin: true }))
     localStorage.setItem('teachdigital_session', JSON.stringify({
